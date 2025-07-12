@@ -67,21 +67,16 @@ html[native-dark-active] #scene-container,
 .biz-card-div {
     position: absolute; /* Required for z-index to work */
     font-size: 12px;
-    padding: 0px;
     box-sizing: border-box;
     cursor: pointer;
     z-index: 5; /* Changed from 4 to 5 to match BIZCARD_Z_INDEX_MIN */
-    border: 2px solid white;
-    border-radius: 25px;
     pointer-events: auto;
-    background-color: var(--data-background-color, #ffffff) !important;
-    color: var(--data-foreground-color, #000000) !important;
+    /* All padding, borders, colors handled by JavaScript applyStateStyling */
 }
 
 /* Base styling for resume divs */
 .biz-resume-div {
-    background-color: var(--data-background-color, #ffffff) !important;
-    color: var(--data-foreground-color, #000000) !important;
+    /* All colors, borders, padding handled by JavaScript applyStateStyling */
 }
 
 .biz-details-z-value {
@@ -91,39 +86,8 @@ html[native-dark-active] #scene-container,
     text-align: right;
 }
 
-/* cDiv hover states - white borders for scene cards */
-.biz-card-div.hovered,
-#scene-container .biz-card-div.hovered,
-body.focal-point-locked .biz-card-div.hovered,
-.biz-card-div[data-hovered="true"],
-#scene-container .biz-card-div[data-hovered="true"],
-body.focal-point-locked .biz-card-div[data-hovered="true"] {
-    background-color: var(--data-background-color-hovered, #e3f2fd) !important;
-    color: var(--data-foreground-color-hovered, #1976d2) !important;
-    border: 3px solid rgba(255, 255, 255, 0.8) !important;
-}
-
-/* rDiv hover states - use CSS variables for colors */
-.biz-resume-div.hovered,
-.biz-resume-div[data-hovered="true"] {
-    background-color: var(--data-background-color-hovered, #e3f2fd) !important;
-    color: var(--data-foreground-color-hovered, #1976d2) !important;
-}
-
-/* cDiv selected states - white borders for scene cards */
-.biz-card-div.selected,
-#scene-container .biz-card-div.selected,
-body.focal-point-locked .biz-card-div.selected {
-    background-color: var(--data-background-color-selected, #f3e5f5) !important;
-    color: var(--data-foreground-color-selected, #7b1fa2) !important;
-    border: 4px solid rgba(255, 255, 255, 1.0) !important;
-}
-
-/* rDiv selected states - use CSS variables for colors */
-.biz-resume-div.selected {
-    background-color: var(--data-background-color-selected, #f3e5f5) !important;
-    color: var(--data-foreground-color-selected, #7b1fa2) !important;
-}
+/* State-based styling is now handled entirely by JavaScript applyStateStyling function */
+/* This eliminates conflicts between CSS and JS styling systems */
 
 .biz-card-details-div {
     padding: 12px;
@@ -387,6 +351,7 @@ body.focal-point-locked .biz-card-div .scroll-caret,
     display: none;
     margin-top: 20px;
     padding: 10px;
+    padding-bottom: 15px; /* Add extra space at the bottom to prevent truncation */
     background-color: inherit;
     border: 1px solid currentColor;
     border-radius: 6px;
@@ -485,5 +450,3 @@ body.focal-point-locked .biz-card-div .scroll-caret,
 .skill-badge-stats.resume-stats {
     margin-top: 25px !important;
 }
-
-

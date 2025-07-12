@@ -1,8 +1,8 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-12T07:04:56.135Z",
+  "lastUpdated": "2025-07-12T19:03:41.595Z",
   "layout": {
-    "panelSizePercentage": 80
+    "panelSizePercentage": 60
   },
   "resizeHandle": {
     "steppingEnabled": true,
@@ -12,19 +12,19 @@
     "mode": "locked"
   },
   "badgeToggle": {
-    "mode": "stats"
+    "mode": "show"
   },
   "resume": {
     "sortRule": {
       "field": "startDate",
       "direction": "desc"
     },
-    "selectedJobNumber": 8
+    "selectedJobNumber": 3
   },
   "theme": {
     "colorPalette": "50_Dark_Grey_Monotone.json",
     "brightnessFactorSelected": 2,
-    "brightnessFactorHovered": 1.75,
+    "brightnessFactorHovered": 1.5,
     "borderSettings": {
       "normal": {
         "padding": "15px",
@@ -47,9 +47,9 @@
       "selected": {
         "padding": "13px",
         "innerBorderWidth": "3px",
-        "innerBorderColor": "purple",
-        "outerBorderWidth": "0px",
-        "outerBorderColor": "transparent",
+        "innerBorderColor": "blue",
+        "outerBorderWidth": "3px",
+        "outerBorderColor": "purple",
         "borderRadius": "25px",
         "marginTop": "11px"
       }
@@ -58,17 +58,29 @@
       "normal": {
         "padding": "15px",
         "innerBorderWidth": "1px",
-        "marginTop": "11px"
+        "marginTop": "11px",
+        "innerBorderColor": "white",
+        "outerBorderWidth": "0px",
+        "outerBorderColor": "transparent",
+        "borderRadius": "25px"
       },
       "hovered": {
         "padding": "14px",
         "innerBorderWidth": "2px",
-        "marginTop": "11px"
+        "marginTop": "11px",
+        "innerBorderColor": "blue",
+        "outerBorderWidth": "0px",
+        "outerBorderColor": "transparent",
+        "borderRadius": "25px"
       },
       "selected": {
         "padding": "13px",
         "innerBorderWidth": "3px",
-        "marginTop": "11px"
+        "marginTop": "11px",
+        "innerBorderColor": "purple",
+        "outerBorderWidth": "0px",
+        "outerBorderColor": "transparent",
+        "borderRadius": "25px"
       }
     }
   },
@@ -390,5 +402,5 @@
       }
     }
   },
-  "colorPalette": "so_cherry.json"
+  "colorPalette": "50_Dark_Grey_Monotone.json"
 }

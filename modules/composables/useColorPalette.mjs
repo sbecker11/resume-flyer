@@ -238,7 +238,7 @@ export async function applyPaletteToElement(element) {
 
     // Get brightness factors from global state
     const brightnessFactorSelected = AppState.theme.brightnessFactorSelected || 2.0;
-    const brightnessFactorHovered = AppState.theme.brightnessFactorHovered || 1.75;
+    const brightnessFactorHovered = AppState.theme.brightnessFactorHovered || 1.5;
 
     // Calculate selected state colors (with brightness filter applied)
     const selectedBackgroundColor = colorUtils.adjustBrightness(backgroundColor, brightnessFactorSelected);
@@ -248,33 +248,42 @@ export async function applyPaletteToElement(element) {
     const hoveredBackgroundColor = colorUtils.adjustBrightness(backgroundColor, brightnessFactorHovered);
     const hoveredForegroundColor = colorUtils.getContrastingColor(hoveredBackgroundColor);
 
+    // Debug: Log the color calculations (commented out)
+    // console.log(`[DEBUG] Color calculations for element ${element.id || element.className}:`, {
+    //     base: backgroundColor,
+    //     selected: selectedBackgroundColor,
+    //     hovered: hoveredBackgroundColor,
+    //     selectedFactor: brightnessFactorSelected,
+    //     hoveredFactor: brightnessFactorHovered
+    // });
+
     const borderRadius = AppState.theme?.borderRadius || '25px';
 
     // Get global border and padding settings from AppState (with defaults)
     const borderSettings = AppState.theme?.borderSettings || {
         normal: {
-            padding: '7px', // Match maximum padding for consistent visual spacing
-            innerBorderWidth: '0px',
-            innerBorderColor: 'transparent',
-            outerBorderWidth: '1px',
-            outerBorderColor: 'white',
+            padding: '8px', // 8px padding + 2px border = 10px total, matching CSS expectations
+            innerBorderWidth: '2px',
+            innerBorderColor: 'white',
+            outerBorderWidth: '0px',
+            outerBorderColor: 'transparent',
             marginTop: '0px', // Top margin for vertical separation
             borderRadius: '25px'
         },
         hovered: {
-            padding: '5px', // 5px padding + 2px inner border = 7px total (consistent with normal)
-            innerBorderWidth: '2px',
-            innerBorderColor: 'blue',
+            padding: '7px', // 7px padding + 3px border = 10px total, matching CSS expectations
+            innerBorderWidth: '3px',
+            innerBorderColor: 'rgba(255, 255, 255, 0.8)',
             outerBorderWidth: '0px',
-            outerBorderColor: 'blue',
+            outerBorderColor: 'transparent',
             marginTop: '0px', // Top margin for vertical separation
             borderRadius: '25px'
         },
         selected: {
-            padding: '5px', // 5px padding + 2px for border = 7px total  
-            innerBorderWidth: '2px',
+            padding: '6px', // 6px padding + 3px inner + 1px outer = 10px total
+            innerBorderWidth: '3px',
             innerBorderColor: 'purple',
-            outerBorderWidth: '7',
+            outerBorderWidth: '1px',
             outerBorderColor: 'purple',
             marginTop: '0px', // Top margin for vertical separation
             borderRadius: '25px'
@@ -297,7 +306,7 @@ export async function applyPaletteToElement(element) {
         }
     }
 
-    // Set data attributes for all color states
+    // Set data attributes for all modes of the element
     element.setAttribute('data-background-color', backgroundColor);
     element.setAttribute('data-foreground-color', foregroundColor);
     element.setAttribute('data-background-color-selected', selectedBackgroundColor);
@@ -306,7 +315,7 @@ export async function applyPaletteToElement(element) {
     element.setAttribute('data-foreground-color-hovered', hoveredForegroundColor);
     element.setAttribute('data-background-border-radius', borderRadius);
 
-    // Set border and padding attributes for all states
+    // Set border and padding attributes for normal, hovered, and selected modes
     element.setAttribute('data-normal-padding', borderSettings.normal.padding);
     element.setAttribute('data-normal-inner-border-width', borderSettings.normal.innerBorderWidth);
     element.setAttribute('data-normal-inner-border-color', borderSettings.normal.innerBorderColor);
@@ -372,6 +381,12 @@ export async function applyPaletteToElement(element) {
  */
 export function applyStateStyling(element, state) {
     if (!element) return;
+
+    // If trying to apply 'hovered' state to an already 'selected' element, do nothing.
+    // The 'selected' state should take precedence over the 'hovered' state.
+    if (state === 'hovered' && element.classList.contains('selected')) {
+        return;
+    }
     
     // Get the state-specific attributes
     const padding = element.getAttribute(`data-${state}-padding`);
@@ -450,8 +465,22 @@ export function applyStateStyling(element, state) {
         element.style.setProperty('filter', 'none', 'important');
     }
     
-    // Only log styling for biz-card-div elements that are clones (have "-clone" in their ID)
-    // COMMENTED OUT: Not needed for current rDiv spacing debug
+    // Debug logging for selected state border issues (commented out)
+    // if (state === 'selected') {
+    //     console.log(`[DEBUG] applyStateStyling: Applied ${state} state to ${element.id || element.className}`, {
+    //         padding,
+    //         innerBorderWidth,
+    //         innerBorderColor,
+    //         outerBorderWidth,
+    //         outerBorderColor,
+    //         borderStyle: element.style.border,
+    //         outlineStyle: element.style.outline,
+    //         borderRadius: element.style.borderRadius,
+    //         filter: element.style.filter,
+    //         backgroundColor: element.style.backgroundColor,
+    //         color: element.style.color
+    //     });
+    // }
     // if (element.classList.contains('biz-card-div') && element.id && element.id.includes('-clone')) {
     //     // Get computed styles to see what's actually being applied
     //     const computedStyle = window.getComputedStyle(element);

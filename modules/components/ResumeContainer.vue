@@ -310,9 +310,7 @@ body #resume-content-div .biz-resume-div.hovered,
 body #resume-content-div-wrapper .biz-resume-div.hovered,
 body #resume-content .biz-resume-div.hovered,
 .biz-resume-div.hovered {
-    background-color: var(--data-background-color-hovered, #e3f2fd) !important;
-    color: var(--data-foreground-color-hovered, #1976d2) !important;
-    /* Padding, border, and outline are handled by applyPaletteToElement function */
+    /* Background, color, padding, border, and outline are handled by applyStateStyling function */
 }
 
 /* Selected state: colors only - padding/border/outline handled by applyPaletteToElement */
@@ -326,9 +324,6 @@ html body #resume-content-div .biz-resume-div.selected,
 html body #resume-content-div-wrapper .biz-resume-div.selected,
 html body #resume-content .biz-resume-div.selected,
 .biz-resume-div.selected {
-    background-color: var(--data-background-color-selected, #f3e5f5) !important;
-    color: var(--data-foreground-color-selected, #7b1fa2) !important;
-    /* Padding, border, and outline are handled by applyPaletteToElement function */
-    border-radius: 25px !important;
+    /* Background, color, padding, border, and outline are handled by applyStateStyling function */
 }
 </style> 
