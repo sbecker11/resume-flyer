@@ -1,28 +1,28 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-14T05:54:56.560Z",
+  "lastUpdated": "2025-07-14T06:50:11.073Z",
   "layout": {
     "panelSizePercentage": 50,
     "orientation": "scene-right",
-    "scenePercentage": 78.63674147963424,
-    "resumePercentage": 21.36325852036575
+    "scenePercentage": 63.013698630136986,
+    "resumePercentage": 36.986301369863014
   },
   "resizeHandle": {
-    "steppingEnabled": true,
-    "stepCount": 5
+    "steppingEnabled": false,
+    "stepCount": 1
   },
   "focalPoint": {
     "mode": "locked"
   },
   "badgeToggle": {
-    "mode": "badges-only"
+    "mode": "no-badges"
   },
   "resume": {
     "sortRule": {
       "field": "startDate",
       "direction": "desc"
     },
-    "selectedJobNumber": 10
+    "selectedJobNumber": 9
   },
   "theme": {
     "colorPalette": "50_Dark_Grey_Monotone.json",

@@ -35,6 +35,7 @@ export function initialize() {
 
             // Position relative to scene container
             const sceneContainerForInit = document.getElementById('scene-container');
+            // Position at scene container center (viewport center)
             if (sceneContainerForInit) {
                 const sceneRect = sceneContainerForInit.getBoundingClientRect();
                 _bullsEyeElement.style.position = 'fixed';
@@ -146,7 +147,7 @@ export function recenterBullsEye() {
     _bullsEyeElement.style.removeProperty('left');
     _bullsEyeElement.style.removeProperty('transform');
 
-    // Re-position relative to scene container
+    // Position at scene container center (viewport center)
     const sceneContainerForRecenter = document.getElementById('scene-container');
     if (sceneContainerForRecenter) {
         const sceneRect = sceneContainerForRecenter.getBoundingClientRect();

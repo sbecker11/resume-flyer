@@ -468,6 +468,23 @@ export default {
   flex-direction: row;
 }
 
+/* Scene viewer label positioning based on layout */
+#app-container.scene-left #scene-viewer-label {
+  right: 20px;
+  left: auto;
+}
+
+#app-container.scene-left #scene-viewer-label .viewer-label {
+  right: 0;
+  left: auto;
+}
+
+/* Resume viewer label positioning based on layout */
+#app-container.scene-left #resume-viewer-label {
+  left: 20px;
+  right: auto;
+}
+
 /* Container ordering */
 .container-first {
   order: 1;

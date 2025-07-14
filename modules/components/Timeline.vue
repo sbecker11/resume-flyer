@@ -5,7 +5,7 @@
       
       <!-- Year Label -->
       <text
-        :x="alignment === 'left' ? 70 : '85%'"
+        :x="alignment === 'left' ? 70 : '92%'"
         :y="item.y - 28"
         class="year-label"
         :text-anchor="alignment === 'left' ? 'start' : 'end'"
@@ -15,9 +15,9 @@
 
       <!-- Continuous year line (from left edge to end of big year) -->
       <line
-        :x1="alignment === 'left' ? '10px' : '20%'"
+        :x1="alignment === 'left' ? '10px' : '81%'"
         :y1="item.y - 16.67 + 4"
-        :x2="alignment === 'left' ? '180px' : '95%'"
+        :x2="alignment === 'left' ? '180px' : '98%'"
         :y2="item.y - 16.67 + 4"
         class="year-tick-line"
       />
@@ -25,7 +25,7 @@
       <!-- Month Ticks -->
       <g v-for="month in 12" :key="`${item.year}-${month}`">
         <text
-          :x="alignment === 'left' ? 18 : '75%'"
+          :x="alignment === 'left' ? 18 : '98%'"
           :y="item.y - (month * 16.67)"
           class="month-label"
           :text-anchor="alignment === 'left' ? 'start' : 'end'"
@@ -34,10 +34,10 @@
           <tspan>{{ item.year }}-{{ month.toString().padStart(2, '0') }}</tspan>
         </text>
         <line
-          :x1="alignment === 'left' ? '10px' : '85%'"
-          :y1="item.y - (month * 16.67)"
-          :x2="alignment === 'left' ? '15px' : '90%'"
-          :y2="item.y - (month * 16.67)"
+          :x1="alignment === 'left' ? '10px' : '94%'"
+          :y1="alignment === 'left' ? item.y - (month * 16.67) + 4 : item.y - (month * 16.67) + 3"
+          :x2="alignment === 'left' ? '50px' : '99%'"
+          :y2="alignment === 'left' ? item.y - (month * 16.67) + 4 : item.y - (month * 16.67) + 3"
           class="month-tick-line"
         />
       </g>

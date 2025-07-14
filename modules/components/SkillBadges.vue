@@ -338,8 +338,11 @@ export default {
   border-radius: 1.25em 0 0 1.25em;
   border-right: none;
   text-align: right;
-  right: 0;
+  right: 0 !important;
+  left: auto !important;
   justify-content: flex-end;
+  width: auto !important;
+  min-width: fit-content;
 }
 
 /* Left-positioned badges (scene on right) */
