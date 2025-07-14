@@ -68,12 +68,12 @@ export default {
     const isConnectionLinesVisible = ref(badgeManager.isConnectionLinesVisible());
     
     // Debug logging for visibility and connections
-    console.log(`[NewConnectionLines] Initial state - connections: ${connections.value.length}, visible: ${isConnectionLinesVisible.value}`);
+    window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Initial state - connections: ${connections.value.length}, visible: ${isConnectionLinesVisible.value}`);
     
     // Computed property to track when container should be visible
     const shouldShowContainer = computed(() => {
       const result = connections.value.length > 0 && isConnectionLinesVisible.value;
-      console.log(`[NewConnectionLines] Container visibility check - connections: ${connections.value.length}, visible: ${isConnectionLinesVisible.value}, result: ${result}`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Container visibility check - connections: ${connections.value.length}, visible: ${isConnectionLinesVisible.value}, result: ${result}`);
       
       // Additional debug when we expect to see lines but don't
       if (isConnectionLinesVisible.value && connections.value.length === 0) {
@@ -86,16 +86,16 @@ export default {
     // Listen for badge mode changes
     const handleBadgeModeChange = (event) => {
       const shouldBeVisible = badgeManager.isConnectionLinesVisible();
-      console.log(`[NewConnectionLines] Badge mode changed to: ${event.detail.mode}, connection lines should be visible: ${shouldBeVisible}`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge mode changed to: ${event.detail.mode}, connection lines should be visible: ${shouldBeVisible}`);
       isConnectionLinesVisible.value = shouldBeVisible;
       
       if (shouldBeVisible) {
         // BadgeManager says lines should be visible, trigger update
-        console.log(`[NewConnectionLines] BadgeManager allows connection lines, triggering update`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] BadgeManager allows connection lines, triggering update`);
         debouncedUpdateConnections(200, 'badge-mode-change');
       } else {
         // BadgeManager says lines shouldn't be visible, let it clear them
-        console.log(`[NewConnectionLines] BadgeManager doesn't allow connection lines, clearing if needed`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] BadgeManager doesn't allow connection lines, clearing if needed`);
         badgeManager.clearConnectionsIfNeeded(connections);
       }
     };
@@ -159,7 +159,7 @@ export default {
       // CONSTRAINT: Never allow connection lines to extend beyond cDiv's left edge
       const badgeLeftEdge = Math.max(badgePos.x, cDivLeft);
       
-      console.log(`[DEBUG] Connection calculation for badge ${badgeIndex}:`, {
+      window.CONSOLE_LOG_IGNORE(`[DEBUG] Connection calculation for badge ${badgeIndex}:`, {
         badgePos,
         badgeCenterY,
         originalBadgeX: badgePos.x,
@@ -196,12 +196,12 @@ export default {
         // FIX: Skip vertical segment if curve endpoint would be below cDiv top edge
         if (badgeCenterY > terminationY) {
           // Curve endpoint is below cDiv top + radius, so create horizontal line only
-          console.log(`[DEBUG] Badge ${badgeIndex} ABOVE: Using horizontal line (badgeCenterY ${badgeCenterY} > terminationY ${terminationY})`);
+          window.CONSOLE_LOG_IGNORE(`[DEBUG] Badge ${badgeIndex} ABOVE: Using horizontal line (badgeCenterY ${badgeCenterY} > terminationY ${terminationY})`);
           const pointBEnd = { x: constrainedTerminationX, y: badgeCenterY };
           path = createHorizontalLine(pointA, pointBEnd);
         } else {
           // Normal L-curve terminating at cDiv top + corner radius
-          console.log(`[DEBUG] Badge ${badgeIndex} ABOVE: Using L-curve (badgeCenterY ${badgeCenterY} <= terminationY ${terminationY})`);
+          window.CONSOLE_LOG_IGNORE(`[DEBUG] Badge ${badgeIndex} ABOVE: Using L-curve (badgeCenterY ${badgeCenterY} <= terminationY ${terminationY})`);
           const pointC = { x: constrainedTerminationX, y: terminationY };
           path = createLShapedCurve(pointA, pointB, pointC, 30);
         }
@@ -228,12 +228,12 @@ export default {
         // FIX: Skip vertical segment if curve endpoint would be above cDiv bottom edge
         if (badgeCenterY < terminationY) {
           // Curve endpoint is above cDiv bottom - radius, so create horizontal line only
-          console.log(`[DEBUG] Badge ${badgeIndex} BELOW: Using horizontal line (badgeCenterY ${badgeCenterY} < terminationY ${terminationY})`);
+          window.CONSOLE_LOG_IGNORE(`[DEBUG] Badge ${badgeIndex} BELOW: Using horizontal line (badgeCenterY ${badgeCenterY} < terminationY ${terminationY})`);
           const pointBEnd = { x: constrainedTerminationX, y: badgeCenterY };
           path = createHorizontalLine(pointA, pointBEnd);
         } else {
           // Normal L-curve terminating at cDiv bottom - corner radius
-          console.log(`[DEBUG] Badge ${badgeIndex} BELOW: Using L-curve (badgeCenterY ${badgeCenterY} >= terminationY ${terminationY})`);
+          window.CONSOLE_LOG_IGNORE(`[DEBUG] Badge ${badgeIndex} BELOW: Using L-curve (badgeCenterY ${badgeCenterY} >= terminationY ${terminationY})`);
           const pointC = { x: constrainedTerminationX, y: terminationY };
           path = createLShapedCurve(pointA, pointB, pointC, 30);
         }
@@ -330,7 +330,7 @@ export default {
       
       // Debug logging disabled to reduce console spam
       // if (element.classList.contains('skill-badge')) {
-      //   console.log(`[DEBUG] Badge position calculation:`, { badgeId: element.id, finalPosition: position });
+      //   window.CONSOLE_LOG_IGNORE(`[DEBUG] Badge position calculation:`, { badgeId: element.id, finalPosition: position });
       // }
       
       return position;
@@ -345,7 +345,7 @@ export default {
         const handleBadgesPositioned = (event) => {
           if (eventReceived) return;
           eventReceived = true;
-          console.log('[NewConnectionLines] Received badges-positioned event, proceeding with connections');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Received badges-positioned event, proceeding with connections');
           window.removeEventListener('badges-positioned', handleBadgesPositioned);
           resolve(true);
         };
@@ -356,12 +356,12 @@ export default {
         setTimeout(() => {
           if (eventReceived) return;
           
-          console.log('[NewConnectionLines] No badges-positioned event received, falling back to stability checking');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No badges-positioned event received, falling back to stability checking');
           window.removeEventListener('badges-positioned', handleBadgesPositioned);
           
           const skillBadgesContainer = document.getElementById('skill-badges-container');
           if (!skillBadgesContainer) {
-            console.log('[NewConnectionLines] Skill badges container not found');
+            window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Skill badges container not found');
             resolve(false);
             return;
           }
@@ -396,7 +396,7 @@ export default {
               }
             });
             
-            console.log(`[NewConnectionLines] Badge stability check: ${validPositions}/${relevantBadges} badges positioned`);
+            window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge stability check: ${validPositions}/${relevantBadges} badges positioned`);
             
             // Check if we have enough valid badges and positions are stable
             if (validPositions > 0 && validPositions === relevantBadges) {
@@ -414,10 +414,10 @@ export default {
               
               if (positionsStable) {
                 stabilityCheckCount++;
-                console.log(`[NewConnectionLines] Badge positions stable (${stabilityCheckCount}/${requiredStabilityChecks})`);
+                window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge positions stable (${stabilityCheckCount}/${requiredStabilityChecks})`);
                 
                 if (stabilityCheckCount >= requiredStabilityChecks) {
-                  console.log('[NewConnectionLines] Badge positioning completed and stable via fallback!');
+                  window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning completed and stable via fallback!');
                   resolve(true);
                   return;
                 }
@@ -443,7 +443,7 @@ export default {
           if (eventReceived) return;
           eventReceived = true;
           window.removeEventListener('badges-positioned', handleBadgesPositioned);
-          console.log('[NewConnectionLines] Badge positioning timeout - proceeding anyway');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning timeout - proceeding anyway');
           resolve(false);
         }, 3000);
       });
@@ -462,7 +462,7 @@ export default {
         }
       });
       
-      console.log(`[NewConnectionLines] Badge validation: ${validBadges}/${totalBadges} badges have valid positioning`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge validation: ${validBadges}/${totalBadges} badges have valid positioning`);
       return validBadges > 0 && validBadges === totalBadges - document.querySelectorAll('.skill-badge[style*="brightness(0.5)"]').length;
     };
 
@@ -470,7 +470,7 @@ export default {
     const debouncedUpdateConnections = (delay = 100, reason = 'unknown') => {
       // Don't update if BadgeManager doesn't allow connection updates
       if (!badgeManager.allowConnectionUpdates()) {
-        console.log(`[NewConnectionLines] Skipping update (${reason}) - BadgeManager doesn't allow connection updates`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Skipping update (${reason}) - BadgeManager doesn't allow connection updates`);
         return;
       }
       
@@ -481,14 +481,14 @@ export default {
       
       // If already updating, just schedule another update
       if (isUpdatingConnections) {
-        console.log(`[NewConnectionLines] Delaying update (${reason}) - already updating`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Delaying update (${reason}) - already updating`);
         updateConnectionsTimeoutId = setTimeout(() => {
           debouncedUpdateConnections(delay, `delayed-${reason}`);
         }, delay);
         return;
       }
       
-      console.log(`[NewConnectionLines] Scheduling debounced update (${reason}) with ${delay}ms delay`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Scheduling debounced update (${reason}) with ${delay}ms delay`);
       updateConnectionsTimeoutId = setTimeout(() => {
         updateConnections(reason);
       }, delay);
@@ -500,7 +500,7 @@ export default {
         // Find the selected cDiv clone
         const selectedClone = document.querySelector('.biz-card-div.selected[id*="-clone"]');
         if (selectedClone) {
-          console.log(`[NewConnectionLines] Refreshing clone ${selectedClone.id}`);
+          window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Refreshing clone ${selectedClone.id}`);
           
           // Re-apply palette to ensure visual consistency
           await applyPaletteToElement(selectedClone);
@@ -508,9 +508,9 @@ export default {
           // Re-apply selected state styling
           selectedClone.classList.add('selected');
           
-          console.log(`[NewConnectionLines] Clone ${selectedClone.id} refreshed successfully`);
+          window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Clone ${selectedClone.id} refreshed successfully`);
         } else {
-          console.log('[NewConnectionLines] No selected clone found to refresh');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No selected clone found to refresh');
         }
       } catch (error) {
         console.error('[NewConnectionLines] Error refreshing selected clone:', error);
@@ -520,18 +520,18 @@ export default {
     // Update connections for any selected cDiv
     const updateConnections = async (reason = 'unknown') => {
       if (isUpdatingConnections) {
-        console.log(`[NewConnectionLines] Skipping update (${reason}) - already in progress`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Skipping update (${reason}) - already in progress`);
         return;
       }
       
       // Double-check that BadgeManager allows connection updates
       if (!badgeManager.allowConnectionUpdates()) {
-        console.log(`[NewConnectionLines] Aborting update (${reason}) - BadgeManager doesn't allow connection updates`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Aborting update (${reason}) - BadgeManager doesn't allow connection updates`);
         return;
       }
       
       isUpdatingConnections = true;
-      console.log(`[NewConnectionLines] Starting connection update (${reason})`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Starting connection update (${reason})`);
       
       try {
       // Clear connections array - this is necessary to rebuild them
@@ -545,26 +545,26 @@ export default {
       }
       
       if (!selectedCDiv) {
-        console.log('[NewConnectionLines] No selected cDiv found - clearing connections');
+        window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No selected cDiv found - clearing connections');
         connections.value = [];
         return;
       }
       
-      // console.log('[NewConnectionLines] Waiting for badge positioning to complete...');
+      // window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Waiting for badge positioning to complete...');
       const badgesReady = await waitForBadgePositioning();
       
       if (!badgesReady) {
-        // console.log('[NewConnectionLines] Badge positioning not optimal, but proceeding');
+        // window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning not optimal, but proceeding');
       }
       
       const cDivPos = getElementPosition(selectedCDiv);
       if (!cDivPos) {
-        console.log('[NewConnectionLines] Could not get cDiv position');
+        window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Could not get cDiv position');
         return;
       }
       
       // Debug cDiv position calculation
-      console.log('[NewConnectionLines] cDiv position details:', {
+      window.CONSOLE_LOG_IGNORE('[NewConnectionLines] cDiv position details:', {
         selectedCDivId: selectedCDiv.id,
         selectedCDivClasses: selectedCDiv.className,
         cDivPos,
@@ -603,7 +603,7 @@ export default {
       }
       
       // Log validated cDiv bounds
-      console.log('[NewConnectionLines] Validated cDiv bounds:', {
+      window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Validated cDiv bounds:', {
         left: cDivLeft, top: cDivTop, right: cDivRight, bottom: cDivBottom,
         width: cDivWidth, height: cDivHeight
       });
@@ -615,13 +615,13 @@ export default {
       skillBadges.forEach((badge, index) => {
         const badgePos = getElementPosition(badge);
         if (!badgePos) {
-          // console.log(`[NewConnectionLines] Could not get position for badge ${index}`);
+          // window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Could not get position for badge ${index}`);
           return;
         }
         
         // Validate badge has reasonable coordinates
         if (badgePos.x <= 0 || badgePos.y <= 0) {
-          // console.log(`[NewConnectionLines] Badge ${index} has invalid coordinates:`, badgePos);
+          // window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge ${index} has invalid coordinates:`, badgePos);
           return;
         }
         
@@ -661,7 +661,7 @@ export default {
         }
         
         // Debug individual badge categorization if needed
-        // console.log(`[NewConnectionLines] Badge "${badge.textContent.trim()}" CenterY=${badgeCenterY.toFixed(1)} cDivTop=${cDivTop.toFixed(1)} cDivBottom=${cDivBottom.toFixed(1)} -> ${category}`);
+        // window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge "${badge.textContent.trim()}" CenterY=${badgeCenterY.toFixed(1)} cDivTop=${cDivTop.toFixed(1)} cDivBottom=${cDivBottom.toFixed(1)} -> ${category}`);
       });
       
       // Sort case1 and case2 badges by Y position (lowest Y first, highest Y last)
@@ -724,8 +724,8 @@ export default {
       connections.value = newConnections;
       
       // Summary comparison for debugging
-      console.log(`[NewConnectionLines] cDiv boundaries: top=${cDivPos.y.toFixed(1)} bottom=${(cDivPos.y + cDivPos.height).toFixed(1)} height=${cDivPos.height.toFixed(1)}`);
-      console.log(`[NewConnectionLines] Badge centers: ${relevantBadges.map(b => (b.badgePos.y + b.badgePos.height/2).toFixed(1)).join(', ')}`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] cDiv boundaries: top=${cDivPos.y.toFixed(1)} bottom=${(cDivPos.y + cDivPos.height).toFixed(1)} height=${cDivPos.height.toFixed(1)}`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge centers: ${relevantBadges.map(b => (b.badgePos.y + b.badgePos.height/2).toFixed(1)).join(', ')}`);
       
       // Dispatch event with actual type counts for statistics
       const currentSelectedCDiv = document.querySelector('.biz-card-div.selected');
@@ -740,7 +740,7 @@ export default {
             totalConnections: newConnections.length
           }
         }));
-        console.log(`[NewConnectionLines] Final counts: ${actualAboveCount} above, ${actualBetweenCount} between, ${actualBelowCount} below (total: ${newConnections.length})`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Final counts: ${actualAboveCount} above, ${actualBetweenCount} between, ${actualBelowCount} below (total: ${newConnections.length})`);
       }
       
       // Refresh the clone of the selected cDiv after rendering connector lines
@@ -750,7 +750,7 @@ export default {
         console.error(`[NewConnectionLines] Error during connection update (${reason}):`, error);
       } finally {
         isUpdatingConnections = false;
-        console.log(`[NewConnectionLines] Completed connection update (${reason})`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Completed connection update (${reason})`);
       }
     };
 
@@ -761,7 +761,7 @@ export default {
     };
 
     const handleCardDeselect = () => {
-      console.log('[NewConnectionLines] Card deselected - clearing connections');
+      window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Card deselected - clearing connections');
       // Always clear connections when no card is selected
       connections.value = [];
       
@@ -819,7 +819,7 @@ export default {
 
     // Define event handlers outside onMounted for proper cleanup
     const handleSkillBadgesReady = () => {
-      console.log('[NewConnectionLines] Skill badges initialization ready, checking for selected cDiv');
+      window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Skill badges initialization ready, checking for selected cDiv');
       const selectedCDiv = document.querySelector('.biz-card-div.selected');
       if (selectedCDiv) {
         debouncedUpdateConnections(150, 'skill-badges-ready');
@@ -827,20 +827,20 @@ export default {
     };
     
     const handleCloneCreated = () => {
-      console.log('[NewConnectionLines] Clone created');
+      window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Clone created');
       debouncedUpdateConnections(100, 'clone-created');
     };
     
     const handleBadgesPositioned = (event) => {
       const jobNumber = event.detail?.jobNumber;
-      console.log(`[NewConnectionLines] Badges positioned event received for job ${jobNumber}`);
+      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badges positioned event received for job ${jobNumber}`);
       
       // Check if there's a selected cDiv and update connections
       const selectedCDiv = document.querySelector('.biz-card-div.selected');
       if (selectedCDiv) {
         const selectedJobNumber = parseInt(selectedCDiv.getAttribute('data-job-number'));
         if (jobNumber === selectedJobNumber) {
-          console.log('[NewConnectionLines] Scheduling update for matching job number');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Scheduling update for matching job number');
           debouncedUpdateConnections(75, `badges-positioned-${jobNumber}`);
         }
       }
@@ -850,8 +850,8 @@ export default {
       // Force refresh visibility state after mount to ensure proper initialization
       setTimeout(() => {
         isConnectionLinesVisible.value = badgeManager.isConnectionLinesVisible();
-        console.log(`[NewConnectionLines] Force refreshed visibility state: ${isConnectionLinesVisible.value}`);
-        console.log(`[NewConnectionLines] Badge mode: ${badgeManager.getMode()}`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Force refreshed visibility state: ${isConnectionLinesVisible.value}`);
+        window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge mode: ${badgeManager.getMode()}`);
       }, 50);
       
       window.addEventListener('card-select', handleCardSelect);
@@ -873,15 +873,15 @@ export default {
       setTimeout(() => {
         const selectedCDiv = document.querySelector('.biz-card-div.selected');
         if (selectedCDiv) {
-          console.log('[NewConnectionLines] Found selected cDiv on mount');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Found selected cDiv on mount');
           debouncedUpdateConnections(200, 'mount-initial');
         } else {
-          console.log('[NewConnectionLines] No selected cDiv found on mount');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No selected cDiv found on mount');
           // Check if there should be a selected job from app state
           const jobNumber = 3; // From app_state.json selectedJobNumber
           const jobCard = document.querySelector(`[data-job-number="${jobNumber}"]`);
           if (jobCard && !jobCard.classList.contains('selected')) {
-            console.log(`[NewConnectionLines] Found job card ${jobNumber} but not selected, attempting selection`);
+            window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Found job card ${jobNumber} but not selected, attempting selection`);
             jobCard.click();
           }
         }
@@ -891,7 +891,7 @@ export default {
       setTimeout(() => {
         const selectedCDiv = document.querySelector('.biz-card-div.selected');
         if (selectedCDiv && connections.value.length === 0) {
-          console.log('[NewConnectionLines] Re-checking selected cDiv after longer delay');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Re-checking selected cDiv after longer delay');
           debouncedUpdateConnections(300, 'mount-delayed');
         }
       }, 500);
@@ -900,7 +900,7 @@ export default {
       setTimeout(() => {
         const selectedCDiv = document.querySelector('.biz-card-div.selected');
         if (selectedCDiv && connections.value.length === 0) {
-          console.log('[NewConnectionLines] Final check after page load');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Final check after page load');
           debouncedUpdateConnections(400, 'mount-final');
         }
       }, 1000);
@@ -909,10 +909,10 @@ export default {
       setTimeout(() => {
         const selectedCDiv = document.querySelector('.biz-card-div.selected');
         if (selectedCDiv && connections.value.length === 0) {
-          console.log('[NewConnectionLines] Hard page refresh safety net - final attempt');
+          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Hard page refresh safety net - final attempt');
           // Force badge validation and retry
           const skillBadges = document.querySelectorAll('.skill-badge:not([style*="brightness(0.5)"])');
-          console.log(`[NewConnectionLines] Found ${skillBadges.length} non-dimmed badges for final attempt`);
+          window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Found ${skillBadges.length} non-dimmed badges for final attempt`);
           if (skillBadges.length > 0) {
             debouncedUpdateConnections(500, 'mount-safety-net');
           }
@@ -921,18 +921,18 @@ export default {
       
       // Add debug helper to window for troubleshooting
       window.debugConnectionLines = () => {
-        console.log('[NewConnectionLines] Debug status:');
-        console.log('- Badge mode:', badgeManager.getMode());
-        console.log('- Connection lines visible:', badgeManager.isConnectionLinesVisible());
-        console.log('- Component visibility state:', isConnectionLinesVisible.value);
-        console.log('- Should show container:', shouldShowContainer.value);
-        console.log('- Connections count:', connections.value.length);
-        console.log('- Selected cDiv:', document.querySelector('.biz-card-div.selected'));
-        console.log('- Skill badges count:', document.querySelectorAll('.skill-badge').length);
-        console.log('- Non-dimmed badges:', document.querySelectorAll('.skill-badge:not([style*="brightness(0.5)"])').length);
+        window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Debug status:');
+        window.CONSOLE_LOG_IGNORE('- Badge mode:', badgeManager.getMode());
+        window.CONSOLE_LOG_IGNORE('- Connection lines visible:', badgeManager.isConnectionLinesVisible());
+        window.CONSOLE_LOG_IGNORE('- Component visibility state:', isConnectionLinesVisible.value);
+        window.CONSOLE_LOG_IGNORE('- Should show container:', shouldShowContainer.value);
+        window.CONSOLE_LOG_IGNORE('- Connections count:', connections.value.length);
+        window.CONSOLE_LOG_IGNORE('- Selected cDiv:', document.querySelector('.biz-card-div.selected'));
+        window.CONSOLE_LOG_IGNORE('- Skill badges count:', document.querySelectorAll('.skill-badge').length);
+        window.CONSOLE_LOG_IGNORE('- Non-dimmed badges:', document.querySelectorAll('.skill-badge:not([style*="brightness(0.5)"])').length);
         
         // Force update
-        console.log('Forcing connection update...');
+        window.CONSOLE_LOG_IGNORE('Forcing connection update...');
         debouncedUpdateConnections(100, 'debug-manual');
       };
     });

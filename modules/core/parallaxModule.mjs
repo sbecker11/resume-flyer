@@ -103,7 +103,7 @@ export function isInitialized() {
  */
 export function applyParallaxToScenePoint(sceneX, sceneY, sceneZ = 0) {
     if ( !isInitialized() ) {
-        console.log('parallax not initialized, skipping applyParallaxToScenePoint');
+        window.CONSOLE_LOG_IGNORE('parallax not initialized, skipping applyParallaxToScenePoint');
         return null;
     }
     if (sceneZ < 0) {

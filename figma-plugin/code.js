@@ -73,7 +73,7 @@ async function importTypography(typography) {
       }
       
     } catch (error) {
-      console.log(`Could not create text style ${styleConfig.name}:`, error);
+      window.CONSOLE_LOG_IGNORE(`Could not create text style ${styleConfig.name}:`, error);
     }
   }
 }

@@ -28,7 +28,7 @@ export function useColorPalette() {
             
             // Now it's safe to access AppState.
             currentPaletteFilename.value = AppState.colorPalette;
-            console.log(`[ColorPalette] Initialized currentPaletteFilename from AppState.colorPalette: ${AppState.colorPalette}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Initialized currentPaletteFilename from AppState.colorPalette: ${AppState.colorPalette}`);
 
             const response = await fetch(MANIFEST_ENDPOINT);
             if (!response.ok) throw new Error('Failed to fetch palette manifest');
@@ -76,19 +76,19 @@ export function useColorPalette() {
     function setCurrentPalette(filename) {
         if (filename && filenameToNameMap.value[filename]) {
             const previousFilename = currentPaletteFilename.value;
-            console.log(`[ColorPalette] setCurrentPalette called: ${previousFilename} → ${filename}`);
-            console.log(`[ColorPalette] AppState.colorPalette: ${AppState.colorPalette}`);
-            console.log(`[ColorPalette] currentPaletteFilename.value: ${currentPaletteFilename.value}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] setCurrentPalette called: ${previousFilename} → ${filename}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] AppState.colorPalette: ${AppState.colorPalette}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] currentPaletteFilename.value: ${currentPaletteFilename.value}`);
             
             // Check if AppState and reactive state are in sync
             if (AppState.colorPalette !== currentPaletteFilename.value) {
                 console.warn(`[ColorPalette] State mismatch detected! AppState: ${AppState.colorPalette}, reactive: ${currentPaletteFilename.value}`);
-                console.log(`[ColorPalette] User selected ${filename}, proceeding with user choice`);
+                window.CONSOLE_LOG_IGNORE(`[ColorPalette] User selected ${filename}, proceeding with user choice`);
             }
             
             // Only proceed if actually changing to a different palette from what user selected
             if (currentPaletteFilename.value === filename && AppState.colorPalette === filename) {
-                console.log(`[ColorPalette] No change needed - already using ${filename}`);
+                window.CONSOLE_LOG_IGNORE(`[ColorPalette] No change needed - already using ${filename}`);
                 return;
             }
             
@@ -106,10 +106,10 @@ export function useColorPalette() {
                 }
             }));
             
-            console.log(`[ColorPalette] Palette changed from ${previousFilename} to ${filename} (${paletteName}), event dispatched`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Palette changed from ${previousFilename} to ${filename} (${paletteName}), event dispatched`);
         } else {
             console.warn(`[ColorPalette] setCurrentPalette called with invalid filename: ${filename}`);
-            console.log(`[ColorPalette] Available palettes:`, Object.keys(filenameToNameMap.value));
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Available palettes:`, Object.keys(filenameToNameMap.value));
         }
     }
 
@@ -249,7 +249,7 @@ export async function applyPaletteToElement(element) {
     const hoveredForegroundColor = colorUtils.getContrastingColor(hoveredBackgroundColor);
 
     // Debug: Log the color calculations (commented out)
-    // console.log(`[DEBUG] Color calculations for element ${element.id || element.className}:`, {
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] Color calculations for element ${element.id || element.className}:`, {
     //     base: backgroundColor,
     //     selected: selectedBackgroundColor,
     //     hovered: hoveredBackgroundColor,
@@ -413,43 +413,43 @@ watch(currentPaletteFilename, async (newFilename) => {
 
     // Update elements with data-color-index
     const elements = document.querySelectorAll('[data-color-index]');
-    console.log(`[ColorPalette] Found ${elements.length} elements with data-color-index to update`);
+    window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${elements.length} elements with data-color-index to update`);
     
     for (const element of elements) {
         const paletteColorIndexAttr = element.getAttribute("data-color-index");
         if (paletteColorIndexAttr === null || isNaN(parseInt(paletteColorIndexAttr, 10))) continue;
         
-        console.log(`[ColorPalette] Updating element ${element.id || element.className} with color index ${paletteColorIndexAttr}`);
+        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating element ${element.id || element.className} with color index ${paletteColorIndexAttr}`);
         
         // Use the applyPaletteToElement function to set all data attributes
         await applyPaletteToElement(element);
         
         // Check if colors were actually applied
         const bgColor = element.getAttribute('data-background-color');
-        console.log(`[ColorPalette] Element ${element.id || element.className} background color set to: ${bgColor}`);
+        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Element ${element.id || element.className} background color set to: ${bgColor}`);
     }
     
     // Apply palette to ALL rDivs and cDivs (including clones) regardless of data-color-index
     const allRDivs = document.querySelectorAll('.biz-resume-div');
-    console.log(`[ColorPalette] Found ${allRDivs.length} rDivs to check for color updates`);
+    window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allRDivs.length} rDivs to check for color updates`);
     for (const rDiv of allRDivs) {
         if (rDiv.hasAttribute('data-color-index')) {
-            console.log(`[ColorPalette] Updating rDiv ${rDiv.id} with color index ${rDiv.getAttribute('data-color-index')}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating rDiv ${rDiv.id} with color index ${rDiv.getAttribute('data-color-index')}`);
             await applyPaletteToElement(rDiv);
         }
     }
     
     const allCDivs = document.querySelectorAll('.biz-card-div');
-    console.log(`[ColorPalette] Found ${allCDivs.length} cDivs to check for color updates`);
+    window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allCDivs.length} cDivs to check for color updates`);
     for (const cDiv of allCDivs) {
         if (cDiv.hasAttribute('data-color-index')) {
-            console.log(`[ColorPalette] Updating cDiv ${cDiv.id} with color index ${cDiv.getAttribute('data-color-index')}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating cDiv ${cDiv.id} with color index ${cDiv.getAttribute('data-color-index')}`);
             await applyPaletteToElement(cDiv);
             
             // Check current styling state
             const computedStyle = window.getComputedStyle(cDiv);
             const bgColor = cDiv.getAttribute('data-background-color');
-            console.log(`[ColorPalette] cDiv ${cDiv.id} - data-background-color: ${bgColor}, computed background-color: ${computedStyle.backgroundColor}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] cDiv ${cDiv.id} - data-background-color: ${bgColor}, computed background-color: ${computedStyle.backgroundColor}`);
         }
     }
 
@@ -461,7 +461,7 @@ watch(currentPaletteFilename, async (newFilename) => {
 watch(colorPalettes, () => {
     // Trigger palette application when palettes are loaded and we have a current filename
     if (currentPaletteFilename.value) {
-        console.log(`[ColorPalette] Palettes loaded, re-applying current palette: ${currentPaletteFilename.value}`);
+        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Palettes loaded, re-applying current palette: ${currentPaletteFilename.value}`);
         // Re-trigger the main watcher by setting the filename again
         const filename = currentPaletteFilename.value;
         currentPaletteFilename.value = null;

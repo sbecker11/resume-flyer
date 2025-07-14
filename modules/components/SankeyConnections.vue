@@ -70,7 +70,7 @@ export default {
     }));
 
     const buildSankeyGraph = () => {
-      console.log('[Sankey] Building global Sankey graph from jobs data.');
+      window.CONSOLE_LOG_IGNORE('[Sankey] Building global Sankey graph from jobs data.');
 
       const nodes = [];
       const graphLinks = [];
@@ -163,7 +163,7 @@ export default {
         strokeWidth: Math.max(1, link.width),
       }));
 
-      console.log(`[Sankey] Generated ${sankeyNodes.value.length} nodes and ${links.value.length} links.`);
+      window.CONSOLE_LOG_IGNORE(`[Sankey] Generated ${sankeyNodes.value.length} nodes and ${links.value.length} links.`);
     };
 
     onMounted(() => {

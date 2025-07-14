@@ -5,18 +5,19 @@
       
       <!-- Year Label -->
       <text
-        :x="alignment === 'left' ? 70 : '95%'"
+        :x="alignment === 'left' ? 70 : '85%'"
         :y="item.y - 28"
         class="year-label"
+        :text-anchor="alignment === 'left' ? 'start' : 'end'"
       >
         {{ item.year }}
       </text>
 
       <!-- Continuous year line (from left edge to end of big year) -->
       <line
-        :x1="alignment === 'left' ? '10px' : 'calc(100% - 10px)'"
+        :x1="alignment === 'left' ? '10px' : '20%'"
         :y1="item.y - 16.67 + 4"
-        :x2="alignment === 'left' ? '180px' : 'calc(100% - 180px)'"
+        :x2="alignment === 'left' ? '180px' : '95%'"
         :y2="item.y - 16.67 + 4"
         class="year-tick-line"
       />
@@ -24,17 +25,18 @@
       <!-- Month Ticks -->
       <g v-for="month in 12" :key="`${item.year}-${month}`">
         <text
-          :x="alignment === 'left' ? 18 : '85%'"
+          :x="alignment === 'left' ? 18 : '75%'"
           :y="item.y - (month * 16.67)"
           class="month-label"
+          :text-anchor="alignment === 'left' ? 'start' : 'end'"
           style="list-style: none !important; list-style-type: none !important;"
         >
           <tspan>{{ item.year }}-{{ month.toString().padStart(2, '0') }}</tspan>
         </text>
         <line
-          :x1="alignment === 'left' ? '10px' : 'calc(100% - 10px)'"
+          :x1="alignment === 'left' ? '10px' : '85%'"
           :y1="item.y - (month * 16.67)"
-          :x2="alignment === 'left' ? '15px' : 'calc(100% - 15px)'"
+          :x2="alignment === 'left' ? '15px' : '90%'"
           :y2="item.y - (month * 16.67)"
           class="month-tick-line"
         />
@@ -45,6 +47,7 @@
 
 <script setup>
 import { useTimeline } from '@/modules/composables/useTimeline.mjs';
+import { watchEffect } from 'vue';
 
 const props = defineProps({
   alignment: {
@@ -54,6 +57,12 @@ const props = defineProps({
 });
 
 const { timelineHeight, years } = useTimeline();
+
+// Debug the alignment prop - reactive to changes
+watchEffect(() => {
+  console.log('Timeline alignment prop changed to:', props.alignment);
+  console.log('Timeline should position years at:', props.alignment === 'left' ? '70px' : 'calc(100% - 150px)');
+});
 </script>
 
 <style scoped>

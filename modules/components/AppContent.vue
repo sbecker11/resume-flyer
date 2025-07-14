@@ -1,32 +1,45 @@
 <template>
-  <div id="app-container">
-    <div id="scene-container" :style="sceneContainerStyle" @click="handleSceneContainerClick">
+  <div id="app-container" :class="appContainerClass">
+    <!-- Scene Container -->
+    <div 
+      id="scene-container" 
+      :style="sceneContainerStyle" 
+      @click="handleSceneContainerClick"
+      :class="{ 'container-first': firstContainer === 'scene-container', 'container-second': secondContainer === 'scene-container' }"
+    >
       <div id="scene-content">
         <div id="scene-plane-top-gradient"></div>
         <div id="scene-plane-btm-gradient"></div>
         <div id="scene-plane">
-          <Timeline alignment="left" />
-          <SankeyConnections />
+          <Timeline :alignment="timelineAlignment" />
+          <!-- <SankeyConnections /> -->
           <SkillBadges />
         </div>
-        <div id="biz-details-div"></div>
       </div>
-      <SceneContainerFooter />
+      <div id="scene-viewer-label">
+        <span class="viewer-label">Scene Viewer ({{ Math.round(scenePercentage) }}%)</span>
+      </div>
     </div>
-    <div id="resume-container">
-      <div id="resume-container-left">
-        <ResizeHandle />
-      </div>
-      <div id="resume-container-right">
+    
+    <!-- Resume Container -->
+    <div 
+      id="resume-container"
+      :class="{ 'container-first': firstContainer === 'resume-container', 'container-second': secondContainer === 'resume-container' }"
+    >
+      <!-- ResizeHandle on left side when scene is on left -->
+      <ResizeHandle v-if="appContainerClass === 'scene-left'" />
+      
+      <div class="resume-content">
         <div class="resume-wrapper">
           <ResumeContainer />
-        </div>
-        <div id="resume-content-footer">
-          <div>
-            <span class="viewer-label">({{ resumePercentage }}%) Resume Viewer</span>
+          <div id="resume-viewer-label">
+            <span class="viewer-label">Resume Viewer ({{ resumePercentage }}%)</span>
           </div>
         </div>
       </div>
+      
+      <!-- ResizeHandle on right side when scene is on right -->
+      <ResizeHandle v-if="appContainerClass === 'scene-right'" />
     </div>
 
     <div id="aim-point"></div>
@@ -47,6 +60,7 @@ import { useBullsEye } from '@/modules/composables/useBullsEye.mjs';
 import { useAimPoint } from '@/modules/composables/useAimPoint.mjs';
 import { useFocalPoint } from '@/modules/composables/useFocalPoint.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
+import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useTimeline, initialize as initializeTimeline } from '@/modules/composables/useTimeline.mjs';
 
 
@@ -69,7 +83,6 @@ import { badgeManager } from '@/modules/core/badgeManager.mjs';
 import Timeline from '@/modules/components/Timeline.vue';
 import ResizeHandle from '@/modules/components/ResizeHandle.vue';
 import ResumeContainer from '@/modules/components/ResumeContainer.vue';
-import SceneContainerFooter from '@/modules/components/SceneContainerFooter.vue';
 import SkillBadges from '@/modules/components/SkillBadges.vue';
 import SankeyConnections from '@/modules/components/SankeyConnections.vue';
 import BadgeToggle from '@/modules/components/BadgeToggle.vue';
@@ -81,7 +94,6 @@ export default {
     Timeline,
     ResizeHandle,
     ResumeContainer,
-    SceneContainerFooter,
     SkillBadges,
     SankeyConnections,
     BadgeToggle,
@@ -105,6 +117,9 @@ export default {
     const focalPoint = useFocalPoint();
     const resizeHandle = useResizeHandle();
     useTimeline();
+    
+    // Declare layoutToggle - will be initialized by InitializationManager
+    let layoutToggle = null;
     
     // Initialize color palette composable immediately (before any await statements)
     const colorPalette = useColorPalette();
@@ -140,6 +155,18 @@ export default {
           ['StateManager'], // Depends on StateManager
           { priority: 'high' }
         );
+
+        // Register LayoutToggle with its dependencies on StateManager
+        initializationManager.register(
+          'LayoutToggle',
+          () => {
+            window.CONSOLE_LOG_IGNORE('[INIT] Initializing LayoutToggle');
+            layoutToggle = useLayoutToggle(); // Initialize and store the composable
+            return layoutToggle;
+          },
+          ['StateManager'], // Depends on StateManager being ready first
+          { priority: 'high' }
+        );
         
         // Register all controllers with their dependencies
         cardsController.registerForInitialization();
@@ -151,7 +178,7 @@ export default {
           'Viewport',
           async () => {
             window.CONSOLE_LOG_IGNORE('[INIT] Initializing Viewport systems');
-            await initializationManager.waitForComponents(['CardsController', 'ResumeListController']);
+            initializationManager.waitForComponents(['CardsController', 'ResumeListController']);
             viewport.initialize();
             viewPort.initialize();
           },
@@ -163,12 +190,12 @@ export default {
           'Layout',
           async () => {
             window.CONSOLE_LOG_IGNORE('[INIT] Initializing Layout systems');
-            await initializationManager.waitForComponent('Viewport');
+            initializationManager.waitForComponents(['Viewport', 'LayoutToggle']);
             resizeHandle.initializeResizeHandleState(viewport, bullsEye);
             const { applyInitialLayout } = resizeHandle;
             applyInitialLayout();
           },
-          ['Viewport'],
+          ['Viewport', 'LayoutToggle'],
           { priority: 'medium' }
         );
         
@@ -176,7 +203,7 @@ export default {
           'ReactiveSystems',
           async () => {
             window.CONSOLE_LOG_IGNORE('[INIT] Initializing Reactive systems');
-            await initializationManager.waitForComponent('Viewport');
+            initializationManager.waitForComponent('Viewport');
             bullsEye.initialize();
             aimPoint.initialize();
             focalPoint.initialize();
@@ -189,7 +216,7 @@ export default {
           'SceneSystems',
           async () => {
             window.CONSOLE_LOG_IGNORE('[INIT] Initializing Scene systems');
-            await initializationManager.waitForComponents(['Viewport', 'Layout']);
+            initializationManager.waitForComponents(['Viewport', 'Layout']);
             sceneContainer.initialize();
             autoScroll.initialize();
             scenePlane.initialize();
@@ -205,8 +232,8 @@ export default {
           async () => {
             window.CONSOLE_LOG_IGNORE('[INIT] Initializing SkillBadges');
             // Wait for both CardsController and color palette to be ready
-            await initializationManager.waitForComponents(['CardsController']);
-            await colorPalette.readyPromise; // Wait for color palette to load
+            initializationManager.waitForComponents(['CardsController']);
+            colorPalette.readyPromise; // Wait for color palette to load
             
             // Dispatch event to trigger SkillBadges initialization
             window.dispatchEvent(new CustomEvent('skill-badges-init-ready'));
@@ -220,7 +247,7 @@ export default {
           'ConnectionLines',
           async () => {
             window.CONSOLE_LOG_IGNORE('[INIT] Initializing ConnectionLines');
-            await initializationManager.waitForComponents(['CardsController', 'SkillBadges']);
+            initializationManager.waitForComponents(['CardsController', 'SkillBadges']);
             
             // Dispatch event to trigger ConnectionLines initialization
             window.dispatchEvent(new CustomEvent('connection-lines-init-ready'));
@@ -230,9 +257,10 @@ export default {
         );
         
         // Wait for all components to be ready
-        await initializationManager.waitForComponents([
+        initializationManager.waitForComponents([
           'StateManager',
           'BadgeManager',
+          'LayoutToggle',
           'Timeline',
           'CardsController', 
           'ResumeItemsController', 
@@ -253,7 +281,7 @@ export default {
         
         // Add a listener to handle rDiv height changes when badge stats are toggled
         badgeManager.addEventListener('badgeModeChanged', () => {
-          console.log('[AppContent] Badge mode changed, triggering resume list height recalculation.');
+          window.CONSOLE_LOG_IGNORE('[AppContent] Badge mode changed, triggering resume list height recalculation.');
           if (window.resumeListController && window.resumeListController.infiniteScroller) {
             // Use the existing handleResize logic as it's robust.
             // It debounces, recalculates all heights, and restores the scroll position.
@@ -351,6 +379,41 @@ export default {
       return 100 - Math.round(resizeHandle.percentage.value);
     });
 
+    // Computed properties for dynamic layout ordering
+    const firstContainer = computed(() => {
+      return layoutToggle?.isSceneLeft?.value ? 'scene-container' : 'resume-container';
+    });
+
+    const secondContainer = computed(() => {
+      return layoutToggle?.isSceneLeft?.value ? 'resume-container' : 'scene-container';
+    });
+
+    const appContainerClass = computed(() => {
+      const layout = useLayoutToggle();
+      return layout.orientation.value || 'scene-left';
+    });
+
+    const resumeViewerLabel = computed(() => {
+      return 'Resume Viewer'; // Always show Resume Viewer for resume container
+    });
+
+    // Get orientation from layout toggle
+    const { orientation } = useLayoutToggle();
+    
+    const timelineAlignment = computed(() => {
+      // Timeline always against window inner edge:
+      // - scene-left: left window edge, so alignment = 'left' 
+      // - scene-right: right window edge, so alignment = 'right'
+      // Timeline follows scene position:
+      // - scene-left: timeline on left
+      // - scene-right: timeline on right
+      const alignment = orientation.value === 'scene-left' ? 'left' : 'right';
+      console.log(`ACTUAL orientation.value: "${orientation.value}"`);
+      console.log(`layout: ${orientation.value}`);
+      console.log(`timeline: move to ${alignment}`);
+      return alignment;
+    });
+
     const handleSceneContainerClick = (event) => {
       // Only clear selection if clicking directly on the scene container or its immediate children
       // Don't clear if clicking on interactive elements like cards
@@ -359,7 +422,6 @@ export default {
           event.target.id === 'scene-plane' ||
           event.target.id === 'scene-plane-top-gradient' ||
           event.target.id === 'scene-plane-btm-gradient' ||
-          event.target.id === 'biz-details-div' ||
           event.target.id === 'scene-content-footer' ||
           event.target.closest('#scene-content-footer')) {
         selectionManager.clearSelection('AppContent.sceneContainerClick');
@@ -376,7 +438,13 @@ export default {
       handleSceneContainerClick,
       totalWidth,
       sceneWidth,
-      resumePercentage
+      resumePercentage,
+      firstContainer,
+      secondContainer,
+      appContainerClass,
+      resumeViewerLabel,
+      timelineAlignment,
+      scenePercentage: resizeHandle.percentage
     };
   }
 };
@@ -389,6 +457,24 @@ export default {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+}
+
+/* Layout orientation classes */
+#app-container.scene-left {
+  flex-direction: row-reverse;
+}
+
+#app-container.scene-right {
+  flex-direction: row;
+}
+
+/* Container ordering */
+.container-first {
+  order: 1;
+}
+
+.container-second {
+  order: 2;
 }
 
 #scene-container {
@@ -425,46 +511,65 @@ export default {
 }
 
 #resume-container {
-  display: flex;
   height: 100%;
   flex-grow: 1; /* Take up remaining space after scene container */
   z-index: 10;
+  display: flex;
+  flex-direction: row; /* Horizontal layout for handle + content */
 }
 
-.resume-wrapper {
-  flex: 1;
-  min-width: 0;
-  position: relative; /* Required for child's absolute positioning */
-}
-
-#resume-container-right {
-  position: relative; /* Required for footer absolute positioning */
+.resume-content {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-#resume-content-footer {
+.resume-wrapper {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+#scene-viewer-label {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: rgba(255, 255, 255, 0.2) !important;
+  bottom: 10px;
+  left: 20px;
+  right: undefined;
+  background-color: rgba(0, 0, 0, 0.5);
   padding: 10px;
-  flex-shrink: 0;
-  z-index: 10; /* Ensure it's above resume content */
-  pointer-events: none; /* Allow clicking through to resume content */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 20%);
-  height: 40px; /* Match scene footer height */
+  z-index: 100;
+  pointer-events: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
 }
 
-#resume-content-footer div,
-#resume-content-footer span {
-  background-color: transparent !important;
+#scene-viewer-label .viewer-label {
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: 100;
+  color: white;
+  user-select: none;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  pointer-events: auto;
 }
 
-#resume-content-footer .viewer-label {
+#resume-viewer-label {
+  position: absolute;
+  bottom: 10px;
+  right: 20px;
+  left: undefined;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 10px;
+  z-index: 100;
+  pointer-events: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+#resume-viewer-label .viewer-label {
   font-family: sans-serif;
   font-size: 14px;
   font-weight: 700;
@@ -472,8 +577,7 @@ export default {
   user-select: none;
   text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
   white-space: nowrap;
-  background-color: transparent !important;
-  pointer-events: auto; /* Allow interaction with the text */
+  pointer-events: auto;
 }
 
 #scene-plane {

@@ -11,7 +11,8 @@ function getDefaultState() {
         version: "1.2", // Updated for constants system
         lastUpdated: new Date().toISOString(),
         layout: {
-            panelSizePercentage: 50 // Default to a 50/50 split
+            panelSizePercentage: 50, // Default to a 50/50 split
+            orientation: 'scene-left' // Default to scene on left, resume on right
         },
         resizeHandle: {
             steppingEnabled: true, // Default to stepping/snapping enabled
@@ -187,7 +188,7 @@ function migrateState(state) {
 
     // Migration from 1.0 to 1.1: Update marginTop values
     if (state.version === "1.0") {
-        console.log('[MIGRATION] Migrating state from v1.0 to v1.1: Updating marginTop values');
+        window.CONSOLE_LOG_IGNORE('[MIGRATION] Migrating state from v1.0 to v1.1: Updating marginTop values');
         
         // Ensure rDivBorderOverrideSettings exists
         if (!state.theme) state.theme = {};
@@ -211,12 +212,12 @@ function migrateState(state) {
         }
         
         state.version = "1.1";
-        console.log('[MIGRATION] Successfully migrated to v1.1');
+        window.CONSOLE_LOG_IGNORE('[MIGRATION] Successfully migrated to v1.1');
     }
 
     // Migration from 1.1 to 1.2: Add constants system while preserving user preferences
     if (state.version === "1.1") {
-        console.log('[MIGRATION] Migrating state from v1.1 to v1.2: Adding constants system');
+        window.CONSOLE_LOG_IGNORE('[MIGRATION] Migrating state from v1.1 to v1.2: Adding constants system');
         
         // Preserve existing focal point mode (don't reset to locked)
         // The user's saved preference should be maintained
@@ -237,7 +238,7 @@ function migrateState(state) {
         // Constants will be added via deepMerge with default state
         
         state.version = "1.2";
-        console.log('[MIGRATION] Successfully migrated to v1.2 - preserved user preferences');
+        window.CONSOLE_LOG_IGNORE('[MIGRATION] Successfully migrated to v1.2 - preserved user preferences');
     }
 
     return state;
@@ -314,6 +315,10 @@ export function initializeState() {
     if (!initStatePromise) {
         initStatePromise = loadState().then(state => {
             AppState = state;
+            // Dispatch event to notify components that state is loaded
+            window.dispatchEvent(new CustomEvent('app-state-loaded', {
+                detail: { state: AppState }
+            }));
             return state;
         });
     }

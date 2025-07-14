@@ -94,7 +94,7 @@ class CardsController {
         
         this.originalJobsData = jobsData;
         this.bizCardDivs = await this._createAllBizCardDivs(jobsData);
-        console.log('[CardsController] Created', this.bizCardDivs.length, 'bizCardDivs');
+        window.CONSOLE_LOG_IGNORE('[CardsController] Created', this.bizCardDivs.length, 'bizCardDivs');
         
         // Apply the same sort rule as ResumeListController
         const initialSortRule = AppState.resume.sortRule || { field: 'startDate', direction: 'desc' };
@@ -201,7 +201,7 @@ class CardsController {
         // Check if attributes were removed by palette
         const afterPaletteSceneLeft = bizCardDiv.getAttribute('scene-left');
         const afterPaletteSceneTop = bizCardDiv.getAttribute('scene-top');
-        console.log(`[SIMPLE TEST] After palette: cDiv ${bizCardDiv.id} scene-left="${afterPaletteSceneLeft}", scene-top="${afterPaletteSceneTop}"`);
+        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] After palette: cDiv ${bizCardDiv.id} scene-left="${afterPaletteSceneLeft}", scene-top="${afterPaletteSceneTop}"`);
 
         // Apply normal state styling after palette application
         bizCardDiv.classList.remove('hovered', 'selected');
@@ -209,7 +209,7 @@ class CardsController {
         // Check if attributes were removed by styling
         const afterStylingSceneLeft = bizCardDiv.getAttribute('scene-left');
         const afterStylingSceneTop = bizCardDiv.getAttribute('scene-top');
-        console.log(`[SIMPLE TEST] After styling: cDiv ${bizCardDiv.id} scene-left="${afterStylingSceneLeft}", scene-top="${afterStylingSceneTop}"`);
+        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] After styling: cDiv ${bizCardDiv.id} scene-left="${afterStylingSceneLeft}", scene-top="${afterStylingSceneTop}"`);
 
             this._setupMouseListeners(bizCardDiv);
 
@@ -293,7 +293,7 @@ class CardsController {
         // Simple test: verify the attributes were set
         const verifySceneLeft = bizCardDiv.getAttribute('scene-left');
         const verifySceneTop = bizCardDiv.getAttribute('scene-top');
-        console.log(`[SIMPLE TEST] cDiv ${bizCardDiv.id} scene-left="${verifySceneLeft}", scene-top="${verifySceneTop}"`);
+        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] cDiv ${bizCardDiv.id} scene-left="${verifySceneLeft}", scene-top="${verifySceneTop}"`);
         
         let sceneZ = 0;
         let lastSceneZ = -1;
@@ -365,7 +365,7 @@ class CardsController {
         // Check if original cDiv has scene-left and scene-top attributes
         const originalSceneLeftAttr = bizCardDiv.getAttribute("scene-left");
         const originalSceneTopAttr = bizCardDiv.getAttribute("scene-top");
-        console.log(`[SIMPLE TEST] Original cDiv ${bizCardDiv.id} has scene-left="${originalSceneLeftAttr}", scene-top="${originalSceneTopAttr}"`);
+        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] Original cDiv ${bizCardDiv.id} has scene-left="${originalSceneLeftAttr}", scene-top="${originalSceneTopAttr}"`);
 
 
 
@@ -428,12 +428,12 @@ class CardsController {
         }
         
         // Add scene-left and scene-top attributes for components that expect them
-        console.log(`[SIMPLE TEST] Setting scene-left="${newSceneLeft.toString()}", scene-top="${originalSceneTop || "0"}" on clone ${clone.id}`);
+        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] Setting scene-left="${newSceneLeft.toString()}", scene-top="${originalSceneTop || "0"}" on clone ${clone.id}`);
         clone.setAttribute("scene-left", newSceneLeft.toString());
         clone.setAttribute("scene-top", originalSceneTop || "0");
         
         // Simple test: immediately check if they were set
-        console.log(`[SIMPLE TEST] Clone ${clone.id} scene-left="${clone.getAttribute('scene-left')}", scene-top="${clone.getAttribute('scene-top')}"`);
+        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] Clone ${clone.id} scene-left="${clone.getAttribute('scene-left')}", scene-top="${clone.getAttribute('scene-top')}"`);
         
         // Debug: Verify clone scene coordinates immediately after setting
         window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} scene coordinates immediately after setting:`, {
@@ -479,7 +479,7 @@ class CardsController {
         clone.setAttribute("data-sceneLeft", translatedLeft.toString());  // Update to translated value
         clone.setAttribute("data-sceneTop", translatedTop.toString());    // Update to translated value
         
-        console.log(`[DEBUG] Clone ${clone.id} positioning properties set (translated):`, {
+        window.CONSOLE_LOG_IGNORE(`[DEBUG] Clone ${clone.id} positioning properties set (translated):`, {
             top: clone.style.top,
             left: clone.style.left,
             bottom: clone.style.bottom,
@@ -669,7 +669,7 @@ class CardsController {
         const jobNumber = parseInt(bizCardDiv.getAttribute('data-job-number'), 10);
         const isAlreadySelected = selectionManager.getSelectedJobNumber() === jobNumber;
         
-        // console.log(`[DEBUG] CardsController: Clicked cDiv with jobNumber=${jobNumber}`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Clicked cDiv with jobNumber=${jobNumber}`);
 
         if (isAlreadySelected) {
             selectionManager.clearSelection('CardsController.handleBizCardDivClickEvent');
@@ -902,7 +902,7 @@ class CardsController {
     handleColorPaletteChanged(event) {
         const { filename, paletteName, previousFilename } = event.detail;
         
-        console.log(`[CardsController] handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
+        window.CONSOLE_LOG_IGNORE(`[CardsController] handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
         
         // Apply new palette to all cards (both originals and clones) and their children
         this.bizCardDivs.forEach(div => {
@@ -922,7 +922,7 @@ class CardsController {
             colorElements.forEach(applyPaletteToElement);
         });
         
-        console.log(`[CardsController] handleColorPaletteChanged: Applied new palette to ${this.bizCardDivs.length} cards and ${allClones.length} clones`);
+        window.CONSOLE_LOG_IGNORE(`[CardsController] handleColorPaletteChanged: Applied new palette to ${this.bizCardDivs.length} cards and ${allClones.length} clones`);
     }
 
     isJobNumberSelected(jobNumber) {

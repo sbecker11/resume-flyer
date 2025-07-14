@@ -68,7 +68,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -        const handleBadgesPositioned = (event) => {
 -          if (eventReceived) return;
 -          eventReceived = true;
--          console.log('[NewConnectionLines] Received badges-positioned event, proceeding with connections');
+-          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Received badges-positioned event, proceeding with connections');
 -          window.removeEventListener('badges-positioned', handleBadgesPositioned);
 -          resolve(true);
 -        };
@@ -79,12 +79,12 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -        setTimeout(() => {
 -          if (eventReceived) return;
 -          
--          console.log('[NewConnectionLines] No badges-positioned event received, falling back to stability checking');
+-          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No badges-positioned event received, falling back to stability checking');
 -          window.removeEventListener('badges-positioned', handleBadgesPositioned);
 -          
 -          const skillBadgesContainer = document.getElementById('skill-badges-container');
 -          if (!skillBadgesContainer) {
--            console.log('[NewConnectionLines] Skill badges container not found');
+-            window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Skill badges container not found');
 -            resolve(false);
 -            return;
 -          }
@@ -119,7 +119,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -              }
 -            });
 -            
--            console.log(`[NewConnectionLines] Badge stability check: ${validPositions}/${relevantBadges} badges positioned`);
+-            window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge stability check: ${validPositions}/${relevantBadges} badges positioned`);
 -            
 -            // Check if we have enough valid badges and positions are stable
 -            if (validPositions > 0 && validPositions === relevantBadges) {
@@ -137,10 +137,10 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -              
 -              if (positionsStable) {
 -                stabilityCheckCount++;
--                console.log(`[NewConnectionLines] Badge positions stable (${stabilityCheckCount}/${requiredStabilityChecks})`);
+-                window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge positions stable (${stabilityCheckCount}/${requiredStabilityChecks})`);
 -                
 -                if (stabilityCheckCount >= requiredStabilityChecks) {
--                  console.log('[NewConnectionLines] Badge positioning completed and stable via fallback!');
+-                  window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning completed and stable via fallback!');
 -                  resolve(true);
 -                  return;
 -                }
@@ -166,7 +166,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -          if (eventReceived) return;
 -          eventReceived = true;
 -          window.removeEventListener('badges-positioned', handleBadgesPositioned);
--          console.log('[NewConnectionLines] Badge positioning timeout - proceeding anyway');
+-          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning timeout - proceeding anyway');
 -          resolve(false);
 -        }, 3000);
 -      });
@@ -177,7 +177,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
        const skillBadges = document.querySelectorAll('.skill-badge');
 @@ -476,13 +379,6 @@
        isUpdatingConnections = true;
-       console.log(`[NewConnectionLines] Starting connection update (${reason})`);
+       window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Starting connection update (${reason})`);
        
 -      try {
 -      // Clear connections array - this is necessary to rebuild them
@@ -191,22 +191,22 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -      }
 -      
 -      if (!selectedCDiv) {
--        console.log('[NewConnectionLines] No selected cDiv found - clearing connections');
+-        window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No selected cDiv found - clearing connections');
 -        connections.value = [];
 -        return;
 -      }
 -      
--      // console.log('[NewConnectionLines] Waiting for badge positioning to complete...');
+-      // window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Waiting for badge positioning to complete...');
 -      const badgesReady = await waitForBadgePositioning();
 -      
 -      if (!badgesReady) {
--        // console.log('[NewConnectionLines] Badge positioning not optimal, but proceeding');
+-        // window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning not optimal, but proceeding');
 -      }
 -      
 +      try {      
        const cDivPos = getElementPosition(selectedCDiv);
        if (!cDivPos) {
-         console.log('[NewConnectionLines] Could not get cDiv position');
+         window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Could not get cDiv position');
 @@ -628,12 +518,6 @@
      };
  
@@ -217,14 +217,14 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -    };
 -
      const handleCardDeselect = () => {
-       console.log('[NewConnectionLines] Card deselected - clearing connections');
+       window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Card deselected - clearing connections');
        // Always clear connections when no card is selected
 @@ -671,13 +555,12 @@
      
      const handleBadgesPositioned = (event) => {
        const jobNumber = event.detail?.jobNumber;
--      console.log(`[NewConnectionLines] Badges positioned event received for job ${jobNumber}`);
-+      console.log(`[NewConnectionLines] Badges positioned event received.`);
+-      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badges positioned event received for job ${jobNumber}`);
++      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badges positioned event received.`);
        
 -      // Check if there's a selected cDiv and update connections
 +      // When badges are positioned, update the connection lines if a card is selected.
@@ -234,11 +234,11 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -        if (jobNumber === selectedJobNumber) {
 +        const selectedJobNumber = parseInt(selectedCDiv.getAttribute('data-job-number'), 10);
 +        if (jobNumber === selectedJobNumber || !jobNumber) { // Update if event is for the right job or is generic
-           console.log('[NewConnectionLines] Scheduling update for matching job number');
+           window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Scheduling update for matching job number');
            debouncedUpdateConnections(75, `badges-positioned-${jobNumber}`);
          }
 @@ -688,7 +571,6 @@
-         console.log(`[NewConnectionLines] Badge mode: ${badgeManager.getMode()}`);
+         window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge mode: ${badgeManager.getMode()}`);
        }, 50);
        
 -      window.addEventListener('card-select', handleCardSelect);
@@ -299,7 +299,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -        const handleBadgesPositioned = (event) => {
 -          if (eventReceived) return;
 -          eventReceived = true;
--          console.log('[NewConnectionLines] Received badges-positioned event, proceeding with connections');
+-          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Received badges-positioned event, proceeding with connections');
 -          window.removeEventListener('badges-positioned', handleBadgesPositioned);
 -          resolve(true);
 -        };
@@ -310,12 +310,12 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -        setTimeout(() => {
 -          if (eventReceived) return;
 -          
--          console.log('[NewConnectionLines] No badges-positioned event received, falling back to stability checking');
+-          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No badges-positioned event received, falling back to stability checking');
 -          window.removeEventListener('badges-positioned', handleBadgesPositioned);
 -          
 -          const skillBadgesContainer = document.getElementById('skill-badges-container');
 -          if (!skillBadgesContainer) {
--            console.log('[NewConnectionLines] Skill badges container not found');
+-            window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Skill badges container not found');
 -            resolve(false);
 -            return;
 -          }
@@ -350,7 +350,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -              }
 -            });
 -            
--            console.log(`[NewConnectionLines] Badge stability check: ${validPositions}/${relevantBadges} badges positioned`);
+-            window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge stability check: ${validPositions}/${relevantBadges} badges positioned`);
 -            
 -            // Check if we have enough valid badges and positions are stable
 -            if (validPositions > 0 && validPositions === relevantBadges) {
@@ -368,10 +368,10 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -              
 -              if (positionsStable) {
 -                stabilityCheckCount++;
--                console.log(`[NewConnectionLines] Badge positions stable (${stabilityCheckCount}/${requiredStabilityChecks})`);
+-                window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge positions stable (${stabilityCheckCount}/${requiredStabilityChecks})`);
 -                
 -                if (stabilityCheckCount >= requiredStabilityChecks) {
--                  console.log('[NewConnectionLines] Badge positioning completed and stable via fallback!');
+-                  window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning completed and stable via fallback!');
 -                  resolve(true);
 -                  return;
 -                }
@@ -397,7 +397,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -          if (eventReceived) return;
 -          eventReceived = true;
 -          window.removeEventListener('badges-positioned', handleBadgesPositioned);
--          console.log('[NewConnectionLines] Badge positioning timeout - proceeding anyway');
+-          window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning timeout - proceeding anyway');
 -          resolve(false);
 -        }, 3000);
 -      });
@@ -408,7 +408,7 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
        const skillBadges = document.querySelectorAll('.skill-badge');
 @@ -476,13 +379,6 @@
        isUpdatingConnections = true;
-       console.log(`[NewConnectionLines] Starting connection update (${reason})`);
+       window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Starting connection update (${reason})`);
        
 -      try {
 -      // Clear connections array - this is necessary to rebuild them
@@ -422,22 +422,22 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -      }
 -      
 -      if (!selectedCDiv) {
--        console.log('[NewConnectionLines] No selected cDiv found - clearing connections');
+-        window.CONSOLE_LOG_IGNORE('[NewConnectionLines] No selected cDiv found - clearing connections');
 -        connections.value = [];
 -        return;
 -      }
 -      
--      // console.log('[NewConnectionLines] Waiting for badge positioning to complete...');
+-      // window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Waiting for badge positioning to complete...');
 -      const badgesReady = await waitForBadgePositioning();
 -      
 -      if (!badgesReady) {
--        // console.log('[NewConnectionLines] Badge positioning not optimal, but proceeding');
+-        // window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Badge positioning not optimal, but proceeding');
 -      }
 -      
 +      try {      
        const cDivPos = getElementPosition(selectedCDiv);
        if (!cDivPos) {
-         console.log('[NewConnectionLines] Could not get cDiv position');
+         window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Could not get cDiv position');
 @@ -628,12 +518,6 @@
      };
  
@@ -448,14 +448,14 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -    };
 -
      const handleCardDeselect = () => {
-       console.log('[NewConnectionLines] Card deselected - clearing connections');
+       window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Card deselected - clearing connections');
        // Always clear connections when no card is selected
 @@ -671,13 +555,12 @@
      
      const handleBadgesPositioned = (event) => {
        const jobNumber = event.detail?.jobNumber;
--      console.log(`[NewConnectionLines] Badges positioned event received for job ${jobNumber}`);
-+      console.log(`[NewConnectionLines] Badges positioned event received.`);
+-      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badges positioned event received for job ${jobNumber}`);
++      window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badges positioned event received.`);
        
 -      // Check if there's a selected cDiv and update connections
 +      // When badges are positioned, update the connection lines if a card is selected.
@@ -465,11 +465,11 @@ Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modu
 -        if (jobNumber === selectedJobNumber) {
 +        const selectedJobNumber = parseInt(selectedCDiv.getAttribute('data-job-number'), 10);
 +        if (jobNumber === selectedJobNumber || !jobNumber) { // Update if event is for the right job or is generic
-           console.log('[NewConnectionLines] Scheduling update for matching job number');
+           window.CONSOLE_LOG_IGNORE('[NewConnectionLines] Scheduling update for matching job number');
            debouncedUpdateConnections(75, `badges-positioned-${jobNumber}`);
          }
 @@ -688,7 +571,6 @@
-         console.log(`[NewConnectionLines] Badge mode: ${badgeManager.getMode()}`);
+         window.CONSOLE_LOG_IGNORE(`[NewConnectionLines] Badge mode: ${badgeManager.getMode()}`);
        }, 50);
        
 -      window.addEventListener('card-select', handleCardSelect);

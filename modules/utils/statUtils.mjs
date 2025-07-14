@@ -217,7 +217,7 @@ export function calculateStdDevRanges(data, mean, stdDev) {
  */
 export function runNormalDistributionTest(testCase) {
   const { N, desiredMean, desiredStdDev } = testCase;
-  console.log(`\n--- Testing Normal Distribution Generation (N=${N}, Mean=${desiredMean}, StdDev=${desiredStdDev}) ---`);
+  window.CONSOLE_LOG_IGNORE(`\n--- Testing Normal Distribution Generation (N=${N}, Mean=${desiredMean}, StdDev=${desiredStdDev}) ---`);
 
   const normalArray = generateNormalDistributionArray(N, desiredMean, desiredStdDev);
 
@@ -229,16 +229,16 @@ export function runNormalDistributionTest(testCase) {
   const calculatedMean = calculateMean(normalArray);
   const calculatedStdDev = calculateStandardDeviation(normalArray);
 
-  console.log("Input Mean:", desiredMean);
-  console.log("Computed Mean:", calculatedMean);
-  console.log("Input Standard Deviation:", desiredStdDev);
-  console.log("Computed Standard Deviation:", calculatedStdDev);
+  window.CONSOLE_LOG_IGNORE("Input Mean:", desiredMean);
+  window.CONSOLE_LOG_IGNORE("Computed Mean:", calculatedMean);
+  window.CONSOLE_LOG_IGNORE("Input Standard Deviation:", desiredStdDev);
+  window.CONSOLE_LOG_IGNORE("Computed Standard Deviation:", calculatedStdDev);
 
   const meanDifference = Math.abs(desiredMean - calculatedMean);
   const stdDevDifference = Math.abs(desiredStdDev - calculatedStdDev);
 
-  console.log("Mean Difference:", meanDifference);
-  console.log("Standard Deviation Difference:", stdDevDifference);
+  window.CONSOLE_LOG_IGNORE("Mean Difference:", meanDifference);
+  window.CONSOLE_LOG_IGNORE("Standard Deviation Difference:", stdDevDifference);
 
   // Example tolerance levels; these might need adjustment based on the expected accuracy for your use case
   // A reasonable tolerance can be related to the standard error of the mean or standard deviation.
@@ -248,18 +248,18 @@ export function runNormalDistributionTest(testCase) {
   const stdDevTolerance = 2 * (desiredStdDev / Math.sqrt(2 * N)); // Allowing for some deviation
 
   if (meanDifference < meanTolerance) {
-    console.log("Result: Computed Mean is within an acceptable range.");
+    window.CONSOLE_LOG_IGNORE("Result: Computed Mean is within an acceptable range.");
   } else {
     console.warn("Result: Computed Mean deviates significantly from the Input Mean. Consider increasing N.");
   }
 
   if (calculatedStdDev === undefined || stdDevDifference < stdDevTolerance) {
-    console.log("Result: Computed Standard Deviation is within an acceptable range.");
+    window.CONSOLE_LOG_IGNORE("Result: Computed Standard Deviation is within an acceptable range.");
   } else {
     console.warn("Result: Computed Standard Deviation deviates significantly from the Input Standard Deviation. Consider increasing N.");
   }
 
-  console.log("------------------------------------------------------------------");
+  window.CONSOLE_LOG_IGNORE("------------------------------------------------------------------");
   return {
     success: meanDifference < meanTolerance && (calculatedStdDev === undefined || stdDevDifference < stdDevTolerance),
     meanDifference,
@@ -282,11 +282,11 @@ export function runAllNormalDistributionTests() {
     { N: 5000, desiredMean: -10, desiredStdDev: 0.5 } // Negative mean, smaller std dev
   ];
 
-  console.log("=== Running All Normal Distribution Tests ===");
+  window.CONSOLE_LOG_IGNORE("=== Running All Normal Distribution Tests ===");
   const results = testCases.map(runNormalDistributionTest);
   
   const successCount = results.filter(r => r.success).length;
-  console.log(`\n=== Test Summary: ${successCount}/${results.length} tests passed ===`);
+  window.CONSOLE_LOG_IGNORE(`\n=== Test Summary: ${successCount}/${results.length} tests passed ===`);
   
   return results;
 }

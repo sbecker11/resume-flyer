@@ -45,11 +45,11 @@ const defaultConfig = {
 function loadConfig() {
   if (!fs.existsSync(CONFIG_FILE)) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(defaultConfig, null, 2));
-    console.log('📋 Created figma-config.json - please fill in your Figma credentials');
-    console.log('   Required fields:');
-    console.log('   - FIGMA_TOKEN: Add your personal access token to .env file');
-    console.log('   - fileId: The Figma file ID where components will be created');
-    console.log('   - teamId: Your team ID (optional, for shared libraries)');
+    window.CONSOLE_LOG_IGNORE('📋 Created figma-config.json - please fill in your Figma credentials');
+    window.CONSOLE_LOG_IGNORE('   Required fields:');
+    window.CONSOLE_LOG_IGNORE('   - FIGMA_TOKEN: Add your personal access token to .env file');
+    window.CONSOLE_LOG_IGNORE('   - fileId: The Figma file ID where components will be created');
+    window.CONSOLE_LOG_IGNORE('   - teamId: Your team ID (optional, for shared libraries)');
     return null;
   }
   
@@ -60,7 +60,7 @@ function loadConfig() {
   
   if (!figmaToken || !config.fileId) {
     console.error('❌ Missing required Figma credentials');
-    console.log('   Please add FIGMA_TOKEN to .env file and fileId to figma-config.json');
+    window.CONSOLE_LOG_IGNORE('   Please add FIGMA_TOKEN to .env file and fileId to figma-config.json');
     return null;
   }
   
@@ -148,7 +148,7 @@ function colorToFigma(color) {
  * Create color styles in Figma
  */
 async function syncColors(designTokens, config) {
-  console.log('🎨 Syncing colors to Figma...');
+  window.CONSOLE_LOG_IGNORE('🎨 Syncing colors to Figma...');
   
   const colorStyles = [];
   
@@ -199,9 +199,9 @@ async function syncColors(designTokens, config) {
         })
       });
       
-      console.log(`   ✅ Created color style: ${style.name}`);
+      window.CONSOLE_LOG_IGNORE(`   ✅ Created color style: ${style.name}`);
     } catch (error) {
-      console.log(`   ⚠️  Could not create color style ${style.name}: ${error.message}`);
+      window.CONSOLE_LOG_IGNORE(`   ⚠️  Could not create color style ${style.name}: ${error.message}`);
     }
   }
 }
@@ -210,7 +210,7 @@ async function syncColors(designTokens, config) {
  * Create text styles in Figma
  */
 async function syncTypography(designTokens, config) {
-  console.log('📝 Syncing typography to Figma...');
+  window.CONSOLE_LOG_IGNORE('📝 Syncing typography to Figma...');
   
   const textStyles = [];
   
@@ -246,9 +246,9 @@ async function syncTypography(designTokens, config) {
         })
       });
       
-      console.log(`   ✅ Created text style: ${style.name}`);
+      window.CONSOLE_LOG_IGNORE(`   ✅ Created text style: ${style.name}`);
     } catch (error) {
-      console.log(`   ⚠️  Could not create text style ${style.name}: ${error.message}`);
+      window.CONSOLE_LOG_IGNORE(`   ⚠️  Could not create text style ${style.name}: ${error.message}`);
     }
   }
 }
@@ -257,7 +257,7 @@ async function syncTypography(designTokens, config) {
  * Create component frames in Figma
  */
 async function syncComponents(designTokens, config) {
-  console.log('🧩 Syncing components to Figma...');
+  window.CONSOLE_LOG_IGNORE('🧩 Syncing components to Figma...');
   
   const components = [
     {
@@ -302,13 +302,13 @@ async function syncComponents(designTokens, config) {
   // Note: Component creation via API is complex and requires detailed node structures
   // For now, we'll create a documentation page with component specifications
   
-  console.log('   📋 Component specifications prepared for manual creation');
-  console.log('   💡 Tip: Use these specifications to create components manually in Figma');
+  window.CONSOLE_LOG_IGNORE('   📋 Component specifications prepared for manual creation');
+  window.CONSOLE_LOG_IGNORE('   💡 Tip: Use these specifications to create components manually in Figma');
   
   // Save component specifications
   const specsPath = path.join(projectRoot, 'figma-component-specs.json');
   fs.writeFileSync(specsPath, JSON.stringify(components, null, 2));
-  console.log(`   📁 Component specs saved to: ${specsPath}`);
+  window.CONSOLE_LOG_IGNORE(`   📁 Component specs saved to: ${specsPath}`);
 }
 
 /**
@@ -456,21 +456,21 @@ function hexToRgb(hex) {
   
   fs.writeFileSync(path.join(pluginPath, 'ui.html'), uiHtml);
   
-  console.log('🔌 Generated Figma plugin files:');
-  console.log(`   📁 ${path.join(pluginPath, 'manifest.json')}`);
-  console.log(`   📁 ${path.join(pluginPath, 'code.js')}`);
-  console.log(`   📁 ${path.join(pluginPath, 'ui.html')}`);
+  window.CONSOLE_LOG_IGNORE('🔌 Generated Figma plugin files:');
+  window.CONSOLE_LOG_IGNORE(`   📁 ${path.join(pluginPath, 'manifest.json')}`);
+  window.CONSOLE_LOG_IGNORE(`   📁 ${path.join(pluginPath, 'code.js')}`);
+  window.CONSOLE_LOG_IGNORE(`   📁 ${path.join(pluginPath, 'ui.html')}`);
 }
 
 /**
  * Main sync function
  */
 async function syncWithFigma() {
-  console.log('🔄 Starting Figma synchronization...');
+  window.CONSOLE_LOG_IGNORE('🔄 Starting Figma synchronization...');
   
   const config = loadConfig();
   if (!config) {
-    console.log('⚠️  Skipping Figma sync - configuration needed');
+    window.CONSOLE_LOG_IGNORE('⚠️  Skipping Figma sync - configuration needed');
     return;
   }
   
@@ -498,11 +498,11 @@ async function syncWithFigma() {
     // Generate Figma plugin
     generateFigmaPlugin();
     
-    console.log('✅ Figma synchronization completed!');
-    console.log('💡 Next steps:');
-    console.log('   1. Open your Figma file to see the imported styles');
-    console.log('   2. Install the generated plugin for advanced features');
-    console.log('   3. Create components using the provided specifications');
+    window.CONSOLE_LOG_IGNORE('✅ Figma synchronization completed!');
+    window.CONSOLE_LOG_IGNORE('💡 Next steps:');
+    window.CONSOLE_LOG_IGNORE('   1. Open your Figma file to see the imported styles');
+    window.CONSOLE_LOG_IGNORE('   2. Install the generated plugin for advanced features');
+    window.CONSOLE_LOG_IGNORE('   3. Create components using the provided specifications');
     
   } catch (error) {
     console.error('❌ Figma sync failed:', error);

@@ -55,7 +55,7 @@ function extractCSSCustomProperties() {
   const stylesPath = path.join(projectRoot, 'styles.css');
   
   if (!fs.existsSync(stylesPath)) {
-    console.log('Warning: styles.css not found');
+    window.CONSOLE_LOG_IGNORE('Warning: styles.css not found');
     return;
   }
   
@@ -83,7 +83,7 @@ async function extractColorPalettes() {
   const palettesDir = path.join(projectRoot, 'modules', 'palettes');
   
   if (!fs.existsSync(palettesDir)) {
-    console.log('Warning: palettes directory not found');
+    window.CONSOLE_LOG_IGNORE('Warning: palettes directory not found');
     return;
   }
   
@@ -97,7 +97,7 @@ async function extractColorPalettes() {
       const paletteData = JSON.parse(fs.readFileSync(palettePath, 'utf8'));
       designTokens.colors.palettes[paletteName] = paletteData;
     } catch (error) {
-      console.log(`Warning: Could not parse palette ${file}:`, error.message);
+      window.CONSOLE_LOG_IGNORE(`Warning: Could not parse palette ${file}:`, error.message);
     }
   }
 }
@@ -109,7 +109,7 @@ function extractFromVueComponents() {
   const componentsDir = path.join(projectRoot, 'modules', 'components');
   
   if (!fs.existsSync(componentsDir)) {
-    console.log('Warning: components directory not found');
+    window.CONSOLE_LOG_IGNORE('Warning: components directory not found');
     return;
   }
   
@@ -303,7 +303,7 @@ function cleanupTokens() {
  * Main extraction function
  */
 async function extractDesignTokens() {
-  console.log('🎨 Extracting design tokens from flock-of-postcards...');
+  window.CONSOLE_LOG_IGNORE('🎨 Extracting design tokens from flock-of-postcards...');
   
   try {
     extractCSSCustomProperties();
@@ -316,14 +316,14 @@ async function extractDesignTokens() {
     const outputPath = path.join(projectRoot, 'design-tokens.json');
     fs.writeFileSync(outputPath, JSON.stringify(designTokens, null, 2));
     
-    console.log('✅ Design tokens extracted successfully!');
-    console.log(`📁 Saved to: ${outputPath}`);
-    console.log('\n📊 Token Summary:');
-    console.log(`   Colors: ${Object.keys(designTokens.colors.base).length + Object.keys(designTokens.colors.palettes).length + Object.keys(designTokens.colors.semantic).length}`);
-    console.log(`   Typography: ${Object.keys(designTokens.typography.families).length + Object.keys(designTokens.typography.sizes).length + Object.keys(designTokens.typography.weights).length}`);
-    console.log(`   Spacing: ${Object.keys(designTokens.spacing.padding).length + Object.keys(designTokens.spacing.margin).length}`);
-    console.log(`   Borders: ${Object.keys(designTokens.borders.radius).length}`);
-    console.log(`   Shadows: ${Object.keys(designTokens.shadows.box).length + Object.keys(designTokens.shadows.text).length}`);
+    window.CONSOLE_LOG_IGNORE('✅ Design tokens extracted successfully!');
+    window.CONSOLE_LOG_IGNORE(`📁 Saved to: ${outputPath}`);
+    window.CONSOLE_LOG_IGNORE('\n📊 Token Summary:');
+    window.CONSOLE_LOG_IGNORE(`   Colors: ${Object.keys(designTokens.colors.base).length + Object.keys(designTokens.colors.palettes).length + Object.keys(designTokens.colors.semantic).length}`);
+    window.CONSOLE_LOG_IGNORE(`   Typography: ${Object.keys(designTokens.typography.families).length + Object.keys(designTokens.typography.sizes).length + Object.keys(designTokens.typography.weights).length}`);
+    window.CONSOLE_LOG_IGNORE(`   Spacing: ${Object.keys(designTokens.spacing.padding).length + Object.keys(designTokens.spacing.margin).length}`);
+    window.CONSOLE_LOG_IGNORE(`   Borders: ${Object.keys(designTokens.borders.radius).length}`);
+    window.CONSOLE_LOG_IGNORE(`   Shadows: ${Object.keys(designTokens.shadows.box).length + Object.keys(designTokens.shadows.text).length}`);
     
   } catch (error) {
     console.error('❌ Error extracting design tokens:', error);

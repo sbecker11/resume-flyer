@@ -116,7 +116,7 @@ export class InfiniteScrollingContainer {
         }
 
         this.resizeTimeoutId = setTimeout(() => {
-            console.log('[InfiniteScroller] Resize detected. Recalculating layout...');
+            window.CONSOLE_LOG_IGNORE('[InfiniteScroller] Resize detected. Recalculating layout...');
 
             // Get the currently selected job number BEFORE recalculating layout
             const selectedJobNumber = selectionManager.getSelectedJobNumber();
@@ -126,7 +126,7 @@ export class InfiniteScrollingContainer {
 
             // 2. If an item was selected, scroll it back into view.
             if (selectedJobNumber !== null) {
-                console.log(`[InfiniteScroller] Restoring view to selected job: ${selectedJobNumber}`);
+                window.CONSOLE_LOG_IGNORE(`[InfiniteScroller] Restoring view to selected job: ${selectedJobNumber}`);
                 this.scrollToJobNumber(selectedJobNumber, 'handleResize');
             }
 
@@ -171,7 +171,7 @@ export class InfiniteScrollingContainer {
         const isHeaderVisible = itemTop >= viewportTop && (itemTop + headerAndMargin) <= (viewportTop + viewportHeight);
 
         if (isHeaderVisible) {
-            console.log(`[InfiniteScroller] Job ${jobNumber} header is already visible. No scroll needed.`);
+            window.CONSOLE_LOG_IGNORE(`[InfiniteScroller] Job ${jobNumber} header is already visible. No scroll needed.`);
             return;
         }
 
@@ -179,7 +179,7 @@ export class InfiniteScrollingContainer {
         // Aim to place the item's top edge near the top of the viewport, with a margin.
         const targetScrollTop = Math.max(0, itemTop - 50); // 50px margin from top
 
-        console.log(`[InfiniteScroller] Scrolling to job ${jobNumber} at position ${targetScrollTop}px (called by ${caller})`);
+        window.CONSOLE_LOG_IGNORE(`[InfiniteScroller] Scrolling to job ${jobNumber} at position ${targetScrollTop}px (called by ${caller})`);
 
         this.scrollport.scrollTo({
             top: targetScrollTop,

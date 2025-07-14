@@ -743,7 +743,7 @@ class ResumeListController {
   goToLastResumeItem() {
     if (!this.sortedIndices || this.sortedIndices.length === 0) return;
     const lastJobNumber = this.sortedIndices[this.sortedIndices.length - 1];
-    // console.log(`[DEBUG] goToLastResumeItem: Going to lastJobNumber=${lastJobNumber}, sortedIndices.length=${this.sortedIndices.length}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] goToLastResumeItem: Going to lastJobNumber=${lastJobNumber}, sortedIndices.length=${this.sortedIndices.length}`);
     selectionManager.selectJobNumber(lastJobNumber, 'ResumeListController.goToLastResumeItem');
   }
 
@@ -915,18 +915,18 @@ class ResumeListController {
   }
 
   scrollToJobNumber(jobNumber, caller = '') {
-    // console.log(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
-    // console.log(`[DEBUG] ResumeListController: infiniteScroller exists=${!!this.infiniteScroller}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: infiniteScroller exists=${!!this.infiniteScroller}`);
     
     if (!this.infiniteScroller) {
-      // console.log(`[DEBUG] ResumeListController: infiniteScroller is null!`);
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: infiniteScroller is null!`);
       return;
     }
 
     // Find the sortedIndex for this jobNumber
     const sortedIndex = this.sortedIndices.indexOf(jobNumber);
-    // console.log(`[DEBUG] ResumeListController: jobNumber=${jobNumber} -> sortedIndex=${sortedIndex}`);
-    // console.log(`[DEBUG] ResumeListController: sortedIndices first 10:`, this.sortedIndices.slice(0, 10));
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: jobNumber=${jobNumber} -> sortedIndex=${sortedIndex}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: sortedIndices first 10:`, this.sortedIndices.slice(0, 10));
     
     if (sortedIndex === -1) {
       window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: jobNumber ${jobNumber} not found in sortedIndices!`);
@@ -991,23 +991,23 @@ class ResumeListController {
         const scrollDistance = Math.abs(currentScrollTop - targetScrollTop);
         const stillScrolling = scrollDistance > 10; // Allow 10px tolerance
         
-        // console.log(`[DEBUG] scrollToJobNumber visibility check: targetScrollTop=${targetScrollTop}, currentScrollTop=${currentScrollTop}, scrollDistance=${scrollDistance}, stillScrolling=${stillScrolling}`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber visibility check: targetScrollTop=${targetScrollTop}, currentScrollTop=${currentScrollTop}, scrollDistance=${scrollDistance}, stillScrolling=${stillScrolling}`);
         
         if (stillScrolling) {
-          // console.log(`[DEBUG] scrollToJobNumber: Scroll still in progress, skipping visibility check`);
+          // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Scroll still in progress, skipping visibility check`);
           return; // Skip visibility check if scroll is still in progress
         }
         
         // For now, skip the visibility recheck to prevent double scrolling
         // The scroll positioning has been fixed in InfiniteScrollingContainer
         // const isVisible = itemTop >= visibleTop && itemBottom <= visibleBottom;
-        // console.log(`[DEBUG] scrollToJobNumber final visibility: itemTop=${itemTop}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, isVisible=${isVisible}`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber final visibility: itemTop=${itemTop}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, isVisible=${isVisible}`);
         
         // if (!isVisible) {
-        //   console.log(`[DEBUG] scrollToJobNumber: Item not visible after scroll completed, attempting to scroll again`);
+        //   window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Item not visible after scroll completed, attempting to scroll again`);
         //   this.infiniteScroller.scrollToIndex(sortedIndex, false);
         // } else {
-        //   console.log(`[DEBUG] scrollToJobNumber: Item is visible, no retry needed`);
+        //   window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Item is visible, no retry needed`);
         // }
       }
     }, 100);

@@ -1015,7 +1015,7 @@ export class InfiniteScrollingContainer {
         }
 
         this.resizeTimeoutId = setTimeout(() => {
-            console.log('[InfiniteScroller] Resize detected. Recalculating layout...');
+            window.CONSOLE_LOG_IGNORE('[InfiniteScroller] Resize detected. Recalculating layout...');
 
             // Get the currently selected job number BEFORE recalculating layout
             const selectedJobNumber = selectionManager.getSelectedJobNumber();
@@ -1025,7 +1025,7 @@ export class InfiniteScrollingContainer {
 
             // 2. If an item was selected, scroll it back into view.
             if (selectedJobNumber !== null) {
-                console.log(`[InfiniteScroller] Restoring view to selected job: ${selectedJobNumber}`);
+                window.CONSOLE_LOG_IGNORE(`[InfiniteScroller] Restoring view to selected job: ${selectedJobNumber}`);
                 this.scrollToJobNumber(selectedJobNumber, 'handleResize');
             }
 
@@ -1070,7 +1070,7 @@ export class InfiniteScrollingContainer {
         const isHeaderVisible = itemTop >= viewportTop && (itemTop + headerAndMargin) <= (viewportTop + viewportHeight);
 
         if (isHeaderVisible) {
-            console.log(`[InfiniteScroller] Job ${jobNumber} header is already visible. No scroll needed.`);
+            window.CONSOLE_LOG_IGNORE(`[InfiniteScroller] Job ${jobNumber} header is already visible. No scroll needed.`);
             return;
         }
 
@@ -1078,7 +1078,7 @@ export class InfiniteScrollingContainer {
         // Aim to place the item's top edge near the top of the viewport, with a margin.
         const targetScrollTop = Math.max(0, itemTop - 50); // 50px margin from top
 
-        console.log(`[InfiniteScroller] Scrolling to job ${jobNumber} at position ${targetScrollTop}px (called by ${caller})`);
+        window.CONSOLE_LOG_IGNORE(`[InfiniteScroller] Scrolling to job ${jobNumber} at position ${targetScrollTop}px (called by ${caller})`);
 
         this.scrollport.scrollTo({
             top: targetScrollTop,
@@ -1176,7 +1176,7 @@ AppContent.vue
         
         // Add a listener to handle rDiv height changes when badge stats are toggled
         badgeManager.addEventListener('badgeModeChanged', () => {
-          console.log('[AppContent] Badge mode changed, triggering resume list height recalculation.');
+          window.CONSOLE_LOG_IGNORE('[AppContent] Badge mode changed, triggering resume list height recalculation.');
           if (window.resumeListController && window.resumeListController.infiniteScroller) {
             // Use the existing handleResize logic as it's robust.
             // It debounces, recalculates all heights, and restores the scroll position.
@@ -1319,7 +1319,7 @@ class BadgeManager extends EventTarget {
             this._mode = AppState.badgeToggle.mode;
         }
         
-        console.log(`[BadgeManager] Initialized with mode: ${this._mode}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode: ${this._mode}`);
         this._mode = 'none'; // Default until state is loaded
         
         // Defer initialization until AppState is ready
@@ -1345,7 +1345,7 @@ class BadgeManager extends EventTarget {
         if (AppState?.badgeToggle?.mode) {
             this._mode = AppState.badgeToggle.mode;
         }
-        console.log(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
         this.refreshVisibility(); // Update visibility now that we have the correct mode
     }
     
@@ -1387,7 +1387,7 @@ class BadgeManager extends EventTarget {
             this._mode = AppState.badgeToggle.mode;
         }
         
-        console.log(`[BadgeManager] Initialized with mode: ${this._mode}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode: ${this._mode}`);
         // Defer initialization until AppState is ready to avoid race conditions.
         this._initializeFromState();
         
@@ -1416,7 +1416,7 @@ class BadgeManager extends EventTarget {
             this._mode = AppState.badgeToggle.mode;
         }
 
-        console.log(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
         // Update visibility now that we have the correct mode.
         this.refreshVisibility(); 
     }
@@ -1951,12 +1951,12 @@ watch(currentPaletteFilename, async (newFilename) => {
 function refreshCurrentElementStates() {
     // Refresh all elements with data-color-index
     const elements = document.querySelectorAll('[data-color-index]');
-    console.log(`[ColorPalette] Refreshing visual state for ${elements.length} elements`);
+    window.CONSOLE_LOG_IGNORE(`[ColorPalette] Refreshing visual state for ${elements.length} elements`);
     
     elements.forEach(element => {
         // Skip elements that should only get foreground colors, not full state styling
         if (element.classList.contains('color-index-foreground-only')) {
-            console.log(`[ColorPalette] Skipping full state styling for foreground-only element: ${element.id || element.className}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Skipping full state styling for foreground-only element: ${element.id || element.className}`);
             // Only apply colors, not borders/padding
             const backgroundColor = element.getAttribute('data-background-color');
             const foregroundColor = element.getAttribute('data-foreground-color');
@@ -1977,7 +1977,7 @@ function refreshCurrentElementStates() {
             currentState = 'hovered';
         }
         
-        console.log(`[ColorPalette] Element ${element.id || element.className} current state: ${currentState}`);
+        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Element ${element.id || element.className} current state: ${currentState}`);
         
         // Re-apply the current state to use updated color data
         applyStateStyling(element, currentState);

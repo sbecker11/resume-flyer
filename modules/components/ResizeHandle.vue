@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useFocalPoint } from '@/modules/composables/useFocalPoint.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
+import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import BadgeToggle from '@/modules/components/BadgeToggle.vue';
 
 // --- Composables ---
@@ -26,10 +27,50 @@ const isRightDisabled = computed(() => {
   return isRightCollapsed.value || stepCount.value === 1;
 });
 
+// Step buttons that make the container on that side smaller
+const stepLeftButton = computed(() => {
+  // Left arrow makes LEFT side smaller
+  // - scene-left: scene is on left, so decrease scene (collapseLeft)
+  // - scene-right: resume is on left, so increase scene (collapseRight)
+  const action = orientation.value === 'scene-left' ? collapseLeft : collapseRight;
+  const disabled = orientation.value === 'scene-left' ? isLeftDisabled.value : isRightDisabled.value;
+  
+  return {
+    id: 'step-left',
+    action: action,
+    disabled: disabled,
+    title: 'Step Left (Make Left Side Smaller)',
+    icon: '‹'
+  };
+});
+
+const stepRightButton = computed(() => {
+  // Right arrow makes RIGHT side smaller
+  // - scene-left: resume is on right, so make resume smaller = increase scene (collapseRight)
+  // - scene-right: scene is on right, so make scene smaller = decrease scene (collapseLeft)
+  const action = orientation.value === 'scene-left' ? collapseRight : collapseLeft;
+  const disabled = orientation.value === 'scene-left' ? isRightDisabled.value : isLeftDisabled.value;
+  
+  return {
+    id: 'step-right',
+    action: action,
+    disabled: disabled,
+    title: 'Step Right (Make Right Side Smaller)',
+    icon: '›'
+  };
+});
+
 const { 
   mode: focalPointMode,
   cycleMode: cycleFocalPointMode
 } = useFocalPoint();
+
+const {
+  orientation,
+  toggleOrientation,
+  getToggleButtonText,
+  getOrientationLabel
+} = useLayoutToggle();
 
 const isHovering = ref(false);
 const isSteppingHovering = ref(false);
@@ -52,7 +93,7 @@ const displayedIconMode = computed(() => {
 // The actual icon to show
 const displayIcon = computed(() => {
     const modeToShow = isHovering.value ? nextMode.value : focalPointMode.value;
-    console.log('displayIcon computed:', {
+    window.CONSOLE_LOG_IGNORE('displayIcon computed:', {
         isHovering: isHovering.value,
         currentMode: focalPointMode.value,
         nextMode: nextMode.value,
@@ -105,12 +146,19 @@ function handleSteppingClick(event) {
   // Reset hover state when step changes to prevent immediate hover preview
   isSteppingHovering.value = false;
 }
+
+function handleLayoutToggle(event) {
+  event.stopPropagation();
+  console.log('BEFORE toggle:', orientation.value);
+  toggleOrientation();
+  console.log('AFTER toggle:', orientation.value);
+}
 </script>
 
 <template>
     <div id="resize-handle" class="resize-handle" @mousedown="startDrag">
         <div class="button-container">
-            <button id="collapse-left" class="toggle-circle" @click.stop="collapseLeft" :disabled="isLeftDisabled" title="Collapse Left">‹</button>
+            <button :id="stepLeftButton.id" class="toggle-circle" @click.stop="stepLeftButton.action" :disabled="stepLeftButton.disabled" :title="stepLeftButton.title">{{ stepLeftButton.icon }}</button>
             <button id="tri-state-toggle" 
                     class="toggle-circle" 
                     :class="buttonClasses"
@@ -121,6 +169,12 @@ function handleSteppingClick(event) {
                 <span>{{ displayIcon }}</span>
             </button>
             <BadgeToggle />
+            <button id="layout-toggle" 
+                    class="toggle-circle" 
+                    @click.stop="handleLayoutToggle" 
+                    :title="`Layout: ${getOrientationLabel()} (click to swap)`">
+                {{ getToggleButtonText() }}
+            </button>
             <button id="stepping-indicator" 
                     class="toggle-circle" 
                     :class="{ 'inverted': steppingEnabled, 'hovering': isSteppingHovering, 'infinity-mode': stepCount === 1 }"
@@ -128,7 +182,7 @@ function handleSteppingClick(event) {
                     @mouseenter="isSteppingHovering = true"
                     @mouseleave="isSteppingHovering = false"
                     :title="stepCount === 1 ? 'Free dragging (no steps)' : `Stepping: ${stepCount} steps`">{{ displayStepCount }}</button>
-            <button id="collapse-right" class="toggle-circle" @click.stop="collapseRight" :disabled="isRightDisabled" title="Collapse Right">›</button>
+            <button :id="stepRightButton.id" class="toggle-circle" @click.stop="stepRightButton.action" :disabled="stepRightButton.disabled" :title="stepRightButton.title">{{ stepRightButton.icon }}</button>
         </div>
     </div>
 </template>
@@ -238,17 +292,28 @@ function handleSteppingClick(event) {
     border-color: black;
 }
 
-/* Hover effects for collapse buttons only */
-#collapse-left:hover:not(:disabled),
-#collapse-right:hover:not(:disabled) {
+#layout-toggle {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#layout-toggle:hover {
+    background-color: white;
+    color: black;
+    border-color: black;
+}
+
+/* Hover effects for step buttons only */
+#step-left:hover:not(:disabled),
+#step-right:hover:not(:disabled) {
     background-color: var(--button-text-color, white);
     color: var(--button-bg-color, #555);
     border-color: var(--button-text-color, white);
 }
 
-/* Disabled state for collapse buttons */
-#collapse-left:disabled,
-#collapse-right:disabled {
+/* Disabled state for step buttons */
+#step-left:disabled,
+#step-right:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     background-color: #444;

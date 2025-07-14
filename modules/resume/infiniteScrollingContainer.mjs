@@ -265,10 +265,10 @@ class InfiniteScrollingContainer {
   getRDivMarginTop() {
     try {
       const marginTopStr = AppState?.theme?.rDivBorderOverrideSettings?.normal?.marginTop || '0px';
-      // console.log('[DEBUG] getRDivMarginTop: marginTopStr =', marginTopStr);
+      // window.CONSOLE_LOG_IGNORE('[DEBUG] getRDivMarginTop: marginTopStr =', marginTopStr);
       return parseInt(marginTopStr) || 0;
     } catch (error) {
-      // console.log('[DEBUG] InfiniteScrollingContainer.getRDivMarginTop: Error getting marginTop, using 0:', error);
+      // window.CONSOLE_LOG_IGNORE('[DEBUG] InfiniteScrollingContainer.getRDivMarginTop: Error getting marginTop, using 0:', error);
       return 0;
     }
   }
@@ -301,7 +301,7 @@ class InfiniteScrollingContainer {
     const totalSpacing = rDivMarginTop + (rDivOuterBorderWidth * 2);
     
     // Always show debug for spacing coordination (regardless of measureHeights)
-    // console.log(`[DEBUG] InfiniteScrollingContainer: Using marginTop=${rDivMarginTop}px + outerBorderWidth=${rDivOuterBorderWidth}px (x2) = totalSpacing=${totalSpacing}px`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScrollingContainer: Using marginTop=${rDivMarginTop}px + outerBorderWidth=${rDivOuterBorderWidth}px (x2) = totalSpacing=${totalSpacing}px`);
     // console.trace('[DEBUG] calculateItemPositions called from:');
     
     // Calculate tail clone heights first
@@ -325,7 +325,7 @@ class InfiniteScrollingContainer {
       minTop = Math.min(minTop, topPosition); // Track most negative position
       
       this.positionItem(item, topPosition, contentHeight);
-      // console.log(`[DEBUG] Tail clone positioning: index=${itemIndex} originalIndex=${item.originalIndex} top=${topPosition}px height=${contentHeight}px`);
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] Tail clone positioning: index=${itemIndex} originalIndex=${item.originalIndex} top=${topPosition}px height=${contentHeight}px`);
     }
     
     // Phase 2: Position original items starting from 0
@@ -340,7 +340,7 @@ class InfiniteScrollingContainer {
       let contentHeight = this.measureItemHeight(item, measureHeights);
       this.positionItem(item, currentTop, contentHeight);
       
-      // console.log(`[DEBUG] Original item positioning: index=${itemIndex} originalIndex=${originalIndex} top=${currentTop}px height=${contentHeight}px`);
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] Original item positioning: index=${itemIndex} originalIndex=${originalIndex} top=${currentTop}px height=${contentHeight}px`);
       currentTop += contentHeight;
     });
     
@@ -353,7 +353,7 @@ class InfiniteScrollingContainer {
       let contentHeight = this.measureItemHeight(item, measureHeights);
       this.positionItem(item, currentTop, contentHeight);
       
-      // console.log(`[DEBUG] Head clone positioning: index=${itemIndex} top=${currentTop}px height=${contentHeight}px`);
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] Head clone positioning: index=${itemIndex} top=${currentTop}px height=${contentHeight}px`);
       currentTop += contentHeight;
     });
     
@@ -634,8 +634,8 @@ class InfiniteScrollingContainer {
     const cloneCount = Math.min(this.options.cloneCount, this.originalItems.length);
     const targetItemIndex = cloneCount + originalIndex; // Account for tail clones
     
-    // console.log(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
-    // console.log(`[DEBUG] scrollToIndex: allItems.length=${this.allItems.length}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: allItems.length=${this.allItems.length}`);
     
     // Disable seamless transitions during targeted scrolling
     this._isTargetScrolling = true;
@@ -672,18 +672,18 @@ class InfiniteScrollingContainer {
     // }
     
     if (targetItemIndex >= this.allItems.length) {
-      // console.log(`[DEBUG] scrollToIndex: Invalid target index ${targetItemIndex}, max is ${this.allItems.length - 1}`);
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: Invalid target index ${targetItemIndex}, max is ${this.allItems.length - 1}`);
       return;
     }
     
     const targetItem = this.allItems[targetItemIndex];
     if (!targetItem) {
-      // console.log(`[DEBUG] scrollToIndex: targetItem is null for index ${targetItemIndex}`);
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: targetItem is null for index ${targetItemIndex}`);
       return;
     }
     
     // const actualJobNumber = targetItem.element.getAttribute('data-job-number');
-    // console.log(`[DEBUG] scrollToIndex: targetItem has jobNumber=${actualJobNumber}, type=${targetItem.type}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: targetItem has jobNumber=${actualJobNumber}, type=${targetItem.type}`);
     
     // Debug: Check what job number the target item represents
     // if (targetItem.element) {
@@ -732,7 +732,7 @@ class InfiniteScrollingContainer {
     }
     
     // if (originalIndex >= this.originalItems.length - 3) {
-    //   console.log(`[DEBUG] scrollToIndex: LAST ITEMS - originalIndex=${originalIndex}, itemType=${targetItem.type}, targetItem.top=${targetItem.top}, final targetScrollTop=${targetScrollTop}, _minTop=${this._minTop}, _maxTop=${this._maxTop}`);
+    //   window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: LAST ITEMS - originalIndex=${originalIndex}, itemType=${targetItem.type}, targetItem.top=${targetItem.top}, final targetScrollTop=${targetScrollTop}, _minTop=${this._minTop}, _maxTop=${this._maxTop}`);
     // }
     
     // Positioning calculations completed
@@ -1057,7 +1057,7 @@ class InfiniteScrollingContainer {
           if (!item.element.classList.contains('selected')) {
             item.element.classList.add('selected');
             item.element.classList.remove('hovered');
-            console.log(`[DEBUG] Applied selected class to visible jobNumber=${jobNumber}, type=${item.type}`);
+            window.CONSOLE_LOG_IGNORE(`[DEBUG] Applied selected class to visible jobNumber=${jobNumber}, type=${item.type}`);
           }
         }
       }
@@ -1312,7 +1312,7 @@ class InfiniteScrollingContainer {
    * @returns {boolean} - Whether the scroll was successful
    */
   scrollToJobNumber(jobNumber, animate = true) {
-    // console.log(`[DEBUG] InfiniteScroller.scrollToJobNumber: jobNumber=${jobNumber}, animate=${animate}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScroller.scrollToJobNumber: jobNumber=${jobNumber}, animate=${animate}`);
     
     // Find the item with the specified job number
     const index = this.originalItems.findIndex(item => {
@@ -1325,7 +1325,7 @@ class InfiniteScrollingContainer {
       return false;
     }
     
-    // console.log(`[DEBUG] InfiniteScroller.scrollToJobNumber: Found job ${jobNumber} at index ${index}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScroller.scrollToJobNumber: Found job ${jobNumber} at index ${index}`);
     
     // Use scrollToIndex instead of scrollToItem to properly handle the cloned structure
     this.scrollToIndex(index, animate);
@@ -1448,7 +1448,7 @@ class InfiniteScrollingContainer {
 
   // Method to trigger debounced resize handling
   handleResize() {
-    // console.log('[DEBUG] handleResize: Container size changed, triggering recalculation');
+    // window.CONSOLE_LOG_IGNORE('[DEBUG] handleResize: Container size changed, triggering recalculation');
     
     // Clear any existing timeout
     if (this.resizeTimeoutId) {
@@ -1475,7 +1475,7 @@ class InfiniteScrollingContainer {
       void this.contentHolder.offsetHeight;
       
       // Now recalculate heights and positions using centralized logic
-      // console.log('[DEBUG] handleResize: About to call calculateItemPositions from resize handler');
+      // window.CONSOLE_LOG_IGNORE('[DEBUG] handleResize: About to call calculateItemPositions from resize handler');
       const { minTop, maxTop } = this.calculateItemPositions(true);
       const totalHeight = maxTop - minTop;
       this.contentHolder.style.height = `${totalHeight}px`;

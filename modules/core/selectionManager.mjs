@@ -14,7 +14,7 @@ class SelectionManager extends EventTarget {
 
     selectJobNumber(jobNumber, caller = '') {
         if (this.selectedJobNumber === jobNumber) {
-            // console.log(`[DEBUG] SelectionManager: Early return - same job already selected: ${jobNumber} from ${caller}`);
+            // window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager: Early return - same job already selected: ${jobNumber} from ${caller}`);
             return;
         }
 
@@ -23,7 +23,7 @@ class SelectionManager extends EventTarget {
             this.clearHover(`${caller}-auto-clear-before-select`);
         }
 
-        // console.log(`[DEBUG] SelectionManager: [${caller}] Selecting job number: ${jobNumber} (was: ${this.selectedJobNumber})`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager: [${caller}] Selecting job number: ${jobNumber} (was: ${this.selectedJobNumber})`);
         this.selectedJobNumber = jobNumber;
         const event = new CustomEvent('selectionChanged', {
             detail: {
@@ -32,7 +32,7 @@ class SelectionManager extends EventTarget {
                 isPaired: true // Flag to indicate both cDiv and rDiv should be selected
             }
         });
-        // console.log(`[DEBUG] SelectionManager: Dispatching selectionChanged event:`, event.detail);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager: Dispatching selectionChanged event:`, event.detail);
         this.dispatchEvent(event);
     }
 

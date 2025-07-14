@@ -72,7 +72,7 @@ class ResumeItemsController {
     }
 
     async createAllBizResumeDivs(bizCardDivs) {
-        console.log('[ResumeItemsController] createAllBizResumeDivs called with:', bizCardDivs?.length || 0, 'cards');
+        window.CONSOLE_LOG_IGNORE('[ResumeItemsController] createAllBizResumeDivs called with:', bizCardDivs?.length || 0, 'cards');
         
         if (!bizCardDivs || bizCardDivs.length === 0) {
             console.warn("ResumeItemsController: Cannot create resume divs, no card divs provided.");
@@ -82,7 +82,7 @@ class ResumeItemsController {
         this.bizResumeDivs = [];
         for (let i = 0; i < bizCardDivs.length; i++) {
             const cardDiv = bizCardDivs[i];
-            // console.log(`[ResumeItemsController] Processing card ${i}:`, cardDiv);
+            // window.CONSOLE_LOG_IGNORE(`[ResumeItemsController] Processing card ${i}:`, cardDiv);
             
             if (!cardDiv) {
                 console.warn(`[ResumeItemsController] Card at index ${i} is null/undefined, skipping`);
@@ -195,7 +195,7 @@ class ResumeItemsController {
 
         // Skip applying hover styling to selected items, but allow event coordination to proceed
         if (selectionManager.getSelectedJobNumber() === hoveredJobNumber) {
-            console.log(`[DEBUG] ResumeItemsController: Skipping hover styling for selected item ${hoveredJobNumber}, but allowing coordination`);
+            window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeItemsController: Skipping hover styling for selected item ${hoveredJobNumber}, but allowing coordination`);
             return;
         }
 

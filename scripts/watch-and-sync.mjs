@@ -39,12 +39,12 @@ const handleFileChange = debounce(async (eventType, filename) => {
   
   // Skip if too soon since last sync
   if (now - lastSyncTime < MIN_SYNC_INTERVAL) {
-    console.log(`⏱️  Skipping sync - too soon since last sync (${Math.round((now - lastSyncTime) / 1000)}s ago)`);
+    window.CONSOLE_LOG_IGNORE(`⏱️  Skipping sync - too soon since last sync (${Math.round((now - lastSyncTime) / 1000)}s ago)`);
     return;
   }
   
-  console.log(`\n📝 File changed: ${filename} (${eventType})`);
-  console.log('🔄 Extracting design tokens and syncing with Figma...');
+  window.CONSOLE_LOG_IGNORE(`\n📝 File changed: ${filename} (${eventType})`);
+  window.CONSOLE_LOG_IGNORE('🔄 Extracting design tokens and syncing with Figma...');
   
   try {
     // Extract tokens and sync
@@ -52,7 +52,7 @@ const handleFileChange = debounce(async (eventType, filename) => {
     await syncWithFigma();
     
     lastSyncTime = now;
-    console.log('✅ Sync completed successfully!');
+    window.CONSOLE_LOG_IGNORE('✅ Sync completed successfully!');
     
   } catch (error) {
     console.error('❌ Sync failed:', error.message);
@@ -77,7 +77,7 @@ function watchDirectories() {
       const stats = fs.statSync(watchPath);
       
       if (stats.isDirectory()) {
-        console.log(`👀 Watching directory: ${watchPath}`);
+        window.CONSOLE_LOG_IGNORE(`👀 Watching directory: ${watchPath}`);
         const watcher = fs.watch(watchPath, { recursive: true }, (eventType, filename) => {
           if (filename && (filename.endsWith('.vue') || filename.endsWith('.js') || filename.endsWith('.mjs') || filename.endsWith('.json'))) {
             handleFileChange(eventType, path.join(watchPath, filename));
@@ -86,12 +86,12 @@ function watchDirectories() {
         watchers.push(watcher);
         
       } else if (stats.isFile()) {
-        console.log(`👀 Watching file: ${watchPath}`);
+        window.CONSOLE_LOG_IGNORE(`👀 Watching file: ${watchPath}`);
         const watcher = fs.watch(watchPath, handleFileChange);
         watchers.push(watcher);
       }
     } else {
-      console.log(`⚠️  Warning: ${watchPath} does not exist`);
+      window.CONSOLE_LOG_IGNORE(`⚠️  Warning: ${watchPath} does not exist`);
     }
   });
   
@@ -103,13 +103,13 @@ function watchDirectories() {
  */
 function setupShutdown(watchers) {
   process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down watchers...');
+    window.CONSOLE_LOG_IGNORE('\n🛑 Shutting down watchers...');
     watchers.forEach(watcher => watcher.close());
     process.exit(0);
   });
   
   process.on('SIGTERM', () => {
-    console.log('\n🛑 Shutting down watchers...');
+    window.CONSOLE_LOG_IGNORE('\n🛑 Shutting down watchers...');
     watchers.forEach(watcher => watcher.close());
     process.exit(0);
   });
@@ -119,28 +119,28 @@ function setupShutdown(watchers) {
  * Main function
  */
 async function startWatching() {
-  console.log('🚀 Starting Figma design token watcher...');
-  console.log('📊 This will monitor your Vue components and CSS files for changes');
-  console.log('🔄 When changes are detected, design tokens will be extracted and synced with Figma');
-  console.log('⏱️  Minimum sync interval: 5 seconds');
-  console.log('🛑 Press Ctrl+C to stop watching\n');
+  window.CONSOLE_LOG_IGNORE('🚀 Starting Figma design token watcher...');
+  window.CONSOLE_LOG_IGNORE('📊 This will monitor your Vue components and CSS files for changes');
+  window.CONSOLE_LOG_IGNORE('🔄 When changes are detected, design tokens will be extracted and synced with Figma');
+  window.CONSOLE_LOG_IGNORE('⏱️  Minimum sync interval: 5 seconds');
+  window.CONSOLE_LOG_IGNORE('🛑 Press Ctrl+C to stop watching\n');
   
   // Initial sync
   try {
-    console.log('🔄 Running initial sync...');
+    window.CONSOLE_LOG_IGNORE('🔄 Running initial sync...');
     await extractDesignTokens();
     await syncWithFigma();
-    console.log('✅ Initial sync completed!\n');
+    window.CONSOLE_LOG_IGNORE('✅ Initial sync completed!\n');
   } catch (error) {
     console.error('❌ Initial sync failed:', error.message);
-    console.log('⚠️  Continuing with file watching...\n');
+    window.CONSOLE_LOG_IGNORE('⚠️  Continuing with file watching...\n');
   }
   
   // Start watching
   const watchers = watchDirectories();
   setupShutdown(watchers);
   
-  console.log('✅ Watcher started! Monitoring for changes...');
+  window.CONSOLE_LOG_IGNORE('✅ Watcher started! Monitoring for changes...');
   
   // Keep the process alive
   setInterval(() => {

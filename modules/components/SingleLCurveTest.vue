@@ -142,8 +142,8 @@ export default {
       cDivTop.value = cDivRect.top - sceneRect.top;
       cDivBottom.value = cDivRect.bottom - sceneRect.top;
 
-      console.log(`[SingleLCurveTest] Badge: (${badgeLeft.value}, ${badgeCenterY.value})`);
-      console.log(`[SingleLCurveTest] cDiv: center=(${cDivCenterX.value}, ${(cDivTop.value + cDivBottom.value) / 2}), top=${cDivTop.value}, bottom=${cDivBottom.value}`);
+      window.CONSOLE_LOG_IGNORE(`[SingleLCurveTest] Badge: (${badgeLeft.value}, ${badgeCenterY.value})`);
+      window.CONSOLE_LOG_IGNORE(`[SingleLCurveTest] cDiv: center=(${cDivCenterX.value}, ${(cDivTop.value + cDivBottom.value) / 2}), top=${cDivTop.value}, bottom=${cDivBottom.value}`);
     };
 
     // Container style
@@ -187,14 +187,14 @@ export default {
     const handleCardSelect = (event) => {
       const jobNumber = parseInt(event.detail.jobNumber);
       if (jobNumber === TARGET_CDIV_JOB_NUMBER) {
-        console.log('[SingleLCurveTest] Card selected, showing connection');
+        window.CONSOLE_LOG_IGNORE('[SingleLCurveTest] Card selected, showing connection');
         showConnection.value = true;
         setTimeout(() => updatePositions(), 100);
       }
     };
 
     const handleCardDeselect = () => {
-      console.log('[SingleLCurveTest] Card deselected, hiding connection');
+      window.CONSOLE_LOG_IGNORE('[SingleLCurveTest] Card deselected, hiding connection');
       showConnection.value = false;
     };
 

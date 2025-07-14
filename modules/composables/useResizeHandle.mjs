@@ -1,6 +1,7 @@
 import { ref, computed, nextTick } from 'vue';
 import { useViewport } from './useViewport.mjs';
 import { useBullsEye } from './useBullsEye.mjs';
+import { useLayoutToggle } from './useLayoutToggle.mjs';
 import * as aimPoint from '@/modules/core/aimPoint.mjs';
 import { AppState, saveState } from '@/modules/core/stateManager.mjs';
 import { performanceMonitor } from '@/modules/utils/performanceMonitor.mjs';
@@ -99,8 +100,14 @@ function updateLayout(newUiPercentage, shouldSave = true) {
         window.CONSOLE_LOG_IGNORE('RESIZE: ERROR - _viewport is null!');
     }
     
-    if (AppState) {
-        AppState.layout.panelSizePercentage = actualPercentage;
+    if (AppState?.layout) {
+        // Calculate true percentages of total window width
+        const trueScenePercentage = (finalSceneWidth / windowWidth) * 100;
+        const trueResumePercentage = ((windowWidth - finalSceneWidth) / windowWidth) * 100;
+        
+        AppState.layout.scenePercentage = trueScenePercentage;
+        AppState.layout.resumePercentage = trueResumePercentage;
+        
         if (shouldSave) {
             saveState(AppState);
         }
@@ -136,11 +143,23 @@ function debouncedResizeHandler() {
 }
 
 export function useResizeHandle() {
+    // Get layout orientation
+    const { orientation } = useLayoutToggle();
 
     function initializeResizeHandleState(viewport = null, bullsEyeInstance = null) {
         _viewport = viewport;
         _bullsEyeInstance = bullsEyeInstance;
-        const initialPercentage = AppState?.layout?.panelSizePercentage || DEFAULT_WIDTH_PERCENT;
+        // Convert stored true scene percentage back to internal percentage
+        const storedScenePercentage = AppState?.layout?.scenePercentage;
+        let initialPercentage = DEFAULT_WIDTH_PERCENT;
+        
+        if (storedScenePercentage) {
+            const windowWidth = window.innerWidth;
+            const resumeContainerWidth = 20;
+            const maxSceneWidth = windowWidth - resumeContainerWidth;
+            const storedSceneWidth = (storedScenePercentage / 100) * windowWidth;
+            initialPercentage = (storedSceneWidth / maxSceneWidth) * 100;
+        }
         steppingEnabled.value = AppState?.resizeHandle?.steppingEnabled || false;
         stepCount.value = AppState?.resizeHandle?.stepCount || 5;
         uiPercentage.value = initialPercentage;
@@ -180,25 +199,18 @@ export function useResizeHandle() {
         const maxSceneWidth = windowWidth - resumeContainerWidth;
         
         const dx = e.clientX - startX;
-        const newPixelWidth = startPixelWidth + dx;
+        // The percentage always represents scene width, but handle position affects behavior:
+        // - scene-left: handle on left of resume, drag right = increase scene area = increase percentage
+        // - scene-right: handle on right of resume, drag right = decrease scene area = decrease percentage
+        // So we need to invert dx when scene is on right
+        const adjustedDx = orientation.value === 'scene-right' ? -dx : dx;
+        const newPixelWidth = startPixelWidth + adjustedDx;
         
         // Clamp pixel width to valid range (0 to maxSceneWidth)
         const clampedPixelWidth = Math.max(0, Math.min(maxSceneWidth, newPixelWidth));
         
         // Calculate percentage based on clamped pixel width
         const percentage = maxSceneWidth > 0 ? (clampedPixelWidth / maxSceneWidth) * 100 : 0;
-        
-        // AGGRESSIVE DRAG DEBUGGING
-        window.CONSOLE_LOG_IGNORE('=== DRAG DEBUG START ===');
-        window.CONSOLE_LOG_IGNORE('Mouse dx:', dx);
-        window.CONSOLE_LOG_IGNORE('Start pixel width:', startPixelWidth);
-        window.CONSOLE_LOG_IGNORE('New pixel width:', newPixelWidth);
-        window.CONSOLE_LOG_IGNORE('Window width:', windowWidth);
-        window.CONSOLE_LOG_IGNORE('Max scene width:', maxSceneWidth);
-        window.CONSOLE_LOG_IGNORE('Clamped pixel width:', clampedPixelWidth);
-        window.CONSOLE_LOG_IGNORE('Calculated percentage:', percentage);
-        window.CONSOLE_LOG_IGNORE('Current uiPercentage.value:', uiPercentage.value);
-        window.CONSOLE_LOG_IGNORE('=== DRAG DEBUG END ===');
         
         updateLayoutFromPercentage(percentage, false);
     }

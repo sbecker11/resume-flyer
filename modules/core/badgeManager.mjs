@@ -34,7 +34,7 @@ class BadgeManager extends EventTarget {
             this._mode = AppState.badgeToggle.mode;
         }
 
-        console.log(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
         this.refreshVisibility(); // Update visibility now that we have the correct mode.
 
         // Dispatch an event to notify components that the initial mode is set.
@@ -70,7 +70,7 @@ class BadgeManager extends EventTarget {
         const previousMode = this._mode;
         this._mode = mode;
         
-        console.log(`[BadgeManager] ${caller ? `[${caller}] ` : ''}Mode changed from ${previousMode} to ${mode}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] ${caller ? `[${caller}] ` : ''}Mode changed from ${previousMode} to ${mode}`);
         
         // Update AppState and persist
         this._saveToAppState();
@@ -191,7 +191,7 @@ class BadgeManager extends EventTarget {
      * Useful when DOM structure changes or elements are added/removed
      */
     refreshVisibility() {
-        console.log(`[BadgeManager] Force refreshing visibility for mode: ${this._mode}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Force refreshing visibility for mode: ${this._mode}`);
         this._updateAllVisibility();
     }
     
@@ -211,7 +211,7 @@ class BadgeManager extends EventTarget {
      */
     clearConnectionsIfNeeded(connectionsRef) {
         if (!this.isConnectionLinesVisible() && connectionsRef.value.length > 0) {
-            console.log(`[BadgeManager] Clearing connections - not visible in mode: ${this._mode}`);
+            window.CONSOLE_LOG_IGNORE(`[BadgeManager] Clearing connections - not visible in mode: ${this._mode}`);
             connectionsRef.value = [];
         }
     }
@@ -237,7 +237,7 @@ class BadgeManager extends EventTarget {
             }
         }
         
-        console.log(`[BadgeManager] Updated individual stats element. Stats visible: ${shouldShowStats}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Updated individual stats element. Stats visible: ${shouldShowStats}`);
     }
     
     /**
@@ -419,7 +419,7 @@ class BadgeManager extends EventTarget {
             }
         });
         
-        console.log(`[BadgeManager] Updated ${allStatsElements.length} stats elements and ${bizCardStatsDivs.length} biz-card-stats-divs. Stats visible: ${shouldShowStats}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Updated ${allStatsElements.length} stats elements and ${bizCardStatsDivs.length} biz-card-stats-divs. Stats visible: ${shouldShowStats}`);
     }
     
     /**
@@ -440,7 +440,7 @@ class BadgeManager extends EventTarget {
             }
         });
         
-        console.log(`[BadgeManager] Updated ${badgeContainers.length} badge containers. Badges visible: ${shouldShowBadges}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Updated ${badgeContainers.length} badge containers. Badges visible: ${shouldShowBadges}`);
     }
     
     /**
@@ -448,7 +448,7 @@ class BadgeManager extends EventTarget {
      * @private
      */
     _handleCloneCreated(event) {
-        console.log(`[BadgeManager] Clone created, updating stats visibility for new elements`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Clone created, updating stats visibility for new elements`);
         // Small delay to ensure the stats div is added to the clone
         setTimeout(() => {
             this._updateStatsVisibility();

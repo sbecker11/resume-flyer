@@ -172,14 +172,14 @@ if (typeof window !== 'undefined') {
     window.addEventListener('connection-types-counted', (event) => {
         const { jobNumber: eventJobNumber, aboveCount, betweenCount, belowCount } = event.detail;
         actualCounts = { aboveCount, betweenCount, belowCount };
-        console.log(`[Stats] Received actual counts for job ${eventJobNumber}: Above=${aboveCount}, Between=${betweenCount}, Below=${belowCount}`);
+        window.CONSOLE_LOG_IGNORE(`[Stats] Received actual counts for job ${eventJobNumber}: Above=${aboveCount}, Between=${betweenCount}, Below=${belowCount}`);
         
         // Trigger unified stats recalculation for this job when we receive updated counts
         const currentSelectedCDiv = document.querySelector('.biz-card-div.selected');
         if (currentSelectedCDiv) {
             const selectedJobNumber = parseInt(currentSelectedCDiv.getAttribute('data-job-number'));
             if (selectedJobNumber === eventJobNumber) {
-                console.log(`[Stats] Recalculating and updating all statistics displays for job ${eventJobNumber}`);
+                window.CONSOLE_LOG_IGNORE(`[Stats] Recalculating and updating all statistics displays for job ${eventJobNumber}`);
                 recalculateAndUpdateAllStatistics(selectedJobNumber);
             }
         }
@@ -191,7 +191,7 @@ if (typeof window !== 'undefined') {
  * @param {number} jobNumber - The job number to recalculate and update statistics for
  */
 function recalculateAndUpdateAllStatistics(jobNumber) {
-    console.log(`[Stats] Recalculating all statistics for job ${jobNumber}`);
+    window.CONSOLE_LOG_IGNORE(`[Stats] Recalculating all statistics for job ${jobNumber}`);
     
     // Calculate fresh statistics with the latest actual counts
     const newStats = badgeManager.calculateSkillBadgeStats(jobNumber);
@@ -225,7 +225,7 @@ function recalculateAndUpdateAllStatistics(jobNumber) {
         if (rDivStatsContent) {
             rDivStatsContent.innerHTML = statsHtml;
             updateCount++;
-            console.log(`[Stats] Updated rDiv statistics for job ${jobNumber}`);
+            window.CONSOLE_LOG_IGNORE(`[Stats] Updated rDiv statistics for job ${jobNumber}`);
         }
     }
     
@@ -237,12 +237,12 @@ function recalculateAndUpdateAllStatistics(jobNumber) {
         if (cDivStatsContent) {
             cDivStatsContent.innerHTML = statsHtml;
             updateCount++;
-            console.log(`[Stats] Updated cDiv statistics for job ${jobNumber}`);
+            window.CONSOLE_LOG_IGNORE(`[Stats] Updated cDiv statistics for job ${jobNumber}`);
         }
     }
     
-    console.log(`[Stats] Completed unified statistics update for job ${jobNumber} - updated ${updateCount} displays`);
-    console.log(`[Stats] Final counts: Above=${newStats.aboveCount}, Between=${newStats.betweenCount}, Below=${newStats.belowCount}`);
+    window.CONSOLE_LOG_IGNORE(`[Stats] Completed unified statistics update for job ${jobNumber} - updated ${updateCount} displays`);
+    window.CONSOLE_LOG_IGNORE(`[Stats] Final counts: Above=${newStats.aboveCount}, Between=${newStats.betweenCount}, Below=${newStats.belowCount}`);
 }
 
 

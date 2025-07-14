@@ -61,7 +61,7 @@ class NavigationAPI {
         if (!this.isInitialized) return false;
 
         const currentJobNumber = selectionManager.getSelectedJobNumber();
-        console.log(`[DEBUG] NavigationAPI.navigateToNext: currentJobNumber=${currentJobNumber}`);
+        window.CONSOLE_LOG_IGNORE(`[DEBUG] NavigationAPI.navigateToNext: currentJobNumber=${currentJobNumber}`);
         
         if (currentJobNumber === null) {
             // If nothing selected, start with first job
@@ -71,7 +71,7 @@ class NavigationAPI {
         const nextJobNumber = currentJobNumber + 1;
         const maxJobNumber = this.cardsController?.bizCardDivs?.length - 1 || 0;
         
-        console.log(`[DEBUG] NavigationAPI.navigateToNext: nextJobNumber=${nextJobNumber}, maxJobNumber=${maxJobNumber}`);
+        window.CONSOLE_LOG_IGNORE(`[DEBUG] NavigationAPI.navigateToNext: nextJobNumber=${nextJobNumber}, maxJobNumber=${maxJobNumber}`);
         
         if (nextJobNumber <= maxJobNumber) {
             return this.navigateToJobNumber(nextJobNumber, caller);

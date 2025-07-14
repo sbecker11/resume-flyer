@@ -1,7 +1,7 @@
 <template>
   <div id="scene-content-footer">
     <div>
-      <span class="viewer-label">Scene Viewer ({{ scenePercentage }}%)</span>
+      <span class="viewer-label">{{ viewerLabel }} ({{ scenePercentage }}%)</span>
     </div>
   </div>
 </template>
@@ -9,14 +9,21 @@
 <script>
 import { computed } from 'vue';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
+import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 
 export default {
   name: 'SceneContainerFooter',
   setup() {
     const { percentage: scenePercentage } = useResizeHandle();
+    const { orientation } = useLayoutToggle();
+
+    const viewerLabel = computed(() => {
+      return 'Scene Viewer'; // Always show Scene Viewer for scene container
+    });
 
     return {
-      scenePercentage: computed(() => Math.round(scenePercentage.value))
+      scenePercentage: computed(() => Math.round(scenePercentage.value)),
+      viewerLabel
     };
   }
 };

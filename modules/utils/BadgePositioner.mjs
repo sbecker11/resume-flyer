@@ -31,8 +31,8 @@ export class BadgePositioner {
         // Use cDiv center directly for all badges
         const centerY = Math.max(200, cDivCenterY); // Ensure minimum distance from top
         
-        console.log(`[BadgePositioner] cDiv bounds: top=${cDivTop.toFixed(1)}px, bottom=${cDivBottom.toFixed(1)}px, centerY=${cDivCenterY.toFixed(1)}px`);
-        console.log(`[BadgePositioner] Creating ordered list: ${relatedBadges.length} related badges first, then ${unrelatedBadges.length} unrelated badges`);
+        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] cDiv bounds: top=${cDivTop.toFixed(1)}px, bottom=${cDivBottom.toFixed(1)}px, centerY=${cDivCenterY.toFixed(1)}px`);
+        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Creating ordered list: ${relatedBadges.length} related badges first, then ${unrelatedBadges.length} unrelated badges`);
         
         // Create single ordered list: related badges first, then unrelated badges
         const orderedBadges = [...relatedBadges, ...unrelatedBadges];
@@ -54,7 +54,7 @@ export class BadgePositioner {
             positionData.forEach(({ element, position }, index) => {
                 element.style.top = `${position}px`;
                 if (index < 3) {
-                    console.log(`[BadgePositioner] Badge ${index} (${element.textContent}): positioned at ${position}px (DOM fallback)`);
+                    window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Badge ${index} (${element.textContent}): positioned at ${position}px (DOM fallback)`);
                 }
             });
         }
@@ -122,7 +122,7 @@ export class BadgePositioner {
             });
         }
         
-        console.log(`[BadgePositioner] Positioned ${allBadges.length} badges in viewport mode (scrollTop=${scrollTop}, startY=${startY})`);
+        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Positioned ${allBadges.length} badges in viewport mode (scrollTop=${scrollTop}, startY=${startY})`);
     }
 
     /**
@@ -133,7 +133,7 @@ export class BadgePositioner {
         const positions = [];
         let offset = 0;
         
-        console.log(`[BadgePositioner] Calculating staggered positions for ${totalBadges} badges around centerBucket=${centerBucket}px`);
+        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Calculating staggered positions for ${totalBadges} badges around centerBucket=${centerBucket}px`);
         
         for (let i = 0; i < totalBadges; i++) {
             let targetY;
@@ -154,11 +154,11 @@ export class BadgePositioner {
             
             // Debug first few positions
             if (i < 5) {
-                console.log(`[BadgePositioner] Badge ${i}: targetY=${targetY}px (center=${centerBucket}, offset=${offset})`);
+                window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Badge ${i}: targetY=${targetY}px (center=${centerBucket}, offset=${offset})`);
             }
         }
         
-        console.log(`[BadgePositioner] Generated ${positions.length} staggered positions:`, positions.slice(0, 5), '...');
+        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Generated ${positions.length} staggered positions:`, positions.slice(0, 5), '...');
         return positions;
     }
 

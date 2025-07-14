@@ -81,7 +81,7 @@ export class CSSVariableInjector {
         this.root.style.setProperty('--depth-blur-scale', constants.visualEffects.depthEffects.blurScaleFactor);
         this.root.style.setProperty('--depth-min-brightness', `${constants.visualEffects.depthEffects.minBrightnessPercent}%`);
         
-        console.log('[CSSVariableInjector] Injected constants as CSS custom properties');
+        window.CONSOLE_LOG_IGNORE('[CSSVariableInjector] Injected constants as CSS custom properties');
     }
 
     /**

@@ -8,7 +8,7 @@
       :key="skill.id"
       :id="skill.id"
       class="skill-badge"
-      :class="skill.classes"
+      :class="[...skill.classes, orientation === 'scene-left' ? 'position-right' : 'position-left']"
       :data-color-index="skill.colorIndex"
       :style="skill.style"
     >
@@ -21,6 +21,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useViewport } from '@/modules/composables/useViewport.mjs';
 import { useColorPalette, applyPaletteToElement } from '@/modules/composables/useColorPalette.mjs';
+import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { jobs as jobsData } from '@/static_content/jobs/jobs.mjs';
 import { AppState } from '@/modules/core/stateManager.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
@@ -33,6 +34,7 @@ export default {
   setup(props, { emit }) {
     const viewport = useViewport('SkillBadges');
     const colorPalette = useColorPalette();
+    const { orientation } = useLayoutToggle();
     
     const skillBadges = ref([]);
     const hoveredJobNumber = ref(null);
@@ -71,6 +73,7 @@ export default {
       
       // Convert to array and create badge objects
       skillMap.forEach(skill => {
+        const isSceneLeft = orientation.value === 'scene-left';
         badges.push({
           id: skill.id,
           name: skill.name,
@@ -81,26 +84,27 @@ export default {
           style: {
             position: 'absolute',
             top: '0px',
-            right: '0px'
+            right: isSceneLeft ? '0px' : 'auto',
+            left: isSceneLeft ? 'auto' : '0px'
           }
         });
       });
       
       skillBadges.value = badges;
-      console.log(`[SkillBadges] Created ${badges.length} skill badges`);
+      window.CONSOLE_LOG_IGNORE(`[SkillBadges] Created ${badges.length} skill badges`);
     };
     
     // Position badges based on selection state
     const positionBadges = () => {
       if (!badgeManager.isBadgesVisible()) {
-        console.log('[SkillBadges] Skipping positioning - badges not visible');
+        window.CONSOLE_LOG_IGNORE('[SkillBadges] Skipping positioning - badges not visible');
         return;
       }
       
       const selectedCDiv = document.querySelector('.biz-card-div.selected');
       const badges = document.querySelectorAll('.skill-badge');
       
-      console.log(`[SkillBadges] positionBadges called - found ${badges.length} badge elements, selectedCDiv:`, selectedCDiv);
+      window.CONSOLE_LOG_IGNORE(`[SkillBadges] positionBadges called - found ${badges.length} badge elements, selectedCDiv:`, selectedCDiv);
       
       if (selectedCDiv && selectedJobNumber.value !== null) {
         // Position around selected cDiv
@@ -127,7 +131,7 @@ export default {
         };
         
         // Debug the cDiv bounds calculation
-        console.log(`[SkillBadges] cDiv positioning debug:`, {
+        window.CONSOLE_LOG_IGNORE(`[SkillBadges] cDiv positioning debug:`, {
           cDivRect: { top: cDivRect.top, bottom: cDivRect.bottom, height: cDivRect.height },
           containerRect: { top: containerRect.top, bottom: containerRect.bottom },
           scrollTop,
@@ -136,13 +140,13 @@ export default {
         
         // Create callback to update Vue reactive data
         const updatePositions = (positionData) => {
-          console.log(`[SkillBadges] Updating ${positionData.length} badge positions in reactive data`);
+          window.CONSOLE_LOG_IGNORE(`[SkillBadges] Updating ${positionData.length} badge positions in reactive data`);
           positionData.forEach(({ element, position }, index) => {
             const skillBadgeData = skillBadges.value.find(sb => sb.id === element.id);
             if (skillBadgeData) {
               skillBadgeData.style.top = `${position}px`;
               if (index < 3) {
-                console.log(`[SkillBadges] Updated reactive data for ${skillBadgeData.name}: top=${skillBadgeData.style.top}`);
+                window.CONSOLE_LOG_IGNORE(`[SkillBadges] Updated reactive data for ${skillBadgeData.name}: top=${skillBadgeData.style.top}`);
               }
             }
           });
@@ -151,7 +155,7 @@ export default {
         const stats = badgePositioner.positionBadges([...badges], relatedBadges, unrelatedBadges, cDivBounds, updatePositions);
       } else {
         // No selection - hide all badges by moving them off-screen
-        console.log('[SkillBadges] No selection - hiding all badges');
+        window.CONSOLE_LOG_IGNORE('[SkillBadges] No selection - hiding all badges');
         skillBadges.value.forEach(skillBadge => {
           skillBadge.style.top = '-1000px'; // Move off-screen
         });
@@ -197,7 +201,7 @@ export default {
     };
     
     const handleCardDeselect = () => {
-      console.log('[SkillBadges] Card deselected - hiding badges');
+      window.CONSOLE_LOG_IGNORE('[SkillBadges] Card deselected - hiding badges');
       selectedJobNumber.value = null;
       setTimeout(positionBadges, 50);
     };
@@ -234,10 +238,15 @@ export default {
     // Container positioning within scene-content
     const containerStyle = computed(() => {
       const skillBadgesZIndex = AppState.constants.zIndex.badges;
+      const isSceneLeft = orientation.value === 'scene-left';
+      
+      console.log(`layout: ${orientation.value}`);
+      console.log(`badges: move to ${isSceneLeft ? 'right' : 'left'}`);
       
       return {
         position: 'absolute',
-        right: '10px',
+        right: isSceneLeft ? '10px' : 'auto',
+        left: isSceneLeft ? 'auto' : '10px',
         top: '0px',
         width: 'auto',
         height: '100%',
@@ -249,7 +258,7 @@ export default {
     });
     
     onMounted(() => {
-      console.log('[SkillBadges] Component mounted');
+      window.CONSOLE_LOG_IGNORE('[SkillBadges] Component mounted');
       
       createSkillBadges();
       
@@ -283,7 +292,8 @@ export default {
     
     return {
       skillBadges,
-      containerStyle
+      containerStyle,
+      orientation
     };
   }
 };
@@ -307,25 +317,40 @@ export default {
   min-width: 2.5em;
   padding: 0.5em 0.75em;
   margin-bottom: 0.1em;
-  border-radius: 1.25em 0 0 1.25em;
-  border-right: none;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5em;
-  text-align: right;
   white-space: nowrap;
   cursor: default;
   transition: all 0.2s ease;
   border: 1px solid transparent;
   box-sizing: border-box;
-  right: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   background-color: var(--data-background-color, #ffffff);
   color: var(--data-foreground-color, #000000);
   border-color: var(--data-foreground-color, #000000);
+}
+
+/* Right-positioned badges (scene on left) */
+.skill-badge.position-right {
+  border-radius: 1.25em 0 0 1.25em;
+  border-right: none;
+  text-align: right;
+  right: 0;
+  justify-content: flex-end;
+}
+
+/* Left-positioned badges (scene on right) */
+.skill-badge.position-left {
+  border-radius: 0 1.25em 1.25em 0;
+  border-left: none;
+  text-align: left;
+  left: 0 !important;
+  justify-content: flex-start;
+  width: auto !important;
+  min-width: fit-content;
 }
 
 .skill-badge.hovered {
