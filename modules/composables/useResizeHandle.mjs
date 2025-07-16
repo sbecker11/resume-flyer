@@ -231,6 +231,7 @@ export function useResizeHandle() {
         } else {
             if (AppState) saveState(AppState);
         }
+        
     }
 
     function startDrag(e) {
@@ -240,6 +241,8 @@ export function useResizeHandle() {
         isDragging.value = true;
         startX = e.clientX;
         startPixelWidth = sceneWidthInPixels.value;
+        
+        
         document.body.style.userSelect = 'none';
         document.addEventListener('mousemove', handleDrag);
         document.addEventListener('mouseup', stopDrag);

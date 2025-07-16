@@ -28,28 +28,25 @@ export function initialize() {
 
             window.CONSOLE_LOG_IGNORE('BullsEye: Element found, setting up centering...');
 
-            // Clear any conflicting inline styles first
+            // Clear any existing inline styles
             _bullsEyeElement.style.removeProperty('top');
             _bullsEyeElement.style.removeProperty('left');
             _bullsEyeElement.style.removeProperty('transform');
 
-            // Position relative to scene container
+            // Position at scene container center (simplified approach)
             const sceneContainerForInit = document.getElementById('scene-container');
-            // Position at scene container center (viewport center)
             if (sceneContainerForInit) {
                 const sceneRect = sceneContainerForInit.getBoundingClientRect();
+                const centerX = sceneRect.left + sceneRect.width / 2;
+                const centerY = sceneRect.top + sceneRect.height / 2;
+                
                 _bullsEyeElement.style.position = 'fixed';
-                _bullsEyeElement.style.left = `${sceneRect.left + sceneRect.width / 2}px`;
-                _bullsEyeElement.style.top = `${sceneRect.top + sceneRect.height / 2}px`;
+                _bullsEyeElement.style.left = `${centerX}px`;
+                _bullsEyeElement.style.top = `${centerY}px`;
                 _bullsEyeElement.style.transform = 'translate(-50%, -50%)';
                 _bullsEyeElement.style.zIndex = '1000';
             } else {
-                // Fallback to window centering
-                _bullsEyeElement.style.position = 'fixed';
-                _bullsEyeElement.style.top = '50%';
-                _bullsEyeElement.style.left = '50%';
-                _bullsEyeElement.style.transform = 'translate(-50%, -50%)';
-                _bullsEyeElement.style.zIndex = '1000';
+                throw new Error('BullsEye: Scene container not found - cannot position bullsEye');
             }
 
             // Force a layout recalculation
@@ -87,7 +84,17 @@ export function initialize() {
             window.CONSOLE_LOG_IGNORE('BullsEye: Distance from scene center:', distance.toFixed(2) + 'px');
 
             // Add resize listener for recentering
-            window.addEventListener('resize', recenterBullsEye);
+            // NOTE: Temporarily disabled to let composable handle positioning
+            // window.addEventListener('resize', recenterBullsEye);
+            
+            // Add viewport-changed listener for layout changes
+            // NOTE: Temporarily disabled to let composable handle positioning
+            // window.addEventListener('viewport-changed', () => {
+            //     console.log('BullsEye: Viewport changed, recentering...');
+            //     recenterBullsEye();
+            // });
+
+            // Layout orientation changes are now handled reactively by the composable
 
             _isInitialized = true;
             window.CONSOLE_LOG_IGNORE('BullsEye initialized successfully');
@@ -102,13 +109,14 @@ export function initialize() {
 }
 
 /**
- * Get the current bullsEye position
- * @returns {object} The bullsEye position {x, y}
+ * Returns the center position of the bullsEye element
+ * @returns {Object} {x, y} coordinates relative to the viewport (window coordinates)
  */
 export function getBullsEye() {
     if (!_isInitialized || !_bullsEyeElement) {
-        window.CONSOLE_LOG_IGNORE('BullsEye not initialized, returning scene center');
-        // Get scene container for scene-relative positioning
+        window.CONSOLE_LOG_IGNORE('BullsEye not initialized, returning scene container center');
+        
+        // Get scene container center directly
         const sceneContainer = document.getElementById('scene-container');
         if (sceneContainer) {
             const sceneRect = sceneContainer.getBoundingClientRect();
@@ -117,11 +125,9 @@ export function getBullsEye() {
                 y: sceneRect.top + sceneRect.height / 2
             };
         }
-        // Fallback to window center
-        return {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2
-        };
+        
+        // No fallback - scene container must exist
+        throw new Error('BullsEye: Scene container not found - cannot determine position');
     }
 
     const rect = _bullsEyeElement.getBoundingClientRect();
@@ -142,59 +148,80 @@ export function recenterBullsEye() {
 
     window.CONSOLE_LOG_IGNORE('BullsEye: Recentering...');
 
-    // Clear any inline styles that might interfere with CSS centering
-    _bullsEyeElement.style.removeProperty('top');
-    _bullsEyeElement.style.removeProperty('left');
-    _bullsEyeElement.style.removeProperty('transform');
+    // Wait for layout transitions to complete if they're happening
+    const performRecenter = () => {
+        console.log('BullsEye: performRecenter called');
+        
+        // Clear any existing inline styles
+        _bullsEyeElement.style.removeProperty('top');
+        _bullsEyeElement.style.removeProperty('left');
+        _bullsEyeElement.style.removeProperty('transform');
 
-    // Position at scene container center (viewport center)
-    const sceneContainerForRecenter = document.getElementById('scene-container');
-    if (sceneContainerForRecenter) {
-        const sceneRect = sceneContainerForRecenter.getBoundingClientRect();
-        _bullsEyeElement.style.position = 'fixed';
-        _bullsEyeElement.style.left = `${sceneRect.left + sceneRect.width / 2}px`;
-        _bullsEyeElement.style.top = `${sceneRect.top + sceneRect.height / 2}px`;
-        _bullsEyeElement.style.transform = 'translate(-50%, -50%)';
-    } else {
-        // Fallback to window centering
-        _bullsEyeElement.style.position = 'fixed';
-        _bullsEyeElement.style.top = '50%';
-        _bullsEyeElement.style.left = '50%';
-        _bullsEyeElement.style.transform = 'translate(-50%, -50%)';
-    }
+        // Get scene container center directly (simplified approach)
+        const sceneContainerForRecenter = document.getElementById('scene-container');
+        if (sceneContainerForRecenter) {
+            // Force a layout recalculation to get accurate measurements
+            void sceneContainerForRecenter.offsetHeight;
+            
+            const sceneRect = sceneContainerForRecenter.getBoundingClientRect();
+            const centerX = sceneRect.left + sceneRect.width / 2;
+            const centerY = sceneRect.top + sceneRect.height / 2;
+            
+            console.log('BullsEye: Positioning at scene container center:', { centerX, centerY });
+            _bullsEyeElement.style.position = 'fixed';
+            _bullsEyeElement.style.left = `${centerX}px`;
+            _bullsEyeElement.style.top = `${centerY}px`;
+            _bullsEyeElement.style.transform = 'translate(-50%, -50%)';
+            _bullsEyeElement.style.zIndex = '1000';
+        } else {
+            throw new Error('BullsEye: Scene container not found - cannot recenter bullsEye');
+        }
 
-    // Force a layout recalculation
-    void _bullsEyeElement.offsetHeight;
+        // Force a layout recalculation
+        void _bullsEyeElement.offsetHeight;
 
-    // Verify the recentering worked
-    const rect = _bullsEyeElement.getBoundingClientRect();
-    const sceneContainer = document.getElementById('scene-container');
-    let referenceCenter;
-    
-    if (sceneContainer) {
-        const sceneRect = sceneContainer.getBoundingClientRect();
-        referenceCenter = {
-            x: sceneRect.left + sceneRect.width / 2,
-            y: sceneRect.top + sceneRect.height / 2
+        // Verify the recentering worked
+        const rect = _bullsEyeElement.getBoundingClientRect();
+        const sceneContainer = document.getElementById('scene-container');
+        let referenceCenter;
+        
+        if (sceneContainer) {
+            const sceneRect = sceneContainer.getBoundingClientRect();
+            referenceCenter = {
+                x: sceneRect.left + sceneRect.width / 2,
+                y: sceneRect.top + sceneRect.height / 2
+            };
+        } else {
+            referenceCenter = {
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2
+            };
+        }
+        
+        const bullsEyeCenter = {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
         };
-    } else {
-        referenceCenter = {
-            x: window.innerWidth / 2,
-            y: window.innerHeight / 2
-        };
-    }
-    
-    const bullsEyeCenter = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
+        
+        const distance = Math.sqrt(
+            Math.pow(bullsEyeCenter.x - referenceCenter.x, 2) + 
+            Math.pow(bullsEyeCenter.y - referenceCenter.y, 2)
+        );
+        
+        console.log('BullsEye: Recentered - distance from scene center:', distance.toFixed(2) + 'px');
+        console.log('BullsEye: Final position verification:', {
+            bullsEyeCenter,
+            referenceCenter,
+            distance: distance.toFixed(2)
+        });
     };
-    
-    const distance = Math.sqrt(
-        Math.pow(bullsEyeCenter.x - referenceCenter.x, 2) + 
-        Math.pow(bullsEyeCenter.y - referenceCenter.y, 2)
-    );
-    
-    window.CONSOLE_LOG_IGNORE('BullsEye: Recentered - distance from scene center:', distance.toFixed(2) + 'px');
+
+    // If we're in the middle of a layout transition, wait for it to complete
+    if (window.isLayoutTransitioning) {
+        setTimeout(performRecenter, 100);
+    } else {
+        performRecenter();
+    }
 }
 
 /**
@@ -218,8 +245,11 @@ export function getBullsEyeElement() {
  */
 export function cleanup() {
     if (_isInitialized) {
-        window.removeEventListener('resize', recenterBullsEye);
+        // NOTE: These listeners are disabled, but keeping cleanup for safety
+        // window.removeEventListener('resize', recenterBullsEye);
+        // window.removeEventListener('viewport-changed', recenterBullsEye);
         _bullsEyeElement = null;
         _isInitialized = false;
+        _initializationPromise = null; // Reset initialization promise to allow re-initialization
     }
 } 

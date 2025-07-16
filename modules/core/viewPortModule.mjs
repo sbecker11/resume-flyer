@@ -5,7 +5,7 @@ import * as utils from '../utils/utils.mjs';
 import * as domUtils from '../utils/domUtils.mjs';
 
 // Constants
-const VIEWPORT_PADDING = 100; // Padding around the viewPortProperties
+const VIEWPORT_PADDING = 0; // Padding around the viewPortProperties
 
 // ViewPort state
 const viewPortProperties = {
@@ -31,32 +31,42 @@ const _resumeContainer = document.getElementById("resume-container");
  */
 export function initialize() {
     if (_isInitialized) {
-    
-        return;
+        return Promise.resolve();
     }
 
-    _sceneContainer = document.getElementById('scene-container');
-    if (!_sceneContainer) {
-        throw new Error("Viewport element #scene-container not found");
-    }
-
-    // Initial calculation
-    calculateViewPortProperties();
-
-    // Listen for resize events to recalculate properties
-    window.addEventListener('resize', calculateViewPortProperties);
-
-    // Add ResizeObserver to detect scene container size changes
-    if (typeof ResizeObserver !== 'undefined') {
-        const resizeObserver = new ResizeObserver(() => {
-    
-            updateViewPort();
+    // Wait for DOM to be ready
+    const waitForElement = () => {
+        return new Promise((resolve) => {
+            const checkElement = () => {
+                _sceneContainer = document.getElementById('scene-container');
+                if (_sceneContainer) {
+                    resolve();
+                } else {
+                    setTimeout(checkElement, 10);
+                }
+            };
+            checkElement();
         });
-        resizeObserver.observe(_sceneContainer);
-    }
+    };
+    
+    return waitForElement().then(() => {
+        // Initial calculation
+        calculateViewPortProperties();
 
-    _isInitialized = true;
+        // Listen for resize events to recalculate properties
+        window.addEventListener('resize', calculateViewPortProperties);
 
+        // Add ResizeObserver to detect scene container size changes
+        if (typeof ResizeObserver !== 'undefined') {
+            const resizeObserver = new ResizeObserver(() => {
+                updateViewPort();
+            });
+            resizeObserver.observe(_sceneContainer);
+        }
+
+        _isInitialized = true;
+        window.CONSOLE_LOG_IGNORE('Viewport initialized');
+    });
 }
 
 export function isInitialized() {
@@ -74,22 +84,44 @@ export function updateViewPort() {
     if ( !isInitialized() ) {
         throw new Error("viewPortProperties is not initialized");
     }
-    const sceneContainerRect = _sceneContainer.getBoundingClientRect();
-
-    // the scene matches the size of the window
-    const sceneWidth =_sceneContainer.offsetWidth;
-    const viewPortWidth = sceneWidth;
-    const viewPortLeft = 0;
-    const viewPortHeight = sceneContainerRect.height;
-    const viewPortTop = sceneContainerRect.top;
     
+    // Skip updates during layout transitions to prevent race conditions
+    if (window.isLayoutTransitioning) {
+        console.log('[ViewPort] Skipping update during layout transition');
+        return;
+    }
+    
+    // Force a layout recalculation to get accurate measurements
+    void _sceneContainer.offsetHeight;
+    void _sceneContainer.offsetWidth;
+    
+    // Get a stable scene container rect - retry multiple times if needed
+    let sceneContainerRect = _sceneContainer.getBoundingClientRect();
+    let retryCount = 0;
+    
+    // Retry if the rect seems unstable (width is 0 or very small) or if left position seems wrong
+    while ((sceneContainerRect.width < 10 || sceneContainerRect.left < 0) && retryCount < 3) {
+        // Force another layout recalculation
+        void _sceneContainer.offsetHeight;
+        void _sceneContainer.offsetWidth;
+        void _sceneContainer.getBoundingClientRect(); // Force a reflow
+        sceneContainerRect = _sceneContainer.getBoundingClientRect();
+        retryCount++;
+    }
+
+    // Viewport properties are directly based on scene container properties
     viewPortProperties.padding = VIEWPORT_PADDING;
-    viewPortProperties.top = viewPortTop - viewPortProperties.padding;
-    viewPortProperties.left = viewPortLeft - viewPortProperties.padding;
-    viewPortProperties.right = viewPortWidth + 2*viewPortProperties.padding;
-    viewPortProperties.bottom = viewPortHeight + 2*viewPortProperties.padding;
-    viewPortProperties.centerX = viewPortWidth / 2;
-    viewPortProperties.centerY = viewPortHeight / 2;
+    viewPortProperties.top = sceneContainerRect.top - viewPortProperties.padding;
+    viewPortProperties.left = sceneContainerRect.left - viewPortProperties.padding;
+    viewPortProperties.right = sceneContainerRect.right + viewPortProperties.padding;
+    viewPortProperties.bottom = sceneContainerRect.bottom + viewPortProperties.padding;
+    // Viewport center is simply the center of the scene container in app-container coordinates
+    viewPortProperties.centerX = sceneContainerRect.left + sceneContainerRect.width / 2;
+    viewPortProperties.centerY = sceneContainerRect.top + sceneContainerRect.height / 2;
+    viewPortProperties.width = sceneContainerRect.width;
+    viewPortProperties.height = sceneContainerRect.height;
+    
+    // Viewport properties updated
     
     // Calculate bullsEye position as midpoint between window left edge (0) and resize handle center
     // If handle is at left edge (initial state), use window width / 2 as initial position
@@ -103,13 +135,18 @@ export function updateViewPort() {
         detail: { 
             centerX: viewPortProperties.centerX,
             centerY: viewPortProperties.centerY,
-            width: viewPortWidth,
-            height: viewPortHeight
+            width: viewPortProperties.width,
+            height: viewPortProperties.height,
+            sceneRect: sceneContainerRect
         } 
     });
     window.dispatchEvent(event);
 }
 
+/**
+ * Returns the center/origin position of the viewport
+ * @returns {Object} {x, y} coordinates relative to the scene container (scene-relative coordinates)
+ */
 export function getViewPortOrigin() {
     if ( !isInitialized() ) {
         throw new Error("viewPortProperties is not initialized");
@@ -128,7 +165,9 @@ export function getViewPortRect() {
         left: viewPortProperties.left,
         top: viewPortProperties.top,
         right: viewPortProperties.right,
-        bottom: viewPortProperties.bottom
+        bottom: viewPortProperties.bottom,
+        width: viewPortProperties.width,
+        height: viewPortProperties.height
     };
 }
 

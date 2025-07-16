@@ -1,11 +1,11 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-14T06:50:11.073Z",
+  "lastUpdated": "2025-07-16T06:25:09.354Z",
   "layout": {
     "panelSizePercentage": 50,
     "orientation": "scene-right",
-    "scenePercentage": 63.013698630136986,
-    "resumePercentage": 36.986301369863014
+    "scenePercentage": 69.58424507658644,
+    "resumePercentage": 30.41575492341357
   },
   "resizeHandle": {
     "steppingEnabled": false,
@@ -22,7 +22,7 @@
       "field": "startDate",
       "direction": "desc"
     },
-    "selectedJobNumber": 9
+    "selectedJobNumber": 0
   },
   "theme": {
     "colorPalette": "50_Dark_Grey_Monotone.json",

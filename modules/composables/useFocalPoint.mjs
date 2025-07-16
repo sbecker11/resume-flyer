@@ -38,6 +38,7 @@ export function useFocalPoint() {
   const { position: aimPointPosition, mode: aimPointMode } = aimPoint;
 
   // Reactive properties
+  // Returns focal point position in viewport-relative coordinates (client coordinates)
   const position = computed(() => focalPointState.value.current);
   const target = computed(() => focalPointState.value.target);
   const mode = computed(() => _mode.value);

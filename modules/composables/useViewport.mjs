@@ -1,4 +1,5 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
+import { useLayoutToggle } from './useLayoutToggle.mjs';
 
 // --- Constants ---
 const VIEWPORT_PADDING = 100;
@@ -36,8 +37,8 @@ function updateViewportProperties() {
   const viewPortHeight = sceneContainerRect.height;
   const viewPortTop = sceneContainerRect.top;
 
-  const newCenterX = viewPortWidth / 2;
-  const newCenterY = viewPortHeight / 2;
+  const newCenterX = sceneContainerRect.left + sceneContainerRect.width / 2;
+  const newCenterY = sceneContainerRect.top + sceneContainerRect.height / 2;
   
   window.CONSOLE_LOG_IGNORE('updateViewportProperties: viewPortWidth:', viewPortWidth, 'viewPortHeight:', viewPortHeight, 'centerX:', newCenterX, 'centerY:', newCenterY);
   
@@ -76,6 +77,22 @@ export function useViewport(label = 'unnamed') {
   // This must be done immediately to avoid Vue lifecycle warnings
   onUnmounted(() => {
     cleanup();
+  });
+
+  // Watch for layout changes and update viewport reactively
+  const layoutToggle = useLayoutToggle();
+  watchEffect(() => {
+    // Re-run when layout orientation changes
+    const orientation = layoutToggle.orientation.value;
+    window.CONSOLE_LOG_IGNORE(`[${label}] Layout orientation changed to:`, orientation);
+    
+    // Trigger viewport recalculation after layout change
+    if (_sceneContainer) {
+      setTimeout(() => {
+        // Wait for CSS transitions to complete before updating viewport properties
+        updateViewportProperties();
+      }, 350); // Increased delay to match CSS transition duration
+    }
   });
 
   // Increment count only for the first (and only) instance

@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
 import { useBullsEye } from './useBullsEye.mjs';
 
 // --- Constants ---
@@ -11,7 +11,7 @@ export const MODES = {
 // --- Private State ---
 let _aimPointElement = null;
 let _isInitialized = false;
-let _mode = MODES.LOCKED;
+let _mode = ref(MODES.LOCKED);
 let _mousePosition = { x: 0, y: 0 };
 
 // --- Reactive State ---
@@ -32,7 +32,7 @@ function handleMouseMove(event) {
   _mousePosition.x = event.clientX;
   _mousePosition.y = event.clientY;
   
-  if (_mode === MODES.FOLLOWING || _mode === MODES.DRAGGING) {
+  if (_mode.value === MODES.FOLLOWING || _mode.value === MODES.DRAGGING) {
     aimPointState.value.x = _mousePosition.x;
     aimPointState.value.y = _mousePosition.y;
     updateAimPointPosition();
@@ -42,21 +42,27 @@ function handleMouseMove(event) {
 // This will be set by the composable
 let _updatePositionFromBullsEye = null;
 
-function handleViewportChanged() {
-  if (_mode === MODES.LOCKED && _isInitialized && _updatePositionFromBullsEye) {
-    _updatePositionFromBullsEye();
-  }
-}
-
 // --- Composable ---
-export function useAimPoint(viewport = null) {
+export function useAimPoint() {
   // Register cleanup on component unmount
   // This must be done immediately to avoid Vue lifecycle warnings
   onUnmounted(() => {
     cleanup();
   });
 
-  const bullsEye = useBullsEye(viewport);
+  const bullsEye = useBullsEye();
+
+  // Watch bullsEye position reactively and update aimPoint when mode is locked
+  // AimPoint moves immediately to target (no easing like focalPoint)
+  watchEffect(() => {
+    if (_mode.value === MODES.LOCKED) {
+      const bullsEyePos = bullsEye.position.value;
+      console.log('AimPoint: Mode locked, updating from BullsEye:', { x: bullsEyePos.x, y: bullsEyePos.y });
+      aimPointState.value.x = bullsEyePos.x;
+      aimPointState.value.y = bullsEyePos.y;
+      updateAimPointPosition();
+    }
+  });
 
   // Reactive properties
   const position = computed(() => aimPointState.value);
@@ -64,11 +70,11 @@ export function useAimPoint(viewport = null) {
   const y = computed(() => aimPointState.value.y);
 
   // Mode management
-  const mode = computed(() => _mode);
+  const mode = computed(() => _mode.value);
 
   function updatePositionFromBullsEye() {
-    if (_mode === MODES.LOCKED) {
-      const bullsEyePos = bullsEye.getBullsEye();
+    if (_mode.value === MODES.LOCKED) {
+      const bullsEyePos = bullsEye.position.value;
       aimPointState.value.x = bullsEyePos.x;
       aimPointState.value.y = bullsEyePos.y;
       updateAimPointPosition();
@@ -79,13 +85,14 @@ export function useAimPoint(viewport = null) {
   _updatePositionFromBullsEye = updatePositionFromBullsEye;
 
   function setMode(newMode) {
-    window.CONSOLE_LOG_IGNORE('aimPoint.setMode called with:', newMode, 'current mode was:', _mode);
-    _mode = newMode;
+    window.CONSOLE_LOG_IGNORE('aimPoint.setMode called with:', newMode, 'current mode was:', _mode.value);
+    _mode.value = newMode;
     
-    // Update position based on new mode
-    if (_mode === MODES.LOCKED) {
+    // AimPoint moves immediately to target (no easing like focalPoint)
+    // Update position immediately based on new mode
+    if (newMode === MODES.LOCKED) {
       updatePositionFromBullsEye();
-    } else if (_mode === MODES.FOLLOWING || _mode === MODES.DRAGGING) {
+    } else if (newMode === MODES.FOLLOWING || newMode === MODES.DRAGGING) {
       // Use current mouse position
       aimPointState.value.x = _mousePosition.x;
       aimPointState.value.y = _mousePosition.y;
@@ -95,7 +102,7 @@ export function useAimPoint(viewport = null) {
 
   function cycleMode() {
     const modes = Object.values(MODES);
-    const currentIndex = modes.indexOf(_mode);
+    const currentIndex = modes.indexOf(_mode.value);
     const nextIndex = (currentIndex + 1) % modes.length;
     setMode(modes[nextIndex]);
   }
@@ -115,11 +122,8 @@ export function useAimPoint(viewport = null) {
     // Set up mouse move listener
     window.addEventListener('mousemove', handleMouseMove);
     
-    // Listen for viewport changes to update position from bullsEye
-    window.addEventListener('viewport-changed', handleViewportChanged);
-    
     _isInitialized = true;
-    window.CONSOLE_LOG_IGNORE("aimPoint initialized successfully");
+    window.CONSOLE_LOG_IGNORE("aimPoint initialized successfully with mode:", _mode.value);
     
     // Initial position update
     updatePositionFromBullsEye();
@@ -132,7 +136,6 @@ export function useAimPoint(viewport = null) {
   function cleanup() {
     if (_isInitialized) {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('viewport-changed', handleViewportChanged);
       _aimPointElement = null;
       _isInitialized = false;
     }

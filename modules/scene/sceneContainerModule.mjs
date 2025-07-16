@@ -11,13 +11,26 @@ export function initialize() {
         window.CONSOLE_LOG_IGNORE("sceneContainer.initialize: already initialized");
         return;
     }
-    _sceneContainer = document.getElementById('scene-container');
-    if (!_sceneContainer) {
-        throw new Error('Scene container element #scene-container not found');
-    }
-
-    _isInitialized = true;
-    window.CONSOLE_LOG_IGNORE('Scene container initialized');
+    
+    // Wait for DOM to be ready
+    const waitForElement = () => {
+        return new Promise((resolve) => {
+            const checkElement = () => {
+                _sceneContainer = document.getElementById('scene-container');
+                if (_sceneContainer) {
+                    resolve();
+                } else {
+                    setTimeout(checkElement, 10);
+                }
+            };
+            checkElement();
+        });
+    };
+    
+    return waitForElement().then(() => {
+        _isInitialized = true;
+        window.CONSOLE_LOG_IGNORE('Scene container initialized');
+    });
 }
 
 export function isInitialized() {

@@ -8,26 +8,37 @@ let scenePlane = null;
 export function initialize() {
     if (_isInitialized) {
         window.CONSOLE_LOG_IGNORE("initializeScenePlane: Scene plane already initialized, ignoring duplicate initialization request");
-        return;
+        return Promise.resolve();
     }
     
-    // Set up the scene plane
-    scenePlane = document.getElementById('scene-plane');
-    if (!scenePlane) {
-        throw new Error('Scene plane element not found');
-    }
+    // Wait for DOM to be ready
+    const waitForElement = () => {
+        return new Promise((resolve) => {
+            const checkElement = () => {
+                scenePlane = document.getElementById('scene-plane');
+                if (scenePlane) {
+                    resolve();
+                } else {
+                    setTimeout(checkElement, 10);
+                }
+            };
+            checkElement();
+        });
+    };
     
-    // Initialize any scene-related properties
-    // ...
-    
-    // Remove any existing click handler to avoid duplicates
-    scenePlane.removeEventListener('click', handleScenePlaneClick);
+    return waitForElement().then(() => {
+        // Initialize any scene-related properties
+        // ...
+        
+        // Remove any existing click handler to avoid duplicates
+        scenePlane.removeEventListener('click', handleScenePlaneClick);
 
-    // Add the click handler
-    scenePlane.addEventListener('click', handleScenePlaneClick);
-    
-    _isInitialized = true;
-    window.CONSOLE_LOG_IGNORE("Scene plane initialized");
+        // Add the click handler
+        scenePlane.addEventListener('click', handleScenePlaneClick);
+        
+        _isInitialized = true;
+        window.CONSOLE_LOG_IGNORE("Scene plane initialized");
+    });
 }
 
 export function isInitialized() {

@@ -307,6 +307,20 @@ class CardsController {
         utils.validateNumberInRange(sceneZ, zUtils.ALL_CARDS_Z_MIN, zUtils.ALL_CARDS_Z_MAX);
         bizCardDiv.setAttribute("data-sceneZ", sceneZ);
         
+        // Log data-scene- values for job 0 only
+        const jobNumber = bizCardDiv.getAttribute('data-job-number');
+        if (jobNumber === '0') {
+            console.log('Job 0 data-scene- attributes:', {
+                'data-sceneTop': bizCardDiv.getAttribute('data-sceneTop'),
+                'data-sceneBottom': bizCardDiv.getAttribute('data-sceneBottom'),
+                'data-sceneHeight': bizCardDiv.getAttribute('data-sceneHeight'),
+                'data-sceneLeft': bizCardDiv.getAttribute('data-sceneLeft'),
+                'data-sceneRight': bizCardDiv.getAttribute('data-sceneRight'),
+                'data-sceneWidth': bizCardDiv.getAttribute('data-sceneWidth'),
+                'data-sceneZ': bizCardDiv.getAttribute('data-sceneZ')
+            });
+        }
+        
         // set the z-relative style properties
         bizCardDiv.style.setProperty("z-index", zUtils.get_zIndexStr_from_z(sceneZ));
         bizCardDiv.style.filter = filters.get_filterStr_from_z(sceneZ);
