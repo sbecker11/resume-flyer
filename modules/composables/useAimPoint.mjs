@@ -57,7 +57,7 @@ export function useAimPoint() {
   watchEffect(() => {
     if (_mode.value === MODES.LOCKED) {
       const bullsEyePos = bullsEye.position.value;
-      console.log('AimPoint: Mode locked, updating from BullsEye:', { x: bullsEyePos.x, y: bullsEyePos.y });
+      window.CONSOLE_LOG_IGNORE('AimPoint: Mode locked, updating from BullsEye:', { x: bullsEyePos.x, y: bullsEyePos.y });
       aimPointState.value.x = bullsEyePos.x;
       aimPointState.value.y = bullsEyePos.y;
       updateAimPointPosition();

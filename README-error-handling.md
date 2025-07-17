@@ -1,6 +1,6 @@
 # Error Handling & Development Practices
 
-This document outlines the error handling strategies and development practices used in the flock-of-postcards project, specifically focusing on the "fail fast during development, fail gracefully in production" approach.
+This document outlines the error handling strategies and development practices used in the resume-flock project, specifically focusing on the "fail fast during development, fail gracefully in production" approach.
 
 ## Overview
 

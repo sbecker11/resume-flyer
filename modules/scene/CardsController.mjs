@@ -187,9 +187,8 @@ class CardsController {
             bizCardDiv.style.width = `${sceneWidth}px`;
             bizCardDiv.style.height = `${sceneHeight}px`;
 
-            // Assign a color index for styling. Using a prime number
-            // helps distribute colors more interestingly.
-            const colorIndex = index % 7;
+            // Assign a color index for styling. Use job number for consistency with rDivs
+            const colorIndex = index;
             bizCardDiv.setAttribute('data-color-index', colorIndex);
 
             const bizCardDetailsDiv = BizDetailsDivModule.createBizCardDetailsDiv(bizCardDiv, job, colorIndex);
@@ -323,7 +322,11 @@ class CardsController {
         
         // set the z-relative style properties
         bizCardDiv.style.setProperty("z-index", zUtils.get_zIndexStr_from_z(sceneZ));
-        bizCardDiv.style.filter = filters.get_filterStr_from_z(sceneZ);
+        
+        // Only apply depth filters to card divs, not resume divs
+        if (!bizCardDiv.classList.contains('biz-resume-div')) {
+            bizCardDiv.style.filter = filters.get_filterStr_from_z(sceneZ);
+        }
 
 
     }

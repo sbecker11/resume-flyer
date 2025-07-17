@@ -5,12 +5,15 @@ import * as domUtils from '../utils/domUtils.mjs';
 // No longer directly interacting with these for selection
 // import { bizCardDivManager } from '../scene/bizCardDivManager.mjs';
 // import * as scenePlane from '../scene/scenePlane.mjs';
-import { resumeItemsController } from '../scene/ResumeItemsController.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
 import { cardsController } from '../scene/CardsController.mjs';
 import { AppState, saveState } from '../core/stateManager.mjs';
 import { initializationManager } from '../core/initializationManager.mjs';
 import { jobs } from '../../static_content/jobs/jobs.mjs';
+import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
+import { badgeManager } from '../core/badgeManager.mjs';
+import * as BizDetailsDivModule from '../scene/bizDetailsDivModule.mjs';
+import * as utils from '../utils/utils.mjs';
 
 /**
  * ResumeListController - Manages the infinite scrolling resume list
@@ -45,6 +48,10 @@ class ResumeListController {
     this.sortedIndices = []; // Maps sorted position to original index
     this._isInitialized = false;
     
+    // Set up event listeners for badge mode and color palette changes
+    this._setupBadgeModeListener();
+    this._setupColorPaletteListener();
+    
     // Store the singleton instance
     ResumeListController.instance = this;
     
@@ -62,11 +69,11 @@ class ResumeListController {
     initializationManager.register(
       'ResumeListController',
       async () => {
-        // Wait for CardsController and ResumeItemsController to be ready
-        await initializationManager.waitForComponents(['CardsController', 'ResumeItemsController']);
+        // Wait for CardsController to be ready
+        await initializationManager.waitForComponents(['CardsController']);
         
-        // Get the resume divs from ResumeItemsController
-        const bizResumeDivs = await resumeItemsController.createAllBizResumeDivs(cardsController.bizCardDivs);
+        // Create resume divs directly (no longer using ResumeItemsController)
+        const bizResumeDivs = await this.createAllBizResumeDivs(cardsController.bizCardDivs);
         
         // Add resume divs to the DOM
         const resumeContentDivElement = document.getElementById('resume-content-div');
@@ -79,15 +86,15 @@ class ResumeListController {
         // Initialize with the resume divs
         this.initialize(jobs, bizResumeDivs);
       },
-      ['CardsController', 'ResumeItemsController'], // Depends on both controllers
+      ['CardsController'], // Only depends on CardsController now
       { priority: 'medium' }
     );
   }
 
   initialize(originalJobsData, bizResumeDivs) {
     // --- Dependency Checks ---
-    if (!resumeItemsController.isInitialized) {
-        throw new Error("ResumeListController requires resumeItemsController to be initialized.");
+    if (!cardsController.isInitialized) {
+        throw new Error("ResumeListController requires cardsController to be initialized.");
     }
     // --- End Dependency Checks ---
 
@@ -99,8 +106,9 @@ class ResumeListController {
     this.originalJobsData = originalJobsData;
     this.bizResumeDivs = bizResumeDivs;
     
-    // Listen for selection changes to save state
+    // Listen for selection changes to save state and manage visual state
     selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged.bind(this));
+    selectionManager.addEventListener('selectionCleared', this.handleSelectionCleared.bind(this));
 
     // Initialize with saved state FIRST, before setting up infinite scrolling
     this.applySortRule(AppState.resume.sortRule, true); // isInitializing = true
@@ -182,65 +190,65 @@ class ResumeListController {
             saveState(AppState);
         }
 
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: selectedJobNumber=${selectedJobNumber}, caller=${caller}`);
-    window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: infiniteScroller exists=${!!this.infiniteScroller}`);
-    window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: sortedIndices=`, this.sortedIndices);
+        console.log(`[DEBUG] ResumeListController.handleSelectionChanged: selectedJobNumber=${selectedJobNumber}, caller=${caller}`);
 
-        // Debug the mapping when a selection occurs
-        this.debugMapping();
-
-        // Don't scroll during initialization - the setupInfiniteScrolling method handles the initial scroll
-        if (!caller.includes('initialize')) {
-            this.scrollToJobNumber(selectedJobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
-        } else {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: Skipping scroll during initialization`);
-            
-            // Log viewport and selected resume div coordinates
-            this.logViewportAndResumeDivCoordinates(selectedJobNumber, caller);
-            
-            // But let's still try to scroll to the correct job after a delay
+        // Handle visual state management
+        this.updateVisualSelection(selectedJobNumber);
+        
+        // Handle scrolling - this is the single scroll operation
+        if (caller.includes('initialize')) {
+            // During initialization, allow delayed scroll for proper setup
             setTimeout(() => {
-                window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: Delayed scroll to job ${selectedJobNumber}`);
-                this.scrollToJobNumber(selectedJobNumber, `ResumeListController.handleSelectionChanged delayed from ${caller}`);
-                
-                        // Log coordinates again after the delayed scroll
-        setTimeout(() => {
-          this.logViewportAndResumeDivCoordinates(selectedJobNumber, `${caller} after delayed scroll`);
-          
-          // Force a recalculation of heights after scrolling to ensure proper content containment
-          window.CONSOLE_LOG_IGNORE('[DEBUG] handleSelectionChanged: Forcing height recalculation after scroll');
-          this.infiniteScroller.recalculateHeights();
-          
-          // Also check what jobs are currently visible in the viewport
-          setTimeout(() => {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] Checking visible jobs after scrolling to job ${selectedJobNumber}:`);
-            if (window.checkVisibleJobs) {
-              window.checkVisibleJobs();
-            }
-          }, 50);
-        }, 100);
+                this.scrollToJobNumber(selectedJobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
             }, 500);
-        }
-
-        // Coordinate with CardsController to scroll to the selected job
-        if (window.cardsController) {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: Coordinating with CardsController to scroll to job ${selectedJobNumber}`);
-            // Add a small delay to ensure infinite scroller is ready, especially during initialization
-            setTimeout(() => {
-                window.cardsController.scrollToJobNumber(selectedJobNumber);
-            }, caller.includes('initialize') ? 100 : 0);
         } else {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: CardsController not available for coordination`);
+            // For direct selections (like clicking a cDiv), scroll immediately
+            this.scrollToJobNumber(selectedJobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
         }
+    }
 
-        // Check if the resume div is actually selected and visible
-        const resumeDiv = this.getBizResumeDivByJobNumber(selectedJobNumber);
-        if (resumeDiv) {
-                    window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: Found resume div for job ${selectedJobNumber}`);
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: Resume div job number: ${resumeDiv.getAttribute('data-job-number')}`);
-        } else {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: No resume div found for job ${selectedJobNumber}`);
+    handleSelectionCleared(event) {
+        const { caller } = event.detail;
+        console.log(`[DEBUG] ResumeListController.handleSelectionCleared: caller=${caller}`);
+        
+        // Clear visual selection state
+        this.clearVisualSelection();
+    }
+
+    /**
+     * Update visual selection state of resume divs
+     */
+    updateVisualSelection(selectedJobNumber) {
+        if (!this.bizResumeDivs) return;
+        
+        // Clear all previous selections
+        this.bizResumeDivs.forEach(div => {
+            if (div) {
+                div.classList.remove('selected', 'hovered');
+            }
+        });
+        
+        // Apply selection to the target div
+        const selectedDiv = this.getBizResumeDivByJobNumber(selectedJobNumber);
+        if (selectedDiv) {
+            selectedDiv.classList.add('selected');
+            console.log(`[DEBUG] ResumeListController.updateVisualSelection: Applied 'selected' class to job ${selectedJobNumber}`);
         }
+    }
+
+    /**
+     * Clear visual selection state of all resume divs
+     */
+    clearVisualSelection() {
+        if (!this.bizResumeDivs) return;
+        
+        this.bizResumeDivs.forEach(div => {
+            if (div) {
+                div.classList.remove('selected', 'hovered');
+            }
+        });
+        
+        console.log(`[DEBUG] ResumeListController.clearVisualSelection: Cleared all selection classes`);
     }
   // endregion
 
@@ -915,102 +923,26 @@ class ResumeListController {
   }
 
   scrollToJobNumber(jobNumber, caller = '') {
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: infiniteScroller exists=${!!this.infiniteScroller}`);
+    console.log(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
     
     if (!this.infiniteScroller) {
-      // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: infiniteScroller is null!`);
+      console.log(`[DEBUG] ResumeListController: infiniteScroller is null!`);
       return;
     }
 
     // Find the sortedIndex for this jobNumber
     const sortedIndex = this.sortedIndices.indexOf(jobNumber);
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: jobNumber=${jobNumber} -> sortedIndex=${sortedIndex}`);
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: sortedIndices first 10:`, this.sortedIndices.slice(0, 10));
     
     if (sortedIndex === -1) {
-      window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: jobNumber ${jobNumber} not found in sortedIndices!`);
-      this.debugMapping();
+      console.log(`[DEBUG] scrollToJobNumber: jobNumber ${jobNumber} not found in sortedIndices!`);
       return;
     }
     
-    // Verify the mapping is correct
-    const expectedJobNumber = this.sortedIndices[sortedIndex];
-    if (expectedJobNumber !== jobNumber) {
-      window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: MAPPING ERROR! sortedIndices[${sortedIndex}] = ${expectedJobNumber}, expected ${jobNumber}`);
-      this.debugMapping();
-      return;
-    }
+    console.log(`[DEBUG] scrollToJobNumber: Scrolling to job ${jobNumber} at sorted index ${sortedIndex}`);
     
-    // Verify the infinite scroller has the correct item at this sortedIndex
-    if (this.infiniteScroller.originalItems && this.infiniteScroller.originalItems[sortedIndex]) {
-      const actualJobNumber = this.infiniteScroller.originalItems[sortedIndex].getAttribute('data-job-number');
-      if (parseInt(actualJobNumber) !== jobNumber) {
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: INFINITE SCROLLER MISMATCH! originalItems[${sortedIndex}] has job ${actualJobNumber}, expected ${jobNumber}`);
-        this.debugMapping();
-        return;
-      }
-    }
-    
-    window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: All checks passed, calling infiniteScroller.scrollToJobNumber(${jobNumber})`);
-    
-    // Use the new direct job number scrolling method for better reliability
-    const success = this.infiniteScroller.scrollToJobNumber(jobNumber, false); // No animation for immediate response
-    
-    if (!success) {
-      window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Failed to scroll to job ${jobNumber}`);
-      return;
-    }
-    
-    // Also update the current index in the infinite scroller
+    // Direct scroll to the index - this is the single scroll operation
+    this.infiniteScroller.scrollToIndex(sortedIndex, true);
     this.infiniteScroller.currentIndex = sortedIndex;
-    
-    // Verify the scroll worked and recalculate heights
-    setTimeout(() => {
-      const currentScrollTop = this.infiniteScroller.scrollport.scrollTop;
-      window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Scroll verification - scrollTop: ${currentScrollTop}`);
-      
-      // Heights are already properly calculated by new positioning logic
-      // Removed: this.infiniteScroller.recalculateHeights(); - was causing repositioning after scroll
-      
-      // Check if the target item is visible
-      // Find the original item (not a clone) that matches the sortedIndex
-      const targetItem = this.infiniteScroller.allItems.find(item => 
-        item.type === 'original' && item.originalIndex === sortedIndex
-      );
-      
-      if (targetItem) {
-        const itemTop = targetItem.top;
-        const itemBottom = itemTop + targetItem.height;
-        const containerHeight = this.infiniteScroller.scrollport.offsetHeight;
-        const visibleTop = currentScrollTop;
-        const visibleBottom = currentScrollTop + containerHeight;
-        
-        // Check if we're still scrolling (smooth scroll in progress)
-        const targetScrollTop = Math.max(0, itemTop - 50); // Same calculation as scrollToIndex
-        const scrollDistance = Math.abs(currentScrollTop - targetScrollTop);
-        const stillScrolling = scrollDistance > 10; // Allow 10px tolerance
-        
-        // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber visibility check: targetScrollTop=${targetScrollTop}, currentScrollTop=${currentScrollTop}, scrollDistance=${scrollDistance}, stillScrolling=${stillScrolling}`);
-        
-        if (stillScrolling) {
-          // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Scroll still in progress, skipping visibility check`);
-          return; // Skip visibility check if scroll is still in progress
-        }
-        
-        // For now, skip the visibility recheck to prevent double scrolling
-        // The scroll positioning has been fixed in InfiniteScrollingContainer
-        // const isVisible = itemTop >= visibleTop && itemBottom <= visibleBottom;
-        // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber final visibility: itemTop=${itemTop}, itemBottom=${itemBottom}, visibleTop=${visibleTop}, visibleBottom=${visibleBottom}, isVisible=${isVisible}`);
-        
-        // if (!isVisible) {
-        //   window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Item not visible after scroll completed, attempting to scroll again`);
-        //   this.infiniteScroller.scrollToIndex(sortedIndex, false);
-        // } else {
-        //   window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Item is visible, no retry needed`);
-        // }
-      }
-    }, 100);
   }
 
   updateSortedIndices() {
@@ -1417,6 +1349,180 @@ class ResumeListController {
     return 5; // Default spacing
   }
 
+  // region Resume Div Creation and Management (from ResumeItemsController)
+  
+  /**
+   * Create all resume divs from card divs
+   */
+  async createAllBizResumeDivs(bizCardDivs) {
+    console.log('[ResumeListController] createAllBizResumeDivs called with:', bizCardDivs?.length || 0, 'cards');
+    
+    if (!bizCardDivs || bizCardDivs.length === 0) {
+      console.warn("ResumeListController: Cannot create resume divs, no card divs provided.");
+      return [];
+    }
+    
+    const bizResumeDivs = [];
+    for (let i = 0; i < bizCardDivs.length; i++) {
+      const cardDiv = bizCardDivs[i];
+      
+      if (!cardDiv) {
+        console.warn(`[ResumeListController] Card at index ${i} is null/undefined, skipping`);
+        continue;
+      }
+      
+      try {
+        const resumeDiv = await this.createBizResumeDiv(cardDiv);
+        bizResumeDivs.push(resumeDiv);
+      } catch (error) {
+        console.error(`[ResumeListController] Failed to create resume div for card ${i}:`, error);
+      }
+    }
+    
+    console.log(`[ResumeListController] Successfully created ${bizResumeDivs.length} resume divs`);
+    return bizResumeDivs;
+  }
+  
+  /**
+   * Create a single resume div from a card div
+   */
+  async createBizResumeDiv(bizCardDiv) {
+    if (!bizCardDiv) {
+      throw new Error('createBizResumeDiv: bizCardDiv not found');
+    }
+    
+    const jobNumberStr = bizCardDiv.getAttribute('data-job-number');
+    if (!jobNumberStr || isNaN(parseInt(jobNumberStr, 10))) {
+      throw new Error('createBizResumeDiv: jobNumber is not a numeric string');
+    }
+    const jobNumber = parseInt(jobNumberStr, 10);
+    
+    try {
+      const bizResumeDiv = document.createElement('div');
+      bizResumeDiv.id = `resume-${jobNumber}`;
+      bizResumeDiv.className = 'biz-resume-div';
+      bizResumeDiv.setAttribute('data-job-number', jobNumber);
+      bizResumeDiv.setAttribute('data-color-index', bizCardDiv.getAttribute('data-color-index'));
+      bizResumeDiv.style.pointerEvents = 'auto';
+      
+      const bizResumeDetailsDiv = BizDetailsDivModule.createBizResumeDetailsDiv(bizResumeDiv, bizCardDiv);
+      bizResumeDiv.appendChild(bizResumeDetailsDiv);
+      
+      // Apply the current color palette
+      await applyPaletteToElement(bizResumeDiv);
+      
+      // Set up mouse listeners for the resume div
+      this._setupMouseListeners(bizResumeDiv);
+      
+      console.log(`[ResumeListController] Successfully created resume div for job ${jobNumber}`);
+      return bizResumeDiv;
+    } catch (error) {
+      console.error('[ResumeListController] Error creating resume div:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Set up mouse listeners for resume div
+   */
+  _setupMouseListeners(bizResumeDiv) {
+    if (!bizResumeDiv) return;
+    
+    bizResumeDiv.addEventListener('click', () => this.handleBizResumeDivClickEvent(bizResumeDiv));
+    bizResumeDiv.addEventListener('mouseenter', () => this.handleMouseEnterEvent(bizResumeDiv));
+    bizResumeDiv.addEventListener('mouseleave', () => this.handleMouseLeaveEvent(bizResumeDiv));
+  }
+  
+  /**
+   * Handle resume div click events
+   */
+  handleBizResumeDivClickEvent(bizResumeDiv) {
+    if (!bizResumeDiv) return;
+    
+    const jobNumber = parseInt(bizResumeDiv.getAttribute('data-job-number'), 10);
+    const isSelected = selectionManager.getSelectedJobNumber() === jobNumber;
+    
+    if (isSelected) {
+      selectionManager.clearSelection('ResumeListController.handleBizResumeDivClickEvent');
+    } else {
+      selectionManager.selectJobNumber(jobNumber, 'ResumeListController.handleBizResumeDivClickEvent');
+    }
+  }
+  
+  /**
+   * Handle mouse enter events
+   */
+  handleMouseEnterEvent(bizResumeDiv) {
+    if (!bizResumeDiv) return;
+    
+    const jobNumber = parseInt(bizResumeDiv.getAttribute('data-job-number'), 10);
+    selectionManager.hoverJobNumber(jobNumber, 'ResumeListController.handleMouseEnterEvent');
+  }
+  
+  /**
+   * Handle mouse leave events
+   */
+  handleMouseLeaveEvent(bizResumeDiv) {
+    if (!bizResumeDiv) return;
+    
+    selectionManager.clearHover('ResumeListController.handleMouseLeaveEvent');
+  }
+  
+  /**
+   * Set up badge mode listener
+   */
+  _setupBadgeModeListener() {
+    badgeManager.addEventListener('badgeModeChanged', this.handleBadgeModeChanged.bind(this));
+  }
+  
+  /**
+   * Set up color palette listener
+   */
+  _setupColorPaletteListener() {
+    window.addEventListener('color-palette-changed', this.handleColorPaletteChanged.bind(this));
+  }
+  
+  /**
+   * Handle badge mode changes
+   */
+  handleBadgeModeChanged(event) {
+    const { mode, previousMode, caller } = event.detail;
+    
+    console.log(`[DEBUG] ResumeListController.handleBadgeModeChanged: Mode changed from ${previousMode} to ${mode} (caller: ${caller})`);
+    
+    // Force recalculation of heights when badge mode changes
+    if (this.infiniteScroller) {
+      requestAnimationFrame(() => {
+        this.infiniteScroller.recalculateHeights();
+      });
+    }
+  }
+  
+  /**
+   * Handle color palette changes
+   */
+  handleColorPaletteChanged(event) {
+    const { filename, paletteName, previousFilename } = event.detail;
+    
+    console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
+    
+    // Apply new palette to all resume divs
+    if (this.bizResumeDivs) {
+      this.bizResumeDivs.forEach(div => {
+        if (div) {
+          // Apply palette to the div itself and all elements with data-color-index within it
+          applyPaletteToElement(div);
+          const colorElements = div.querySelectorAll('[data-color-index]');
+          colorElements.forEach(applyPaletteToElement);
+        }
+      });
+    }
+    
+    console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Applied new palette to ${this.bizResumeDivs?.length || 0} resume divs`);
+  }
+  
+  // endregion
+  
   /**
    * Debug method to check sort rule consistency between controllers
    */

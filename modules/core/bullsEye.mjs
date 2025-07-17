@@ -150,7 +150,7 @@ export function recenterBullsEye() {
 
     // Wait for layout transitions to complete if they're happening
     const performRecenter = () => {
-        console.log('BullsEye: performRecenter called');
+        window.CONSOLE_LOG_IGNORE('BullsEye: performRecenter called');
         
         // Clear any existing inline styles
         _bullsEyeElement.style.removeProperty('top');
@@ -167,7 +167,7 @@ export function recenterBullsEye() {
             const centerX = sceneRect.left + sceneRect.width / 2;
             const centerY = sceneRect.top + sceneRect.height / 2;
             
-            console.log('BullsEye: Positioning at scene container center:', { centerX, centerY });
+            window.CONSOLE_LOG_IGNORE('BullsEye: Positioning at scene container center:', { centerX, centerY });
             _bullsEyeElement.style.position = 'fixed';
             _bullsEyeElement.style.left = `${centerX}px`;
             _bullsEyeElement.style.top = `${centerY}px`;
@@ -208,8 +208,8 @@ export function recenterBullsEye() {
             Math.pow(bullsEyeCenter.y - referenceCenter.y, 2)
         );
         
-        console.log('BullsEye: Recentered - distance from scene center:', distance.toFixed(2) + 'px');
-        console.log('BullsEye: Final position verification:', {
+        window.CONSOLE_LOG_IGNORE('BullsEye: Recentered - distance from scene center:', distance.toFixed(2) + 'px');
+        window.CONSOLE_LOG_IGNORE('BullsEye: Final position verification:', {
             bullsEyeCenter,
             referenceCenter,
             distance: distance.toFixed(2)

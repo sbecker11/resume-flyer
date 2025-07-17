@@ -6,7 +6,7 @@ import { AppState, saveState } from '../core/stateManager.mjs';
  * This reinitializes all the core components from scratch
  */
 function programmaticSoftRefresh() {
-  console.log('[LayoutToggle] Starting programmatic soft refresh');
+  window.CONSOLE_LOG_IGNORE('[LayoutToggle] Starting programmatic soft refresh');
   
   // Step 1: Clear all existing state and positions
   if (window.bullsEye) {
@@ -47,7 +47,7 @@ function programmaticSoftRefresh() {
       window.focalPoint.initialize?.();
     }
     
-    console.log('[LayoutToggle] Programmatic soft refresh completed');
+    window.CONSOLE_LOG_IGNORE('[LayoutToggle] Programmatic soft refresh completed');
     
     // Emit a completion event to signal that all systems are ready
     window.dispatchEvent(new CustomEvent('programmatic-soft-refresh-complete', {

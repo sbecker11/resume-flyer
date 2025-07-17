@@ -1,7 +1,7 @@
 # Vue Enterprise Toolkit - Productization Strategy
 
 ## Overview
-This document outlines the strategy for productizing the sophisticated Vue components from the flock-of-postcards project into a profitable revenue stream.
+This document outlines the strategy for productizing the sophisticated Vue components from the resume-flock project into a profitable revenue stream.
 
 ## Core Product: Vue Enterprise Toolkit
 
@@ -176,7 +176,7 @@ Premium middle-market solution that's more sophisticated than free alternatives,
 ## Technical Development Strategy
 
 ### Component Extraction
-1. **Create standalone packages** - Extract from flock-of-postcards
+1. **Create standalone packages** - Extract from resume-flock
 2. **Add TypeScript support** - Critical for enterprise adoption
 3. **Framework-agnostic core** - Vanilla JS with Vue wrapper
 4. **Plugin architecture** - Allow custom sorting/filtering

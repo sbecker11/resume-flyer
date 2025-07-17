@@ -111,7 +111,6 @@ import * as keyDown from '@/modules/core/keyDownModule.mjs';
 import * as sceneContainer from '@/modules/scene/sceneContainerModule.mjs';
 import * as viewPort from '@/modules/core/viewPortModule.mjs';
 import { cardsController } from '@/modules/scene/CardsController.mjs';
-import { resumeItemsController } from '@/modules/scene/ResumeItemsController.mjs';
 import { resumeListController } from '@/modules/resume/ResumeListController.mjs';
 import { initializationManager } from '@/modules/core/initializationManager.mjs';
 import * as scenePlane from '@/modules/scene/scenePlaneModule.mjs';
@@ -216,11 +215,11 @@ export default {
         
         // Register all controllers with their dependencies
         cardsController.registerForInitialization();
-        resumeItemsController.registerForInitialization();
         resumeListController.registerForInitialization();
         
         // Register DebugPanel with its dependencies
         debugPanel.registerForInitialization(initializationManager);
+        
         
         // Register other components that depend on controllers
         initializationManager.register(

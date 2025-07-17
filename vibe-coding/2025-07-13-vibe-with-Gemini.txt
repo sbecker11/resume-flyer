@@ -10,10 +10,10 @@ The fix is to make the `SkillBadges.vue` component emit a `badges-positioned` ev
 
 This change makes the communication between your components more robust and event-driven, eliminating the need for fragile timer-based workarounds.
 
-Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/SkillBadges.vue`:
+Here is the change for `/Users/sbecker11/workspace-flock/resume-flock/modules/components/SkillBadges.vue`:
 ```diff
---- a/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/SkillBadges.vue
-+++ b/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/SkillBadges.vue
+--- a/Users/sbecker11/workspace-flock/resume-flock/modules/components/SkillBadges.vue
++++ b/Users/sbecker11/workspace-flock/resume-flock/modules/components/SkillBadges.vue
 @@ -7,7 +7,7 @@
  </template>
  
@@ -41,11 +41,11 @@ The new, more robust flow is:
 
 This change makes the line rendering event-driven, faster, and more reliable, which is crucial for a smooth user experience and a solid foundation for the future Sankey diagram.
 
-Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/NewConnectionLines.vue`:
+Here is the change for `/Users/sbecker11/workspace-flock/resume-flock/modules/components/NewConnectionLines.vue`:
 
 ```diff
---- a/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/NewConnectionLines.vue
-++++ b/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/NewConnectionLines.vue
+--- a/Users/sbecker11/workspace-flock/resume-flock/modules/components/NewConnectionLines.vue
+++++ b/Users/sbecker11/workspace-flock/resume-flock/modules/components/NewConnectionLines.vue
 @@ -38,7 +38,7 @@
  </template>
  
@@ -272,11 +272,11 @@ The new, more robust flow is:
 
 This change makes the line rendering event-driven, faster, and more reliable, which is crucial for a smooth user experience and a solid foundation for the future Sankey diagram.
 
-Here is the change for `/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/NewConnectionLines.vue`:
+Here is the change for `/Users/sbecker11/workspace-flock/resume-flock/modules/components/NewConnectionLines.vue`:
 
 ```diff
---- a/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/NewConnectionLines.vue
-++++ b/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/NewConnectionLines.vue
+--- a/Users/sbecker11/workspace-flock/resume-flock/modules/components/NewConnectionLines.vue
+++++ b/Users/sbecker11/workspace-flock/resume-flock/modules/components/NewConnectionLines.vue
 @@ -38,7 +38,7 @@
  </template>
  
@@ -497,8 +497,8 @@ Now that the component exists, it needs to be integrated into the main applicati
 This change wires up the new component so we can begin developing and testing the D3 visualization.
 
 ```diff
---- a/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/AppContent.vue
-++++ b/Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/AppContent.vue
+--- a/Users/sbecker11/workspace-flock/resume-flock/modules/components/AppContent.vue
+++++ b/Users/sbecker11/workspace-flock/resume-flock/modules/components/AppContent.vue
 @@ -6,7 +6,7 @@
          <div id="scene-plane-btm-gradient"></div>
          <div id="scene-plane">

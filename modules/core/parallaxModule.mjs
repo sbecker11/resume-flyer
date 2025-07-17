@@ -7,7 +7,7 @@ import * as viewPort from './viewPortModule.mjs';
 import * as zUtils from '../utils/zUtils.mjs';
 import * as mathUtils from '../utils/mathUtils.mjs';
 
-export const TEST_PARALLAX = true;
+export const TEST_PARALLAX = false;
 export const EPSILON = 0.01
 // Parallax constants
 export const PARALLAX_X_EXAGGERATION_FACTOR = 0.9;
@@ -29,6 +29,9 @@ function updateSceneContainerRect() {
       width: rect.width,
       height: rect.height,
     };
+    
+    // Force refresh all parallax transforms when scene container changes size
+    refreshAllParallaxTransforms();
   }
 }
 
@@ -70,6 +73,17 @@ export function initialize(focalPoint = null) {
         }
     });
 
+    // Initial application of parallax to all cards
+    // This ensures cards are properly positioned even if focal point doesn't change
+    if (_focalPoint && _focalPoint.position) {
+        const { dh, dv } = calculateParallaxDisplacements();
+        const bizCardDivs = document.getElementsByClassName("biz-card-div");
+        
+        for (const bizCardDiv of bizCardDivs) {
+            applyParallaxToBizCardDiv(bizCardDiv, dh, dv);
+        }
+    }
+
     _isInitialized = true;
 }
 
@@ -81,7 +95,7 @@ export function getSceneContainerWidth() {
     const sceneContainer = document.getElementById('scene-container');
     if (sceneContainer) {
         const rect = sceneContainer.getBoundingClientRect();
-        return rect.width/2;
+        return rect.width;
     }
     throw new Error('scene-container not found');
 }
@@ -111,6 +125,22 @@ export function projectAllBizCardDivs() {
     }
 }
 
+// Force refresh all parallax transforms - useful for initialization or when cards are added
+export function refreshAllParallaxTransforms() {
+    if (!isInitialized()) {
+        return;
+    }
+    
+    requestAnimationFrame(() => {
+        const { dh, dv } = calculateParallaxDisplacements();
+        const bizCardDivs = document.getElementsByClassName("biz-card-div");
+        
+        for (const bizCardDiv of bizCardDivs) {
+            applyParallaxToBizCardDiv(bizCardDiv, dh, dv);
+        }
+    });
+}
+
 /**
  * Applies the parallax transform to a point in scene-relative coordinates.
  * @param {number} sceneX - The original scene X coordinate
@@ -134,14 +164,14 @@ export function applyParallaxToScenePoint(sceneX, sceneY, sceneZ = 0) {
     if (sceneZ > 0) 
         zScale = (0.9 - ((sceneZ - zUtils.ALL_CARDS_Z_MIN - 1) / (zUtils.ALL_CARDS_Z_MAX - zUtils.ALL_CARDS_Z_MIN)));
 
-    // OVERRIDE for no parallax effect
-    zScale = 1;
+    // uncomment to skip z-depth the parallax effect
+    // zScale = 1;
 
     let translateX = dh * zScale;
     let translateY = dv * zScale;
 
     // scene to view transformation
-    translateX += getSceneContainerWidth();
+    translateX += getSceneContainerWidth()/2;
 
     const viewPortPos = { 
         x:  sceneX + translateX,
@@ -171,15 +201,15 @@ export function applyParallaxToBizCardDiv(bizCardDiv, dh, dv) {
     if (sceneZ > 0) 
         zScale = (0.9 - ((sceneZ - zUtils.ALL_CARDS_Z_MIN - 1) / (zUtils.ALL_CARDS_Z_MAX - zUtils.ALL_CARDS_Z_MIN)));
 
-    // OVERRIDE for no parallax effect
-    zScale = 1;
+    // uncomment to skip z-depth the parallax effect
+    // zScale = 1;
 
     // default before parallax
     let translateX = 0;
     let translateY = 0;
     
     // scene to view transformation
-    translateX += getSceneContainerWidth();
+    translateX += getSceneContainerWidth()/2;
 
     // only original cDivs with zScale > 0 are subject to parallax
     if (zScale > 0) {
@@ -229,5 +259,6 @@ export function applyParallaxToBizCardDiv(bizCardDiv, dh, dv) {
 // Expose functions globally for components to use
 if (typeof window !== 'undefined') {
     window.applyParallaxToScenePoint = applyParallaxToScenePoint;
-    window.applyParallaxToScenePoint = applyParallaxToScenePoint;
+    window.refreshAllParallaxTransforms = refreshAllParallaxTransforms;
+    window.projectAllBizCardDivs = projectAllBizCardDivs;
 }

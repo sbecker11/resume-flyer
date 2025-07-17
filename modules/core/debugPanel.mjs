@@ -29,17 +29,17 @@ class DebugPanel {
      * Dependencies: Viewport, Layout (which ensures bullsEye and focalPoint are ready)
      */
     registerForInitialization(initializationManager) {
-        console.log('[DebugPanel] Attempting to register with initialization manager');
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Attempting to register with initialization manager');
         if (!initializationManager) {
             console.error('[DebugPanel] No initialization manager provided');
             return;
         }
 
-        console.log('[DebugPanel] Registering with initialization manager');
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Registering with initialization manager');
         initializationManager.register(
             'DebugPanel',
             async () => {
-                console.log('[DebugPanel] Initialization manager is calling initialize()');
+                window.CONSOLE_LOG_IGNORE('[DebugPanel] Initialization manager is calling initialize()');
                 await this.initialize();
             },
             ['Viewport', 'Layout'], // Wait for these components which ensure the coordinate systems are ready
@@ -55,7 +55,7 @@ class DebugPanel {
             return;
         }
 
-        console.log('[DebugPanel] Initializing debug panel');
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Initializing debug panel');
         
         // Wait for DOM to be ready
         await new Promise(resolve => {
@@ -73,13 +73,13 @@ class DebugPanel {
 
         // Initialize drag functionality
         setTimeout(() => {
-            console.log('[DebugPanel] Initializing drag functionality');
+            window.CONSOLE_LOG_IGNORE('[DebugPanel] Initializing drag functionality');
             this.initializeDragFunctionality();
             this.loadDebugPanelPosition();
         }, 100); // Reduced timeout
 
         this.isInitialized = true;
-        console.log('[DebugPanel] Debug panel initialized');
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Debug panel initialized');
     }
 
     /**
@@ -244,7 +244,7 @@ class DebugPanel {
             return;
         }
         
-        console.log('[DebugPanel] Setting up drag functionality on element:', debugElement);
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Setting up drag functionality on element:', debugElement);
 
         // Add draggable styling
         debugElement.style.cursor = 'move';
@@ -264,23 +264,23 @@ class DebugPanel {
         document.addEventListener('mouseup', this.handleMouseUp.bind(this));
         
         // Add touch events for mobile support
-        debugElement.addEventListener('touchstart', this.handleTouchStart.bind(this));
-        document.addEventListener('touchmove', this.handleTouchMove.bind(this));
-        document.addEventListener('touchend', this.handleTouchEnd.bind(this));
+        debugElement.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: true });
+        document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+        document.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: true });
         
         // Test event listener attachment
         debugElement.addEventListener('click', () => {
-            console.log('[DebugPanel] Click event received - drag listeners are attached!');
+            window.CONSOLE_LOG_IGNORE('[DebugPanel] Click event received - drag listeners are attached!');
         });
         
-        console.log('[DebugPanel] Event listeners attached to debug panel');
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Event listeners attached to debug panel');
     }
 
     /**
      * Handle mouse down event
      */
     handleMouseDown(event) {
-        console.log('[DebugPanel] Mouse down event received:', event.target, event.clientX, event.clientY);
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Mouse down event received:', event.target, event.clientX, event.clientY);
         event.preventDefault();
         this.dragState.isDragging = true;
         this.dragState.startX = event.clientX - this.dragState.currentX;
@@ -298,7 +298,7 @@ class DebugPanel {
     handleMouseMove(event) {
         if (!this.dragState.isDragging) return;
         
-        console.log('[DebugPanel] Mouse move event during drag:', event.clientX, event.clientY);
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Mouse move event during drag:', event.clientX, event.clientY);
         event.preventDefault();
         this.dragState.currentX = event.clientX - this.dragState.startX;
         this.dragState.currentY = event.clientY - this.dragState.startY;
@@ -312,7 +312,7 @@ class DebugPanel {
     handleMouseUp(event) {
         if (!this.dragState.isDragging) return;
         
-        console.log('[DebugPanel] Mouse up event received');
+        window.CONSOLE_LOG_IGNORE('[DebugPanel] Mouse up event received');
         this.dragState.isDragging = false;
         const debugElement = document.getElementById('live-debug-display');
         if (debugElement) {

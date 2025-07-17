@@ -3,7 +3,7 @@
 ## 🏷️ Project Renaming
 
 ### Current Status
-- **Current Name**: `flock-of-postcards`
+- **Current Name**: `resume-flock`
 - **Proposed Name**: `resume-flock`
 - **Rationale**: The project has evolved from a postcard concept into a resume visualization system with business cards and skill chips
 

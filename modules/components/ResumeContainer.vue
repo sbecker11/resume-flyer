@@ -77,7 +77,7 @@ function selectPrevious() {
 <template>
     <div id="resume-content">
         <div id="resume-content-header">
-            <p class="intro">Welcome to your flock-of-postcards!</p>
+            <p class="intro">Welcome to your resume-flock!</p>
             <div id="color-palette-container" tabindex="-1">
                 <select 
                     id="color-palette-selector" 
@@ -141,6 +141,10 @@ function selectPrevious() {
     overflow: hidden; /* The scroller inside will handle overflow */
 }
 
+#resume-content-div {
+    background-color: var(--grey-dark-6);
+}
+
 /* Custom scrollbar to match the cDiv scrollbar */
 #resume-content-div-wrapper::-webkit-scrollbar {
     width: 5px;
@@ -180,7 +184,7 @@ function selectPrevious() {
     flex: 1 1 auto;
     min-width: 60px;
     padding: 8px 12px;
-    background-color: #2196F3;
+    background-color: var(--grey-dark-6);
     color: white;
     border: none;
     border-radius: 4px;
@@ -205,7 +209,7 @@ function selectPrevious() {
 }
 
 .biz-card-control-button:hover {
-    background-color: #1976D2;
+    background-color: var(--grey-dark-7);
 }
 #color-palette-container,
 #biz-card-sorting-container {
@@ -218,7 +222,7 @@ function selectPrevious() {
 #biz-resume-div-sorting-selector {
     flex: 1 1 auto;
     padding: 8px 12px;
-    background-color: #4CAF50;
+    background-color: var(--grey-dark-6);
     color: white;
     border: none;
     border-radius: 4px;
@@ -228,7 +232,7 @@ function selectPrevious() {
 }
 #color-palette-selector:hover,
 #biz-resume-div-sorting-selector:hover {
-    background-color: #45a049;
+    background-color: var(--grey-dark-7);
 }
 /* rDiv styles moved to global styles section below */
 
@@ -257,14 +261,21 @@ function selectPrevious() {
     min-height: fit-content; /* Allow height to fit content */
 
     /* Default state styling using CSS variables */
-    background-color: var(--data-background-color);
-    color: var(--data-foreground-color);
+    background-color: var(--data-background-color) !important;
+    color: var(--data-foreground-color) !important;
     padding: var(--data-normal-padding);
     border: var(--data-normal-inner-border-width) solid var(--data-normal-inner-border-color);
     outline: var(--data-normal-outer-border-width) solid var(--data-normal-outer-border-color);
     border-radius: var(--data-normal-border-radius) !important;
     margin-top: var(--data-normal-margin-top);
     transition: background-color 0.2s, color 0.2s, border 0.2s, outline 0.2s;
+    
+    /* Force CSS variables to be applied - fallback for cases where variables aren't set */
+    background-color: var(--data-background-color, #666666) !important;
+    color: var(--data-foreground-color, #ffffff) !important;
+    
+    /* Override any filter interference */
+    filter: none !important;
 }
 
 /* 
@@ -292,23 +303,25 @@ function selectPrevious() {
 
 /* Hovered state */
 .biz-resume-div.hovered {
-    background-color: var(--data-background-color-hovered);
-    color: var(--data-foreground-color-hovered);
+    background-color: var(--data-background-color-hovered) !important;
+    color: var(--data-foreground-color-hovered) !important;
     padding: var(--data-hovered-padding);
     border: var(--data-hovered-inner-border-width) solid var(--data-hovered-inner-border-color);
     outline: var(--data-hovered-outer-border-width) solid var(--data-hovered-outer-border-color);
     border-radius: var(--data-hovered-border-radius) !important;
     margin-top: var(--data-hovered-margin-top);
+    filter: none !important;
 }
 
 /* Selected state */
 .biz-resume-div.selected {
-    background-color: var(--data-background-color-selected);
-    color: var(--data-foreground-color-selected);
+    background-color: var(--data-background-color-selected) !important;
+    color: var(--data-foreground-color-selected) !important;
     padding: var(--data-selected-padding);
     border: var(--data-selected-inner-border-width) solid var(--data-selected-inner-border-color);
     outline: var(--data-selected-outer-border-width) solid var(--data-selected-outer-border-color);
     border-radius: var(--data-selected-border-radius) !important;
     margin-top: var(--data-selected-margin-top);
+    filter: none !important;
 }
 </style> 

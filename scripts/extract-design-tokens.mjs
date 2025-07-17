@@ -303,7 +303,7 @@ function cleanupTokens() {
  * Main extraction function
  */
 async function extractDesignTokens() {
-  window.CONSOLE_LOG_IGNORE('🎨 Extracting design tokens from flock-of-postcards...');
+  window.CONSOLE_LOG_IGNORE('🎨 Extracting design tokens from resume-flock...');
   
   try {
     extractCSSCustomProperties();

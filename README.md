@@ -1,4 +1,4 @@
-# flock-of-postcards  
+# resume-flock  
 # Dark, chaotic, and deep  
 
 The `flock` is a glorified resume describing my own work history and skills over my career timeline.
@@ -28,23 +28,23 @@ one or more return icons <img src="static_content/icons/icons8-back-16-black.png
 of return icons indicates the number of jobs and the amount of time used to hone that skill.
 
 
-# Run the `flock-of-postcards` career resume web app using VSCode
+# Run the `resume-flock` career resume web app using VSCode
 
 ## Clone this repo to your local development folder  
 `cd <your-local-dev-folder>`
-`git clone git@github.com:sbecker11/flock-of-postcards.git`
+`git clone git@github.com:sbecker11/resume-flock.git`
 `cd <your-local-dev-folder>/fock-of-postcards`
  
 ## Install VSCode + LiverServer  
 
-The `flock-of-postcards` webapp uses ES6 Modules. This requires that you have an ultra lightweight webserver running on your local machine that supports ES6. 
+The `resume-flock` webapp uses ES6 Modules. This requires that you have an ultra lightweight webserver running on your local machine that supports ES6. 
 
 LiveServer is an ultra light weight webserver that works with Google Chrome browser. Installation of Vscode IDE and the LiveServer extension is easy-peasy.  
 
 - Install the  <a href="https://code.visualstudio.com">vscode IDE</a> on your local OS.    
 <a href="https://code.visualstudio.com/"><img src="static_content/icons/vscode-IDE-logo.png"/></a>
 
-- Start vscode and open the newly cloned `flock-of-postcards` folder in vscode  
+- Start vscode and open the newly cloned `resume-flock` folder in vscode  
 
 - Click the "extensions" icon in the left panel of vscode to search for vscode extensions  
 <img src="static_content/icons/vscode-extensions-icon.png"/>  
@@ -1034,7 +1034,7 @@ This **Infinite Scrolling Container** represents a significant advancement in vi
 - Updated installation and customization instructions in README.md
 - Deployed latest to github
 
-<a target="_new" href="https://sbecker11.github.io/flock-of-postcards/">https://sbecker11.github.io/flock-of-postcards</a>
+<a target="_new" href="https://sbecker11.github.io/resume-flock/">https://sbecker11.github.io/resume-flock</a>
 
 ### version 1.0    March 8, 2024 
 

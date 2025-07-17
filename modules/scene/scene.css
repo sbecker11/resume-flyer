@@ -47,7 +47,7 @@ html[native-dark-active] #scene-container,
     left: 0;
     right: 0;
     height: 50vh;
-    background: linear-gradient(to bottom, var(--background-light) 0%, rgba(0, 0, 0, 0.0) 100%);
+    background: linear-gradient(to bottom, var(--background-light) 0%, var(--background-dark) 100%);
     pointer-events: none;
     z-index: 1; /* Lower than scene-plane */
 }
@@ -58,7 +58,7 @@ html[native-dark-active] #scene-container,
     left: 0;
     right: 0;
     height: 50vh;
-    background: linear-gradient(to top, var(--background-light) 0%, rgba(0, 0, 0, 0.0) 100%);
+    background: linear-gradient(to top, var(--background-light) 0%, var(--background-dark) 100%);
     pointer-events: none;
     z-index: 1; /* Lower than scene-plane */
 }
@@ -107,6 +107,8 @@ html[native-dark-active] #scene-container,
 }
 
 /* Base styling for resume divs (moved to ResumeContainer.vue) */
+
+/* Filter overrides for resume divs to prevent grayscale appearance - moved to ResumeContainer.vue */
 .biz-resume-div {
     /* Base styles are now in ResumeContainer.vue */
 }

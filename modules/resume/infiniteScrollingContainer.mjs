@@ -37,6 +37,7 @@ class InfiniteScrollingContainer {
     this.velocity = 0;
     this.momentumAnimationId = null;
     this.resizeTimeoutId = null; // For debounced resize handling
+    this.selectedJobNumberBeforeResize = null; // Capture selected job before resize starts
     this.lastContentWidth = 0;
     this.lastContentHeight = 0;
     this._isInitialized = false;
@@ -297,8 +298,9 @@ class InfiniteScrollingContainer {
     const rDivMarginTop = this.getRDivMarginTop();
     const rDivOuterBorderWidth = this.getRDivOuterBorderWidth();
     
-    // Total spacing = marginTop + outerBorderWidth (top and bottom borders)
-    const totalSpacing = rDivMarginTop + (rDivOuterBorderWidth * 2);
+    // Since we're no longer zeroing out marginTop, we need to account for it differently
+    // The color palette system will handle the marginTop, so we only need minimal spacing
+    const totalSpacing = Math.max(rDivMarginTop, 5); // Minimum 5px spacing between items
     
     // Always show debug for spacing coordination (regardless of measureHeights)
     // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScrollingContainer: Using marginTop=${rDivMarginTop}px + outerBorderWidth=${rDivOuterBorderWidth}px (x2) = totalSpacing=${totalSpacing}px`);
@@ -320,7 +322,7 @@ class InfiniteScrollingContainer {
       let contentHeight = this.measureItemHeight(item, measureHeights);
       
       // Position tail clones at negative offsets (they appear above original items)
-      currentTop -= (contentHeight + totalSpacing);
+      currentTop -= (contentHeight + totalSpacing + 5); // Extra buffer to prevent overlaps
       const topPosition = currentTop;
       minTop = Math.min(minTop, topPosition); // Track most negative position
       
@@ -342,6 +344,10 @@ class InfiniteScrollingContainer {
       
       // window.CONSOLE_LOG_IGNORE(`[DEBUG] Original item positioning: index=${itemIndex} originalIndex=${originalIndex} top=${currentTop}px height=${contentHeight}px`);
       currentTop += contentHeight;
+      
+      // Add additional spacing after each item to prevent overlaps
+      // This accounts for any CSS styling that might affect positioning
+      currentTop += 5; // Extra buffer to prevent overlaps
     });
     
     // Phase 3: Position head clones after original items
@@ -355,6 +361,9 @@ class InfiniteScrollingContainer {
       
       // window.CONSOLE_LOG_IGNORE(`[DEBUG] Head clone positioning: index=${itemIndex} top=${currentTop}px height=${contentHeight}px`);
       currentTop += contentHeight;
+      
+      // Add additional spacing after each item to prevent overlaps
+      currentTop += 5; // Extra buffer to prevent overlaps
     });
     
     // Store the positioning info for content height calculation
@@ -553,26 +562,18 @@ class InfiniteScrollingContainer {
         });
       }
       
-      // Reset all margins since we're using absolute positioning with calculated spacing
+      // Reset only external margins since we're using absolute positioning with calculated spacing
+      // DO NOT reset padding - this is handled by the color palette system
       item.element.style.margin = '0';
-      item.element.style.marginTop = '0';
-      item.element.style.marginBottom = '0';
       item.element.style.marginLeft = '0';
       item.element.style.marginRight = '0';
-      item.element.style.padding = '0';
-      item.element.style.paddingTop = '0';
-      item.element.style.paddingBottom = '0';
-      item.element.style.paddingLeft = '0';
-      item.element.style.paddingRight = '0';
+      // Don't reset marginTop/Bottom or padding - these are controlled by the color palette system
       
-      // Remove only margins that could interfere with positioning
+      // Remove only external margins from children that could interfere with positioning
       // Keep padding for visual styling but ensure no external spacing
       const children = item.element.querySelectorAll('*');
       children.forEach(child => {
-        // Only remove margin, not padding (padding is internal to elements)
-        child.style.margin = '0';
-        child.style.marginTop = '0';
-        child.style.marginBottom = '0';
+        // Only remove horizontal margins, not vertical margins or padding
         child.style.marginLeft = '0';
         child.style.marginRight = '0';
       });
@@ -634,8 +635,7 @@ class InfiniteScrollingContainer {
     const cloneCount = Math.min(this.options.cloneCount, this.originalItems.length);
     const targetItemIndex = cloneCount + originalIndex; // Account for tail clones
     
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: allItems.length=${this.allItems.length}`);
+    console.log(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
     
     // Disable seamless transitions during targeted scrolling
     this._isTargetScrolling = true;
@@ -691,45 +691,18 @@ class InfiniteScrollingContainer {
     //   // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScroller.scrollToIndex: Target item job number: ${targetJobNumber}`);
     // }
     
-    // Find the header elements within the resume div and calculate scroll position
-    const detailsDiv = targetItem.element.querySelector('.biz-resume-details-div');
-    let headerOffset = 0;
+    // Use a fixed small offset to position the rDiv content at the top
+    // This ensures the beginning of the rDiv is visible without complex calculations
+    const headerOffset = 10; // Small fixed offset to show rDiv content clearly
     
-    if (detailsDiv) {
-      // Find the first header element (employer, role, dates, or z-value)
-      const firstHeader = detailsDiv.querySelector('.biz-details-employer, .biz-details-role, .biz-details-dates, .biz-details-z-value');
-      if (firstHeader) {
-        // Calculate the offset from the top of the resume div to the first header
-        const resumeDivRect = targetItem.element.getBoundingClientRect();
-        const headerRect = firstHeader.getBoundingClientRect();
-        headerOffset = headerRect.top - resumeDivRect.top;
-      }
-    }
-    
-    // Calculate scroll position to ensure the target item is visible without clone overlap
+    // Calculate scroll position to show the target item at the top with small margin
     const topMargin = 10; // Small margin from the top for optimal positioning
-    const tailCloneHeight = this.getTotalCloneHeight('tail');
-    
-    let targetScrollTop;
     
     // Account for negative tail clone positioning
     const tailCloneOffset = Math.abs(this._minTop || 0);
     
-    if (targetItem.type === 'original') {
-      // For original items, ensure we show them clearly without clone interference
-      if (originalIndex === 0) {
-        // Special case for first original item: scroll to show original content
-        // Add tail clone offset to account for negative positioning
-        targetScrollTop = Math.max(0, targetItem.top + tailCloneOffset - topMargin);
-      } else {
-        // For other original items, use normal positioning with offset
-        const idealScrollTop = Math.max(0, targetItem.top + headerOffset + tailCloneOffset - topMargin);
-        targetScrollTop = idealScrollTop;
-      }
-    } else {
-      // For clones, use the standard calculation with offset
-      targetScrollTop = Math.max(0, targetItem.top + headerOffset + tailCloneOffset - topMargin);
-    }
+    // Simple calculation: position the target item at the top of the viewport
+    const targetScrollTop = Math.max(0, targetItem.top + tailCloneOffset - topMargin);
     
     // if (originalIndex >= this.originalItems.length - 3) {
     //   window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: LAST ITEMS - originalIndex=${originalIndex}, itemType=${targetItem.type}, targetItem.top=${targetItem.top}, final targetScrollTop=${targetScrollTop}, _minTop=${this._minTop}, _maxTop=${this._maxTop}`);
@@ -742,6 +715,8 @@ class InfiniteScrollingContainer {
       top: targetScrollTop,
       behavior: 'smooth'
     });
+    
+    window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScroller.scrollToIndex: Scrolling to targetScrollTop=${targetScrollTop}`);
     
     // Re-enable seamless transitions after scroll completes
     setTimeout(() => {
@@ -760,13 +735,17 @@ class InfiniteScrollingContainer {
     // }, 100);
 
     this.currentIndex = originalIndex;
-    const jumped = this.checkForSeamlessTransition();
-    // Seamless transition check completed
-    if (jumped && !_retry) {
-      // Retrying scroll due to seamless transition
-      setTimeout(() => {
-        this.scrollToIndex(originalIndex, animate, true);
-      }, 0);
+    
+    // Skip seamless transition check for direct job selection to prevent double scrolling
+    if (!this._directScrolling) {
+      const jumped = this.checkForSeamlessTransition();
+      // Seamless transition check completed
+      if (jumped && !_retry) {
+        // Retrying scroll due to seamless transition
+        setTimeout(() => {
+          this.scrollToIndex(originalIndex, animate, true);
+        }, 0);
+      }
     }
 
     if (this.options.onItemChange) {
@@ -798,9 +777,9 @@ class InfiniteScrollingContainer {
   }
 
   checkForSeamlessTransition() {
-    // Skip seamless transitions during targeted scrolling
-    if (this._isTargetScrolling) {
-      // Skipping seamless transitions during targeted scrolling
+    // Skip seamless transitions during targeted scrolling or direct job selection
+    if (this._isTargetScrolling || this._directScrolling) {
+      // Skipping seamless transitions during targeted scrolling or direct job selection
       return false;
     }
     
@@ -1024,8 +1003,8 @@ class InfiniteScrollingContainer {
   }
 
   handleScroll() {
-    if (!this.isDragging && !this._isTargetScrolling) {
-      // Debounce the seamless transition check and only when not doing targeted scrolling
+    if (!this.isDragging && !this._isTargetScrolling && !this._directScrolling) {
+      // Debounce the seamless transition check and only when not doing targeted scrolling or direct job selection
       clearTimeout(this.scrollTimeout);
       this.scrollTimeout = setTimeout(() => {
         this.checkForSeamlessTransition();
@@ -1312,7 +1291,7 @@ class InfiniteScrollingContainer {
    * @returns {boolean} - Whether the scroll was successful
    */
   scrollToJobNumber(jobNumber, animate = true) {
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScroller.scrollToJobNumber: jobNumber=${jobNumber}, animate=${animate}`);
+    console.log(`[DEBUG] InfiniteScroller.scrollToJobNumber: jobNumber=${jobNumber}, animate=${animate}`);
     
     // Find the item with the specified job number
     const index = this.originalItems.findIndex(item => {
@@ -1321,14 +1300,23 @@ class InfiniteScrollingContainer {
     });
     
     if (index === -1) {
-      // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScroller.scrollToJobNumber: Job number ${jobNumber} not found in originalItems`);
+      console.log(`[DEBUG] InfiniteScroller.scrollToJobNumber: Job number ${jobNumber} not found in originalItems`);
       return false;
     }
     
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] InfiniteScroller.scrollToJobNumber: Found job ${jobNumber} at index ${index}`);
+    console.log(`[DEBUG] InfiniteScroller.scrollToJobNumber: Found job ${jobNumber} at index ${index}`);
+    
+    // Set flag to prevent seamless transitions during direct job selection
+    this._directScrolling = true;
     
     // Use scrollToIndex instead of scrollToItem to properly handle the cloned structure
     this.scrollToIndex(index, animate);
+    
+    // Clear flag after scroll completes
+    setTimeout(() => {
+      this._directScrolling = false;
+    }, 1000);
+    
     return true;
   }
 
@@ -1450,6 +1438,13 @@ class InfiniteScrollingContainer {
   handleResize() {
     // window.CONSOLE_LOG_IGNORE('[DEBUG] handleResize: Container size changed, triggering recalculation');
     
+    // Capture the selected job number at the START of resize, not at the end
+    if (!this.resizeTimeoutId) {
+      // Only capture on the first resize event, not on subsequent ones
+      this.selectedJobNumberBeforeResize = selectionManager?.getSelectedJobNumber() || null;
+      console.log(`[DEBUG] RESIZE: Captured selected job before resize: ${this.selectedJobNumberBeforeResize}`);
+    }
+    
     // Clear any existing timeout
     if (this.resizeTimeoutId) {
       clearTimeout(this.resizeTimeoutId);
@@ -1457,57 +1452,88 @@ class InfiniteScrollingContainer {
     
     // Set a new timeout to recalculate after resize stops
     this.resizeTimeoutId = setTimeout(() => {
-      // window.CONSOLE_LOG_IGNORE('[DEBUG] InfiniteScroller.handleResize: Recalculating heights and positions');
+      this.handleResizeComplete();
+    }, 300); // Wait 300ms after last resize event
+  }
+
+  // Enhanced resize handling method that follows the specific requirements
+  handleResizeComplete() {
+    console.log('[DEBUG] InfiniteScroller.handleResizeComplete: Starting enhanced resize handling');
+    
+    // Step 1: Use the selected job number that was captured before resize started
+    const selectedJobNumber = this.selectedJobNumberBeforeResize;
+    console.log(`[DEBUG] RESIZE: Selected job to restore: ${selectedJobNumber}`);
+    
+    // Step 2: Set all rDivs (originals and clones) to overflow-y: auto to prevent height changes during width adjustment
+    this.setRDivOverflowConstraints(true);
+    
+    // Force layout calculation after applying constraints
+    void this.contentHolder.offsetHeight;
+    
+    // Step 3: Allow a brief moment for width changes to complete, then remove overflow constraints
+    setTimeout(() => {
+      // Step 4: Remove overflow-y constraint and allow rDivs to resize vertically to contain content
+      this.setRDivOverflowConstraints(false);
       
-      // CAPTURE CURRENT VISIBLE JOB BEFORE RESIZE
-      const visibleJobBeforeResize = this.getCurrentlyVisibleJob();
-      // window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Job visible before resize: ${visibleJobBeforeResize}`);
-      
-      // First, reset all items to auto height to measure their natural content height
-      this.allItems.forEach(item => {
-        if (item.element) {
-          item.element.style.height = 'auto';
-          item.element.style.minHeight = 'auto';
-        }
-      });
-      
-      // Force layout calculation
+      // Force layout calculation after removing constraints
       void this.contentHolder.offsetHeight;
       
-      // Now recalculate heights and positions using centralized logic
-      // window.CONSOLE_LOG_IGNORE('[DEBUG] handleResize: About to call calculateItemPositions from resize handler');
+      // Step 5: Use updated rDiv heights to compute new vertical positions
+      console.log('[DEBUG] handleResizeComplete: Recalculating heights and positions');
       const { minTop, maxTop } = this.calculateItemPositions(true);
       const totalHeight = maxTop - minTop;
       this.contentHolder.style.height = `${totalHeight}px`;
       this.contentHolder.style.transform = `translateY(${Math.abs(minTop)}px)`;
       
-      // VERIFY WHAT JOB IS VISIBLE AFTER POSITIONING
-      const visibleJobAfterPositioning = this.getCurrentlyVisibleJob();
-      // window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Job visible after positioning: ${visibleJobAfterPositioning}`);
-      
-      // If the visible job changed, try to restore the original job
-      if (visibleJobBeforeResize && visibleJobAfterPositioning !== visibleJobBeforeResize) {
-        // window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Visible job changed from ${visibleJobBeforeResize} to ${visibleJobAfterPositioning}! Attempting to restore...`);
-        
-        // Try to scroll back to the original job
-        const success = this.scrollToJobNumber(visibleJobBeforeResize, false);
-        if (success) {
-          // window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Successfully restored visibility to job ${visibleJobBeforeResize}`);
-        } else {
-          // window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Failed to restore visibility to job ${visibleJobBeforeResize}`);
-        }
-        
-        // Verify the final result
+      // Step 6: Restore the selected job position
+      if (selectedJobNumber !== null) {
+        // Use a longer delay to ensure all DOM transformations and height calculations are complete
         setTimeout(() => {
-          const finalVisibleJob = this.getCurrentlyVisibleJob();
-          // window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Final visible job after restoration attempt: ${finalVisibleJob}`);
-        }, 50);
-      } else {
-        // window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Job visibility maintained correctly`);
+          console.log(`[DEBUG] RESIZE: Restoring selected job ${selectedJobNumber}`);
+          
+          // Use ResumeListController for consistent scrolling behavior
+          if (window.resumeListController && window.resumeListController.scrollToJobNumber) {
+            window.resumeListController.scrollToJobNumber(selectedJobNumber, `InfiniteScroller.handleResizeComplete`);
+            console.log(`[DEBUG] RESIZE: Called ResumeListController.scrollToJobNumber for job ${selectedJobNumber}`);
+          } else {
+            // Fallback to direct scroll (no animation for resize restoration)
+            const success = this.scrollToJobNumber(selectedJobNumber, false);
+            console.log(`[DEBUG] RESIZE: Direct scroll result: ${success}`);
+          }
+        }, 50); // Small delay to ensure DOM updates are complete
       }
       
       this.resizeTimeoutId = null;
-    }, 300); // Wait 300ms after last resize event
+      // Clear the captured selected job number after resize handling is complete
+      this.selectedJobNumberBeforeResize = null;
+    }, 100); // Wait 100ms for width changes to complete
+  }
+
+  // Helper method to set/remove overflow constraints on all rDivs
+  setRDivOverflowConstraints(enable) {
+    const constraint = enable ? 'auto' : 'visible';
+    const heightConstraint = enable ? 'fixed' : 'auto';
+    
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] setRDivOverflowConstraints: ${enable ? 'Enabling' : 'Disabling'} overflow constraints`);
+    
+    this.allItems.forEach(item => {
+      if (item.element) {
+        if (enable) {
+          // Store current height before applying constraints
+          const currentHeight = item.element.offsetHeight;
+          item.element.style.setProperty('overflow-y', constraint, 'important');
+          item.element.style.setProperty('height', `${currentHeight}px`, 'important');
+          item.element.style.setProperty('min-height', `${currentHeight}px`, 'important');
+          item.element.style.setProperty('max-height', `${currentHeight}px`, 'important');
+        } else {
+          // Remove constraints and allow natural height
+          item.element.style.removeProperty('overflow-y');
+          item.element.style.removeProperty('max-height');
+          item.element.style.setProperty('height', 'auto', 'important');
+          item.element.style.setProperty('min-height', 'auto', 'important');
+        }
+      }
+    });
   }
 
   // Helper method to determine which job is currently most visible in viewport

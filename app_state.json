@@ -1,15 +1,15 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-16T06:25:09.354Z",
+  "lastUpdated": "2025-07-17T06:01:44.595Z",
   "layout": {
     "panelSizePercentage": 50,
-    "orientation": "scene-right",
-    "scenePercentage": 69.58424507658644,
-    "resumePercentage": 30.41575492341357
+    "orientation": "scene-left",
+    "scenePercentage": 48.60248447204969,
+    "resumePercentage": 51.39751552795031
   },
   "resizeHandle": {
-    "steppingEnabled": false,
-    "stepCount": 1
+    "steppingEnabled": true,
+    "stepCount": 6
   },
   "focalPoint": {
     "mode": "locked"
@@ -22,7 +22,7 @@
       "field": "startDate",
       "direction": "desc"
     },
-    "selectedJobNumber": 0
+    "selectedJobNumber": 10
   },
   "theme": {
     "colorPalette": "50_Dark_Grey_Monotone.json",
@@ -405,5 +405,5 @@
       }
     }
   },
-  "colorPalette": "so_cherry.json"
+  "colorPalette": "sweeps.json"
 }

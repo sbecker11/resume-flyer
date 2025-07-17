@@ -31,14 +31,14 @@ function updateBullsEyePosition() {
 
 // Immediate update to prevent flickering
 function immediateBullsEyeUpdate(x, y, source = 'unknown') {
-  console.log(`BullsEye: Immediate update from ${source}:`, { x, y });
+  window.CONSOLE_LOG_IGNORE(`BullsEye: Immediate update from ${source}:`, { x, y });
   
   // If module isn't initialized, try to initialize it first
   if (!bullsEyeModule.isInitialized()) {
     console.warn('BullsEye: BullsEye module not initialized yet, attempting to initialize');
     try {
       bullsEyeModule.initialize();
-      console.log('BullsEye: Module initialized successfully');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Module initialized successfully');
     } catch (error) {
       console.error('BullsEye: Failed to initialize module:', error);
       // Schedule for later with multiple retries
@@ -52,7 +52,7 @@ function immediateBullsEyeUpdate(x, y, source = 'unknown') {
         }
         
         retryCount++;
-        console.log(`BullsEye: Retry ${retryCount}/${maxRetries} - attempting to initialize and update`);
+        window.CONSOLE_LOG_IGNORE(`BullsEye: Retry ${retryCount}/${maxRetries} - attempting to initialize and update`);
         
         setTimeout(() => {
           if (bullsEyeModule.isInitialized()) {
@@ -91,7 +91,7 @@ function immediateBullsEyeUpdate(x, y, source = 'unknown') {
   bullsEyeState.value.x = x;
   bullsEyeState.value.y = y;
   
-  console.log('BullsEye: Updated element position and state:', { 
+  window.CONSOLE_LOG_IGNORE('BullsEye: Updated element position and state:', { 
     elementLeft: bullsEyeElement.style.left,
     elementTop: bullsEyeElement.style.top,
     stateX: bullsEyeState.value.x,
@@ -130,7 +130,7 @@ export function useBullsEye() {
 
   // Function to update bullsEye to scene container center
   function updateToSceneCenter() {
-    console.log('BullsEye: updateToSceneCenter called, mode:', _mode);
+    window.CONSOLE_LOG_IGNORE('BullsEye: updateToSceneCenter called, mode:', _mode);
     
     if (_mode === MODES.LOCKED) {
       const sceneContainer = document.getElementById('scene-container');
@@ -143,7 +143,7 @@ export function useBullsEye() {
       const centerX = sceneRect.left + sceneRect.width / 2;
       const centerY = sceneRect.top + sceneRect.height / 2;
       
-      console.log('BullsEye: Scene container center calculated:', { 
+      window.CONSOLE_LOG_IGNORE('BullsEye: Scene container center calculated:', { 
         centerX, 
         centerY, 
         sceneRect: { left: sceneRect.left, width: sceneRect.width } 
@@ -156,7 +156,7 @@ export function useBullsEye() {
         console.warn('BullsEye: Could not update position, bullsEye element may not be ready:', error);
       }
     } else {
-      console.log('BullsEye: Not in locked mode, skipping update');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Not in locked mode, skipping update');
     }
   }
 
@@ -168,7 +168,7 @@ export function useBullsEye() {
     if (!isComponentActive) return;
     
     const orientation = layoutToggle.orientation.value;
-    console.log('BullsEye: Layout orientation changed to:', orientation);
+    window.CONSOLE_LOG_IGNORE('BullsEye: Layout orientation changed to:', orientation);
     
     // Add a small delay to ensure DOM has updated after layout change
     setTimeout(() => {
@@ -185,7 +185,7 @@ export function useBullsEye() {
   // Listen for window resize events
   const handleResize = () => {
     if (!isComponentActive) return;
-    console.log('BullsEye: Window resize event received');
+    window.CONSOLE_LOG_IGNORE('BullsEye: Window resize event received');
     try {
       updateToSceneCenter();
     } catch (error) {
@@ -199,7 +199,7 @@ export function useBullsEye() {
   let sceneContainerObserver = null;
   const handleSceneContainerResize = () => {
     if (!isComponentActive) return;
-    console.log('BullsEye: Scene container resize detected');
+    window.CONSOLE_LOG_IGNORE('BullsEye: Scene container resize detected');
     try {
       updateToSceneCenter();
     } catch (error) {
@@ -213,7 +213,7 @@ export function useBullsEye() {
     if (sceneContainer && window.ResizeObserver) {
       sceneContainerObserver = new ResizeObserver(handleSceneContainerResize);
       sceneContainerObserver.observe(sceneContainer);
-      console.log('BullsEye: Scene container observer established');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Scene container observer established');
     }
   };
   
@@ -278,9 +278,9 @@ export function useBullsEye() {
     
     if (layoutToggleButton) {
       layoutToggleButton.addEventListener('click', handleLayoutToggle);
-      console.log('BullsEye: Layout toggle button listener established');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle button listener established');
     } else {
-      console.log('BullsEye: Layout toggle button not found, will retry');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle button not found, will retry');
       // Retry after DOM is ready
       setTimeout(() => {
         if (!isComponentActive) return;

@@ -19,7 +19,7 @@ I"ve opened the first one. Please read it like a product definition documnet.
 
 
 Gemini
-Okay, I've read the README.md file for the "flock-of-postcards" project and understand it as a product definition document. It describes a visually rich, interactive resume application with the following key features:
+Okay, I've read the README.md file for the "resume-flock" project and understand it as a product definition document. It describes a visually rich, interactive resume application with the following key features:
 
 Visual Metaphor: The resume is represented as a "flock" of business cards and skill cards.
 Interactive Scene: Users navigate the flock using mouse movements, creating parallax and depth-of-field effects.
@@ -42,7 +42,7 @@ Kindly review the other README files
 
 
 Gemini
-I see that there are several README files in the "flock-of-postcards" project. Could you please specify which other README files you would like me to review? For example, provide their full paths or filenames. Once you let me know which files to look at, I'll be happy to read them and provide insights.
+I see that there are several README files in the "resume-flock" project. Could you please specify which other README files you would like me to review? For example, provide their full paths or filenames. Once you let me know which files to look at, I'll be happy to read them and provide insights.
 
 Context Sources (1)
 
@@ -198,7 +198,7 @@ Please read the read monetization.md file and the productization.md file
 Gemini
 I cannot access a file named productization.md.
 
-However, I have read the /Users/sbecker11/workspace-flock/flock-of-postcards/README-monetization.md file, which outlines the commercial potential of various components within the "Flock of Postcards" project. It identifies the resume parser and color palette system as having the highest revenue potential due to large market demand and existing infrastructure, respectively.
+However, I have read the /Users/sbecker11/workspace-flock/resume-flock/README-monetization.md file, which outlines the commercial potential of various components within the "Flock of Postcards" project. It identifies the resume parser and color palette system as having the highest revenue potential due to large market demand and existing infrastructure, respectively.
 
 Context Sources (1)
 
@@ -282,7 +282,7 @@ The rectangular cDiv for a job has top and bottom pixel offsets from the top tha
 
 
 Gemini
-You've accurately described the core concept of the "flock-of-postcards" project: a visually engaging resume experience. To summarize:
+You've accurately described the core concept of the "resume-flock" project: a visually engaging resume experience. To summarize:
 
 Resume Data: The project uses resume data parsed into "jobs," each with details like employer, role, description, dates, and skills.
 Visual Representation: Each job is represented in two ways:
@@ -306,7 +306,7 @@ Each color palette is defined in a server-side json file that contains any numbe
 
 
 Gemini
-Yes, that's a good summary of how the "Resume Viewer" and its interaction with the "Scene Viewer" (flock of business cards) function in the "flock-of-postcards" project. Let's break down the key points:
+Yes, that's a good summary of how the "Resume Viewer" and its interaction with the "Scene Viewer" (flock of business cards) function in the "resume-flock" project. Let's break down the key points:
 
 Resume Viewer and Infinite Scrolling:
 
@@ -335,7 +335,7 @@ The resize handle has left and right colllapse buttons which move the slider in 
 
 
 Gemini
-You've described the functionality of the resize handle in the "flock-of-postcards" project, which acts as a divider between the Scene Viewer and the Resume Viewer. Here's a summary of its key features:
+You've described the functionality of the resize handle in the "resume-flock" project, which acts as a divider between the Scene Viewer and the Resume Viewer. Here's a summary of its key features:
 
 Resizing: The handle allows users to dynamically adjust the width of the Scene Viewer and Resume Viewer, ranging from 0% to 100% for each view.
 Percentage Display: The current width percentages of both viewers are displayed next to the handle, providing immediate feedback.
@@ -362,11 +362,11 @@ Of course. I can certainly help you debug the styling issue with your cDiv and r
 
 You are correct to want to consolidate your dynamic styling logic into your JavaScript code. This makes the state transitions much clearer and easier to maintain.
 
-Based on my investigation of the files you've provided, the primary source of the conflict is within the global <style> section of /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/ResumeContainer.vue. The CSS rules for the .hovered and .selected states are highly specific and use !important, which directly competes with the inline styles being applied by your applyStateStyling JavaScript function.
+Based on my investigation of the files you've provided, the primary source of the conflict is within the global <style> section of /Users/sbecker11/workspace-flock/resume-flock/modules/components/ResumeContainer.vue. The CSS rules for the .hovered and .selected states are highly specific and use !important, which directly competes with the inline styles being applied by your applyStateStyling JavaScript function.
 
 To resolve this and make your JavaScript function the single source of truth for dynamic styling, I'll remove the conflicting CSS rules. This change will allow the styles for background-color, color, border, and padding that are calculated in your JavaScript to be applied correctly when an item's state changes to "hovered" or "selected".
 
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/ResumeContainer.vue:
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/components/ResumeContainer.vue:
 
 ResumeContainer.vue
 The code change produced by Gemini cannot be automatically applied. You can manually apply the change or ask Gemini to try again.
@@ -379,7 +379,7 @@ status?
 Gemini
 Of course. I've investigated the styling issue for the "selected" mode on your cDiv and rDiv elements.
 
-You are correct; the problem is a classic CSS specificity conflict. The global <style> block in /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/ResumeContainer.vue contains highly specific rules with !important declarations for the .hovered and .selected states. These rules are overriding the dynamic inline styles that your JavaScript is attempting to apply, which is why the "selected" mode styling (like the brightness filter) is not appearing correctly.
+You are correct; the problem is a classic CSS specificity conflict. The global <style> block in /Users/sbecker11/workspace-flock/resume-flock/modules/components/ResumeContainer.vue contains highly specific rules with !important declarations for the .hovered and .selected states. These rules are overriding the dynamic inline styles that your JavaScript is attempting to apply, which is why the "selected" mode styling (like the brightness filter) is not appearing correctly.
 
 To fix this and make your JavaScript code the single source of truth for dynamic styling, we need to remove the conflicting background-color and color properties from the CSS. This will allow your applyStateStyling function to work as intended.
 
@@ -424,7 +424,7 @@ Of course. You can begin testing now.
 
 The fix I've implemented addresses the CSS specificity conflict we discussed. By removing the background-color and color properties from the .hovered and .selected rules in the stylesheet, the dynamic styling applied by your JavaScript applyStateStyling function should now take precedence and work as expected.
 
-Here is the change in /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/ResumeContainer.vue for your reference:
+Here is the change in /Users/sbecker11/workspace-flock/resume-flock/modules/components/ResumeContainer.vue for your reference:
 
 ResumeContainer.vue
 -7
@@ -486,7 +486,7 @@ The logic there incorrectly allows the event to proceed, adding the .hovered cla
 When the mouse leaves, handleMouseLeaveEvent removes the .hovered class but sees that the element is still .selected and does not re-apply the "selected" styles, leaving the element in a visually incorrect state.
 The most direct way to fix this, using the files you've provided, is to make the applyStateStyling function itself smarter. By adding a guard, we can ensure that the "selected" state always has precedence over the "hovered" state.
 
-Here is the change for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/composables/useColorPalette.mjs:
+Here is the change for /Users/sbecker11/workspace-flock/resume-flock/modules/composables/useColorPalette.mjs:
 
 useColorPalette.mjs
 -0
@@ -526,7 +526,7 @@ javascript: 1 lines selected
 Gemini
 You've got it exactly right. The "selected" mode should always have visual priority, and we can enforce this with a small change in the styling logic.
 
-The best place to implement this is in the applyStateStyling function within /Users/sbecker11/workspace-flock/flock-of-postcards/modules/composables/useColorPalette.mjs. By adding a guard at the beginning of this function, we can prevent any 'hovered' styles from being applied to an element that is already 'selected'.
+The best place to implement this is in the applyStateStyling function within /Users/sbecker11/workspace-flock/resume-flock/modules/composables/useColorPalette.mjs. By adding a guard at the beginning of this function, we can prevent any 'hovered' styles from being applied to an element that is already 'selected'.
 
 This ensures that even if mouseenter and mouseleave events fire on a selected element, its 'selected' appearance will remain unchanged, effectively giving it priority.
 
@@ -586,8 +586,8 @@ You've provided some excellent clues. The fact that the issue occurs even when u
 
 Based on your description and the files, I've identified two key issues:
 
-Incorrect State Definition: The borderSettings for the "selected" state in /Users/sbecker11/workspace-flock/flock-of-postcards/modules/core/stateManager.mjs are misconfigured. It defines a purple inner border but sets the outer border to 0px, which is the opposite of the "strong, purple outer border" you're looking for.
-Styling Precedence: The logic in /Users/sbecker11/workspace-flock/flock-of-postcards/modules/composables/useColorPalette.mjs for applying styles to a selected element needs to be more robust to ensure it always takes priority, especially over the complex parallax filter effects applied in the "normal" state.
+Incorrect State Definition: The borderSettings for the "selected" state in /Users/sbecker11/workspace-flock/resume-flock/modules/core/stateManager.mjs are misconfigured. It defines a purple inner border but sets the outer border to 0px, which is the opposite of the "strong, purple outer border" you're looking for.
+Styling Precedence: The logic in /Users/sbecker11/workspace-flock/resume-flock/modules/composables/useColorPalette.mjs for applying styles to a selected element needs to be more robust to ensure it always takes priority, especially over the complex parallax filter effects applied in the "normal" state.
 Here are the code changes to fix these issues.
 
 1. Correct the "Selected" State Definition
@@ -622,7 +622,7 @@ I'll provide fixes for both of these issues. This will ensure the "selected" sta
 1. Correct the Border Definition
 First, let's adjust the borderSettings in stateManager.mjs to define the strong, purple outer border you're looking for.
 
-Here is the change for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/core/stateManager.mjs:
+Here is the change for /Users/sbecker11/workspace-flock/resume-flock/modules/core/stateManager.mjs:
 
 stateManager.mjs
 -4
@@ -647,7 +647,7 @@ stateManager.mjs
 2. Ensure "Selected" State Precedence
 Next, we'll add a guard to the applyStateStyling function. This will prevent the "normal" (from the parallax effect) and "hovered" (from mouse movement) states from ever overwriting an element that is already "selected".
 
-Here is the change for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/composables/useColorPalette.mjs:
+Here is the change for /Users/sbecker11/workspace-flock/resume-flock/modules/composables/useColorPalette.mjs:
 
 useColorPalette.mjs
 -0
@@ -678,7 +678,7 @@ I've updated the application's default state to change the border for selected i
 
 These changes will apply to both the business cards in the scene and the items in the resume list, ensuring a consistent user experience.
 
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/core/stateManager.mjs:
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/core/stateManager.mjs:
 
 stateManager.mjs
 -7
@@ -745,7 +745,7 @@ Incorrect Spacing (Double-Counting): The logic that calculates the space between
 
 To fix this, we need to update the height measurement to be more precise and simplify the spacing calculation. Since I don't have the source file InfiniteScrollingContainer.mjs, I cannot provide a diff, but here are the corrected functions you should use in that module. This will ensure that each item is positioned perfectly, accommodating all its styling.
 
-Here is how the corrected functions should look in what I assume is /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/InfiniteScrollingContainer.mjs:
+Here is how the corrected functions should look in what I assume is /Users/sbecker11/workspace-flock/resume-flock/modules/components/InfiniteScrollingContainer.mjs:
 
 javascript
 // In modules/components/InfiniteScrollingContainer.mjs
@@ -825,7 +825,7 @@ Of course. I've prepared the fix for the infinite scrolling container. Your insi
 
 This change updates the height calculation to be more precise by using getBoundingClientRect().height. This method accurately measures an element's total on-screen size, including content, padding, and any borders. This ensures that items in the resume list are positioned correctly, preventing them from overlapping, especially when their border sizes change between "normal", "hovered", and "selected" states.
 
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/InfiniteScrollingContainer.mjs. I'm providing the logic for this file based on the project's documentation.
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/components/InfiniteScrollingContainer.mjs. I'm providing the logic for this file based on the project's documentation.
 
 InfiniteScrollingContainer.mjs
 -0
@@ -854,7 +854,7 @@ The solution involves a few key improvements to the InfiniteScrollingContainer l
 Accurate Height Measurement: The height of each resume item (rDiv) is now measured using element.getBoundingClientRect().height. This is the most reliable method as it provides the true, on-screen height, including all content, padding, and borders. This prevents items from overlapping, especially when their border sizes change.
 Simplified Spacing: The logic for positioning items now correctly accounts only for margin-top, since the border is already included in the height measurement. This ensures consistent spacing between items.
 Robust Resize Handling: The resize handler is now debounced, meaning it will only run once after you've finished resizing the window or the panels. Crucially, after it recalculates the layout, it will automatically find the currently selected item and scroll it back into view, ensuring its header is visible, just as you required.
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/InfiniteScrollingContainer.mjs. This updated
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/components/InfiniteScrollingContainer.mjs. This updated
 
 Context Sources (18)
 
@@ -1113,7 +1113,7 @@ export class InfiniteScrollingContainer {
 }
 
 How to Use This Fix
-Replace the File: Copy the code above and completely replace the contents of your /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/InfiniteScrollingContainer.mjs file.
+Replace the File: Copy the code above and completely replace the contents of your /Users/sbecker11/workspace-flock/resume-flock/modules/components/InfiniteScrollingContainer.mjs file.
 Update the Controller: In your ResumeListController.mjs, you will need to instantiate and use this new class. Make sure it's initialized with the correct scrollport (the wrapper div) and contentHolder (the inner div that contains the items).
 Your ResumeListController's initialization might look something like this:
 
@@ -1206,7 +1206,7 @@ Improving the BadgeManager: The BadgeManager will be updated to only manage the 
 Here are the code changes to resolve this issue.
 
 1. Refine CSS for Stats Visibility
-I'll update /Users/sbecker11/workspace-flock/flock-of-postcards/modules/scene/scene.css to be more specific and ensure the stats div is only displayed when its parent rDiv is selected.
+I'll update /Users/sbecker11/workspace-flock/resume-flock/modules/scene/scene.css to be more specific and ensure the stats div is only displayed when its parent rDiv is selected.
 
 scene.css
 The code change produced by Gemini cannot be automatically applied. You can manually apply the change or ask Gemini to try again.
@@ -1295,7 +1295,7 @@ The current implementation in BadgeManager has a subtle race condition: it attem
 
 I've updated BadgeManager to correctly and safely load its mode from AppState. It now waits for the application's state to be fully loaded before applying the persisted badge mode. This change is self-contained within the badgeManager.mjs file and ensures that the user's last-selected badge visibility setting is always restored correctly after a refresh.
 
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/core/badgeManager.mjs:
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/core/badgeManager.mjs:
 
 badgeManager.mjs
 -14
@@ -1451,7 +1451,7 @@ I welcome any suggestions you have for improvements needed n this project to mak
 
 
 Gemini
-Of course. I've reviewed the architecture and code for your "flock-of-postcards" project. It's a highly ambitious and creative application with a sophisticated, event-driven core. Based on your goal of making the project smaller, faster, and more robust, I have three key suggestions that will provide the most significant impact.
+Of course. I've reviewed the architecture and code for your "resume-flock" project. It's a highly ambitious and creative application with a sophisticated, event-driven core. Based on your goal of making the project smaller, faster, and more robust, I have three key suggestions that will provide the most significant impact.
 
 Suggestion 1: Decouple and Simplify the Styling System
 Your current system for applying styles is a powerful but complex mix of CSS, CSS variables, and direct JavaScript manipulation. The applyStateStyling function in useColorPalette.mjs has become a "god function" that handles colors, borders, padding, and even parallax filters, which makes it brittle and hard to maintain.
@@ -1561,7 +1561,7 @@ Here is a conceptual refactor of the updateConnections function in NewConnection
 
 javascript
  Show full code block 
-// In /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/NewConnectionLines.vue
+// In /Users/sbecker11/workspace-flock/resume-flock/modules/components/NewConnectionLines.vue
 
     const updateConnections = async (reason = 'unknown') => {
       if (isUpdatingConnections) return;
@@ -1659,11 +1659,11 @@ composables/useColorPalette.mjs/..
 core/badgeManager.mjs/..
 core/stateManager.mjs/..
 figma-plugin/code.js/..
-flock-of-postcards/README-error-handling.md/..
-flock-of-postcards/README-FIGMA-INTEGRATION.md/..
-flock-of-postcards/README-monetization.md/..
-flock-of-postcards/README-singleton-conversion.md/..
-flock-of-postcards/README.md/..
+resume-flock/README-error-handling.md/..
+resume-flock/README-FIGMA-INTEGRATION.md/..
+resume-flock/README-monetization.md/..
+resume-flock/README-singleton-conversion.md/..
+resume-flock/README.md/..
 
 Shawn Becker
 how can i get a copy of today's chat messages?
@@ -1689,11 +1689,11 @@ composables/useColorPalette.mjs/..
 core/badgeManager.mjs/..
 core/stateManager.mjs/..
 figma-plugin/code.js/..
-flock-of-postcards/README-error-handling.md/..
-flock-of-postcards/README-FIGMA-INTEGRATION.md/..
-flock-of-postcards/README-monetization.md/..
-flock-of-postcards/README-singleton-conversion.md/..
-flock-of-postcards/README.md/..
+resume-flock/README-error-handling.md/..
+resume-flock/README-FIGMA-INTEGRATION.md/..
+resume-flock/README-monetization.md/..
+resume-flock/README-singleton-conversion.md/..
+resume-flock/README.md/..
 
 Shawn Becker
 Excellent. suggestions. As for the complex curves, I'd like to retain these for now, I'd like to have something like a sankey diagram (see attached) to jobs to skills using D3 as shown at https://observablehq.com/@d3/sankey/2
@@ -1831,7 +1831,7 @@ I have implemented the refactoring as you've outlined. The changes are broken do
 Suggestion 1: Decouple and Simplify the Styling System
 The first step is to remove the complex styling logic from JavaScript and make it the responsibility of the CSS. This makes the useColorPalette.mjs module much simpler—its only job is to set CSS custom properties based on the selected color palette. The applyStateStyling function, which was manually setting numerous inline styles, has been removed.
 
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/composables/useColorPalette.mjs:
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/composables/useColorPalette.mjs:
 
 useColorPalette.mjs
 -134
@@ -1990,7 +1990,7 @@ watch(colorPalettes, () => {
 
 With the JavaScript logic simplified, the styling rules are now defined directly in the CSS, using the custom properties set by applyPaletteToElement.
 
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/scene/scene.css:
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/scene/scene.css:
 
 scene.css
 -7
@@ -2060,7 +2060,7 @@ scene.css
 Suggestion 2: Refactor High-Specificity CSS
 Next, I've refactored the global styles in ResumeContainer.vue. The overly specific selectors have been removed, and the new state-based rules (similar to the ones above) have been added. This makes the component's styling much cleaner and easier to manage.
 
-Here are the changes for /Users/sbecker11/workspace-flock/flock-of-postcards/modules/components/ResumeContainer.vue:
+Here are the changes for /Users/sbecker11/workspace-flock/resume-flock/modules/components/ResumeContainer.vue:
 
 ResumeContainer.vue
 -42

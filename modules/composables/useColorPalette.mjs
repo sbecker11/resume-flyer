@@ -248,15 +248,6 @@ export async function applyPaletteToElement(element) {
     const hoveredBackgroundColor = colorUtils.adjustBrightness(backgroundColor, brightnessFactorHovered);
     const hoveredForegroundColor = colorUtils.getContrastingColor(hoveredBackgroundColor);
 
-    // Debug: Log the color calculations (commented out)
-    // window.CONSOLE_LOG_IGNORE(`[DEBUG] Color calculations for element ${element.id || element.className}:`, {
-    //     base: backgroundColor,
-    //     selected: selectedBackgroundColor,
-    //     hovered: hoveredBackgroundColor,
-    //     selectedFactor: brightnessFactorSelected,
-    //     hoveredFactor: brightnessFactorHovered
-    // });
-
     const borderRadius = AppState.theme?.borderRadius || '25px';
 
     // Get global border and padding settings from AppState (with defaults)
@@ -369,6 +360,7 @@ export async function applyPaletteToElement(element) {
     element.style.setProperty('--data-selected-outer-border-color', borderSettings.selected.outerBorderColor);
     element.style.setProperty('--data-selected-margin-top', borderSettings.selected.marginTop);
     element.style.setProperty('--data-selected-border-radius', borderSettings.selected.borderRadius);
+
 
     // Don't apply inline styles - let CSS variables handle the styling
     // The normal state will be applied when needed by the state system
