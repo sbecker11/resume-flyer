@@ -6,6 +6,7 @@ import { watchEffect, ref } from 'vue';
 import * as viewPort from './viewPortModule.mjs';
 import * as zUtils from '../utils/zUtils.mjs';
 import * as mathUtils from '../utils/mathUtils.mjs';
+import { selectionManager } from './selectionManager.mjs';
 
 export const TEST_PARALLAX = false;
 export const EPSILON = 0.01
@@ -139,6 +140,108 @@ export function refreshAllParallaxTransforms() {
             applyParallaxToBizCardDiv(bizCardDiv, dh, dv);
         }
     });
+}
+
+/**
+ * Gets the clone element for the selected job number.
+ * @returns {HTMLElement|null} The clone element or null if not found.
+ */
+export function getCloneForSelectedJobNumber() {
+    const selectedJobNumber = selectionManager.getSelectedJobNumber();
+    if (!selectedJobNumber) {
+        return null;
+    }
+    
+    const cloneId = `biz-card-div-${selectedJobNumber}-clone`;
+    return document.getElementById(cloneId);
+}
+
+/**
+ * Projects any element to sceneContainer-relative coordinates without parallax.
+ * Used for clones, badges, and connection lines which should not have parallax.
+ * @param {HTMLElement} element - The element to project.
+ * @returns {Object} The projected rect in sceneContainer-relative coordinates.
+ */
+export function projectElementToSceneContainer(element) {
+    if (!element) return null;
+    
+    const rect = element.getBoundingClientRect();
+    const translateX = getSceneContainerWidth() / 2;
+    
+    return {
+        left: rect.left + translateX,
+        top: rect.top,
+        right: rect.right + translateX,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        x: rect.x + translateX,
+        y: rect.y
+    };
+}
+
+/**
+ * Projects a bizCardDivClone to viewPort-relative coordinates 
+ * without parallax effect, since clones are not subject to parallax.
+ * @param {HTMLElement} bizCardDivClone - The bizCardDivClone to project.
+ * @returns {Object} The projected rect in viewPort-relative coordinates.
+ */
+export function projectBizCardDivClone(bizCardDivClone) {
+    if ( !isInitialized() ) {
+        return null;
+    }
+    if( !bizCardDivClone.classList.contains('hasClone') ) {
+        throw new Error('projectBizCardDivClone: bizCardDivClone is not a clone');
+    }
+    
+    const sceneLeft = parseFloat(bizCardDivClone.getAttribute("data-sceneLeft"));
+    const sceneRight = parseFloat(bizCardDivClone.getAttribute("data-sceneRight"));
+    const sceneWidth = parseFloat(bizCardDivClone.getAttribute("data-sceneWidth"));
+    const sceneCenterX = parseFloat(bizCardDivClone.getAttribute("data-sceneCenterX"));
+
+    const sceneTop = parseFloat(bizCardDivClone.getAttribute("data-sceneTop"));
+    const sceneBottom = parseFloat(bizCardDivClone.getAttribute("data-sceneBottom"));
+    const sceneHeight = parseFloat(bizCardDivClone.getAttribute("data-sceneHeight"));
+    const sceneCenterY = parseFloat(bizCardDivClone.getAttribute("data-sceneCenterY"));
+    
+    // Debug log to verify all attributes are available
+    console.log('[parallaxModule.projectBizCardDivClone] Reading attributes from clone:', bizCardDivClone.id, {
+        sceneLeft, sceneRight, sceneWidth, sceneCenterX,
+        sceneTop, sceneBottom, sceneHeight, sceneCenterY
+    });
+    
+    // Check for any NaN values which would indicate missing attributes
+    const hasNaN = [sceneLeft, sceneRight, sceneWidth, sceneCenterX, sceneTop, sceneBottom, sceneHeight, sceneCenterY].some(val => isNaN(val));
+    if (hasNaN) {
+        console.error('[parallaxModule.projectBizCardDivClone] Missing or invalid data attributes on clone:', bizCardDivClone.id);
+        console.error('[parallaxModule.projectBizCardDivClone] All attributes:', {
+            'data-sceneLeft': bizCardDivClone.getAttribute("data-sceneLeft"),
+            'data-sceneRight': bizCardDivClone.getAttribute("data-sceneRight"),
+            'data-sceneWidth': bizCardDivClone.getAttribute("data-sceneWidth"),
+            'data-sceneCenterX': bizCardDivClone.getAttribute("data-sceneCenterX"),
+            'data-sceneTop': bizCardDivClone.getAttribute("data-sceneTop"),
+            'data-sceneBottom': bizCardDivClone.getAttribute("data-sceneBottom"),
+            'data-sceneHeight': bizCardDivClone.getAttribute("data-sceneHeight"),
+            'data-sceneCenterY': bizCardDivClone.getAttribute("data-sceneCenterY")
+        });
+        return null;
+    }
+    
+    // project the scene-relative coordinates to 
+    // viewPort-relative coordinates with no parallax effect
+    // by simply transforming x by + sceneContainerWidth/2
+    const projectedRect = {
+        left: (sceneLeft + getSceneContainerWidth()/2).toFixed(2),
+        top: sceneTop.toFixed(2),
+        right: ((sceneRight + getSceneContainerWidth()/2)*100)/100,
+        bottom: (sceneBottom*100)/100,
+        width: sceneWidth.toFixed(2),
+        height: sceneHeight.toFixed(2),
+        x: (sceneCenterX + getSceneContainerWidth()/2).toFixed(2),
+        y: sceneCenterY.toFixed(2)
+    };
+    
+    return projectedRect;
 }
 
 /**

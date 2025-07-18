@@ -390,6 +390,7 @@ class CardsController {
         const clone = bizCardDiv.cloneNode(true);
         clone.id = bizCardDiv.id + '-clone';
         bizCardDiv.classList.add('hasClone'); // marker for scenePlane.clearAllSelected to know to destroy the clone
+        clone.classList.add('hasClone'); // marker for projectBizCardDivClone to identify as clone
         if ( !clone.classList.contains('biz-card-div') ) throw new Error('Clone is not a biz-card-div');
         clone.classList.remove('hovered')
         clone.classList.add('selected' );
@@ -494,6 +495,15 @@ class CardsController {
         clone.setAttribute("data-sceneLeft", translatedLeft.toString());  // Update to translated value
         clone.setAttribute("data-sceneTop", translatedTop.toString());    // Update to translated value
         
+        // Copy missing attributes needed by projectBizCardDivClone
+        const originalSceneWidth = bizCardDiv.getAttribute("data-sceneWidth");
+        const originalSceneHeight = bizCardDiv.getAttribute("data-sceneHeight");
+        const originalSceneCenterY = bizCardDiv.getAttribute("data-sceneCenterY");
+        
+        if (originalSceneWidth) clone.setAttribute("data-sceneWidth", originalSceneWidth);
+        if (originalSceneHeight) clone.setAttribute("data-sceneHeight", originalSceneHeight);
+        if (originalSceneCenterY) clone.setAttribute("data-sceneCenterY", originalSceneCenterY);
+        
         window.CONSOLE_LOG_IGNORE(`[DEBUG] Clone ${clone.id} positioning properties set (translated):`, {
             top: clone.style.top,
             left: clone.style.left,
@@ -503,6 +513,10 @@ class CardsController {
             'data-sceneLeft': clone.getAttribute('data-sceneLeft'),
             'data-sceneBottom': clone.getAttribute('data-sceneBottom'),
             'data-sceneRight': clone.getAttribute('data-sceneRight'),
+            'data-sceneWidth': clone.getAttribute('data-sceneWidth'),
+            'data-sceneHeight': clone.getAttribute('data-sceneHeight'),
+            'data-sceneCenterY': clone.getAttribute('data-sceneCenterY'),
+            'data-sceneCenterX': clone.getAttribute('data-sceneCenterX'),
             centerX: sceneCenterX,
             originalLeft: newSceneLeft,
             translatedLeft: translatedLeft,
