@@ -242,11 +242,21 @@ export default {
           
           if (!isAssociated) return null;
           
-          const category = el.getAttribute('data-category') || 'LEVEL';
           const rect = el.getBoundingClientRect();
           const sceneContent = document.getElementById('scene-content');
           const sceneRect = sceneContent ? sceneContent.getBoundingClientRect() : { top: 0 };
           const centerY = rect.top + rect.height / 2 - sceneRect.top + (sceneContent ? sceneContent.scrollTop : 0);
+          
+          // Determine category based on badge position relative to cDiv
+          let category;
+          if (centerY < cDivTop) {
+            category = 'ABOVE';
+          } else if (centerY > cDivBottom) {
+            category = 'BELOW';
+          } else {
+            category = 'LEVEL';
+          }
+          
           return { id, name, jobNumbers, category, centerY };
         })
         .filter(Boolean);
@@ -311,11 +321,12 @@ export default {
       
       // The common x midpoint for all line numbers
       const commonTextX = (badgeEdgeFacingCDiv + cDivFacingX) / 2;
-      // Sort ABOVE by startY (top to bottom)
-      const sortedAbove = above.map((info, i) => {
+      // Sort ABOVE by startY (top to bottom), assign termination points in reverse order
+      const sortedAbove = above.sort((a, b) => a.centerY - b.centerY).map((info, i) => {
         const startX = getBadgeX(info.id) + getBadgeWidth(info.id);
         const startY = info.centerY;
-        const termX = aboveX[i];
+        // Reverse the termination assignment for ABOVE: furthest badge gets furthest termination
+        const termX = aboveX[aboveX.length - 1 - i];
         const termY = cDivTop;
         const cornerX = termX;
         const pointA = { x: startX, y: startY };
@@ -327,23 +338,21 @@ export default {
           path,
           case: 'ABOVE',
           skillText: info.name?.trim() || '',
-          strokeWidth: 3,
-          strokeColor: '#9966cc',
-          lineNumber: 0, // placeholder, will set after sorting
+          strokeWidth: 2,
+          strokeColor: 'red',
+          lineNumber: i + 1, // Set line number directly
           textX: commonTextX,
-          textY: startY - 5,
-          _sortY: startY
+          textY: startY - 5
         };
-      }).sort((a, b) => a._sortY - b._sortY);
-      sortedAbove.forEach((conn, idx) => {
-        conn.lineNumber = idx + 1;
-        delete conn._sortY;
+      });
+      sortedAbove.forEach((conn) => {
         connectionsArr.push(conn);
       });
-      // Sort BELOW by startY (top to bottom)
-      const sortedBelow = below.map((info, i) => {
+      // Sort BELOW by startY (top to bottom), assign termination points in same order
+      const sortedBelow = below.sort((a, b) => a.centerY - b.centerY).map((info, i) => {
         const startX = getBadgeX(info.id) + getBadgeWidth(info.id);
         const startY = info.centerY;
+        // Same order for BELOW: closest badge to bottom gets nearest termination
         const termX = belowX[i];
         const termY = cDivBottom;
         const cornerX = termX;
@@ -356,21 +365,18 @@ export default {
           path,
           case: 'BELOW',
           skillText: info.name?.trim() || '',
-          strokeWidth: 3,
-          strokeColor: '#9966cc',
-          lineNumber: 0, // placeholder
+          strokeWidth: 2,
+          strokeColor: 'yellow',
+          lineNumber: i + 1, // Set line number directly
           textX: commonTextX,
-          textY: startY - 5,
-          _sortY: startY
+          textY: startY - 5
         };
-      }).sort((a, b) => a._sortY - b._sortY);
-      sortedBelow.forEach((conn, idx) => {
-        conn.lineNumber = idx + 1;
-        delete conn._sortY;
+      });
+      sortedBelow.forEach((conn) => {
         connectionsArr.push(conn);
       });
-      // Sort LEVEL by startY (top to bottom)
-      const sortedLevel = level.map((info, i) => {
+      // Sort LEVEL by startY (top to bottom), assign termination points in same order
+      const sortedLevel = level.sort((a, b) => a.centerY - b.centerY).map((info, i) => {
         // Determine layout orientation
         const appContainer = document.getElementById('app-container');
         const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
@@ -397,17 +403,14 @@ export default {
           path,
           case: 'LEVEL',
           skillText: info.name?.trim() || '',
-          strokeWidth: 3,
-          strokeColor: '#ff8800',
-          lineNumber: 0, // placeholder
+          strokeWidth: 2,
+          strokeColor: 'orange',
+          lineNumber: i + 1, // Set line number directly
           textX: commonTextX,
-          textY: startY - 5,
-          _sortY: startY
+          textY: startY - 5
         };
-      }).sort((a, b) => a._sortY - b._sortY);
-      sortedLevel.forEach((conn, idx) => {
-        conn.lineNumber = idx + 1;
-        delete conn._sortY;
+      });
+      sortedLevel.forEach((conn) => {
         connectionsArr.push(conn);
       });
       console.log('Generated connections:', connectionsArr);
@@ -438,9 +441,17 @@ export default {
     // Helper functions to distribute points
     function distributeHorizontally(count, left, right) {
       const points = [];
-      const step = count > 1 ? (right - left) / (count - 1) : 0;
-      for (let i = 0; i < count; i++) {
-        points.push(left + step * i);
+      if (count === 1) {
+        // Single connection: center of edge
+        points.push((left + right) / 2);
+      } else {
+        // Multiple connections: padded distribution
+        const padding = Math.min(20, (right - left) * 0.1);
+        const availableWidth = (right - left) - (2 * padding);
+        const step = availableWidth / (count - 1);
+        for (let i = 0; i < count; i++) {
+          points.push(left + padding + step * i);
+        }
       }
       return points;
     }
