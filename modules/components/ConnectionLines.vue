@@ -323,7 +323,18 @@ export default {
       const commonTextX = (badgeEdgeFacingCDiv + cDivFacingX) / 2;
       // Sort ABOVE by startY (top to bottom), assign termination points in reverse order
       const sortedAbove = above.sort((a, b) => a.centerY - b.centerY).map((info, i) => {
-        const startX = getBadgeX(info.id) + getBadgeWidth(info.id);
+        // Determine layout orientation to get correct starting edge
+        const appContainer = document.getElementById('app-container');
+        const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
+        
+        let startX;
+        if (isSceneLeft) {
+          // Scene-left: start from badge left edge
+          startX = getBadgeX(info.id);
+        } else {
+          // Scene-right: start from badge right edge
+          startX = getBadgeX(info.id) + getBadgeWidth(info.id);
+        }
         const startY = info.centerY;
         // Reverse the termination assignment for ABOVE: furthest badge gets furthest termination
         const termX = aboveX[aboveX.length - 1 - i];
@@ -350,7 +361,18 @@ export default {
       });
       // Sort BELOW by startY (top to bottom), assign termination points in same order
       const sortedBelow = below.sort((a, b) => a.centerY - b.centerY).map((info, i) => {
-        const startX = getBadgeX(info.id) + getBadgeWidth(info.id);
+        // Determine layout orientation to get correct starting edge
+        const appContainer = document.getElementById('app-container');
+        const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
+        
+        let startX;
+        if (isSceneLeft) {
+          // Scene-left: start from badge left edge
+          startX = getBadgeX(info.id);
+        } else {
+          // Scene-right: start from badge right edge
+          startX = getBadgeX(info.id) + getBadgeWidth(info.id);
+        }
         const startY = info.centerY;
         // Same order for BELOW: closest badge to bottom gets nearest termination
         const termX = belowX[i];
