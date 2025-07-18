@@ -1,4 +1,5 @@
 import { deepMerge } from '../utils/utils.mjs';
+import { BadgeMode } from './BadgeMode.mjs';
 
 const STORAGE_KEY = 'flockOfPostcards_appState';
 
@@ -22,7 +23,7 @@ function getDefaultState() {
             mode: 'locked' // Default to locked mode
         },
         badgeToggle: {
-            mode: 'no-badges' // Default to no badges shown
+            mode: BadgeMode.NONE // Default to no badges shown
         },
         resume: {
             sortRule: { field: 'startDate', direction: 'asc' }, // Default to oldest first

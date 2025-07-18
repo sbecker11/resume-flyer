@@ -62,15 +62,36 @@ export class BadgePositioner {
         // Calculate statistics for related badges only
         const stats = this._calculateBadgeStatistics(relatedBadges, cDivTop, cDivBottom);
         
+        // Categorize all badges after positioning
+        const categorized = positionData.map(({ element, position }) => {
+            const badgeCenterY = position + 20; // badge height / 2
+            let category;
+            if (badgeCenterY < cDivTop) {
+                category = 'ABOVE';
+            } else if (badgeCenterY > cDivBottom) {
+                category = 'BELOW';
+            } else {
+                category = 'LEVEL';
+            }
+            return {
+                id: element.id,
+                name: element.textContent,
+                top: position,
+                centerY: badgeCenterY,
+                category
+            };
+        });
+        
         // Dispatch positioning complete event
         window.dispatchEvent(new CustomEvent('badges-positioned', {
-            detail: { 
+            detail: {
                 selectedJobNumber: this._getSelectedJobNumber(),
-                stats
+                stats,
+                badgeOrder: categorized
             }
         }));
         
-        return stats;
+        return { ...stats, badgeOrder: categorized };
     }
 
     /**

@@ -11,13 +11,14 @@
  */
 
 import { AppState, saveState } from './stateManager.mjs';
+import { BadgeMode, isValidBadgeMode, getNextBadgeMode, getBadgeModeIcon, getBadgeModeDescription, getBadgeModeAction } from './BadgeMode.mjs';
 
 class BadgeManager extends EventTarget {
     constructor() {
         super();
         
-        // Badge mode state: 'no-badges' | 'badges-only' | 'badges-with-stats'
-        this._mode = 'no-badges'; // Default until state is loaded
+        // Badge mode state: BadgeMode enumeration
+        this._mode = BadgeMode.NONE; // Default until state is loaded
         
         // Initialization is now deferred and handled by the initializationManager
         
@@ -32,6 +33,9 @@ class BadgeManager extends EventTarget {
     initialize() {
         if (AppState?.badgeToggle?.mode) {
             this._mode = AppState.badgeToggle.mode;
+            console.log(`[BadgeManager] Loaded badge mode from app-state.json: ${this._mode}`);
+        } else {
+            console.log(`[BadgeManager] No badge mode found in app-state.json, using default: ${this._mode}`);
         }
 
         window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
@@ -54,11 +58,11 @@ class BadgeManager extends EventTarget {
     
     /**
      * Set badge mode
-     * @param {string} mode - New mode: 'no-badges' | 'badges-only' | 'badges-with-stats'
+     * @param {string} mode - New mode from BadgeMode enumeration
      * @param {string} caller - Optional caller identification for debugging
      */
     setMode(mode, caller = '') {
-        if (!['no-badges', 'badges-only', 'badges-with-stats'].includes(mode)) {
+        if (!isValidBadgeMode(mode)) {
             console.warn(`[BadgeManager] Invalid mode: ${mode}`);
             return;
         }
@@ -93,21 +97,7 @@ class BadgeManager extends EventTarget {
      * @param {string} caller - Optional caller identification for debugging
      */
     toggleMode(caller = 'toggleMode') {
-        let nextMode;
-        switch (this._mode) {
-            case 'no-badges':
-                nextMode = 'badges-only';
-                break;
-            case 'badges-only':
-                nextMode = 'badges-with-stats';
-                break;
-            case 'badges-with-stats':
-                nextMode = 'no-badges';
-                break;
-            default:
-                nextMode = 'no-badges';
-        }
-        
+        const nextMode = getNextBadgeMode(this._mode);
         this.setMode(nextMode, caller);
     }
     
@@ -116,7 +106,7 @@ class BadgeManager extends EventTarget {
      * @returns {boolean} True if badges should be shown
      */
     isBadgesVisible() {
-        return this._mode === 'badges-only' || this._mode === 'badges-with-stats';
+        return this._mode === BadgeMode.BADGES_ONLY || this._mode === BadgeMode.BADGES_WITH_STATS;
     }
     
     /**
@@ -124,7 +114,7 @@ class BadgeManager extends EventTarget {
      * @returns {boolean} True if connection lines should be shown
      */
     isConnectionLinesVisible() {
-        return this._mode === 'badges-only' || this._mode === 'badges-with-stats';
+        return this._mode === BadgeMode.BADGES_ONLY || this._mode === BadgeMode.BADGES_WITH_STATS;
     }
     
     /**
@@ -132,7 +122,7 @@ class BadgeManager extends EventTarget {
      * @returns {boolean} True if statistics should be shown
      */
     isStatsVisible() {
-        return this._mode === 'badges-with-stats';
+        return this._mode === BadgeMode.BADGES_WITH_STATS;
     }
     
     /**
@@ -140,12 +130,7 @@ class BadgeManager extends EventTarget {
      * @returns {string} Next mode in cycle
      */
     getNextMode() {
-        switch (this._mode) {
-            case 'no-badges': return 'badges-only';
-            case 'badges-only': return 'badges-with-stats';
-            case 'badges-with-stats': return 'no-badges';
-            default: return 'no-badges';
-        }
+        return getNextBadgeMode(this._mode);
     }
     
     /**
@@ -155,12 +140,7 @@ class BadgeManager extends EventTarget {
      */
     getDisplayIcon(showNext = false) {
         const mode = showNext ? this.getNextMode() : this._mode;
-        switch (mode) {
-            case 'no-badges': return 'B⁰'; // B with superscript zero
-            case 'badges-only': return 'B';  // B with no superscript
-            case 'badges-with-stats': return 'B⁺'; // B with superscript plus
-            default: return 'B⁰'; // Default to 'no-badges' icon
-        }
+        return getBadgeModeIcon(mode);
     }
     
     /**
@@ -169,17 +149,8 @@ class BadgeManager extends EventTarget {
      * @returns {string} Tooltip text
      */
     getTooltipText(isHovering = false) {
-        const currentModeText = {
-            'no-badges': 'No badges or lines shown',
-            'badges-only': 'Badges and lines visible',
-            'badges-with-stats': 'Badges, lines, and statistics visible'
-        }[this._mode] || 'Unknown mode';
-        
-        const nextModeText = {
-            'no-badges': 'Hide badges and lines',
-            'badges-only': 'Show badges and lines only',
-            'badges-with-stats': 'Show badges, lines, and statistics'
-        }[this.getNextMode()] || 'Unknown mode';
+        const currentModeText = getBadgeModeDescription(this._mode);
+        const nextModeText = getBadgeModeAction(this.getNextMode());
         
         return isHovering 
             ? `Next: ${nextModeText} (click to switch)`

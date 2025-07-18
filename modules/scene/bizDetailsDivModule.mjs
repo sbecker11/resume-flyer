@@ -114,11 +114,18 @@ export function createBizCardDetailsDiv(bizCardDiv, job) {
     bizCardDetailsDiv.style.pointerEvents = 'none';
     bizCardDetailsDiv.style.backgroundColor = 'transparent';
 
+    const currentJobNumber = bizCardDiv.getAttribute('data-job-number');
+    if (parseInt(currentJobNumber) === 21) {
+        console.log('createBizDetailsDiv: bizCardDiv:', bizCardDiv);
+        console.log('createBizDetailsDiv: job:', job);
+    }
     // see createBizDetailsDiv::34  colorIndex format <number>
     let colorIndex = bizCardDiv.getAttribute('data-color-index');
-    
+    if ( colorIndex == null ) {
+        throw new Error('createBizDetailsDiv: given null colorIndex from bizCardDiv:', bizCardDiv);
+    }
     if (!utils.isNumericString(colorIndex)) {
-        throw new Error('createBizDetailsDiv: given non-numeric colorIndex');
+        throw new Error('createBizDetailsDiv: given non-numeric colorIndex:', colorIndex);
     }
     
     bizCardDetailsDiv.setAttribute("data-color-index", colorIndex);
@@ -142,7 +149,7 @@ export function createBizCardDetailsDiv(bizCardDiv, job) {
     <h2 class="biz-details-employer header-text">${employer}</h2>
     <h3 class="biz-details-role header-text">${role}</h3>
     <p class="biz-details-dates header-text">${dates}</p>
-    <p class="biz-details-z-value header-text">(z: ${sceneZ}, #: ${jobNumber})</p>
+    <p class="biz-details-z-value header-text">(z: ${sceneZ}, job#: ${currentJobNumber}, #skl: ${skills.length})</p>
 
     <div class="job-description-items-container">
         ${descriptions.map(item => `<p class="job-description-item">&bull;&nbsp;${item.trim()}</p>`).join('')}

@@ -14,6 +14,7 @@
           <Timeline :alignment="timelineAlignment" />
           <!-- <SankeyConnections /> -->
           <SkillBadges />
+          <ConnectionLines />
         </div>
       </div>
       <div id="scene-viewer-label">
@@ -127,6 +128,7 @@ import ResumeContainer from '@/modules/components/ResumeContainer.vue';
 import SkillBadges from '@/modules/components/SkillBadges.vue';
 import SankeyConnections from '@/modules/components/SankeyConnections.vue';
 import BadgeToggle from '@/modules/components/BadgeToggle.vue';
+import ConnectionLines from '@/modules/components/ConnectionLines.vue';
 
 
 export default {
@@ -137,6 +139,7 @@ export default {
     ResumeContainer,
     SkillBadges,
     SankeyConnections,
+    ConnectionLines,
     BadgeToggle,
   },
   async setup() {
@@ -294,7 +297,7 @@ export default {
         initializationManager.register(
           'ConnectionLines',
           async () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing ConnectionLines');
+            console.log('[INIT] Initializing ConnectionLines');
             initializationManager.waitForComponents(['CardsController', 'SkillBadges']);
             
             // Dispatch event to trigger ConnectionLines initialization
@@ -339,15 +342,6 @@ export default {
         window.focalPoint = focalPoint;
         window.aimPoint = aimPoint;
         
-        // Add a listener to handle rDiv height changes when badge stats are toggled
-        badgeManager.addEventListener('badgeModeChanged', () => {
-          window.CONSOLE_LOG_IGNORE('[AppContent] Badge mode changed, triggering resume list height recalculation.');
-          if (window.resumeListController && window.resumeListController.infiniteScroller) {
-            // Use the existing handleResize logic as it's robust.
-            // It debounces, recalculates all heights, and restores the scroll position.
-            window.resumeListController.infiniteScroller.handleResize();
-          }
-        });
 
         // Set up debug interval after everything is initialized
         debugInterval = setInterval(() => {

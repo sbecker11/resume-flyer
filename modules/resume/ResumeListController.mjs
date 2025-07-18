@@ -1414,7 +1414,7 @@ class ResumeListController {
       // Set up mouse listeners for the resume div
       this._setupMouseListeners(bizResumeDiv);
       
-      console.log(`[ResumeListController] Successfully created resume div for job ${jobNumber}`);
+      if (jobNumber === 21) console.log(`[ResumeListController] Successfully created resume div for job ${jobNumber}`);
       return bizResumeDiv;
     } catch (error) {
       console.error('[ResumeListController] Error creating resume div:', error);

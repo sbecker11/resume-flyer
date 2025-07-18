@@ -52,7 +52,7 @@ class CardsController {
         this.isInitialized = false;
         this.originalJobsData = null;
         this.currentSortRule = null;
-        this.sortedIndices = []; // Maps sorted position to original index
+        this.sortedIndices = []; // Maps sorted position to original jobNumber
         this.currentlyHoveredElement = null; // Track currently hovered element
         this._setupSelectionListeners();
         this._setupColorPaletteListener();
@@ -149,9 +149,9 @@ class CardsController {
             }
         });
 
-        for (let index = 0; index < jobsData.length; index++) {
-            const job = jobsData[index];
-            const bizCardDiv = await this.createBizCardDiv(job, index, jobsData.length);
+        for (let jobNumber = 0; jobNumber < jobsData.length; jobNumber++) {
+            const job = jobsData[jobNumber];
+            const bizCardDiv = await this.createBizCardDiv(job, jobNumber, jobsData.length);
             divs.push(bizCardDiv);
         }
         
@@ -166,12 +166,12 @@ class CardsController {
         return divs;
     }
 
-    async createBizCardDiv(job, index, totalJobs) {
+    async createBizCardDiv(job, jobNumber, totalJobs) {
         try {
             const bizCardDiv = document.createElement('div');
             bizCardDiv.className = 'biz-card-div';
-            bizCardDiv.id = this.createBizCardDivId(index);
-            bizCardDiv.setAttribute('data-job-number', index.toString());
+            bizCardDiv.id = this.createBizCardDivId(jobNumber);
+            bizCardDiv.setAttribute('data-job-number', jobNumber.toString());
             
             this._setBizCardDivSceneGeometry(bizCardDiv, job);
             
@@ -187,8 +187,8 @@ class CardsController {
             bizCardDiv.style.width = `${sceneWidth}px`;
             bizCardDiv.style.height = `${sceneHeight}px`;
 
-            // Assign a color index for styling. Use job number for consistency with rDivs
-            const colorIndex = index;
+            // Assign a color jobNumber for styling. Use job number for consistency with rDivs
+            const colorIndex = jobNumber;
             bizCardDiv.setAttribute('data-color-index', colorIndex);
 
             const bizCardDetailsDiv = BizDetailsDivModule.createBizCardDetailsDiv(bizCardDiv, job, colorIndex);
@@ -321,7 +321,7 @@ class CardsController {
         }
         
         // set the z-relative style properties
-        bizCardDiv.style.setProperty("z-index", zUtils.get_zIndexStr_from_z(sceneZ));
+        bizCardDiv.style.setProperty("z-jobNumber", zUtils.get_zIndexStr_from_z(sceneZ));
         
         // Only apply depth filters to card divs, not resume divs
         if (!bizCardDiv.classList.contains('biz-resume-div')) {
@@ -427,8 +427,6 @@ class CardsController {
             window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Fixing missing data-color-index on clone`);
             clone.setAttribute('data-color-index', originalColorIndex);
         }
-
-
 
         // --- Apply the pre-calculated centered geometry to the clone ---
         clone.setAttribute("data-sceneCenterX", sceneCenterX.toString());
@@ -1033,8 +1031,8 @@ class CardsController {
      */
     updateSortedIndices() {
         // Create array of indices with their corresponding job data
-        const indexedJobs = this.originalJobsData.map((job, index) => ({
-            index,
+        const indexedJobs = this.originalJobsData.map((job, jobNumber) => ({
+            jobNumber,
             job
         }));
 
@@ -1056,7 +1054,7 @@ class CardsController {
                     break;
                 case 'original':
                 default:
-                    comparison = a.index - b.index;
+                    comparison = a.jobNumber - b.jobNumber;
                     break;
             }
             
@@ -1065,7 +1063,7 @@ class CardsController {
         });
 
         // Extract the sorted indices
-        this.sortedIndices = indexedJobs.map(item => item.index);
+        this.sortedIndices = indexedJobs.map(item => item.jobNumber);
         window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.updateSortedIndices: Final sortedIndices=`, this.sortedIndices);
     }
 
@@ -1131,7 +1129,7 @@ class CardsController {
     }
 
     /**
-     * Get the job number at a specific sorted index
+     * Get the job number at a specific sorted jobNumber
      * This helps coordinate with ResumeListController
      */
     getJobNumberAtSortedIndex(sortedIndex) {
@@ -1142,7 +1140,7 @@ class CardsController {
     }
 
     /**
-     * Get the sorted index for a specific job number
+     * Get the sorted jobNumber for a specific job number
      * This helps coordinate with ResumeListController
      */
     getSortedIndexForJobNumber(jobNumber) {
@@ -1256,14 +1254,14 @@ window.debugCardsState = function() {
         if (scenePlaneEl) {
             const cards = scenePlaneEl.querySelectorAll('.biz-card-div:not(.hasClone)');
             window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: Cards in DOM (timeline order):');
-            cards.forEach((card, index) => {
-                const jobNumber = card.getAttribute('data-job-number');
+            cards.forEach((card, jobNumber) => {
+                // const jobNumber = card.getAttribute('data-job-number');
                 const sceneTop = card.getAttribute('data-sceneTop');
                 const roleElement = card.querySelector('.biz-details-role');
                 const employerElement = card.querySelector('.biz-details-employer');
                 const role = roleElement ? roleElement.textContent.trim() : 'N/A';
                 const employer = employerElement ? employerElement.textContent.trim() : 'N/A';
-                window.CONSOLE_LOG_IGNORE(`  DOM Index ${index}: Job ${jobNumber} (top: ${sceneTop}px) -> "${role}" at "${employer}"`);
+                window.CONSOLE_LOG_IGNORE(`  DOM Index ${jobNumber}: Job ${jobNumber} (top: ${sceneTop}px) -> "${role}" at "${employer}"`);
             });
         }
         
