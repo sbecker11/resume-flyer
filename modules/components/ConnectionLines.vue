@@ -381,12 +381,16 @@ export default {
       // Array to collect all connections - ALL LEVEL badges
       const connectionsArr = [];
       
-      // Get all LEVEL badges for connections, sorted by Y position (top to bottom)
+      // Get LEVEL and ABOVE badges for connections, sorted by Y position (top to bottom)
       const levelBadges = associatedBadges
         .filter(badge => badge.category === 'LEVEL')
         .sort((a, b) => a.centerY - b.centerY); // Sort by Y position: top to bottom
+        
+      const aboveBadges = associatedBadges
+        .filter(badge => badge.category === 'ABOVE')
+        .sort((a, b) => a.centerY - b.centerY); // Sort by Y position: top to bottom
       
-      if (levelBadges.length === 0) {
+      if (levelBadges.length === 0 && aboveBadges.length === 0) {
         connections.value = [];
         return;
       }
@@ -417,7 +421,8 @@ export default {
         if (!badgeRect) return;
         
         // Calculate connection points using scene-container coordinates  
-        const badgeStartX = isSceneLeft ? badgeRect.x : badgeRect.x - sceneRect.left;
+        // LEVEL badges start from RIGHT edge in both scene-left and scene-right
+        const badgeStartX = badgeRect.x - sceneRect.left + badgeRect.width; // RIGHT edge for both layouts
         const badgeStartY = levelBadge.centerY; // Use scene-container Y coordinate
         
         // LEVEL: Direct horizontal connection to cDiv side
@@ -448,8 +453,72 @@ export default {
         
         connectionsArr.push(connection);
       });
+      
+      // Create connections for all ABOVE badges with L-shaped paths
+      if (aboveBadges.length > 0) {
+        // Calculate evenly distributed termination points along cDiv top edge
+        const topEdgePoints = distributeHorizontally(aboveBadges.length, cDivLeft, cDivRight);
+        
+        // For non-intersecting curves: lowest badge (maxY) gets rightmost termination point (maxX)
+        // Sort badges by Y position (highest Y = lowest on screen = first)
+        const sortedAboveBadges = [...aboveBadges].sort((a, b) => b.centerY - a.centerY);
+        
+        // For line numbering: sort by Y position (lowest Y = top of screen = line 1)
+        const numberedAboveBadges = [...aboveBadges].sort((a, b) => a.centerY - b.centerY);
+        
+        sortedAboveBadges.forEach((aboveBadge, index) => {
+          // Get badge rect for width calculation
+          const badgeRect = document.getElementById(aboveBadge.id)?.getBoundingClientRect();
+          if (!badgeRect) return;
+          
+          // Calculate connection points using scene-container coordinates  
+          // ABOVE badges start from LEFT edge in scene-left, RIGHT edge in scene-right
+          const badgeStartX = isSceneLeft ? 
+            (badgeRect.x - sceneRect.left) : // LEFT edge for scene-left
+            (badgeRect.x - sceneRect.left + badgeRect.width); // RIGHT edge for scene-right
+          const badgeStartY = aboveBadge.centerY; // Use scene-container Y coordinate
+          
+          // ABOVE: L-shaped connection - non-intersecting termination points
+          // Scene-left: Lowest badge (highest Y) gets rightmost point (highest X) to avoid intersections
+          // Scene-right: Lowest badge (highest Y) gets leftmost point (lowest X) to avoid intersections
+          const termX = isSceneLeft ? 
+            topEdgePoints[topEdgePoints.length - 1 - index] : // Scene-left: reverse order
+            topEdgePoints[index]; // Scene-right: normal order
+          const termY = cDivTop; // Connect to cDiv top edge
+          
+          // Create L-shaped path: horizontal towards distributed point, then vertical to top edge
+          let path, strokeColor;
+          path = createLShapedCurve(
+            { x: badgeStartX, y: badgeStartY },
+            { x: termX, y: badgeStartY },
+            { x: termX, y: termY }
+          );
+          strokeColor = 'red';
+          
+          console.log(`[DEBUG] ABOVE badge ${index + 1}: ${aboveBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
+        
+          // Find this badge's line number (1 = topmost, increasing downward)
+          const lineNumber = numberedAboveBadges.findIndex(b => b.id === aboveBadge.id) + 1;
+          
+          // Create the connection for this ABOVE badge
+          const connection = {
+            id: `connection-above-${index}`,
+            path,
+            case: 'ABOVE',
+            skillText: aboveBadge.name?.trim() || '',
+            strokeWidth: 2,
+            strokeColor,
+            lineNumber: lineNumber, // Line numbering: 1 at top, increasing downward
+            textX: commonTextX, // Common X position for all line numbers
+            textY: badgeStartY - 5
+          };
+          
+          connectionsArr.push(connection);
+        });
+      }
+      
       connections.value = connectionsArr;
-      console.log(`[DEBUG] ${connectionsArr.length} LEVEL connections added to DOM`);
+      console.log(`[DEBUG] ${connectionsArr.length} total connections added to DOM (${levelBadges.length} LEVEL + ${aboveBadges.length} ABOVE)`);
     }
 
     // Helper function to get badge start position based on scene orientation
