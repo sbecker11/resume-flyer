@@ -378,17 +378,15 @@ export default {
       const level = associatedBadges.filter(b => b.category === 'LEVEL');
       
       
-      // Array to collect all connections - SIMPLIFIED: only center badge
+      // Array to collect all connections - ALL LEVEL badges
       const connectionsArr = [];
       
-      // Find the badge nearest to cDiv centerY (the centered-most badge)
-      const centeredBadge = associatedBadges.reduce((closest, badge) => {
-        const badgeDistance = Math.abs(badge.centerY - cDivCenterY);
-        const closestDistance = Math.abs(closest.centerY - cDivCenterY);
-        return badgeDistance < closestDistance ? badge : closest;
-      });
+      // Get all LEVEL badges for connections, sorted by Y position (top to bottom)
+      const levelBadges = associatedBadges
+        .filter(badge => badge.category === 'LEVEL')
+        .sort((a, b) => a.centerY - b.centerY); // Sort by Y position: top to bottom
       
-      if (!centeredBadge) {
+      if (levelBadges.length === 0) {
         connections.value = [];
         return;
       }
@@ -398,38 +396,32 @@ export default {
       const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
       // console.log(`[DEBUG] Layout orientation: isSceneLeft=${isSceneLeft}, appContainer classes:`, appContainer?.classList.toString());
       
-      // Get badge rect for width calculation only
-      const badgeRect = document.getElementById(centeredBadge.id)?.getBoundingClientRect();
+      // Calculate common X position for all line numbers
+      // Find left-most edge of all badges
+      let leftmostBadgeX = Infinity;
+      levelBadges.forEach(levelBadge => {
+        const badgeRect = document.getElementById(levelBadge.id)?.getBoundingClientRect();
+        if (badgeRect) {
+          const badgeLeftX = isSceneLeft ? badgeRect.x : badgeRect.x - sceneRect.left;
+          leftmostBadgeX = Math.min(leftmostBadgeX, badgeLeftX);
+        }
+      });
       
-      // Calculate connection points using scene-container coordinates  
-      const badgeStartX = (badgeRect.x - sceneRect.left) + badgeRect.width;
-      const badgeStartY = centeredBadge.centerY; // Use scene-container Y coordinate
+      // Calculate common text X position: midpoint between leftmost badge and cDiv right edge
+      const commonTextX = (leftmostBadgeX + cDivRight) / 2;
       
-      // console.log(`[DEBUG] Simple coordinates: badgeStartX=${badgeStartX}, badgeStartY=${badgeStartY}, xTransform=${xTransform}`);
-      
-      // Create a single connection for the centered badge
-      let path, strokeColor, termX, termY;
-      
-      if (centeredBadge.category === 'ABOVE') {
-        // ABOVE: L-shaped connection to top edge of cDiv
-        termX = cDivLeft + (cDivWidth / 2); // Center of cDiv top edge
-        termY = cDivTop;
-        const pointA = { x: badgeStartX, y: badgeStartY };
-        const pointB = { x: termX, y: badgeStartY };
-        const pointC = { x: termX, y: termY };
-        path = createLShapedCurve(pointA, pointB, pointC, arcRadius);
-        strokeColor = 'red';
-      } else if (centeredBadge.category === 'BELOW') {
-        // BELOW: L-shaped connection to bottom edge of cDiv
-        termX = cDivLeft + (cDivWidth / 2); // Center of cDiv bottom edge
-        termY = cDivBottom;
-        const pointA = { x: badgeStartX, y: badgeStartY };
-        const pointB = { x: termX, y: badgeStartY };
-        const pointC = { x: termX, y: termY };
-        path = createLShapedCurve(pointA, pointB, pointC, arcRadius);
-        strokeColor = 'yellow';
-      } else {
+      // Create connections for all LEVEL badges
+      levelBadges.forEach((levelBadge, index) => {
+        // Get badge rect for width calculation
+        const badgeRect = document.getElementById(levelBadge.id)?.getBoundingClientRect();
+        if (!badgeRect) return;
+        
+        // Calculate connection points using scene-container coordinates  
+        const badgeStartX = isSceneLeft ? badgeRect.x : badgeRect.x - sceneRect.left;
+        const badgeStartY = levelBadge.centerY; // Use scene-container Y coordinate
+        
         // LEVEL: Direct horizontal connection to cDiv side
+        let termX, termY, path, strokeColor;
         if (isSceneLeft) {
           termX = cDivRight; // Connect to cDiv RIGHT edge
         } else {
@@ -438,30 +430,26 @@ export default {
         termY = badgeStartY; // Use badge Y coordinate for horizontal line
         path = `M ${badgeStartX} ${badgeStartY} H ${termX}`;
         strokeColor = 'orange';
-      }
+        
+        console.log(`[DEBUG] LEVEL badge ${index + 1}: ${levelBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY})`);
       
-      console.log(`[DEBUG] Badge calc: badgeRect.x=${badgeRect.x}, xTransform=${xTransform}, badgeStartX=${badgeStartX} (should be 594)`);
-      console.log(`[DEBUG] cDiv calc: cDivRight=${cDivRight} (should be 408)`);
-      console.log(`[DEBUG] Connection: ${centeredBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) visible=${badgeManager.isConnectionLinesVisible()}`);
-      console.log(`[DEBUG] SVG path: "${path}"`);
-      
-      // Create the single connection
-      const connection = {
-        id: 'connection-centered',
-        path,
-        case: centeredBadge.category,
-        skillText: centeredBadge.name?.trim() || '',
-        strokeWidth: 3, // Slightly thicker for visibility
-        strokeColor: strokeColor,
-        lineNumber: 1,
-        textX: (badgeStartX + termX) / 2, // Midpoint between badge and cDiv
-        textY: badgeStartY - 5
-      };
-      
-      connectionsArr.push(connection);
+        // Create the connection for this LEVEL badge
+        const connection = {
+          id: `connection-level-${index}`,
+          path,
+          case: 'LEVEL',
+          skillText: levelBadge.name?.trim() || '',
+          strokeWidth: 2,
+          strokeColor,
+          lineNumber: index + 1,
+          textX: commonTextX, // Common X position for all line numbers
+          textY: badgeStartY - 5
+        };
+        
+        connectionsArr.push(connection);
+      });
       connections.value = connectionsArr;
-      console.log(`[DEBUG] Connections: ${connections.value.length} added to DOM`);
-      console.log(`[DEBUG] SVG container shouldShowContainer: ${connections.value.length > 0 && isConnectionLinesVisible.value}`);
+      console.log(`[DEBUG] ${connectionsArr.length} LEVEL connections added to DOM`);
     }
 
     // Helper function to get badge start position based on scene orientation
