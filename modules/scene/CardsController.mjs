@@ -24,8 +24,7 @@ const BIZCARD_MAX_WIDTH_OFFSET = 30; // Reduced from 40
 const BIZCARD_MIN_Z_DIFF = 2;
 const MIN_HEIGHT = 180; // Reduced from 200 for more square aspect
 
-// Get the timeline functions once
-const { getPositionForDate } = useTimeline();
+// Timeline functions will be accessed when needed after initialization
 
 /**
  * CardsController - Manages the business card divs in the scene
@@ -292,7 +291,8 @@ class CardsController extends BaseComponent {
             return;
         }
 
-        // Get the top and bottom positions from our new composable
+        // Get the top and bottom positions from timeline
+        const { getPositionForDate } = useTimeline();
         let sceneTop = getPositionForDate(endDate);
         let sceneBottom = getPositionForDate(startDate);
 
@@ -302,8 +302,16 @@ class CardsController extends BaseComponent {
 
         if (sceneHeight < MIN_HEIGHT) {
             sceneHeight = MIN_HEIGHT;
-            sceneTop = sceneCenterY - MIN_HEIGHT / 2;
-            sceneBottom = sceneCenterY + MIN_HEIGHT / 2;
+            let newSceneTop = sceneCenterY - MIN_HEIGHT / 2;
+            
+            // Prevent truncation at timeline top by checking boundary
+            if (newSceneTop < 0) {
+                sceneTop = 0;
+                sceneBottom = MIN_HEIGHT;
+            } else {
+                sceneTop = newSceneTop;
+                sceneBottom = sceneCenterY + MIN_HEIGHT / 2;
+            }
         }
         
         bizCardDiv.setAttribute("data-sceneTop", sceneTop);

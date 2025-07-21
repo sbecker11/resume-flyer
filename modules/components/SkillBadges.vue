@@ -352,7 +352,7 @@ export default {
         
         try {
           // Validate dependencies before proceeding
-          await requireDependencies(['selectionManager', 'badgeManager', 'DOM'], 'SkillBadges');
+          await requireDependencies(['selectionManager', 'badgeManager'], 'SkillBadges');
           
           createSkillBadges();
         

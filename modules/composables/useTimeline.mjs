@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import * as dateUtils from '@/modules/utils/dateUtils.mjs';
+import { linearInterp } from '@/modules/utils/mathUtils.mjs';
 
 // --- Constants ---
 const YEAR_HEIGHT = 200; // The height in pixels for one year on the timeline
@@ -19,14 +20,51 @@ function initialize(jobsData) {
         return;
     }
 
-    const { minYear, maxYear } = dateUtils.getMinMaxYears(jobsData);
-    startYear.value = minYear;
-    endYear.value = maxYear;
+    // Self-initializing timeline: analyze jobs data to determine bounds
+    // Min: Earliest job start date - 1 year  
+    // Max: Today + 1 year
+    
+    let earliestStartDate = null;
+    jobsData.forEach(job => {
+        try {
+            const startDate = dateUtils.parseFlexibleDateString(job.start);
+            if (!earliestStartDate || startDate < earliestStartDate) {
+                earliestStartDate = startDate;
+            }
+        } catch (error) {
+            console.warn('Error parsing job start date:', job.start, error);
+        }
+    });
+    
+    if (!earliestStartDate) {
+        console.error('No valid job start dates found');
+        return;
+    }
+    
+    // Timeline start: Earliest job - 1 year (preserve month/day)
+    const timelineStartDate = new Date(earliestStartDate);
+    timelineStartDate.setFullYear(timelineStartDate.getFullYear() - 1);
+    
+    // Timeline end: Today + 1 year (preserve month/day) 
+    const today = new Date();
+    const timelineEndDate = new Date(today);
+    timelineEndDate.setFullYear(timelineEndDate.getFullYear() + 1);
+    
+    // Convert to fractional years for linear interpolation
+    const dateToFractionalYear = (date) => {
+        return date.getFullYear() + 
+               date.getMonth()/12 + 
+               date.getDate()/365.25/12;
+    };
+    
+    startYear.value = dateToFractionalYear(timelineStartDate);
+    endYear.value = dateToFractionalYear(timelineEndDate);
 
-    const yearCount = maxYear - minYear + 1;
-    timelineHeight.value = (yearCount * YEAR_HEIGHT) + TIMELINE_PADDING_TOP;
+    // Calculate total timeline height using linear interpolation
+    const totalYearSpan = endYear.value - startYear.value;
+    timelineHeight.value = (totalYearSpan * YEAR_HEIGHT) + TIMELINE_PADDING_TOP;
     isInitialized.value = true;
-    window.CONSOLE_LOG_IGNORE(`Timeline initialized: ${startYear.value} - ${endYear.value}`);
+    window.CONSOLE_LOG_IGNORE(`Timeline initialized: ${timelineStartDate.toDateString()} to ${timelineEndDate.toDateString()}`);
 }
 
 // --- Composable ---
@@ -34,10 +72,17 @@ function useTimeline() {
     const years = computed(() => {
         if (!isInitialized.value) return [];
         const yearArray = [];
-        for (let year = endYear.value; year >= startYear.value; year--) {
+        // Display clean integer years from ceiling of start to floor of end
+        const displayStartYear = Math.ceil(startYear.value);
+        const displayEndYear = Math.floor(endYear.value);
+        
+        for (let year = displayEndYear; year >= displayStartYear; year--) {
+            // Calculate position using the fractional start/end years for accuracy
+            const yearPos = linearInterp(year, startYear.value, timelineHeight.value, endYear.value, TIMELINE_PADDING_TOP + 50);
+            
             yearArray.push({
-                year: year,
-                y: (endYear.value - year) * YEAR_HEIGHT + TIMELINE_PADDING_TOP + 50 // Add 50px to align with scene plane padding
+                year: year, // Clean integer year for display
+                y: yearPos
             });
         }
         return yearArray;
@@ -50,21 +95,26 @@ function useTimeline() {
         }
         if (!date) return 0;
 
+        // Convert date to fractional year for precise interpolation
         const year = date.getFullYear();
         const month = date.getMonth(); // 0-11
         const day = date.getDate();
+        const yearFraction = month / 12 + day / 365.25 / 12;
+        const dateAsYear = year + yearFraction;
 
-        const yearFraction = month / 12 + day / 365.25 / 12; // Corrected day fraction
-        const totalYearsFromStart = (year + yearFraction) - startYear.value;
-
-        // The timeline's visual origin (y=0) is at the TOP.
-        // The earliest year (startYear) will be at the bottom, and the latest year (endYear) will be at the top.
-        // So, a later date should have a SMALLER y-value.
-        // We calculate position from the end date downwards.
-        const totalTimelineYears = endYear.value - startYear.value;
-        const yearsFromEnd = totalTimelineYears - totalYearsFromStart;
+        // Use mathUtils linearInterp to map date years to pixel positions
+        // x: dateAsYear, x0: startYear, x1: endYear
+        // y0: timelineHeight (bottom), y1: topPadding (top)
+        const topPadding = TIMELINE_PADDING_TOP + 50; // 50px scene plane padding
+        const bottomPosition = timelineHeight.value;
         
-        const yPosition = (yearsFromEnd * YEAR_HEIGHT) + TIMELINE_PADDING_TOP + 50; // Add 50px to align with scene plane padding
+        const yPosition = linearInterp(
+            dateAsYear,           // x: current date as fractional year
+            startYear.value,      // x0: timeline start (bottom)
+            bottomPosition,       // y0: bottom pixel position
+            endYear.value,        // x1: timeline end (top)
+            topPadding           // y1: top pixel position
+        );
 
         return yPosition;
     }

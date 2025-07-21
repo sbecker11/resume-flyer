@@ -1,0 +1,27 @@
+
+> resume-flock@0.9.0 start
+> npm run kill-listeners && concurrently "npm run node-server" "npm run open-chrome"
+
+
+> resume-flock@0.9.0 kill-listeners
+> pkill -f 'node server.mjs' && pkill -f 'nodemon' && pkill -f 'vite' || true
+
+[0] 
+[0] > resume-flock@0.9.0 node-server
+[0] > nodemon server.mjs
+[0] 
+[1] 
+[1] > resume-flock@0.9.0 open-chrome
+[1] > open-cli http://localhost:5173
+[1] 
+[0] [33m[nodemon] 3.1.10[39m
+[0] [33m[nodemon] to restart at any time, enter `rs`[39m
+[0] [33m[nodemon] watching path(s): server.mjs[39m
+[0] [33m[nodemon] watching extensions: mjs[39m
+[0] [32m[nodemon] starting `node server.mjs`[39m
+[1] npm run open-chrome exited with code 0
+[0] Server listening on http://localhost:3009
+[0] Serving dynamic palette manifest at /api/palette-manifest
+[0] Palette directory path: /Users/sbecker11/workspace-flock/resume-flock/static_content/colorPalettes
+[0] [31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[0] npm run node-server exited with code 143
