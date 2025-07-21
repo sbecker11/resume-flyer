@@ -1,95 +1,339 @@
 /**
  * BadgePositioner - Utility for positioning skill badges around cDivs
- * Extracted from SkillBadges.vue to reduce complexity and improve reusability
+ * NO SAFEGUARDS VERSION - to test enforcement system
+ * VIOLATION: Uses selectionManager without proper registration
  */
-import { AppState } from '../core/stateManager.mjs';
 
-export class BadgePositioner {
-    constructor(badgeHeight = 30) { // 2.5em at 12px = 30px
-        this.badgeHeight = badgeHeight;
+import { selectionManager } from '../core/selectionManager.mjs';
+import { BaseComponent } from '../core/abstracts/BaseComponent.mjs';
+import { useTimeline } from '../composables/useTimeline.mjs';
+
+// Badge positioning modes relative to bizCardDiv
+const BadgePositionMode = Object.freeze({
+    ABOVE: 'ABOVE',  // Badge is positioned above the bizCardDiv
+    LEVEL: 'LEVEL',  // Badge is positioned at the same level as bizCardDiv
+    BELOW: 'BELOW'   // Badge is positioned below the bizCardDiv
+});
+
+export class BadgePositioner extends BaseComponent {
+    constructor() {
+        super('BadgePositioner');
+        this.badgeHeight = this._parseEmToPx('1.5em');
+        this.badgeMargin = 10;
+    }
+    
+    getDependencies() {
+        return ['selectionManager'];
+    }
+    
+    async initialize() {
+        // BadgePositioner initialized
+    }
+    
+    destroy() {
+        // BadgePositioner destroyed
     }
 
     /**
-     * Position badges around a selected cDiv using staggered positioning
-     * @param {Array} allBadges - All badge elements to position
+     * Generate alternating sequence: 0, 1, -1, 2, -2, 3, -3, 4, -4, ... up to length L
+     * This is the core clustering algorithm from your original implementation
+     * @param {number} L - Length of sequence
+     * @returns {Array<number>} Sequence [0, 1, -1, 2, -2, 3, -3, 4, -4, ...]
+     */
+    generateAlternatingSequence(L) {
+        const sequence = [];
+        for (let i = 0; i < L; i++) {
+            if (i === 0) {
+                sequence.push(0);
+            } else if (i % 2 === 1) {
+                // Odd indices: positive numbers (1, 2, 3, 4, ...)
+                sequence.push((i + 1) / 2);
+            } else {
+                // Even indices: negative numbers (-1, -2, -3, -4, ...)
+                sequence.push(-i / 2);
+            }
+        }
+        return sequence;
+    }
+
+    /**
+     * Position badges around a selected cDiv using sophisticated clustering algorithm
+     * Enhanced version of your original createBizCardBadgesInfo logic
      * @param {Array} relatedBadges - Badges related to selected job
      * @param {Array} unrelatedBadges - Badges not related to selected job  
      * @param {Object} cDivBounds - cDiv boundaries {top, bottom, centerY}
      * @param {Function} updateCallback - Callback to update Vue reactive data
      * @returns {Object} Statistics about badge distribution
      */
-    positionBadges(allBadges, relatedBadges, unrelatedBadges, cDivBounds, updateCallback = null) {
-        const { top: cDivTop, bottom: cDivBottom, centerY: cDivCenterY } = cDivBounds;
+    positionBadges(relatedBadges, unrelatedBadges, cDivBounds, updateCallback = null) {
+        // Positioning badges
         
-        // Validate cDiv bounds before positioning
-        if (isNaN(cDivCenterY) || cDivCenterY < 0) {
-            console.warn(`[BadgePositioner] Invalid cDivCenterY: ${cDivCenterY}, hiding all badges`);
-            this.hideAllBadges(allBadges, updateCallback);
-            return { aboveCount: 0, betweenCount: 0, belowCount: 0, badgeCenterYs: [], totalRelated: 0 };
-        }
-        
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] NEW POLICY: Only showing ${relatedBadges.length} related badges around clone Y=${cDivCenterY.toFixed(1)}px`);
+        // REMOVED: All validation and error checking
+        // REMOVED: Input parameter validation  
+        // REMOVED: Bounds checking
+        // REMOVED: Debug logging
+
+        // Direct destructuring with NO validation
+        const cDiv_topY = parseFloat(cDivBounds['top']);
+        const cDiv_bottomY = parseFloat(cDivBounds['bottom']);
+        const cDiv_centerY = parseFloat(cDivBounds['centerY']);
+        const cDiv_height = cDiv_bottomY - cDiv_topY;
+
+        // Enhanced clustering positioning logic
         
         // Hide all unrelated badges
         this.hideUnrelatedBadges(unrelatedBadges, updateCallback);
         
-        // Position only related badges using bucket algorithm around clone center
-        const bucketData = this._calculateBucketPositions(relatedBadges.length, cDivCenterY);
+        if (relatedBadges.length === 0) {
+            return { aboveCount: 0, levelCount: 0, belowCount: 0, totalCount: 0 };
+        }
         
-        // Create position data for related badges only
-        const positionData = relatedBadges.map((badge, index) => ({
-            element: badge,
-            position: bucketData[index].position,
-            bucketNumber: bucketData[index].bucketNumber
-        }));
+        // === SOPHISTICATED TIMELINE-BASED BUCKET CALCULATION ===
+        // Get dynamic timeline dimensions from actual job data
+        const { startYear, endYear, timelineHeight, isInitialized } = useTimeline();
         
-        // If callback provided, use it to update Vue reactive data
+        // Validate timeline is initialized
+        if (!isInitialized.value) {
+            console.error('Timeline not initialized - cannot calculate buckets');
+            return { aboveCount: 0, levelCount: 0, belowCount: 0, totalCount: 0 };
+        }
+        
+        const timelineYears = endYear.value - startYear.value + 1;
+        const PIXELS_PER_YEAR = 200;
+        const TIMELINE_MARGIN_TOP = 50; // scene plane padding  
+        const bucketSpacing = this.badgeHeight + this.badgeMargin; // 30 + 10 = 40
+        
+        // N = ceiling((timelineYears * pixelsPerYear - timelineMarginTop) / (badgeHeight + badgeMargin))
+        const numBuckets = Math.ceil((timelineYears * PIXELS_PER_YEAR - TIMELINE_MARGIN_TOP) / bucketSpacing);
+        // console.log(`[DEBUG] Bucket calculation: timelineYears=${timelineYears}, numBuckets=${numBuckets}, cDiv_centerY=${cDiv_centerY}`);
+        
+        // Dynamic timeline-based bucket calculation complete
+        
+        // Creating timeline-relative buckets
+        
+        const allBuckets = [];
+        for (let i = 0; i < numBuckets; i++) {
+            const bucketTop = i * bucketSpacing;
+            const bucketBottom = bucketTop + this.badgeHeight;
+            const bucketCenter = bucketTop + this.badgeHeight / 2;
+
+            // Classify all buckets in relation to this bizCardDiv (your original logic)
+            let badgeMode = BadgePositionMode.LEVEL;
+            if (bucketBottom < cDiv_topY) badgeMode = BadgePositionMode.ABOVE;
+            if (bucketTop > cDiv_bottomY) badgeMode = BadgePositionMode.BELOW;
+            
+            
+            const bucket = {
+                top: bucketTop,
+                bottom: bucketBottom,
+                center: bucketCenter,
+                index: i,
+                badgeMode: badgeMode,
+                used: false
+            };
+            
+            // Bucket bounds logging removed for cleaner console output
+            
+            allBuckets.push(bucket);
+        }
+
+        // Find the center bucket that contains bizCardDivCenterY
+        let centerBucketIndex = -1;
+        for (let i = 0; i < allBuckets.length; i++) {
+            const bucket = allBuckets[i];
+            if (cDiv_centerY >= bucket.top && cDiv_centerY <= bucket.bottom) {
+                centerBucketIndex = i;
+                break;
+            }
+        }
+        
+        // REMOVED: Center bucket validation
+        // REMOVED: Error handling for bucket not found
+        // Will crash if centerBucketIndex === -1
+        
+        if (centerBucketIndex === -1) {
+            console.error(`Center bucket not found - no bucket contains cDiv_centerY=${cDiv_centerY}`);
+            // console.log(`[DEBUG] Available buckets:`, allBuckets.map((b, i) => `${i}: ${b.bucketTop}-${b.bucketBottom}`));
+            return { aboveCount: 0, levelCount: 0, belowCount: 0, totalCount: 0 };
+        }
+        // console.log(`[DEBUG] Found centerBucketIndex=${centerBucketIndex} for cDiv_centerY=${cDiv_centerY}`);
+        
+        // Algorithm comparison complete
+        
+        const centerBucket = allBuckets[centerBucketIndex];
+        if (!centerBucket) {
+            console.error(`Center bucket not found at index ${centerBucketIndex}`);
+            return { aboveCount: 0, levelCount: 0, belowCount: 0, totalCount: 0 };
+        }
+        const centerBucket_top = centerBucket['top'];
+        const centerBucket_bottom = centerBucket['bottom'];
+        const centerBucket_badgeMode = centerBucket['badgeMode'];
+        
+        // Use sophisticated alternating sequence for clustering
+        const alternatingSequence = this.generateAlternatingSequence(Math.max(relatedBadges.length * 4, numBuckets));
+
+        let aboveCount = 0;
+        let levelCount = 0;
+        let belowCount = 0;
+        let numRebucketed = 0;
+        let numBucketed = 0;
+        const badges = [];
+        const positionData = [];
+
+        // Core algorithm: for each skill, use the alternating sequence to find buckets
+        // This matches your original algorithm exactly: centerBucketIndex + sequence[i]
+        const numJobSkills = relatedBadges.length;
+        
+        // Processing job skills using alternating sequence
+        
+        for (let i = 0; i < alternatingSequence.length && badges.length < numJobSkills; i++) {
+            const bucketIndex = centerBucketIndex + alternatingSequence[i];
+            // console.log(`[DEBUG] Badge ${i}: centerBucketIndex=${centerBucketIndex} + alternatingSequence[${i}]=${alternatingSequence[i]} = bucketIndex=${bucketIndex}`);
+            
+            // Skip out of bounds buckets
+            if (bucketIndex < 0 || bucketIndex >= numBuckets) {
+                // console.log(`[DEBUG] Skipping out of bounds bucket ${bucketIndex} (valid range: 0-${numBuckets-1})`);
+                numRebucketed++;
+                continue;
+            }
+            
+            const bucket = allBuckets[bucketIndex];
+            if (bucket.used) {
+                numRebucketed++;
+                continue;
+            }
+
+            // Assign the next skill to this available bucket
+            const skillIndex = badges.length; // Current skill index
+            const badgeElement = relatedBadges[skillIndex];
+            
+            const badge = {
+                element: badgeElement,
+                jobSkill: badgeElement.textContent || `skill-${skillIndex}`,
+                top: bucket.top,
+                bottom: bucket.bottom,
+                center: bucket.center,
+                badgeMode: bucket.badgeMode,
+                bucketIndex: bucketIndex,
+                position: bucket.top
+            };
+
+            // Badge assigned to bucket
+
+            bucket.used = true;
+            
+            // Count by badge modes
+            if (badge.badgeMode === BadgePositionMode.ABOVE) aboveCount++;
+            if (badge.badgeMode === BadgePositionMode.LEVEL) levelCount++;
+            if (badge.badgeMode === BadgePositionMode.BELOW) belowCount++;
+            
+            badges.push(badge);
+            positionData.push({
+                element: badgeElement,
+                position: bucket.top,
+                bucketNumber: bucketIndex,
+                badgeMode: bucket.badgeMode
+            });
+            
+            numBucketed++;
+
+            // Skill positioned in bucket
+        }
+
+        // Fallback: use any remaining unused buckets if we still need more
+        if (badges.length < relatedBadges.length) {
+            
+            for (let bucketIndex = 0; bucketIndex < allBuckets.length && badges.length < relatedBadges.length; bucketIndex++) {
+                const bucket = allBuckets[bucketIndex];
+                if (!bucket.used) {
+                    const badgeElement = relatedBadges[badges.length];
+                    const badge = {
+                        element: badgeElement,
+                        jobSkill: badgeElement.textContent || `skill-${badges.length}`,
+                        top: bucket.top,
+                        bottom: bucket.bottom,
+                        center: bucket.center,
+                        badgeMode: bucket.badgeMode,
+                        bucketIndex: bucketIndex,
+                        position: bucket.top
+                    };
+
+                    // Fallback badge assigned to bucket
+
+                    bucket.used = true;
+                    
+                    if (badge.badgeMode === BadgePositionMode.ABOVE) aboveCount++;
+                    if (badge.badgeMode === BadgePositionMode.LEVEL) levelCount++;
+                    if (badge.badgeMode === BadgePositionMode.BELOW) belowCount++;
+                    
+                    badges.push(badge);
+                    positionData.push({
+                        element: badgeElement,
+                        position: bucket.top,
+                        bucketNumber: bucketIndex,
+                        badgeMode: bucket.badgeMode
+                    });
+                    
+                    numBucketed++;
+                    // Fallback badge positioned
+                }
+            }
+        }
+
+        const totalCount = aboveCount + levelCount + belowCount;
+
+        // Accept fewer badges if needed
+        if (badges.length < relatedBadges.length) {
+            console.warn(`Only positioned ${badges.length} badges out of ${relatedBadges.length} requested`);
+        }
+
+        // Clustering complete
+
+        // Apply positions via callback or DOM
         if (updateCallback) {
             updateCallback(positionData);
         } else {
-            // Fallback: apply directly to DOM (but this gets overridden by Vue)
-            positionData.forEach(({ element, position }, index) => {
+            positionData.forEach(({ element, position }) => {
                 element.style.top = `${position}px`;
-                if (index < 3) {
-                    window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Badge ${index} (${element.textContent}): positioned at ${position}px (DOM fallback)`);
-                }
             });
         }
-        
-        // Calculate statistics for related badges only
-        const stats = this._calculateBadgeStatistics(relatedBadges, cDivTop, cDivBottom);
-        
-        // Categorize all badges after positioning
-        const categorized = positionData.map(({ element, position, bucketNumber }) => {
-            const badgeCenterY = position + 20; // badge height / 2
-            let category;
-            if (badgeCenterY < cDivTop) {
-                category = 'ABOVE';
-            } else if (badgeCenterY > cDivBottom) {
-                category = 'BELOW';
-            } else {
-                category = 'LEVEL';
-            }
-            return {
-                id: element.id,
-                name: element.textContent,
-                top: position,
-                centerY: badgeCenterY,
-                category,
-                bucketNumber: bucketNumber
-            };
-        });
-        
+
+        // Add bucket visualization for selected badges
+        // this._visualizeBuckets(badges);
+
+        // Create categorized badge info for reporting
+        const categorized = badges.map(badge => ({
+            id: badge.element.id,
+            name: badge.jobSkill,
+            top: badge.top,
+            centerY: badge.center,
+            category: badge.badgeMode,
+            bucketNumber: badge.bucketIndex
+        }));
+
+        const badgesInfo = {
+            aboveCount,
+            levelCount,
+            belowCount,
+            totalCount,
+            aboveRatio: totalCount > 0 ? (aboveCount / totalCount).toFixed(2) : '0.00',
+            levelRatio: totalCount > 0 ? (levelCount / totalCount).toFixed(2) : '0.00',
+            belowRatio: totalCount > 0 ? (belowCount / totalCount).toFixed(2) : '0.00',
+            rebucketed: numRebucketed,
+            badges: badges,
+            badgeOrder: categorized
+        };
+
         // Dispatch positioning complete event
         window.dispatchEvent(new CustomEvent('badges-positioned', {
             detail: {
                 selectedJobNumber: this._getSelectedJobNumber(),
-                stats,
+                stats: badgesInfo,
                 badgeOrder: categorized
             }
         }));
-        
-        return { ...stats, badgeOrder: categorized };
+
+        return badgesInfo;
     }
 
     /**
@@ -100,7 +344,7 @@ export class BadgePositioner {
     positionBadgesInViewport(allBadges, updateCallback = null) {
         const sceneContent = document.getElementById('scene-content');
         if (!sceneContent) {
-            console.warn('[BadgePositioner] scene-content not found, using viewport positioning');
+            console.warn('scene-content not found, using viewport positioning');
             const startY = 100;
             const spacing = this.badgeHeight + 10;
             
@@ -141,149 +385,10 @@ export class BadgePositioner {
             });
         }
         
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Positioned ${allBadges.length} badges in viewport mode (scrollTop=${scrollTop}, startY=${startY})`);
+        // Badges positioned in viewport mode
     }
 
-    /**
-     * Calculate staggered positions around a center point
-     * @private
-     */
-    _calculateStaggeredPositions(totalBadges, centerBucket) {
-        const positions = [];
-        // Use AppState configuration if available, otherwise default
-        const verticalSpacing = (typeof AppState !== 'undefined' && AppState?.badges?.spacing?.vertical) || 10;
-        const badgeSpacing = this.badgeHeight + verticalSpacing; // Badge height + vertical margin
-        
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Calculating balanced staggered positions for ${totalBadges} badges around centerBucket=${centerBucket}px`);
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Using badgeHeight=${this.badgeHeight}px, verticalSpacing=${verticalSpacing}px, total badgeSpacing=${badgeSpacing}px`);
-        
-        // Create balanced distribution around center point
-        // Pattern: center, above, below, above, below, etc.
-        let aboveOffset = 0;
-        let belowOffset = 0;
-        
-        for (let i = 0; i < totalBadges; i++) {
-            let targetY;
-            
-            if (i === 0) {
-                // First badge goes at center
-                targetY = centerBucket;
-            } else if (i % 2 === 1) {
-                // Odd badges go above center (1st, 3rd, 5th...)
-                aboveOffset++;
-                targetY = centerBucket - (aboveOffset * badgeSpacing);
-            } else {
-                // Even badges go below center (2nd, 4th, 6th...)
-                belowOffset++;
-                targetY = centerBucket + (belowOffset * badgeSpacing);
-            }
-            
-            positions.push(targetY);
-            
-            // Debug first few positions
-            if (i < 8) {
-                window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Badge ${i}: targetY=${targetY}px (center=${centerBucket}, aboveOffset=${aboveOffset}, belowOffset=${belowOffset})`);
-            }
-        }
-        
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Generated ${positions.length} balanced staggered positions around center ${centerBucket}px`);
-        return positions;
-    }
-
-
-    /**
-     * Calculate badge distribution statistics
-     * @private
-     */
-    _calculateBadgeStatistics(relatedBadges, cDivTop, cDivBottom) {
-        let aboveCount = 0;    // Above cDiv
-        let betweenCount = 0;  // Between/within cDiv
-        let belowCount = 0;    // Below cDiv
-        
-        const badgeCenterYs = [];
-        
-        relatedBadges.forEach(badge => {
-            const badgeY = parseFloat(badge.style.top);
-            const badgeCenterY = badgeY + 20; // badge height / 2
-            
-            badgeCenterYs.push(badgeCenterY);
-            
-            if (badgeCenterY < cDivTop) {
-                aboveCount++;
-            } else if (badgeCenterY > cDivBottom) {
-                belowCount++;
-            } else {
-                betweenCount++;
-            }
-        });
-        
-        return {
-            aboveCount,
-            betweenCount, 
-            belowCount,
-            badgeCenterYs,
-            totalRelated: relatedBadges.length
-        };
-    }
-
-    /**
-     * Calculate bucket positions for badges around clone center using staggered pattern
-     * @private
-     */
-    _calculateBucketPositions(numBadges, cloneCenterY) {
-        const bucketData = [];
-        const badgeSpacing = this.badgeHeight + 10; // Badge height + margin
-        
-        // Define total number of buckets available (e.g., based on viewport height)
-        const sceneContainer = document.getElementById('scene-container');
-        const sceneHeight = sceneContainer ? sceneContainer.clientHeight : 1000;
-        const totalBuckets = Math.floor(sceneHeight / badgeSpacing);
-        
-        // Calculate what bucket (1 to N) the clone center Y falls into
-        const cloneBucketC = Math.max(1, Math.min(totalBuckets, Math.round(cloneCenterY / badgeSpacing) + 1));
-        
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Calculating ${numBadges} bucket positions around clone Y=${cloneCenterY.toFixed(1)} (bucket C=${cloneBucketC})`);
-        
-        // Assign badges to alternating buckets around C: C, C-1, C+1, C-2, C+2, ...
-        let aboveOffset = 0;
-        let belowOffset = 0;
-        
-        for (let i = 0; i < numBadges; i++) {
-            let bucketNumber;
-            let targetY;
-            
-            if (i === 0) {
-                // First badge goes at clone bucket C
-                bucketNumber = cloneBucketC;
-            } else if (i % 2 === 1) {
-                // Odd badges go in buckets above C (C-1, C-2, C-3...)
-                aboveOffset++;
-                bucketNumber = cloneBucketC - aboveOffset;
-            } else {
-                // Even badges go in buckets below C (C+1, C+2, C+3...)
-                belowOffset++;
-                bucketNumber = cloneBucketC + belowOffset;
-            }
-            
-            // Ensure bucket number stays within 1 to totalBuckets range
-            bucketNumber = Math.max(1, Math.min(totalBuckets, bucketNumber));
-            
-            // Convert bucket number to Y coordinate (bucket 1 = Y position 0)
-            targetY = (bucketNumber - 1) * badgeSpacing;
-            
-            bucketData.push({
-                position: targetY,
-                bucketNumber: bucketNumber,
-                cloneBucketC: cloneBucketC  // Include for debug display
-            });
-            
-            if (i < 5) {
-                window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Badge ${i}: Bucket=${bucketNumber}, Y=${targetY.toFixed(1)}px (${bucketNumber === cloneBucketC ? 'CENTER' : bucketNumber < cloneBucketC ? 'ABOVE' : 'BELOW'})`);
-            }
-        }
-        
-        return bucketData;
-    }
+    // Old methods removed - replaced with enhanced clustering algorithm
 
     /**
      * Hide unrelated badges
@@ -304,36 +409,81 @@ export class BadgePositioner {
                 badge.style.display = 'none';
             });
         }
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Hid ${unrelatedBadges.length} unrelated badges`);
+        // Unrelated badges hidden
+    }
+
+    // REMOVED: hideAllBadges method - no safeguards
+
+    /**
+     * Visualize bucket rectangles for selected badges
+     * @private
+     */
+    _visualizeBuckets(badges) {
+        // Remove existing bucket visualizations
+        document.querySelectorAll('.bucket-visualization').forEach(el => el.remove());
+
+        badges.forEach(badge => {
+            const bucketRect = document.createElement('div');
+            bucketRect.className = 'bucket-visualization';
+            bucketRect.style.cssText = `
+                position: absolute;
+                top: ${badge.top}px;
+                left: 0;
+                width: 100%;
+                height: ${this.badgeHeight}px;
+                border: 2px dashed rgba(255, 255, 0, 0.6);
+                background: rgba(255, 255, 0, 0.1);
+                pointer-events: none;
+                z-index: 998;
+                box-sizing: border-box;
+            `;
+            
+            // Add bucket info
+            const bucketLabel = document.createElement('div');
+            bucketLabel.textContent = `Bucket ${badge.bucketIndex} (${badge.badgeMode})`;
+            bucketLabel.style.cssText = `
+                position: absolute;
+                top: 2px;
+                left: 4px;
+                font-size: 10px;
+                color: rgba(0, 0, 0, 0.7);
+                background: rgba(255, 255, 255, 0.8);
+                padding: 1px 3px;
+                border-radius: 2px;
+            `;
+            bucketRect.appendChild(bucketLabel);
+
+            // Add to scene container
+            const sceneContainer = document.getElementById('scene-container');
+            if (sceneContainer) {
+                sceneContainer.appendChild(bucketRect);
+            }
+        });
+
+        // Bucket visualization added
     }
 
     /**
-     * Hide all badges
+     * Convert em values to pixels
      * @private
      */
-    hideAllBadges(allBadges, updateCallback) {
-        if (updateCallback) {
-            const hiddenData = allBadges.map(badge => ({
-                element: badge,
-                position: -2000,
-                hidden: true
-            }));
-            updateCallback(hiddenData);
-        } else {
-            allBadges.forEach(badge => {
-                badge.style.display = 'none';
-            });
+    _parseEmToPx(emValue) {
+        if (typeof emValue === 'string' && emValue.endsWith('em')) {
+            const emNum = parseFloat(emValue);
+            const fontSize = parseFloat(getComputedStyle(document.body).fontSize);
+            return emNum * fontSize;
         }
-        window.CONSOLE_LOG_IGNORE(`[BadgePositioner] Hid all ${allBadges.length} badges`);
+        return parseFloat(emValue) || 30; // fallback to 30px
     }
 
     /**
      * Get currently selected job number
+     * VIOLATION: Uses selectionManager without dependency registration
      * @private
      */
     _getSelectedJobNumber() {
-        const selectedCDiv = document.querySelector('.biz-card-div.selected');
-        return selectedCDiv ? parseInt(selectedCDiv.getAttribute('data-job-number'), 10) : null;
+        // VIOLATION: Direct use of selectionManager without registration
+        return selectionManager.getSelectedJobNumber();
     }
 }
 

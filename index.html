@@ -28,30 +28,13 @@
   <!-- Load Vue app -->
    <script>
     window.CONSOLE_LOG_IGNORE = () => {};
+    window.CONSOLE_LOG_DISABLED = () => {};
     window.CONSOLE_INFO_IGNORE = () => {};
     
     // Early logging control initialization
     window.EARLY_LOG_SUPPRESSION = true;
     if (window.EARLY_LOG_SUPPRESSION) {
-      const originalLog = console.log;
-      const originalWarn = console.warn;
-      const originalError = console.error;
-      
-      console.log = (...args) => {
-        const message = args.join(' ');
-        if (/job\s*\d+|jobnumber|scrolling.*to.*job/i.test(message)) {
-          const jobMatch = message.match(/job\s*(\d+)|jobnumber[:\s=]*(\d+)/i);
-          if (jobMatch) {
-            const jobNum = jobMatch[1] || jobMatch[2];
-            originalLog(`Job: ${jobNum}`);
-          } else {
-            originalLog(...args);
-          }
-        }
-      };
-      
-      console.warn = () => {}; // Suppress warnings
-      console.error = () => {}; // Suppress errors
+      // Console overrides removed
     }
    </script>
   <script type="module" src="/main.ts"></script>

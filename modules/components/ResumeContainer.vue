@@ -1,9 +1,11 @@
 <script setup>
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 import { ref, onMounted, watch, computed } from 'vue';
 import { jobs } from '@/static_content/jobs/jobs.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
+
 
 // Get the same percentage as the resize handle
 const { percentage: scenePercentage } = useResizeHandle();
@@ -70,8 +72,6 @@ function selectPrevious() {
   }
 }
 
-
-
 </script>
 
 <template>
@@ -109,6 +109,27 @@ function selectPrevious() {
         </div>
     </div>
 </template>
+
+<script>
+import { BaseVueComponentMixin } from
+'@/modules/core/abstracts/BaseComponent.mjs';
+
+export default {
+  name: 'ResumeContainer',
+  mixins: [BaseVueComponentMixin],
+  methods: {
+    getComponentDependencies() {
+      return ['selectionManager'];
+    },
+    async initializeWithDependencies() {
+      console.log("ResumeContainer initialized with dependencies");
+    },
+    cleanupDependencies() {
+      console.log("ResumeContainer cleanup dependencies");
+    }
+  }
+}
+</script>
 
 <style scoped>
 #resume-content {

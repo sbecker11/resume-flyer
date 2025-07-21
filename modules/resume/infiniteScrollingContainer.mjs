@@ -142,6 +142,8 @@ class InfiniteScrollingContainer {
     // window.CONSOLE_LOG_IGNORE(`[DEBUG] createClonedStructure: Creating tail clones (last ${cloneCount} items):`);
     for (let i = 0; i < cloneCount; i++) {
       const originalIndex = itemCount - cloneCount + i;
+      // console.log(`Cloning tail item: i=${i}, originalIndex=${originalIndex}, itemCount=${itemCount}, cloneCount=${cloneCount}`);
+      // console.log(`originalItems[${originalIndex}]:`, this.originalItems[originalIndex]);
       const clone = this.cloneItem(this.originalItems[originalIndex], originalIndex, 'tail');
       const jobNumber = clone.getAttribute('data-job-number');
       // window.CONSOLE_LOG_IGNORE(`  Tail clone ${i}: originalIndex=${originalIndex}, jobNumber=${jobNumber}`);
@@ -211,6 +213,9 @@ class InfiniteScrollingContainer {
   }
 
   cloneItem(originalElement, originalIndex, cloneType) {
+    if (!originalElement) {
+      throw new Error(`cloneItem: originalElement is undefined for index ${originalIndex}, cloneType: ${cloneType}`);
+    }
     const clone = originalElement.cloneNode(true);
     
     // Add clone identifier
@@ -635,7 +640,7 @@ class InfiniteScrollingContainer {
     const cloneCount = Math.min(this.options.cloneCount, this.originalItems.length);
     const targetItemIndex = cloneCount + originalIndex; // Account for tail clones
     
-    console.log(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
+    // console.log(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
     
     // Disable seamless transitions during targeted scrolling
     this._isTargetScrolling = true;
@@ -1291,7 +1296,7 @@ class InfiniteScrollingContainer {
    * @returns {boolean} - Whether the scroll was successful
    */
   scrollToJobNumber(jobNumber, animate = true) {
-    window.LOG_JOB?.(jobNumber, 'scrolling to');
+    
     
     // Find the item with the specified job number
     const index = this.originalItems.findIndex(item => {
@@ -1304,7 +1309,7 @@ class InfiniteScrollingContainer {
       return false;
     }
     
-    window.LOG_JOB?.(jobNumber, `found at index ${index}`);
+    
     
     // Set flag to prevent seamless transitions during direct job selection
     this._directScrolling = true;

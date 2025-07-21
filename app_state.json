@@ -1,11 +1,11 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-19T08:34:44.242Z",
+  "lastUpdated": "2025-07-21T05:20:34.541Z",
   "layout": {
     "panelSizePercentage": 50,
-    "orientation": "scene-left",
-    "scenePercentage": 48.7457627118644,
-    "resumePercentage": 51.2542372881356
+    "orientation": "scene-right",
+    "scenePercentage": 73.32123411978222,
+    "resumePercentage": 26.678765880217785
   },
   "resizeHandle": {
     "steppingEnabled": true,
@@ -48,13 +48,13 @@
       }
     }
   },
-  "selectedJobNumber": 22,
+  "selectedJobNumber": 18,
   "resume": {
     "sortRule": {
       "field": "startDate",
       "direction": "asc"
     },
-    "selectedJobNumber": 22
+    "selectedJobNumber": null
   },
   "theme": {
     "colorPalette": "50_Dark_Grey_Monotone.json",
@@ -73,7 +73,7 @@
       "hovered": {
         "padding": "14px",
         "innerBorderWidth": "2px",
-        "innerBorderColor": "blue",
+        "innerBorderColor": "cyan",
         "outerBorderWidth": "0px",
         "outerBorderColor": "transparent",
         "borderRadius": "25px",
@@ -83,8 +83,8 @@
         "padding": "13px",
         "innerBorderWidth": "3px",
         "innerBorderColor": "purple",
-        "outerBorderWidth": "0px",
-        "outerBorderColor": "transparent",
+        "outerBorderWidth": "6px",
+        "outerBorderColor": "gold",
         "borderRadius": "25px",
         "marginTop": "11px"
       }
@@ -98,12 +98,20 @@
       "hovered": {
         "padding": "14px",
         "innerBorderWidth": "2px",
-        "marginTop": "11px"
+        "marginTop": "11px",
+        "innerBorderColor": "cyan",
+        "outerBorderWidth": "0px",
+        "outerBorderColor": "transparent",
+        "borderRadius": "25px"
       },
       "selected": {
         "padding": "13px",
         "innerBorderWidth": "3px",
-        "marginTop": "11px"
+        "marginTop": "11px",
+        "innerBorderColor": "purple",
+        "outerBorderWidth": "6px",
+        "outerBorderColor": "gold",
+        "borderRadius": "25px"
       }
     }
   },
@@ -422,6 +430,19 @@
             "factor": 0.01
           }
         }
+      }
+    }
+  },
+  "colorPalette": "sweeps.json",
+  "debugPanel": {
+    "position": {
+      "scene-left": {
+        "top": 134,
+        "left": 75
+      },
+      "scene-right": {
+        "top": 126,
+        "right": 132
       }
     }
   }

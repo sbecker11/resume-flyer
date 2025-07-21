@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Job 22 Badge Positioning</title>
+</head>
+<body>
+    <div id="scene-container" style="height: 1000px; width: 800px; position: relative;">
+        <div id="biz-card-div-22" class="biz-card-div selected" 
+             data-job-number="22" 
+             data-sceneTop="300" 
+             data-sceneBottom="400" 
+             data-sceneCenterY="350"
+             style="position: absolute; top: 300px; left: 200px; width: 200px; height: 100px; background: red;">
+            Job 22 Card
+        </div>
+        
+        <div id="biz-card-div-22-clone" class="biz-card-div hasClone selected"
+             data-job-number="22"
+             data-sceneTop="300"
+             data-sceneBottom="400" 
+             data-sceneCenterY="350"
+             data-sceneLeft="200"
+             data-sceneRight="400"
+             data-sceneWidth="200"
+             data-sceneHeight="100"
+             style="position: absolute; top: 300px; left: 200px; width: 200px; height: 100px; background: blue;">
+            Job 22 Clone
+        </div>
+
+        <!-- Create 11 test badges -->
+        <div id="skill-badge-0" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 0</div>
+        <div id="skill-badge-1" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 1</div>
+        <div id="skill-badge-2" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 2</div>
+        <div id="skill-badge-3" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 3</div>
+        <div id="skill-badge-4" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 4</div>
+        <div id="skill-badge-5" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 5</div>
+        <div id="skill-badge-6" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 6</div>
+        <div id="skill-badge-7" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 7</div>
+        <div id="skill-badge-8" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 8</div>
+        <div id="skill-badge-9" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 9</div>
+        <div id="skill-badge-10" class="skill-badge" data-job-numbers="[22]" style="position: absolute; width: 100px; height: 30px; background: yellow;">Badge 10</div>
+    </div>
+
+    <script type="module">
+        // Simple BadgePositioner test
+        class TestBadgePositioner {
+            constructor() {
+                this.badgeHeight = 30;
+                this.badgeMargin = 10;
+            }
+
+            generateAlternatingSequence(L) {
+                const sequence = [];
+                for (let i = 0; i < L; i++) {
+                    if (i === 0) {
+                        sequence.push(0);
+                    } else if (i % 2 === 1) {
+                        sequence.push((i + 1) / 2);
+                    } else {
+                        sequence.push(-i / 2);
+                    }
+                }
+                return sequence;
+            }
+
+            positionBadges() {
+                console.log('🔥 TEST: Starting badge positioning for Job 22');
+                
+                const allBadges = Array.from(document.querySelectorAll('.skill-badge'));
+                const relatedBadges = allBadges.filter(badge => {
+                    const jobNumbers = JSON.parse(badge.getAttribute('data-job-numbers') || '[]');
+                    return jobNumbers.includes(22);
+                });
+                
+                console.log('🔥 TEST: Found', relatedBadges.length, 'related badges');
+                
+                const cDivBounds = {
+                    top: 300,
+                    bottom: 400,
+                    centerY: 350
+                };
+                
+                console.log('🔥 TEST: cDivBounds', cDivBounds);
+                
+                // Create buckets
+                const sceneContainerHeight = 1000;
+                const bucketSpacing = this.badgeHeight + this.badgeMargin;
+                const numBuckets = Math.floor(sceneContainerHeight / bucketSpacing);
+                
+                console.log('🔥 TEST: Creating', numBuckets, 'buckets with spacing', bucketSpacing);
+                
+                const allBuckets = [];
+                for (let i = 0; i < numBuckets; i++) {
+                    const bucketTop = i * bucketSpacing;
+                    const bucketBottom = bucketTop + this.badgeHeight;
+                    
+                    let badgeMode = 'LEVEL';
+                    if (bucketBottom < cDivBounds.top) badgeMode = 'ABOVE';
+                    if (bucketTop > cDivBounds.bottom) badgeMode = 'BELOW';
+                    
+                    allBuckets.push({
+                        top: bucketTop,
+                        bottom: bucketBottom,
+                        index: i,
+                        badgeMode: badgeMode,
+                        used: false
+                    });
+                }
+                
+                // Find center bucket
+                let centerBucketIndex = -1;
+                for (let i = 0; i < allBuckets.length; i++) {
+                    const bucket = allBuckets[i];
+                    if (cDivBounds.centerY >= bucket.top && cDivBounds.centerY <= bucket.bottom) {
+                        centerBucketIndex = i;
+                        console.log('🔥 TEST: Found center bucket', i, 'for centerY', cDivBounds.centerY);
+                        break;
+                    }
+                }
+                
+                if (centerBucketIndex === -1) {
+                    console.error('🔥 TEST: No center bucket found!');
+                    return;
+                }
+                
+                // Count bucket modes
+                let aboveBuckets = 0, levelBuckets = 0, belowBuckets = 0;
+                allBuckets.forEach(bucket => {
+                    if (bucket.badgeMode === 'ABOVE') aboveBuckets++;
+                    if (bucket.badgeMode === 'LEVEL') levelBuckets++;
+                    if (bucket.badgeMode === 'BELOW') belowBuckets++;
+                });
+                
+                console.log('🔥 TEST: Bucket distribution:', aboveBuckets, 'ABOVE,', levelBuckets, 'LEVEL,', belowBuckets, 'BELOW');
+                
+                // Position badges using alternating sequence
+                const alternatingSequence = this.generateAlternatingSequence(Math.max(relatedBadges.length * 4, numBuckets));
+                console.log('🔥 TEST: Alternating sequence:', alternatingSequence.slice(0, 15));
+                
+                let aboveCount = 0, levelCount = 0, belowCount = 0;
+                
+                for (let i = 0; i < alternatingSequence.length && i < relatedBadges.length; i++) {
+                    const bucketIndex = centerBucketIndex + alternatingSequence[i];
+                    
+                    if (bucketIndex < 0 || bucketIndex >= allBuckets.length) {
+                        console.log('🔥 TEST: Skipping out of bounds bucket', bucketIndex);
+                        continue;
+                    }
+                    
+                    const bucket = allBuckets[bucketIndex];
+                    if (bucket.used) {
+                        console.log('🔥 TEST: Skipping used bucket', bucketIndex);
+                        continue;
+                    }
+                    
+                    const badgeElement = relatedBadges[i];
+                    badgeElement.style.top = bucket.top + 'px';
+                    badgeElement.style.left = '450px'; // Position to the right of the card
+                    
+                    bucket.used = true;
+                    
+                    if (bucket.badgeMode === 'ABOVE') aboveCount++;
+                    if (bucket.badgeMode === 'LEVEL') levelCount++;
+                    if (bucket.badgeMode === 'BELOW') belowCount++;
+                    
+                    console.log('🔥 TEST: Badge', i, 'positioned at bucket', bucketIndex, '(', bucket.badgeMode, ') Y=', bucket.top);
+                }
+                
+                console.log('🔥 TEST: FINAL RESULT - ABOVE:', aboveCount, 'LEVEL:', levelCount, 'BELOW:', belowCount);
+                console.log('🔥 TEST: Balance check:', aboveCount === belowCount ? '✅ BALANCED' : '❌ IMBALANCED');
+            }
+        }
+
+        // Run the test
+        const tester = new TestBadgePositioner();
+        setTimeout(() => {
+            tester.positionBadges();
+        }, 100);
+    </script>
+</body>
+</html>

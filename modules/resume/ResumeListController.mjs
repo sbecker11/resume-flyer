@@ -1,5 +1,6 @@
 // modules/resume/ResumeListController.mjs
 
+import { BaseComponent } from '../core/abstracts/BaseComponent.mjs';
 import { InfiniteScrollingContainer } from './infiniteScrollingContainer.mjs';
 import * as domUtils from '../utils/domUtils.mjs';
 // No longer directly interacting with these for selection
@@ -29,8 +30,9 @@ import * as utils from '../utils/utils.mjs';
  * - infiniteScroller.originalItems[sortedIndex] = resume div for jobNumber
  * - When calling infiniteScroller.scrollToIndex(sortedIndex), it scrolls to the job at that sorted position
  */
-class ResumeListController {
+class ResumeListController extends BaseComponent {
   constructor() {
+    super('ResumeListController');
     // Singleton pattern: return existing instance if one exists
     if (ResumeListController.instance) {
       window.CONSOLE_LOG_IGNORE('[DEBUG] ResumeListController: Returning existing singleton instance');
@@ -59,6 +61,24 @@ class ResumeListController {
     window.resumeListController = this;
     
     window.CONSOLE_LOG_IGNORE('[DEBUG] ResumeListController: Singleton instance created and stored');
+  }
+
+  getComponentName() {
+    return 'ResumeListController';
+  }
+
+  getDependencies() {
+    return ['CardsController'];
+  }
+
+  destroy() {
+    this.resumeContentDiv = null;
+    this.infiniteScroller = null;
+    this.bizResumeDivs = null;
+    this.originalJobsData = null;
+    this.currentSortRule = null;
+    this.sortedIndices = [];
+    this._isInitialized = false;
   }
 
   /**
@@ -127,12 +147,10 @@ class ResumeListController {
           infiniteScrollerReady: !!this.infiniteScroller 
         });
         
-        // If no saved job index, default to the first item
+        // If no saved job index, don't auto-select - let user choose
         if (savedJobNumber === undefined || savedJobNumber === null) {
-          savedJobNumber = this.sortedIndices[0];
-          AppState.selectedJobNumber = savedJobNumber;
-          saveState(AppState);
-          window.CONSOLE_LOG_IGNORE('ResumeListController: No saved job index, defaulting to:', savedJobNumber);
+          console.log('ResumeListController: No saved job selected - waiting for user selection');
+          return; // Don't auto-select anything
         }
         // Ensure the saved index is valid before selecting
         if (this.sortedIndices.includes(savedJobNumber)) {
@@ -192,16 +210,12 @@ class ResumeListController {
       handleSelectionChanged(event) {
         const { selectedJobNumber, caller } = event.detail;
 
-        // Save the newly selected index to our global state
-        if (caller !== 'ResumeListController.initialize') {
-            AppState.resume.selectedJobNumber = selectedJobNumber;
-            saveState(AppState);
-        }
+        // The SelectionManager already handles saving to AppState.selectedJobNumber
+        // No need to save resume-specific selection state here
 
-        console.log(`[DEBUG] ResumeListController.handleSelectionChanged: selectedJobNumber=${selectedJobNumber}, caller=${caller}`);
+        // console.log(`[DEBUG] ResumeListController.handleSelectionChanged: selectedJobNumber=${selectedJobNumber}, caller=${caller}`);
 
-        // Handle visual state management
-        this.updateVisualSelection(selectedJobNumber);
+        // Visual selection is now handled by SelectionManager - no need to call deprecated method
         
         // Handle scrolling - this is the single scroll operation
         if (caller.includes('initialize')) {
@@ -217,10 +231,11 @@ class ResumeListController {
 
     handleSelectionCleared(event) {
         const { caller } = event.detail;
-        console.log(`[DEBUG] ResumeListController.handleSelectionCleared: caller=${caller}`);
+        // console.log(`[DEBUG] ResumeListController.handleSelectionCleared: caller=${caller}`);
         
-        // Clear visual selection state
-        this.clearVisualSelection();
+        // Visual selection clearing is now handled by SelectionManager
+        // Note: SelectionManager.clearSelection() is typically called by the component that initiated the clear
+        // ResumeListController just needs to respond to the clear event, not initiate it
     }
 
     /**
@@ -913,7 +928,7 @@ class ResumeListController {
   }
 
   scrollToJobNumber(jobNumber, caller = '') {
-    console.log(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
+    // console.log(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
     
     if (!this.infiniteScroller) {
       console.log(`[DEBUG] ResumeListController: infiniteScroller is null!`);
@@ -928,7 +943,7 @@ class ResumeListController {
       return;
     }
     
-    console.log(`[DEBUG] scrollToJobNumber: Scrolling to job ${jobNumber} at sorted index ${sortedIndex}`);
+    // console.log(`[DEBUG] scrollToJobNumber: Scrolling to job ${jobNumber} at sorted index ${sortedIndex}`);
     
     // Direct scroll to the index - this is the single scroll operation
     this.infiniteScroller.scrollToIndex(sortedIndex, true);
@@ -1369,7 +1384,7 @@ class ResumeListController {
       }
     }
     
-    console.log(`[ResumeListController] Successfully created ${bizResumeDivs.length} resume divs`);
+    // console.log(`[ResumeListController] Successfully created ${bizResumeDivs.length} resume divs`);
     return bizResumeDivs;
   }
   
@@ -1404,7 +1419,7 @@ class ResumeListController {
       // Set up mouse listeners for the resume div
       this._setupMouseListeners(bizResumeDiv);
       
-      if (jobNumber === 21) console.log(`[ResumeListController] Successfully created resume div for job ${jobNumber}`);
+      // if (jobNumber === 21) console.log(`[ResumeListController] Successfully created resume div for job ${jobNumber}`);
       return bizResumeDiv;
     } catch (error) {
       console.error('[ResumeListController] Error creating resume div:', error);

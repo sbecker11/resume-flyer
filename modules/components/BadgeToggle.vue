@@ -1,84 +1,143 @@
-<script setup>
-import { ref, computed } from 'vue';
+<script>
 import { badgeManager } from '@/modules/core/badgeManager.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 
-// --- Reactive refs for current mode ---
-const badgeMode = ref(badgeManager.getMode());
-const selectedJobNumber = ref(selectionManager.getSelectedJobNumber());
-
-// Listen for mode changes from BadgeManager
-badgeManager.addEventListener('badgeModeChanged', (event) => {
-  badgeMode.value = event.detail.mode;
-});
-
-// Listen for selection changes
-selectionManager.addEventListener('selectionChanged', (event) => {
-  selectedJobNumber.value = event.detail.selectedJobNumber;
-});
-
-selectionManager.addEventListener('selectionCleared', () => {
-  selectedJobNumber.value = null;
-});
-
-const isHovering = ref(false);
-const hasJustClicked = ref(false);
-
-// Mode progression: none -> show -> stats -> none
-const nextMode = computed(() => {
-  return badgeManager.getNextMode();
-});
-
-// The mode whose icon we're currently displaying (for CSS class styling)
-const displayedIconMode = computed(() => {
-  return isHovering.value ? nextMode.value : badgeMode.value;
-});
-
-// The actual icon to show with superscripts
-const displayIcon = computed(() => {
-  return badgeManager.getDisplayIcon(isHovering.value);
-});
-
-// CSS classes for the button
-const buttonClasses = computed(() => {
-  return [
-    displayedIconMode.value, // for mode-specific styling
-    { hovering: isHovering.value } // for hover styling (colors)
-  ];
-});
-
-// Disabled state - disable when no cDiv is selected
-const isDisabled = computed(() => {
-  return selectedJobNumber.value === null;
-});
-
-// Tooltip text
-const tooltipText = computed(() => {
-  if (isDisabled.value) {
-    return 'Select a job card to enable badge controls';
+export default {
+  name: 'BadgeToggle',
+  mixins: [BaseVueComponentMixin],
+  
+  data() {
+    return {
+      badgeMode: 'no-badges',
+      selectedJobNumber: null,
+      isHovering: false,
+      hasJustClicked: false,
+      isInitialized: false
+    };
+  },
+  
+  computed: {
+    // Mode progression: none -> show -> none
+    nextMode() {
+      return badgeManager.getNextMode();
+    },
+    
+    // The mode whose icon we're currently displaying (for CSS class styling)
+    displayedIconMode() {
+      return this.isHovering ? this.nextMode : this.badgeMode;
+    },
+    
+    // The actual icon to show with superscripts
+    displayIcon() {
+      return badgeManager.getDisplayIcon(this.isHovering);
+    },
+    
+    // CSS classes for the button
+    buttonClasses() {
+      return [
+        this.displayedIconMode, // for mode-specific styling
+        { hovering: this.isHovering } // for hover styling (colors)
+      ];
+    },
+    
+    // Disabled state - disable when no cDiv is selected or not initialized
+    isDisabled() {
+      return !this.isInitialized || this.selectedJobNumber === null;
+    },
+    
+    // Tooltip text
+    tooltipText() {
+      if (this.isDisabled) {
+        return 'Select a job card to enable badge controls';
+      }
+      return badgeManager.getTooltipText(this.isHovering);
+    }
+  },
+  
+  methods: {
+    getComponentDependencies() {
+      return ['badgeManager', 'selectionManager'];
+    },
+    
+    async initializeWithDependencies() {
+      console.log('[BadgeToggle] initializing with dependencies');
+      
+      // Set up event listeners first
+      badgeManager.addEventListener('badgeModeChanged', this.handleBadgeModeChanged);
+      selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged);
+      selectionManager.addEventListener('selectionCleared', this.handleSelectionCleared);
+      
+      // Then initialize with current values
+      await this.$nextTick();
+      this.badgeMode = badgeManager.getMode();
+      this.selectedJobNumber = selectionManager.getSelectedJobNumber();
+      this.isInitialized = true;
+      
+      console.log(`[BadgeToggle] Initialized - badgeMode=${this.badgeMode}, selectedJobNumber=${this.selectedJobNumber}, disabled=${this.isDisabled}`);
+    },
+    
+    cleanupDependencies() {
+      console.log('[BadgeToggle] cleanup');
+      badgeManager.removeEventListener('badgeModeChanged', this.handleBadgeModeChanged);
+      selectionManager.removeEventListener('selectionChanged', this.handleSelectionChanged);
+      selectionManager.removeEventListener('selectionCleared', this.handleSelectionCleared);
+    },
+    
+    // Event handlers
+    handleBadgeModeChanged(event) {
+      this.badgeMode = event.detail.mode;
+    },
+    
+    handleSelectionChanged(event) {
+      this.selectedJobNumber = event.detail.selectedJobNumber;
+      this.$nextTick(() => {
+        // console.log(`[BadgeToggle] Selection changed to: ${this.selectedJobNumber}, disabled: ${this.isDisabled}`);
+      });
+    },
+    
+    handleSelectionCleared() {
+      this.selectedJobNumber = null;
+      this.$nextTick(() => {
+        console.log(`[BadgeToggle] Selection cleared, disabled: ${this.isDisabled}`);
+      });
+    },
+    
+    // Component Methods
+    toggleBadges(event) {
+      event.stopPropagation();
+      
+      // Don't toggle if disabled
+      if (this.isDisabled) {
+        return;
+      }
+      
+      badgeManager.toggleMode('BadgeToggle');
+      // Mark that we just clicked (don't reset hover state yet)
+      this.hasJustClicked = true;
+      
+      // Force a small delay to ensure the mode change has been processed
+      setTimeout(() => {
+        // This setTimeout ensures the DOM and computeds have updated
+        // The isHovering state remains true, so we'll show the next mode of the NEW current mode
+      }, 0);
+    },
+    
+    handleMouseEnter() {
+      this.isHovering = true;
+      this.hasJustClicked = false;
+    },
+    
+    handleMouseLeave() {
+      this.isHovering = false;
+      this.hasJustClicked = false;
+    }
+  },
+  
+  beforeUnmount() {
+    this.cleanupDependencies();
   }
-  return badgeManager.getTooltipText(isHovering.value);
-});
-
-// --- Component Methods ---
-function toggleBadges(event) {
-  event.stopPropagation();
-  
-  // Don't toggle if disabled
-  if (isDisabled.value) {
-    return;
-  }
-  
-  badgeManager.toggleMode('BadgeToggle');
-  // Mark that we just clicked (don't reset hover state yet)
-  hasJustClicked.value = true;
-  
-  // Force a small delay to ensure the mode change has been processed
-  setTimeout(() => {
-    // This setTimeout ensures the DOM and computeds have updated
-    // The isHovering state remains true, so we'll show the next mode of the NEW current mode
-  }, 0);
-}
+};
 </script>
 
 <template>
@@ -88,8 +147,8 @@ function toggleBadges(event) {
     :class="buttonClasses"
     :disabled="isDisabled"
     @click.stop="toggleBadges" 
-    @mouseenter="isHovering = true; hasJustClicked = false"
-    @mouseleave="isHovering = false; hasJustClicked = false"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
     :title="tooltipText">{{ displayIcon }}</button>
 </template>
 
@@ -109,10 +168,6 @@ function toggleBadges(event) {
 /* Additional visual feedback for active modes */
 #badge-toggle.badges-only {
   background-color: rgba(0, 120, 0, 0.8); /* Green tint when badges showing */
-}
-
-#badge-toggle.badges-with-stats {
-  background-color: rgba(0, 100, 200, 0.8); /* Blue tint when stats showing */
 }
 
 /* Maintain hover effect precedence */

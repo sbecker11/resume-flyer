@@ -60,8 +60,8 @@ const { timelineHeight, years } = useTimeline();
 
 // Debug the alignment prop - reactive to changes
 watchEffect(() => {
-  console.log('Timeline alignment prop changed to:', props.alignment);
-  console.log('Timeline should position years at:', props.alignment === 'left' ? '70px' : 'calc(100% - 150px)');
+  // console.log('Timeline alignment prop changed to:', props.alignment);
+  // console.log('Timeline should position years at:', props.alignment === 'left' ? '70px' : 'calc(100% - 150px)');
 });
 </script>
 

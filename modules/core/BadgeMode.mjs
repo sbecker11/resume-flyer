@@ -9,8 +9,6 @@ export const BadgeMode = Object.freeze({
     /** Badges and connection lines are visible, but no statistics */
     BADGES_ONLY: 'badges-only',
     
-    /** Badges, connection lines, and statistics are all visible */
-    BADGES_WITH_STATS: 'badges-with-stats'
 });
 
 /**
@@ -37,9 +35,7 @@ export function getNextBadgeMode(currentMode) {
         case BadgeMode.NONE:
             return BadgeMode.BADGES_ONLY;
         case BadgeMode.BADGES_ONLY:
-            return BadgeMode.NONE; // Skip BADGES_WITH_STATS mode
-        case BadgeMode.BADGES_WITH_STATS:
-            return BadgeMode.NONE; // Fallback to NONE if somehow in this mode
+            return BadgeMode.NONE;
         default:
             return BadgeMode.NONE;
     }
@@ -56,8 +52,6 @@ export function getBadgeModeIcon(mode) {
             return '-B'; // minus B for no badges
         case BadgeMode.BADGES_ONLY:
             return '+B'; // plus B for badges only
-        case BadgeMode.BADGES_WITH_STATS:
-            return 'B⁺'; // B with superscript plus
         default:
             return '-B';
     }
@@ -74,8 +68,6 @@ export function getBadgeModeDescription(mode) {
             return 'No badges or lines shown';
         case BadgeMode.BADGES_ONLY:
             return 'Badges and lines visible';
-        case BadgeMode.BADGES_WITH_STATS:
-            return 'Badges, lines, and statistics visible';
         default:
             return 'Unknown mode';
     }
@@ -92,8 +84,6 @@ export function getBadgeModeAction(mode) {
             return 'Hide badges and lines';
         case BadgeMode.BADGES_ONLY:
             return 'Show badges and lines only';
-        case BadgeMode.BADGES_WITH_STATS:
-            return 'Show badges, lines, and statistics';
         default:
             return 'Unknown action';
     }

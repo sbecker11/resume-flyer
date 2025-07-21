@@ -1,5 +1,6 @@
 // scene/CardsController.mjs
 
+import { BaseComponent } from '../core/abstracts/BaseComponent.mjs'
 import { selectionManager } from '../core/selectionManager.mjs';
 import * as scenePlane from './scenePlaneModule.mjs';
 import * as utils from '../utils/utils.mjs';
@@ -37,8 +38,11 @@ const { getPositionForDate } = useTimeline();
  * 2. Applying the same sort logic to the bizCardDivs array
  * 3. Updating the visual order of cards in the scene
  */
-class CardsController {
+class CardsController extends BaseComponent {
+
     constructor() {
+        super('CardsController');
+
         // Singleton pattern: return existing instance if one exists
         if (CardsController.instance) {
     
@@ -47,7 +51,6 @@ class CardsController {
 
         // Create new instance
 
-        
         this.bizCardDivs = [];
         this.isInitialized = false;
         this.originalJobsData = null;
@@ -66,10 +69,22 @@ class CardsController {
         
         // Store the singleton instance
         CardsController.instance = this;
-        
-
     }
-    
+
+    getDependencies() {
+        return ['Timeline'];
+    }
+
+    destroy() {
+        this.bizCardDivs = null;
+        this.isInitialized = false;
+        this.originalJobsData = null;
+        this.currentSortRule = null;
+        this.sortedIndices = [];
+        this.currentlyHoveredElement = null;
+        CardsController.instance = null;
+    }
+
     _updateExistingCDivs() {
         // Update existing cDivs to have scene-left and scene-top attributes
         const scenePlaneEl = document.getElementById('scene-plane');
@@ -86,12 +101,13 @@ class CardsController {
         }
     }
 
-    async initialize(jobsData) {
+    async initialize() {
         if (this.isInitialized) {
-    
             return;
         }
         
+        // Get jobs data from import
+        const jobsData = jobs;
         this.originalJobsData = jobsData;
         this.bizCardDivs = await this._createAllBizCardDivs(jobsData);
         window.CONSOLE_LOG_IGNORE('[CardsController] Created', this.bizCardDivs.length, 'bizCardDivs');
@@ -115,7 +131,7 @@ class CardsController {
             async () => {
                 // Wait for timeline to be ready
                 await initializationManager.waitForComponent('Timeline');
-                await this.initialize(jobs);
+                await this.initialize();
             },
             ['Timeline'], // Depends on timeline being initialized first
             { priority: 'high' }
@@ -191,24 +207,24 @@ class CardsController {
             const colorIndex = jobNumber;
             bizCardDiv.setAttribute('data-color-index', colorIndex);
 
-            const bizCardDetailsDiv = BizDetailsDivModule.createBizCardDetailsDiv(bizCardDiv, job, colorIndex);
+            const bizCardDetailsDiv = BizDetailsDivModule.createBizCardDetailsDiv(bizCardDiv);
             bizCardDiv.appendChild(bizCardDetailsDiv);
 
                     // Apply the current color palette
         await applyPaletteToElement(bizCardDiv);
         
         // Check if attributes were removed by palette
-        const afterPaletteSceneLeft = bizCardDiv.getAttribute('scene-left');
-        const afterPaletteSceneTop = bizCardDiv.getAttribute('scene-top');
-        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] After palette: cDiv ${bizCardDiv.id} scene-left="${afterPaletteSceneLeft}", scene-top="${afterPaletteSceneTop}"`);
+        const afterPaletteSceneLeft = bizCardDiv.getAttribute('data-sceneLeft');
+        const afterPaletteSceneTop = bizCardDiv.getAttribute('data-sceneTop');
+        // Palette applied to cDiv
 
         // Apply normal state styling after palette application
         bizCardDiv.classList.remove('hovered', 'selected');
         
         // Check if attributes were removed by styling
-        const afterStylingSceneLeft = bizCardDiv.getAttribute('scene-left');
-        const afterStylingSceneTop = bizCardDiv.getAttribute('scene-top');
-        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] After styling: cDiv ${bizCardDiv.id} scene-left="${afterStylingSceneLeft}", scene-top="${afterStylingSceneTop}"`);
+        const afterStylingSceneLeft = bizCardDiv.getAttribute('data=-sceneLeft');
+        const afterStylingSceneTop = bizCardDiv.getAttribute('data-sceneTop');
+        // Styling applied to cDiv
 
             this._setupMouseListeners(bizCardDiv);
 
@@ -221,6 +237,25 @@ class CardsController {
     
     createBizCardDivId(jobNumber) {
         return `biz-card-div-${jobNumber}`;
+    }
+
+    createBizResumeDivId(jobNumber) {
+        return `biz-resume-div-${jobNumber}`;
+    }
+
+    createBizResumeDetailsDivId(jobNumber) {
+        return `biz-resume-details-div-${jobNumber}`;
+    }
+
+    createBizResumeDetailsDivClass() {
+        return `biz-resume-details-div`;
+    }
+
+    createBizCardDetailsDivId(jobNumber) {
+        return `biz-card-details-div-${jobNumber}`;
+    }
+    createBizCardDetailsDivClass() {
+        return `biz-card-details-div`;
     }
 
     getBizCardDivByJobNumber(jobNumber) {
@@ -263,6 +298,7 @@ class CardsController {
 
         let sceneHeight = sceneBottom - sceneTop;
         const sceneCenterY = sceneTop + sceneHeight / 2;
+        
 
         if (sceneHeight < MIN_HEIGHT) {
             sceneHeight = MIN_HEIGHT;
@@ -292,7 +328,7 @@ class CardsController {
         // Simple test: verify the attributes were set
         const verifySceneLeft = bizCardDiv.getAttribute('scene-left');
         const verifySceneTop = bizCardDiv.getAttribute('scene-top');
-        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] cDiv ${bizCardDiv.id} scene-left="${verifySceneLeft}", scene-top="${verifySceneTop}"`);
+        // Scene coordinates set on cDiv
         
         let sceneZ = 0;
         let lastSceneZ = -1;
@@ -309,15 +345,15 @@ class CardsController {
         // Log data-scene- values for job 0 only
         const jobNumber = bizCardDiv.getAttribute('data-job-number');
         if (jobNumber === '0') {
-            console.log('Job 0 data-scene- attributes:', {
-                'data-sceneTop': bizCardDiv.getAttribute('data-sceneTop'),
-                'data-sceneBottom': bizCardDiv.getAttribute('data-sceneBottom'),
-                'data-sceneHeight': bizCardDiv.getAttribute('data-sceneHeight'),
-                'data-sceneLeft': bizCardDiv.getAttribute('data-sceneLeft'),
-                'data-sceneRight': bizCardDiv.getAttribute('data-sceneRight'),
-                'data-sceneWidth': bizCardDiv.getAttribute('data-sceneWidth'),
-                'data-sceneZ': bizCardDiv.getAttribute('data-sceneZ')
-            });
+            // console.log('Job 0 data-scene- attributes:', {
+            //     'data-sceneTop': bizCardDiv.getAttribute('data-sceneTop'),
+            //     'data-sceneBottom': bizCardDiv.getAttribute('data-sceneBottom'),
+            //     'data-sceneHeight': bizCardDiv.getAttribute('data-sceneHeight'),
+            //     'data-sceneLeft': bizCardDiv.getAttribute('data-sceneLeft'),
+            //     'data-sceneRight': bizCardDiv.getAttribute('data-sceneRight'),
+            //     'data-sceneWidth': bizCardDiv.getAttribute('data-sceneWidth'),
+            //     'data-sceneZ': bizCardDiv.getAttribute('data-sceneZ')
+            // });
         }
         
         // set the z-relative style properties
@@ -368,7 +404,7 @@ class CardsController {
         const existingCloneId = bizCardDiv.id + '-clone';
         const existingClone = document.getElementById(existingCloneId);
         if (existingClone) {
-            window.CONSOLE_LOG_IGNORE(`CardsController._selectBizCardDiv: Clone already exists for ${bizCardDiv.id}, skipping creation`);
+            // Clone already exists, skipping creation
             return;
         }
 
@@ -382,7 +418,7 @@ class CardsController {
         // Check if original cDiv has scene-left and scene-top attributes
         const originalSceneLeftAttr = bizCardDiv.getAttribute("scene-left");
         const originalSceneTopAttr = bizCardDiv.getAttribute("scene-top");
-        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] Original cDiv ${bizCardDiv.id} has scene-left="${originalSceneLeftAttr}", scene-top="${originalSceneTopAttr}"`);
+        // Original cDiv scene coordinates noted
 
 
 
@@ -425,7 +461,7 @@ class CardsController {
         
         // Ensure the clone has the data-color-index attribute
         if (originalColorIndex && !cloneColorIndex) {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Fixing missing data-color-index on clone`);
+            // Fixing missing color index on clone
             clone.setAttribute('data-color-index', originalColorIndex);
         }
 
@@ -440,16 +476,16 @@ class CardsController {
             clone.setAttribute("data-sceneTop", originalSceneTop);
             clone.style.top = `${originalSceneTop}px`; // Set the CSS top style for proper positioning
         } else {
-            window.CONSOLE_LOG_IGNORE(`CardsController._selectBizCardDiv: original card ${bizCardDiv.id} has no data-sceneTop attribute`);
+            // Original card missing scene coordinates
         }
         
         // Add scene-left and scene-top attributes for components that expect them
-        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] Setting scene-left="${newSceneLeft.toString()}", scene-top="${originalSceneTop || "0"}" on clone ${clone.id}`);
+        // Setting scene coordinates on clone
         clone.setAttribute("scene-left", newSceneLeft.toString());
         clone.setAttribute("scene-top", originalSceneTop || "0");
         
         // Simple test: immediately check if they were set
-        window.CONSOLE_LOG_IGNORE(`[SIMPLE TEST] Clone ${clone.id} scene-left="${clone.getAttribute('scene-left')}", scene-top="${clone.getAttribute('scene-top')}"`);
+        // Clone scene coordinates verified
         
         // Debug: Verify clone scene coordinates immediately after setting
         window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} scene coordinates immediately after setting:`, {
@@ -500,9 +536,11 @@ class CardsController {
         const originalSceneHeight = bizCardDiv.getAttribute("data-sceneHeight");
         const originalSceneCenterY = bizCardDiv.getAttribute("data-sceneCenterY");
         
-        if (originalSceneWidth) clone.setAttribute("data-sceneWidth", originalSceneWidth);
-        if (originalSceneHeight) clone.setAttribute("data-sceneHeight", originalSceneHeight);
-        if (originalSceneCenterY) clone.setAttribute("data-sceneCenterY", originalSceneCenterY);
+        
+        if (originalSceneWidth !== null && originalSceneWidth !== undefined) clone.setAttribute("data-sceneWidth", originalSceneWidth);
+        if (originalSceneHeight !== null && originalSceneHeight !== undefined) clone.setAttribute("data-sceneHeight", originalSceneHeight);
+        if (originalSceneCenterY !== null && originalSceneCenterY !== undefined) clone.setAttribute("data-sceneCenterY", originalSceneCenterY);
+        
         
         window.CONSOLE_LOG_IGNORE(`[DEBUG] Clone ${clone.id} positioning properties set (translated):`, {
             top: clone.style.top,
@@ -610,11 +648,16 @@ class CardsController {
             'data-sceneTop': clone.getAttribute('data-sceneTop')
         });
 
-        // Add skill badge statistics to the clone (will be hidden/shown by badge toggle)
-        const cloneBizCardDetailsDiv = clone.querySelector('.biz-card-details-div');
-        if (cloneBizCardDetailsDiv) {
+        // Gather badges for each job skill using the new badge system
+        try {
             const jobNumber = parseInt(bizCardDiv.getAttribute('data-job-number'), 10);
-            BizDetailsDivModule.appendSkillBadgeStats(cloneBizCardDetailsDiv, jobNumber);
+            const badgesInfo = BizDetailsDivModule.getBizCardDivBadges(clone);
+            // Created badges for selected job
+            
+            // Store the badges info on the clone for later use
+            clone.setAttribute('data-badges-info', JSON.stringify(badgesInfo));
+        } catch (error) {
+            console.error('Failed to create badges for selected job:', error);
         }
 
         // Hide the original card now that the clone is in the DOM
@@ -696,9 +739,16 @@ class CardsController {
     handleBizCardDivClickEvent(bizCardDiv) {
         if (!bizCardDiv) return;
         const jobNumber = parseInt(bizCardDiv.getAttribute('data-job-number'), 10);
+        const isClone = bizCardDiv.id && bizCardDiv.id.includes('-clone');
         const isAlreadySelected = selectionManager.getSelectedJobNumber() === jobNumber;
         
-        // window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Clicked cDiv with jobNumber=${jobNumber}`);
+        if (isClone) {
+            // Allow deselection when clicking the clone
+            if (isAlreadySelected) {
+                selectionManager.clearSelection('CardsController.handleBizCardDivClickEvent');
+            }
+            return;
+        }
 
         if (isAlreadySelected) {
             selectionManager.clearSelection('CardsController.handleBizCardDivClickEvent');
@@ -1299,3 +1349,11 @@ window.debugCardsState = function() {
         window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: CardsController not found');
     }
 };
+
+// Export utility functions for use by other modules
+export const createBizCardDivId = (jobNumber) => `biz-card-div-${jobNumber}`;
+export const createBizResumeDivId = (jobNumber) => `biz-resume-div-${jobNumber}`;
+export const createBizResumeDetailsDivId = (jobNumber) => `biz-resume-details-div-${jobNumber}`;
+export const createBizResumeDetailsDivClass = () => 'biz-resume-details-div';
+export const createBizCardDetailsDivId = (jobNumber) => `biz-card-details-div-${jobNumber}`;
+export const createBizCardDetailsDivClass = () => 'biz-card-details-div';

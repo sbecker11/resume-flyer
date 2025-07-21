@@ -33,15 +33,8 @@ class BadgeManager extends EventTarget {
     initialize() {
         if (AppState?.badgeToggle?.mode) {
             let mode = AppState.badgeToggle.mode;
-            // Disable badges-with-stats mode during initialization
-            if (mode === BadgeMode.BADGES_WITH_STATS) {
-                console.warn(`[BadgeManager] badges-with-stats mode is disabled, falling back to badges-only`);
-                mode = BadgeMode.BADGES_ONLY;
-                // Update the state to reflect the change
-                AppState.badgeToggle.mode = mode;
-            }
             this._mode = mode;
-            console.log(`[BadgeManager] Loaded badge mode from app-state.json: ${this._mode}`);
+            // console.log(`[BadgeManager] Loaded badge mode from app-state.json: ${this._mode}`);
         } else {
             console.log(`[BadgeManager] No badge mode found in app-state.json, using default: ${this._mode}`);
         }
@@ -75,11 +68,6 @@ class BadgeManager extends EventTarget {
             return;
         }
         
-        // Disable badges-with-stats mode
-        if (mode === BadgeMode.BADGES_WITH_STATS) {
-            console.warn(`[BadgeManager] badges-with-stats mode is disabled, falling back to badges-only`);
-            mode = BadgeMode.BADGES_ONLY;
-        }
         
         if (this._mode === mode) {
             return; // No change needed
@@ -120,7 +108,7 @@ class BadgeManager extends EventTarget {
      * @returns {boolean} True if badges should be shown
      */
     isBadgesVisible() {
-        return this._mode === BadgeMode.BADGES_ONLY || this._mode === BadgeMode.BADGES_WITH_STATS;
+        return this._mode === BadgeMode.BADGES_ONLY;
     }
     
     /**
@@ -128,16 +116,17 @@ class BadgeManager extends EventTarget {
      * @returns {boolean} True if connection lines should be shown
      */
     isConnectionLinesVisible() {
-        return this._mode === BadgeMode.BADGES_ONLY || this._mode === BadgeMode.BADGES_WITH_STATS;
+        return this._mode === BadgeMode.BADGES_ONLY;
     }
     
     /**
      * Check if statistics should be visible
-     * @returns {boolean} True if statistics should be shown
+     * @returns {boolean} Always false since stats mode was removed
      */
     isStatsVisible() {
-        return this._mode === BadgeMode.BADGES_WITH_STATS;
+        return false;
     }
+    
     
     /**
      * Get the next mode in the cycle (for hover preview)

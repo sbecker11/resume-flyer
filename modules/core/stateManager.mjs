@@ -56,7 +56,7 @@ function getDefaultState() {
                 }
             }
         },
-        selectedJobNumber: 22, // Default to the last item (newest job when sorted oldest first)
+        selectedJobNumber: null, // No default selection - only use saved state
         resume: {
             sortRule: { field: 'startDate', direction: 'asc' } // Default to oldest first
         },

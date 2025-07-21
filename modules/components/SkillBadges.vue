@@ -19,6 +19,7 @@
 </template>
 
 <script>
+// SkillBadges script loading
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useViewport } from '@/modules/composables/useViewport.mjs';
 import { useColorPalette, applyPaletteToElement } from '@/modules/composables/useColorPalette.mjs';
@@ -30,9 +31,15 @@ import { badgeManager } from '@/modules/core/badgeManager.mjs';
 import { badgePositioner } from '@/modules/utils/BadgePositioner.mjs';
 import { eventBus } from '@/modules/utils/eventBus.mjs';
 import { projectBizCardDivClone } from '@/modules/core/parallaxModule.mjs';
+import { requireDependencies, waitForDependencies } from '@/modules/core/dependencyChecker.mjs';
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 
 export default {
   name: 'SkillBadges',
+  mixins: [BaseVueComponentMixin],
+  created() {
+    // SkillBadges component created
+  },
   emits: ['badges-positioned'],
   setup(props, { emit }) {
     const viewport = useViewport('SkillBadges');
@@ -58,9 +65,7 @@ export default {
         const jobSkills = job['job-skills'] || {};
         const skillEntries = Object.entries(jobSkills);
         
-        if (jobNumber === 21) {
-          window.LOG_JOB?.(21, `skills: ${Object.keys(jobSkills).length}`);
-        }
+        // Job skills logging removed
         
         skillEntries.forEach(([skillKey, skillName]) => {
           if (!skillMap.has(skillName)) {
@@ -101,7 +106,7 @@ export default {
       });
       
       skillBadges.value = badges;
-      console.log(`[SkillBadges] Created ${badges.length} skill badges`);
+      // console.log(`[SkillBadges] Created ${badges.length} skill badges`);
     };
 
     // return the badges for a given job number
@@ -138,181 +143,110 @@ export default {
       return null;
     };
 
-    // Position badges based on selected job number
+    // Position badges based on selected job number - CLEAN COORDINATOR VERSION
     const positionBadges = () => {
-      // Check if no job is selected first - this should always hide badges regardless of mode
+      try {
+        // Positioning badges for selected job
       const currentSelectedJobNumber = getSelectedJobNumber();
-      if ( currentSelectedJobNumber == null ) {
+      if (currentSelectedJobNumber == null) {
         // Hide all badges when no job is selected
         const badgeElements = document.querySelectorAll('.skill-badge');
-        badgeElements.forEach(badge => {
-          badge.style.display = 'none';
-        });
+        badgeElements.forEach(badge => badge.style.display = 'none');
+        emit('badges-positioned', { badgeOrder: [] });
+        eventBus.emit('badges-positioned', { badgeOrder: [] });
         return;
       }
       
       if (!badgeManager.isBadgesVisible()) {
-        return;
-      }
-
-      const selectedCDiv = getSelectedCDiv();
-      if ( selectedCDiv == null ) {
+        console.log('[SkillBadges] Badges not visible - skipping positioning');
         return;
       }
       
-      // query the DOM to find all badges
+      // Get all badge elements
       const badgeElements = document.querySelectorAll('.skill-badge');
-      
-      // Ensure badges are visible again (remove any display:none from previous hiding)
-      badgeElements.forEach(badge => {
-        badge.style.display = 'block';
-      });
-      if ( badgeElements.length === 0 ) {
-        console.log("[SkillBadges] no badges found");
+      if (badgeElements.length === 0) {
+        console.log('[SkillBadges] No badge elements found');
         return;
       }
-
-      if ( currentSelectedJobNumber !== null) {
-        const selectedBadges = getBadgesForJobNumber(currentSelectedJobNumber);
-        
-        // find the related and unrelated badges
-        const relatedBadges = [];
-        const unrelatedBadges = [];
-        badgeElements.forEach(badge => {
-          const badgeElement = skillBadges.value.find(sb => sb.id === badge.id);
-          if (badgeElement && badgeElement.jobNumbers.includes(currentSelectedJobNumber)) {
-            relatedBadges.push(badge);
-          } else {
-            unrelatedBadges.push(badge);
-          }
-        });
-
-      //   // find the related and unrelated badges
-      //   const relatedBadges = [];
-      //   const unrelatedBadges = [];
-      //   badges.forEach(badge => {
-      //     const badgeElement = skillBadges.value.find(sb => sb.id === badge.id);
-      //     if (badgeElement && badgeElement.jobNumbers.includes(selectedJobNumber)) {
-      //       relatedBadges.push(badge);
-      //     } else {
-      //       unrelatedBadges.push(badge);
-      //     }
-      //   });
-        
-        // find the vertical bounds of the selected cDiv using proper coordinate projection
-        const selectedCDivClone = getSelectedCDivClone();
-        if (!selectedCDivClone) {
-          console.warn('[SkillBadges] No clone found for selected cDiv');
-          return;
-        }
-        const projectedRect = projectBizCardDivClone(selectedCDivClone);
-        
-        console.log('[SkillBadges] selectedCDiv:', selectedCDiv);
-        console.log('[SkillBadges] selectedCDivClone:', selectedCDivClone);
-        console.log('[SkillBadges] projectedRect:', projectedRect);
-        
-        if (!projectedRect) {
-          console.error('[SkillBadges] projectedRect is null - clone may be missing required data attributes');
-          return;
-        }
-        
-        const cDivBounds = {
-          top: projectedRect.top,
-          bottom: projectedRect.bottom,
-          centerY: (projectedRect.top + projectedRect.bottom) / 2
-        };
-                
-        // Create callback to update Vue reactive data
-        // this is called by BadgePositioner.positionBadges
-        // after the badges have been positioned??
-        const updatePositions = (positionData) => {
-          console.log(`[SkillBadges] Updating ${positionData.length} badge positions in reactive data`);
-          positionData.forEach(({ element, position }, index) => {
-            const skillBadgeData = skillBadges.value.find(sb => sb.id === element.id);
-            if (skillBadgeData) {
-              skillBadgeData.style.top = `${position}px`;
-              if (index < 3) {
-                console.log(`[SkillBadges] Updated reactive data for ${skillBadgeData.name}: top=${skillBadgeData.style.top}`);
-              }
-            }
-          });
-          
-          // Calculate and report final mean positions after positioning
-          const selectedCDivCloneMean = (parseFloat(projectedRect.top) + parseFloat(projectedRect.bottom)) / 2;
-          
-          // Get final positioned badges that are related to current selection
-          const finalRelatedBadgePositions = positionData
-            .filter(({ element }) => {
-              const badgeElement = skillBadges.value.find(sb => sb.id === element.id);
-              return badgeElement && badgeElement.jobNumbers.includes(currentSelectedJobNumber);
-            })
-            .map(({ position }) => position + 20); // Add badge height/2 to get center
-          
-          if (finalRelatedBadgePositions.length > 0) {
-            const finalSelectedBadgesMean = finalRelatedBadgePositions.reduce((sum, pos) => sum + pos, 0) / finalRelatedBadgePositions.length;
-            console.log(`[SkillBadges] FINAL REPORT - Selected cDiv clone center Y: ${selectedCDivCloneMean.toFixed(2)}px`);
-            console.log(`[SkillBadges] FINAL REPORT - Selected badges center Y mean: ${finalSelectedBadgesMean.toFixed(2)}px (${finalRelatedBadgePositions.length} badges)`);
-            console.log(`[SkillBadges] FINAL REPORT - Difference (badges - cDiv): ${(finalSelectedBadgesMean - selectedCDivCloneMean).toFixed(2)}px`);
-            console.log(`[SkillBadges] FINAL REPORT - Selected badge center positions:`, finalRelatedBadgePositions.map(pos => pos.toFixed(2)));
-          }
-        };
-        
-        // categorize and position selected badges
-        console.log('[SkillBadges] Calling badgePositioner.positionBadges with cDivBounds:', cDivBounds);
-        const stats = badgePositioner.positionBadges([...badgeElements], relatedBadges, unrelatedBadges, cDivBounds, updatePositions);
-        
-        // Report mean positions
-        const selectedCDivCloneMean = (parseFloat(projectedRect.top) + parseFloat(projectedRect.bottom)) / 2;
-        console.log(`[SkillBadges] REPORT - Selected cDiv clone mean Y position: ${selectedCDivCloneMean.toFixed(2)}px`);
-        
-        // Calculate mean of all selected badges (related badges)
-        if (relatedBadges.length > 0) {
-          const selectedBadgesPositions = relatedBadges.map(badge => {
-            const top = parseFloat(badge.style.top || '0');
-            return top + 20; // Add badge height/2 to get center
-          });
-          const selectedBadgesMean = selectedBadgesPositions.reduce((sum, pos) => sum + pos, 0) / selectedBadgesPositions.length;
-          console.log(`[SkillBadges] REPORT - Selected badges mean Y position: ${selectedBadgesMean.toFixed(2)}px (${relatedBadges.length} badges)`);
-          console.log(`[SkillBadges] REPORT - Individual selected badge positions:`, selectedBadgesPositions.map(pos => pos.toFixed(2)));
+      
+      // Show badges again (remove any display:none from previous hiding)
+      badgeElements.forEach(badge => badge.style.display = 'block');
+      
+      // Find related and unrelated badges
+      const relatedBadges = [];
+      const unrelatedBadges = [];
+      badgeElements.forEach(badge => {
+        const badgeElement = skillBadges.value.find(sb => sb.id === badge.id);
+        if (badgeElement && badgeElement.jobNumbers.includes(currentSelectedJobNumber)) {
+          relatedBadges.push(badge);
         } else {
-          console.log(`[SkillBadges] REPORT - No selected badges to calculate mean for`);
+          unrelatedBadges.push(badge);
         }
-        
-        // Add debug log before emitting
-        console.log('[SkillBadges] EMITTING badgeOrder:', badgeOrder.value);
-        nextTick(() => {
-          console.log('[SkillBadges] Emitting badges-positioned event with badgeOrder length:', badgeOrder.value.length);
-          emit('badges-positioned', { badgeOrder: [...badgeOrder.value] });
-          eventBus.emit('badges-positioned', { badgeOrder: [...badgeOrder.value] });
-        });
-      } else {
-        // No selection - hide all badges by moving them off-screen
-        window.CONSOLE_LOG_IGNORE('[SkillBadges] No selection - hiding all badges');
-        skillBadges.value.forEach(skillBadge => {
-          skillBadge.style.top = '-1000px'; // Move off-screen
-        });
-        badgeOrder.value = [];
-        // console.log('[SkillBadges] badgeOrder to emit:', badgeOrder.value);
-        emit('badges-positioned', { badgeOrder: [] });
+      });
+      
+      // Get the cDiv clone bounds
+      const selectedCDivClone = getSelectedCDivClone();
+      if (!selectedCDivClone) {
+        console.warn('[SkillBadges] No clone found for selected cDiv');
+        return;
       }
       
+      // Use actual DOM bounds instead of stored scene attributes to avoid NaN issues
+      const cloneBounds = selectedCDivClone.getBoundingClientRect();
+      const sceneContent = document.getElementById('scene-content');
+      if (!sceneContent) {
+        console.error('[SkillBadges] scene-content not found');
+        return;
+      }
+      const sceneRect = sceneContent.getBoundingClientRect();
+      const scrollTop = sceneContent.scrollTop;
+      
+      const cDivBounds = {
+        top: cloneBounds.top - sceneRect.top + scrollTop,
+        bottom: cloneBounds.bottom - sceneRect.top + scrollTop,
+        centerY: null // Will be calculated below
+      };
+      
+      // Calculate centerY directly from actual DOM bounds
+      cDivBounds.centerY = (cDivBounds.top + cDivBounds.bottom) / 2;
+      
+      
+      // Create callback to update Vue reactive data
+      const updatePositions = (positionData) => {
+        positionData.forEach(({ element, position }) => {
+          const skillBadgeData = skillBadges.value.find(sb => sb.id === element.id);
+          if (skillBadgeData) {
+            skillBadgeData.style.top = `${position}px`;
+          }
+        });
+      };
+      
+      // DELEGATE ALL POSITIONING LOGIC TO BadgePositioner
+      // console.log('[SkillBadges] Delegating positioning to BadgePositioner...');
+      // console.log('[SkillBadges] badgePositioner object:', badgePositioner);
+      // console.log('[SkillBadges] Calling with:', { relatedBadges: relatedBadges.length, unrelatedBadges: unrelatedBadges.length, cDivBounds });
+      
+      try {
+        const stats = badgePositioner.positionBadges(relatedBadges, unrelatedBadges, cDivBounds, updatePositions);
+        // console.log('[SkillBadges] BadgePositioner returned stats:', stats);
+      } catch (error) {
+        console.error('[SkillBadges] BadgePositioner error:', error);
+      }
+      
+      // Update badge styles and emit events
       updateBadgeStyles();
-
-      // After all potential position updates, wait for the DOM to update
-      // and then emit an event. This provides a reliable signal for other
-      // components (like SankeyConnections) to know when to draw.
+      
       nextTick(() => {
-        // emit('badges-positioned'); // This line is now handled by the new_code
+        emit('badges-positioned', { badgeOrder: [...badgeOrder.value] });
+        eventBus.emit('badges-positioned', { badgeOrder: [...badgeOrder.value] });
       });
+      } catch (error) {
+        console.error('[SkillBadges] positionBadges error:', error);
+      }
     };
     
     // Update badge visual styles based on state
     const updateBadgeStyles = () => {
-      // Log only the badges associated with the current selectedJobNumber
-      if (selectedJobNumber.value !== null) {
-        const associated = skillBadges.value.filter(skill => Array.isArray(skill.jobNumbers) && skill.jobNumbers.map(Number).includes(Number(selectedJobNumber.value)));
-        console.log(`[SkillBadges] Badges associated with selectedJobNumber ${selectedJobNumber.value}:`, associated.map(b => ({ id: b.id, name: b.name, jobNumbers: b.jobNumbers })));
-      }
       skillBadges.value.forEach(skill => {
         if (!Array.isArray(skill.jobNumbers) || skill.jobNumbers.length === 0) {
           throw new Error(`[SkillBadges] Badge ${skill.id} (${skill.name}) has invalid or empty jobNumbers: ${JSON.stringify(skill.jobNumbers)}`);
@@ -339,19 +273,16 @@ export default {
     
     // Event handlers
     const handleCardSelect = (event) => {
-      console.log('SkillBadges.handleCardSelect called with event:', event.detail);
+      // Handle card selection event
+      // console.log('SkillBadges.handleCardSelect called with event:', event.detail);
       const newJobNumber = parseInt(event.detail.selectedJobNumber);
-      console.log('SkillBadges: About to call LOG_JOB with:', newJobNumber, 'selected');
-      // Use new logging system for clean job number output
-      window.LOG_JOB?.(newJobNumber, 'selected');
-      console.log('SkillBadges: Called LOG_JOB');
       selectedJobNumber.value = newJobNumber;
+      
+      // console.log(`[SkillBadges] Calling positionBadges() for job ${newJobNumber} in 150ms...`);
       setTimeout(() => {
+        // Positioning badges for newly selected job
         positionBadges();
       }, 150);
-      // Log and emit after selection
-      emit('badges-positioned', { badgeOrder: [...badgeOrder.value] });
-      eventBus.emit('badges-positioned', { badgeOrder: [...badgeOrder.value] });
     };
     
     const handleCardDeselect = () => {
@@ -412,43 +343,77 @@ export default {
     });
     
     onMounted(() => {
-      window.CONSOLE_LOG_IGNORE('[SkillBadges] Component mounted');
+      // SkillBadges component mounted
+      window.CONSOLE_LOG_IGNORE('[SkillBadges] Component mounted - waiting for initialization...');
       
-      createSkillBadges();
-      
-      // Set up event listeners
-      selectionManager.addEventListener('hoverChanged', handleCardHover);
-      selectionManager.addEventListener('hoverCleared', handleCardUnhover);
-      selectionManager.addEventListener('selectionChanged', handleCardSelect);
-      selectionManager.addEventListener('selectionCleared', handleCardDeselect);
-      window.addEventListener('viewport-changed', handleViewportResize);
-      window.addEventListener('resize', handleViewportResize);
-      window.addEventListener('color-palette-changed', handlePaletteChange);
-      badgeManager.addEventListener('badgeModeChanged', handleBadgeModeChange);
-      
-      // Apply initial colors and position badges
-      setTimeout(() => {
-        document.querySelectorAll('.skill-badge').forEach(applyPaletteToElement);
+      // Wait for the InitializationManager to signal that SkillBadges should initialize
+      const handleInitReady = async () => {
+        console.log('[SkillBadges] Initializing component...');
         
-        // Check if there's a pre-selected cDiv and position badges accordingly
-        const preSelectedCDiv = document.querySelector('.biz-card-div.selected');
-        console.log('[SkillBadges] Looking for pre-selected cDiv...', preSelectedCDiv);
-        
-        if (preSelectedCDiv) {
-          const preSelectedJobNumber = parseInt(preSelectedCDiv.getAttribute('data-job-number'));
-          console.log('[SkillBadges] Found pre-selected cDiv with job number:', preSelectedJobNumber);
-          console.log('[SkillBadges] Setting selectedJobNumber from', selectedJobNumber.value, 'to', preSelectedJobNumber);
-          selectedJobNumber.value = preSelectedJobNumber;
+        try {
+          // Validate dependencies before proceeding
+          await requireDependencies(['selectionManager', 'badgeManager', 'DOM'], 'SkillBadges');
           
-          // SkillBadges are now ready with known selectedJobId - trigger repositioning
-          console.log('[SkillBadges] SkillBadges ready with selectedJobId:', preSelectedJobNumber, '- triggering repositioning');
-          positionBadges();
-        } else {
-          // No pre-selected job, just position badges in default state
-          console.log('[SkillBadges] No pre-selected cDiv found - positioning badges in default state');
-          positionBadges();
+          createSkillBadges();
+        
+        // Set up event listeners
+        // Registering SkillBadges event listeners
+        selectionManager.addEventListener('hoverChanged', handleCardHover);
+        selectionManager.addEventListener('hoverCleared', handleCardUnhover);
+        selectionManager.addEventListener('selectionChanged', handleCardSelect);
+        selectionManager.addEventListener('selectionCleared', handleCardDeselect);
+        // Event listeners registered
+        
+        // Test if selectionManager is working
+        // Selection manager initialized
+        window.addEventListener('viewport-changed', handleViewportResize);
+        window.addEventListener('resize', handleViewportResize);
+        window.addEventListener('color-palette-changed', handlePaletteChange);
+        badgeManager.addEventListener('badgeModeChanged', handleBadgeModeChange);
+      
+        // Apply initial colors and position badges
+        setTimeout(() => {
+          document.querySelectorAll('.skill-badge').forEach(applyPaletteToElement);
+          
+          // Check if there's a pre-selected cDiv and position badges accordingly
+          const preSelectedCDiv = document.querySelector('.biz-card-div.selected');
+          console.log('[SkillBadges] Looking for pre-selected cDiv...', preSelectedCDiv);
+          
+          if (preSelectedCDiv) {
+            const preSelectedJobNumber = parseInt(preSelectedCDiv.getAttribute('data-job-number'));
+            console.log('[SkillBadges] Found pre-selected cDiv with job number:', preSelectedJobNumber);
+            console.log('[SkillBadges] Setting selectedJobNumber from', selectedJobNumber.value, 'to', preSelectedJobNumber);
+            selectedJobNumber.value = preSelectedJobNumber;
+            
+            // SkillBadges are now ready with known selectedJobId - trigger repositioning
+            console.log('[SkillBadges] SkillBadges ready with selectedJobId:', preSelectedJobNumber, '- triggering repositioning');
+            positionBadges();
+          } else {
+            // No pre-selected job, just position badges in default state
+            console.log('[SkillBadges] No pre-selected cDiv found - positioning badges in default state');
+            positionBadges();
+          }
+        }, 200);
+        
+        } catch (error) {
+          console.error('[SkillBadges] Initialization failed:', error);
+          // Retry after a delay
+          setTimeout(() => {
+            console.log('[SkillBadges] Retrying initialization...');
+            handleInitReady();
+          }, 1000);
         }
-      }, 200);
+      };
+      
+      // Listen for initialization signal from InitializationManager
+      window.addEventListener('skill-badges-init-ready', handleInitReady);
+      
+      // Also initialize immediately if we're already past the initialization phase
+      // (this handles cases where the event was already fired)
+      setTimeout(() => {
+        console.log('[SkillBadges] Fallback initialization after 500ms');
+        handleInitReady();
+      }, 500);
       // Listen for request-badges event and emit current badgeOrder
       eventBus.on('request-badges', () => {
         console.log('[SkillBadges] Received request-badges event, emitting current badgeOrder:', badgeOrder.value);
@@ -485,7 +450,12 @@ export default {
     
     // Watch for changes to selectedJobNumber
     watch(selectedJobNumber, (newVal, oldVal) => {
-      console.log('[SkillBadges] selectedJobNumber changed:', oldVal, '→', newVal);
+      // console.log('[SkillBadges] selectedJobNumber changed:', oldVal, '→', newVal);
+      try {
+        positionBadges();
+      } catch (error) {
+        console.error('[SkillBadges] Error in positionBadges():', error);
+      }
     });
 
     return {
@@ -498,6 +468,23 @@ export default {
       getSelectedCDiv,
       getSelectedCDivClone
     };
+  },
+  
+  methods: {
+    // Required by BaseVueComponentMixin
+    getComponentDependencies() {
+      return ['selectionManager', 'badgeManager', 'DOM'];
+    },
+    
+    async initializeWithDependencies() {
+      console.log('SkillBadges: Initializing with validated dependencies');
+      // Initialization logic moved to setup() function
+    },
+    
+    cleanupDependencies() {
+      console.log('SkillBadges: Cleaning up dependencies');
+      // Cleanup logic if needed
+    }
   }
 };
 </script>

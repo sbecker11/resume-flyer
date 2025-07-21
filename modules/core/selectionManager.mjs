@@ -15,7 +15,7 @@ class SelectionManager extends EventTarget {
     }
 
     selectJobNumber(jobNumber, caller = '') {
-        console.log(`SelectionManager.selectJobNumber called with jobNumber=${jobNumber}, caller=${caller}`);
+        // console.log(`SelectionManager.selectJobNumber called with jobNumber=${jobNumber}, caller=${caller}`);
         if (this.selectedJobNumber === jobNumber) {
             console.log(`SelectionManager: Early return - same job already selected: ${jobNumber} from ${caller}`);
             return;
@@ -66,7 +66,7 @@ class SelectionManager extends EventTarget {
                 isPaired: true // Flag to indicate both cDiv and rDiv should be selected
             }
         });
-        console.log(`SelectionManager: Dispatching selectionChanged event:`, event.detail);
+        // console.log(`SelectionManager: Dispatching selectionChanged event:`, event.detail);
         this.dispatchEvent(event);
     }
 

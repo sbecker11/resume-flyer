@@ -8,132 +8,145 @@
 
 import * as utils from '../utils/utils.mjs';
 import { formatDateRange } from '../utils/dateUtils.mjs';
-import { badgeManager } from '../core/badgeManager.mjs';
-import { BadgeMode } from '../core/BadgeMode.mjs';
 import { BULLET } from '../constants/ui.mjs';
-import { jobs as jobsData } from '../../static_content/jobs/jobs.mjs';
+import { jobs as jobsData, getValidatedJobNumber } from '../../static_content/jobs/jobs.mjs';
+import { 
+    createBizCardDivId,
+    createBizResumeDivId, 
+    createBizResumeDetailsDivId,
+    createBizResumeDetailsDivClass,
+    createBizCardDetailsDivId,
+    createBizCardDetailsDivClass
+} from '../scene/CardsController.mjs';
+
 
 /**
  * Creates a business resume details div
- * @param {HTMLElement} bizResumeDiv - The business resume div
- * @param {HTMLElement} bizCardDiv - The business card div
+ * @param {HTMLElement} bizResumeDiv - The business resume div (in progress)
+ * @param {HTMLElement} bizCardDiv - The business card div (in progress)
  * @returns {HTMLElement} The created business resume details div
  */
 export function createBizResumeDetailsDiv(bizResumeDiv, bizCardDiv) {
-    if (!bizResumeDiv) throw new Error('createBizResumeDetailsDiv: given null bizResumeDiv');
-    if (!bizCardDiv) throw new Error('createBizResumeDetailsDiv: given null bizCardDiv');
+    if (!bizResumeDiv) throw new Error('createBizResumeDetailsDiv: bizResumeDiv is null');
+    if (!bizCardDiv) throw new Error('createBizResumeDetailsDiv: bizCardDiv is null');
     
-    const colorIndex = bizResumeDiv.getAttribute('data-color-index');
-    if (!utils.isNumericString(colorIndex)) throw new Error('createBizResumeDetailsDiv: given non-numeric colorIndex string');
+    const jobNumber = getValidatedJobNumber(bizResumeDiv);
     
+    const bizResumeDivColorIndex = bizResumeDiv.getAttribute('data-color-index');
+    if (!utils.isNumericString(bizResumeDivColorIndex)) throw new Error('createBizResumeDetailsDiv: non-numeric bizResumeDivColorIndex string');
+    const bizCardDivColorIndex = bizCardDiv.getAttribute('data-color-index');
+    if (!utils.isNumericString(bizCardDivColorIndex)) throw new Error('createBizResumeDetailsDiv: non-numeric bizCardDivColorIndex string');
+    if ( bizResumeDivColorIndex != bizCardDivColorIndex ) throw new Error('createBizResumeDetailsDiv: bizResumeDivColorIndex != bizCardDivColorIndex');
+
     const bizResumeDetailsDiv = document.createElement('div');
-    const jobNumber = bizResumeDiv.getAttribute('data-job-number');
-    if (!utils.isNumericString(jobNumber)) throw new Error('createBizResumeDetailsDiv: given non-numeric attriubute string jobNumber');
-    bizResumeDetailsDiv.classList.add('biz-resume-details-div');
-    bizResumeDetailsDiv.id = `biz-resume-details-div-${jobNumber}`;
+    bizResumeDetailsDiv.id = createBizResumeDetailsDivId(jobNumber);
+    bizResumeDetailsDiv.classList.add(createBizResumeDetailsDivClass());
 
     // Set pointer-events to none so clicks pass through to the parent bizResumeDiv
     bizResumeDetailsDiv.style.pointerEvents = 'none';
     bizResumeDetailsDiv.style.backgroundColor = 'transparent';
 
-    const bizCardDetailsDiv = bizCardDiv.querySelector('.biz-card-details-div');
-    if (!bizCardDetailsDiv) throw new Error('createBizResumeDetailsDiv: given null bizCardDetailsDiv');
+    const bizCardDetailsDiv = document.getElementById(createBizCardDetailsDivId(jobNumber));
+    if (!bizCardDetailsDiv) throw new Error('createBizResumeDetailsDiv: bizCardDetailsDiv not found');
+
+    // copy the innerHTML of the bizCardDetailsDiv header element innerHTML 
     bizResumeDetailsDiv.innerHTML = bizCardDetailsDiv.innerHTML;
 
     // Remove the original Z-value element from the resume div clone
     const zValueElement = bizResumeDetailsDiv.querySelector('.biz-details-z-value');
-    if (zValueElement) {
-        zValueElement.remove();
-    }
+    if (zValueElement) zValueElement.remove();
     
-    // Add the resume div's own z-value element right after the dates
-    const resumeSceneZ = bizCardDiv.getAttribute('data-sceneZ') || 'N/A';
-    const resumeJobNumber = bizResumeDiv.getAttribute('data-job-number');
-    const resumeJobSkills = getJobSkills(resumeJobNumber);
-    const numResumeJobSkills = resumeJobSkills.length;
-    const resumeZValueElement = document.createElement('p');
-    const resumeSubContextStr = getBizResumeContextStr(bizResumeDiv);
-    console.log("resumeSubContextStr:", resumeSubContextStr);
-    resumeZValueElement.className = 'biz-details-z-value header-text';
-    resumeZValueElement.textContent = resumeSubContextStr
-    
-    // Insert the z-value element right after the dates element
-    const datesElement = bizResumeDetailsDiv.querySelector('.biz-details-dates');
-    if (datesElement) {
-        datesElement.insertAdjacentElement('afterend', resumeZValueElement);
-    } else {
-        // Fallback: append to the end if dates element not found
-        bizResumeDetailsDiv.appendChild(resumeZValueElement);
-    }
-    
-    // Add skill badge statistics to the end of the rDiv
-    const jobNumberInt = parseInt(jobNumber, 10);
-    const stats = badgeManager.calculateSkillBadgeStats(jobNumberInt);
-    
-    // Create and append stats HTML to the end
-    const statsHtml = `
-    <div class="skill-badge-stats resume-stats hidden-by-mode">
-        <h4 class="stats-header">Skill Badge Statistics</h4>
-        <div class="stats-content">
-            <p><strong>Total Badges:</strong> ${stats.totalBadges}</p>
-            <p><strong>cDiv Center Y:</strong> ${stats.cDivCenterY}</p>
-            <p><strong>Mean Position:</strong> ${stats.mean}</p>
-            <p><strong>Median Position:</strong> ${stats.median}</p>
-            <p><strong>Standard Deviation:</strong> ${stats.stdDev}</p>
-            <p><strong>Skewness:</strong> ${stats.skewness}</p>
-            <p><strong>Within 1 σ:</strong> ${stats.within1StdDev}</p>
-            <p><strong>Between 1-2 σ:</strong> ${stats.between1And2StdDev}</p>
-            <p><strong>Between 2-3 σ:</strong> ${stats.between2And3StdDev}</p>
-            <p><strong>Beyond 3 σ:</strong> ${stats.beyond3StdDev}</p>
-            <p><strong># badges above cDiv:</strong> ${stats.aboveCount}</p>
-            <p><strong># badges between cDiv:</strong> ${stats.betweenCount}</p>
-            <p><strong># badges below cDiv:</strong> ${stats.belowCount}</p>
-            <p><strong>Above/(Above+Below):</strong> ${stats.aboveRatio}</p>
-            <p><strong>Below/(Above+Below):</strong> ${stats.belowRatio}</p>
-            ${stats.biasWarning ? '<p class="bias-warning"><strong>⚠️ Bias Warning:</strong> Distribution shows significant bias or skewness</p>' : ''}
-        </div>
-    </div>`;
-    
-    bizResumeDetailsDiv.insertAdjacentHTML('beforeend', statsHtml);
-    
-    // Apply BadgeManager state to the newly created stats element
-    const newStatsElement = bizResumeDetailsDiv.querySelector('.skill-badge-stats.resume-stats:last-child');
-    if (newStatsElement) {
-        badgeManager.updateStatsElement(newStatsElement);
-    }
+    // place the subContextStr for the bizResumeDiv to the end of the bizResumeDetailsDiv
+    const bizResumeSubContextElement = document.createElement('p');
+    bizResumeSubContextElement.innerHTML = createBizCardDetailsDiv(bizCardDiv);
+    bizResumeDetailsDiv.insertAdjacentHTML('beforeend', bizResumeSubContextElement.innerHTML);
     
     return bizResumeDetailsDiv;
 }
 
-export function createBizCardDetailsDiv(bizCardDiv, job) {
-    if (!bizCardDiv) throw new Error('createBizDetailsDiv: given null bizCardDiv');
-    if (!job) throw new Error('createBizDetailsDiv: given null job');
-    window.CONSOLE_LOG_IGNORE("createBizDetailsDiv: job:", job);
+/**
+ * If the bizCardDiv is a clone, then return the bizCardDiv.
+ * If the bizCardDiv has a clone, then return the bizCardDivClone,
+ * otherwise return null
+ * @param {HTMLElement} bizCardDiv 
+ * @returns {HTMLElement} the bizCardDivClone or null if not found
+ */
+export function getBizCardDivClone(bizCardDiv) {
+    if ( bizCardDiv == null ) {
+        throw new Error('getBizCardDivClone: bizCardDiv is null');
+    }
+    // bizCardDiv is a clone
+    if ( bizCardDiv.id.indexOf('clone') != -1 ) {
+        return bizCardDiv;
+    }
+    const bizCardDivClone = bizCardDiv.querySelector('.biz-card-div-clone');
+    if ( bizCardDivClone == null ) {
+        return null;
+    }
+    return bizCardDivClone;
+}
+
+/**
+ * If the bizCardDiv is not a clone return it
+ * if it is a clone then find and return the original bizCardDiv
+ * @param {HTMLElement} bizCardDiv 
+ * @returns {HTMLElement} the bizCardDivClone or null if not found
+ */
+export function getOriginalBizCardDiv(bizCardDiv) {
+    if ( bizCardDiv == null ) {
+        return null;
+    }
+    
+    try {
+        const jobNumber = getValidatedJobNumber(bizCardDiv);
+        const originalBizCardDivId = createBizCardDivId(jobNumber);
+        const originalBizCardDiv = document.getElementById(originalBizCardDivId);
+        return originalBizCardDiv; // May be null if not found in DOM, that's OK
+    } catch (error) {
+        console.warn('getOriginalBizCardDiv: Failed to get original div:', error.message);
+        return null;
+    }
+}
+
+/**
+ * Start with a basic context string.
+ * If the bizCardDiv is a clone or has a clone, then create 
+ * SkillBadges that cluster around the clone, add the 
+ * that cluster around the clone, add the BadgeInfo object
+ * to the bizCardDiv, and append the badgeInfo to the 
+ * context string.
+ * @param {*} bizCardDiv 
+ * @returns an informative context string that can be used
+ * for bizCardDivs and bizResumeDivs.
+ */
+export function createBizCardDetailsDiv(bizCardDiv) {
+    if (!bizCardDiv) throw new Error('createBizCardDetailsDiv: bizCardDiv is null');
+    const jobNumber = getValidatedJobNumber(bizCardDiv);
+    // Creating biz details div for job
+
     const bizCardDetailsDiv = document.createElement('div');
-    const jobNumber = bizCardDiv.getAttribute('data-job-number');
-    if (!utils.isNumericString(jobNumber)) throw new Error(' createBizCardDetailsDiv: given non-numeric jobNumber attribute string');
-    bizCardDetailsDiv.classList.add('biz-card-details-div');
-    bizCardDetailsDiv.id = `biz-card-details-div-${jobNumber}`;
+    bizCardDetailsDiv.id = createBizCardDetailsDivId(jobNumber);
+    bizCardDetailsDiv.classList.add(createBizCardDetailsDivClass());
 
     const jobSkills = getJobSkills(jobNumber);
     const numJobSkills = jobSkills.length;
-    
+
     // Set pointer-events to none so clicks pass through to the parent bizCardDiv
     bizCardDetailsDiv.style.pointerEvents = 'none';
     bizCardDetailsDiv.style.backgroundColor = 'transparent';
-
+    
     // see createBizDetailsDiv::34  colorIndex format <number>
     let colorIndex = bizCardDiv.getAttribute('data-color-index');
-    if ( colorIndex == null ) {
-        throw new Error('createBizDetailsDiv: given null colorIndex from bizCardDiv:', bizCardDiv);
+    if ( colorIndex == null || !utils.isNumericString(colorIndex) ) {
+        throw new Error('createBizDetailsDiv: given null or non-numeric colorIndex from bizCardDiv:', bizCardDiv);
     }
-    if (!utils.isNumericString(colorIndex)) {
-        throw new Error('createBizDetailsDiv: given non-numeric colorIndex:', colorIndex);
-    }
-    
+    if ( colorIndex != jobNumber ) throw new Error('createBizDetailsDiv: colorIndex != jobNumber');
     bizCardDetailsDiv.setAttribute("data-color-index", colorIndex);
     bizCardDetailsDiv.classList.add('color-index-foreground-only');
 
+    // gather the job details
+    const job = jobsData[jobNumber];
+    if ( job == null ) throw new Error('createBizDetailsDiv: job not found');
     const employer = job.employer || 'Unknown Employer';
     const role = job.role || 'Unknown Role';
     const start = job.start || '1970-01-01';
@@ -141,9 +154,10 @@ export function createBizCardDetailsDiv(bizCardDiv, job) {
     const dates = formatDateRange(start, end);
     const description = job.Description  || 'No description provided';
     const descriptions = description ? description.split(BULLET).filter(d => d.trim()) : [];
-    const subContextStr = getBizCardDivSubContextString(bizCardDiv);
-    console.log("subContextStr:", subContextStr);
+    const subContextStr = createBizCardSubContextString(bizCardDiv);
+    // Sub-context string created
 
+    // create the innerHTML of the bizCardDetailsDiv
     bizCardDetailsDiv.innerHTML = 
     `
     <h2 class="biz-details-employer header-text">${employer}</h2>
@@ -151,164 +165,28 @@ export function createBizCardDetailsDiv(bizCardDiv, job) {
     <p class="biz-details-dates header-text">${dates}</p>
     <p class="biz-details-z-value header-text">${subContextStr}</p>
 
+    // create bulleted list of job descriptions
     <div class="job-description-items-container">
         ${descriptions.map(item => `<p class="job-description-item">&bull;&nbsp;${item.trim()}</p>`).join('')}
     </div>
 
+    // create bulleted list of job skills
     <p class="biz-details-skills">
         ${jobSkills
             .map(skill => skill.trim()) // Remove whitespace around skills
             .filter(skill => skill)     // Remove empty skills
             .join(' &bull; ')}
     </p>
-    <div class="scroll-caret">▼</div>
-    `; 
+    `;
+
+    const cardSubContextElement = document.createElement('p');
+    cardSubContextElement.innerHTML = createBizCardSubContextString(bizCardDiv);
+    bizCardDetailsDiv.insertAdjacentHTML('beforeend', cardSubContextElement.innerHTML);
 
     return bizCardDetailsDiv;
 }
 
-// Store actual counts from connection lines
-let actualCounts = {
-    aboveCount: 0,
-    betweenCount: 0,
-    belowCount: 0
-};
 
-// Listen for actual counts from connection lines
-if (typeof window !== 'undefined') {
-    window.addEventListener('connection-types-counted', (event) => {
-        const { jobNumber: eventJobNumber, aboveCount, betweenCount, belowCount } = event.detail;
-        actualCounts = { aboveCount, betweenCount, belowCount };
-        window.CONSOLE_LOG_IGNORE(`[Stats] Received actual counts for job ${eventJobNumber}: Above=${aboveCount}, Between=${betweenCount}, Below=${belowCount}`);
-        
-        // Trigger unified stats recalculation for this job when we receive updated counts
-        const currentSelectedCDiv = document.querySelector('.biz-card-div.selected');
-        if (currentSelectedCDiv) {
-            const selectedJobNumber = parseInt(currentSelectedCDiv.getAttribute('data-job-number'));
-            if (selectedJobNumber === eventJobNumber) {
-                window.CONSOLE_LOG_IGNORE(`[Stats] Recalculating and updating all statistics displays for job ${eventJobNumber}`);
-                recalculateAndUpdateAllStatistics(selectedJobNumber);
-            }
-        }
-    });
-}
-
-/**
- * Recalculate statistics and update both cDiv and rDiv displays simultaneously
- * @param {number} jobNumber - The job number to recalculate and update statistics for
- */
-function recalculateAndUpdateAllStatistics(jobNumber) {
-    window.CONSOLE_LOG_IGNORE(`[Stats] Recalculating all statistics for job ${jobNumber}`);
-    
-    // Calculate fresh statistics with the latest actual counts
-    const newStats = badgeManager.calculateSkillBadgeStats(jobNumber);
-    
-    // Generate the stats HTML content
-    const statsHtml = `
-        <p><strong>Total Badges:</strong> ${newStats.totalBadges}</p>
-        <p><strong>cDiv Center Y:</strong> ${newStats.cDivCenterY}</p>
-        <p><strong>Mean Position:</strong> ${newStats.mean}</p>
-        <p><strong>Median Position:</strong> ${newStats.median}</p>
-        <p><strong>Standard Deviation:</strong> ${newStats.stdDev}</p>
-        <p><strong>Skewness:</strong> ${newStats.skewness}</p>
-        <p><strong>Within 1 σ:</strong> ${newStats.within1StdDev}</p>
-        <p><strong>Between 1-2 σ:</strong> ${newStats.between1And2StdDev}</p>
-        <p><strong>Between 2-3 σ:</strong> ${newStats.between2And3StdDev}</p>
-        <p><strong>Beyond 3 σ:</strong> ${newStats.beyond3StdDev}</p>
-        <p><strong># badges above cDiv:</strong> ${newStats.aboveCount}</p>
-        <p><strong># badges between cDiv:</strong> ${newStats.betweenCount}</p>
-        <p><strong># badges below cDiv:</strong> ${newStats.belowCount}</p>
-        <p><strong>Above/(Above+Below):</strong> ${newStats.aboveRatio}</p>
-        <p><strong>Below/(Above+Below):</strong> ${newStats.belowRatio}</p>
-        ${newStats.biasWarning ? '<p class="bias-warning"><strong>⚠️ Bias Warning:</strong> Distribution shows significant bias or skewness</p>' : ''}
-    `;
-    
-    let updateCount = 0;
-    
-    // Update rDiv statistics
-    const rDiv = document.querySelector(`.biz-resume-div[data-job-number="${jobNumber}"]`);
-    if (rDiv) {
-        const rDivStatsContent = rDiv.querySelector('.skill-badge-stats.resume-stats .stats-content');
-        if (rDivStatsContent) {
-            rDivStatsContent.innerHTML = statsHtml;
-            updateCount++;
-            window.CONSOLE_LOG_IGNORE(`[Stats] Updated rDiv statistics for job ${jobNumber}`);
-        }
-    }
-    
-    // Update cDiv statistics (could be original or clone)
-    const cDiv = document.querySelector(`.biz-card-div.selected[data-job-number="${jobNumber}"]`) ||
-                 document.querySelector(`.biz-card-div[data-job-number="${jobNumber}"]`);
-    if (cDiv) {
-        const cDivStatsContent = cDiv.querySelector('.biz-card-stats-div .skill-badge-stats .stats-content');
-        if (cDivStatsContent) {
-            cDivStatsContent.innerHTML = statsHtml;
-            updateCount++;
-            window.CONSOLE_LOG_IGNORE(`[Stats] Updated cDiv statistics for job ${jobNumber}`);
-        }
-    }
-    
-    window.CONSOLE_LOG_IGNORE(`[Stats] Completed unified statistics update for job ${jobNumber} - updated ${updateCount} displays`);
-    window.CONSOLE_LOG_IGNORE(`[Stats] Final counts: Above=${newStats.aboveCount}, Between=${newStats.betweenCount}, Below=${newStats.belowCount}`);
-}
-
-
-/**
- * Create and position a separate bizCardStatsDiv with skill badge statistics
- * @param {HTMLElement} bizCardDiv - The main bizCard div
- * @param {number} jobNumber - The job number for statistics
- * @returns {HTMLElement} The created bizCardStatsDiv
- */
-export function createBizCardStatsDiv(bizCardDiv, jobNumber) {
-    if (!bizCardDiv) return null;
-    
-    const stats = badgeManager.calculateSkillBadgeStats(jobNumber);
-    
-    // Create the stats div container
-    const bizCardStatsDiv = document.createElement('div');
-    bizCardStatsDiv.classList.add('biz-card-stats-div');
-    bizCardStatsDiv.id = `biz-card-stats-div-${jobNumber}`;
-    
-    // Set positioning and styling
-    bizCardStatsDiv.style.position = 'absolute';
-    bizCardStatsDiv.style.width = 'calc(100% - 20px)'; // Full width minus padding
-    bizCardStatsDiv.style.left = '10px';
-    bizCardStatsDiv.style.padding = '10px';
-    bizCardStatsDiv.style.pointerEvents = 'none'; // Allow clicks to pass through
-    
-    // Position below the header elements (employer, role, dates, z-value)
-    // Since we know the structure, we can use a fixed offset
-    bizCardStatsDiv.style.top = '110px'; // Position after the header elements
-    
-    // Create statistics HTML
-    bizCardStatsDiv.innerHTML = `
-    <div class="skill-badge-stats hidden-by-mode">
-        <h4 class="stats-header">Skill Badge Statistics</h4>
-        <div class="stats-content">
-            <p><strong>Total Badges:</strong> ${stats.totalBadges}</p>
-            <p><strong>cDiv Center Y:</strong> ${stats.cDivCenterY}</p>
-            <p><strong>Mean Position:</strong> ${stats.mean}</p>
-            <p><strong>Median Position:</strong> ${stats.median}</p>
-            <p><strong>Standard Deviation:</strong> ${stats.stdDev}</p>
-            <p><strong>Skewness:</strong> ${stats.skewness}</p>
-            <p><strong>Within 1 σ:</strong> ${stats.within1StdDev}</p>
-            <p><strong>Between 1-2 σ:</strong> ${stats.between1And2StdDev}</p>
-            <p><strong>Between 2-3 σ:</strong> ${stats.between2And3StdDev}</p>
-            <p><strong>Beyond 3 σ:</strong> ${stats.beyond3StdDev}</p>
-            <p><strong># badges above cDiv:</strong> ${stats.aboveCount}</p>
-            <p><strong># badges between cDiv:</strong> ${stats.betweenCount}</p>
-            <p><strong># badges below cDiv:</strong> ${stats.belowCount}</p>
-            <p><strong>Above/(Above+Below):</strong> ${stats.aboveRatio}</p>
-            <p><strong>Below/(Above+Below):</strong> ${stats.belowRatio}</p>
-            ${stats.biasWarning ? '<p class="bias-warning"><strong>⚠️ Bias Warning:</strong> Distribution shows significant bias or skewness</p>' : ''}
-        </div>
-    </div>`;
-    
-    // Apply initial visibility state based on BadgeManager
-    badgeManager.updateStatsElement(bizCardStatsDiv);
-    
-    return bizCardStatsDiv;
-}
 
 export function getJobSkills(jobNumber) {
     const job = jobsData[jobNumber];
@@ -321,186 +199,136 @@ export function getJobSkills(jobNumber) {
 }
 
 /**
- * Update bizCardDetailsDiv with skill badge statistics (legacy function - now creates separate div)
- * @param {HTMLElement} bizCardDetailsDiv - The details div to update
- * @param {number} jobNumber - The job number for statistics
+ * Returns the sceneZ of the original bizCardDiv. 
+ * If the given bizCardDiv is a clone, get the original
+ * bizCardDiv of that clone.
+ * @param {HTMLElement} bizCardDiv - The bizCardDiv (original or clone)
+ * @returns {string} sceneZ
  */
-export function appendSkillBadgeStats(bizCardDetailsDiv, jobNumber) {
-    if (!bizCardDetailsDiv) return;
-    
-    // Get the parent bizCardDiv
-    const bizCardDiv = bizCardDetailsDiv.closest('.biz-card-div');
-    if (!bizCardDiv) return;
-    
-    // Remove existing stats div if it exists
-    const existingStatsDiv = bizCardDiv.querySelector('.biz-card-stats-div');
-    if (existingStatsDiv) {
-        existingStatsDiv.remove();
+export function getBizCardDivSceneZ(bizCardDiv) {
+    const originalBizCardDiv = getOriginalBizCardDiv(bizCardDiv);
+    if (!originalBizCardDiv) {
+        // Note: Could not find original bizCardDiv for scene Z calculation
+        return null;
     }
     
-    // Create new stats div
-    const bizCardStatsDiv = createBizCardStatsDiv(bizCardDiv, jobNumber);
-    if (bizCardStatsDiv) {
-        bizCardDiv.appendChild(bizCardStatsDiv);
+    // Instead of reading potentially NaN data-sceneZ, calculate from DOM position
+    const rect = originalBizCardDiv.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+        return 'hidden'; // Element is not visible
     }
-}
-
-
-export function getBizCardDivSubContextString(bizCardDiv) {
-    const jobNumber = bizCardDiv.getAttribute('data-job-number');
-    if (!utils.isNumericString(jobNumber)) throw new Error('getBizCardDivSubContextString: given non-numeric jobNumber attribute string');
-    const sceneZ = bizCardDiv.getAttribute('data-sceneZ') || 'N/A';
-    const badgesInfo = getBizCardDivBadges0(bizCardDiv);
-    bizCardDiv.setAttribute('data-badges-info', JSON.stringify(badgesInfo));
-    const subContextStr = `(z:${sceneZ}, #:${jobNumber} #bgs:${badgesInfo.totalCount} above:${badgesInfo.aboveCount},level:${badgesInfo.levelCount},below:${badgesInfo.belowCount})`;
-    return subContextStr;
-}
-
-// use all jobSkills of the given bizCardDiv to create
-// a list of badges that are clustered around the center-most bucket
-// and then place them into the buckets
-// return a list of badges with the following information:
-// - top, bottom, center, index, badgeMode, bucketIndex, badge
-//
-export function getBizCardDivBadges0(bizCardDiv) {
-    const jobNumber = bizCardDiv.getAttribute('data-job-number');
-    if (!utils.isNumericString(jobNumber)) throw new Error('getBizCardDivBadges0: given non-numeric jobNumber attribute string');
-    const bizCardDivTopY = parseFloat(bizCardDiv.getAttribute("data-sceneTop")).toFixed(2);
-    const bizCardDivBottomY = parseFloat(bizCardDiv.getAttribute("data-sceneBottom")).toFixed(2);
-    const bizCardDivCenterY = parseFloat(bizCardDiv.getAttribute("data-sceneCenterY")).toFixed(2);
-
-    // create all buckets that span the entire sceneContainer
-    const bucketHeight = 40;
-    const bucketMargin = 3;
-    const sceneContainer = document.querySelector('.scene-container');
-    const sceneContainerHeight = sceneContainer.clientHeight;
-    const numBuckets = Math.floor(sceneContainerHeight/(bucketHeight+bucketMargin));
-    const allBuckets = [];
-    for (let i = 0; i < numBuckets; i++) {
-        const bucketTop = i * (bucketHeight + bucketMargin);
-        const bucketBottom = bucketTop + bucketHeight;
-        const buckerCenter = bucketTop + bucketHeight/2;
-
-        // classify all buckets in relation to this bizCardDiv
-        let badgeMode = BadgeMode.LEVEL;
-        if ( bucketTop < bizCardDivTopY ) badgeMode = BadgeMode.ABOVE;
-        if ( bucketBottom > bizCardDivBottomY ) BadgeMode = BadgeMode.BELOW;
-        bucket = new Bucket({
-            top: bucketTop, 
-            bottom: bucketBottom, 
-            center: bucketCenter,
-            index: i, 
-            badgeMode: badgeMode,
-            used: false
-        });
-        allBuckets.push(bucket);
-    }
-
-    // create a badge for each jobSkill. 
-    // assign each badge a bucket, which
-    // has precomputed coordinates and 
-    // badgeMode.
-    // 
-    // badges are assigned buckets in 
-    // such a way that they cluster around
-    // the bucket that contains the 
-    // bizCardDivCenterY.
-    const jobSkills = getJobSkills(jobNumber);
-    if ( jobSkills == null ||jobSkills.length == 0 ) {
-        throw new Error('getBizCardDivBadges0: given job with no skills');
-    }
-    const numJobSkills = jobSkills.length;
-    const centerBucketIndex = allBuckets.find(bucket => bizCardDivCenterY >= bucket.top && bizCardDivCenterY <= bucket.bottom);
-    if ( centerBucketIndex == null || centerBucketIndex == undefined ) {
-        throw new Error('centerBucketIndex not found for bizCardDivCenterY:', bizCardDivCenterY);
-    }
-    // use buckets in a staggered way around the center bucket
-    // make the sequence twice as long as the number of jobSkills
-    // so that we can assign each jobSkill a bucket even it if
-    // was originally out of bounds.
-    const alternatingSequence  = generateAlternatingSequence(numJobSkills*2);
-    let aboveCount = 0;
-    let levelCount = 0;
-    let belowCount = 0;
-    let numRebucketed = 0;
-    const bucketedJobSkills = [];
-    const badges = [];
-
-    for (let i = 0; i < alternatingSequence.length; i++) {
-        if ( badges.length >= numJobSkills ) break;
-        const bucketIndex = centerBucketIndex + alternatingSequence[i];
-        // don't assign this bucket for this jobSkill
-        // try to use the next bucket for the last jobSkill
-        if ( bucketIndex < 0 || bucketIndex >= allBuckets.length ) {
-            console.log("skipping out of bounds bucket");
-            numRebucketed++;
-            continue; 
-        }
-        const bucket = allBuckets[bucketIndex];
-        if ( bucket.used ) {
-            console.log("skipping used bucket");
-            numRebucketed++;
-            continue; 
-        }
-        const badge = {
-            jobSkill: jobSkills[numBucketedJobSkills],
-            top: bucket.top,
-            bottom: bucket.bottom,
-            center: bucket.center,
-            badgeMode: bucket.badgeMode,
-            bucketIndex: bucketIndex
-        }
-        bucket.used = true;
-        if ( badge.badgeMode == BadgeMode.ABOVE ) aboveCount++;
-        if ( badge.badgeMode == BadgeMode.LEVEL ) levelCount++;
-        if ( badge.badgeMode == BadgeMode.BELOW ) belowCount++;
-        badges.push(badge);
-    } 
-
-    const badgesInfo = {
-        aboveCount: aboveCount,
-        levelCount: levelCount,
-        belowCount: belowCount,
-        totalCount: aboveCount + levelCount + belowCount,
-        aboveRatio: (aboveCount / totalCount).toFixed(2),
-        levelRatio: (levelCount / totalCount).toFixed(2),
-        belowRatio: (belowCount / totalCount).toFixed(2),
-        rebucketed: numRebucketed,
-        badges: badges
-    }
-    return badgesInfo;
+    
+    // Use a simple Z calculation based on DOM position
+    // This gives a consistent, non-NaN result
+    const zIndex = originalBizCardDiv.style.zIndex || '10';
+    return zIndex;
 }
 
 /**
-* Generate sequence: 0, 1, -1, 2, -2, 3, -3, 4, -4, ... up to length L
-* @param {number} L - Length of sequence
-* @returns {Array<number>} Sequence [0, 1, -1, 2, -2, 3, -3, 4, -4, ...]
-*/
-export function generateAlternatingSequence(L) {
-   const sequence = [];
+ * create the subContextStr for the given bizCardDiv.
+ * The SkillBadges component handles badge creation and positioning automatically
+ * when a clone is selected, so we just need to get badge info from it.
+ * @param {*} bizCardDiv 
+ */
+export function createBizCardSubContextString(bizCardDiv) {
+    try {
+        const jobNumber = getValidatedJobNumber(bizCardDiv);
+        const sceneZ = getBizCardDivSceneZ(bizCardDiv) || 'unknown';
+        const jobSkills = getJobSkills(jobNumber);
+        const numJobSkills = jobSkills.length;
 
-   for (let i = 0; i < L; i++) {
-       if (i === 0) {
-           sequence.push(0);
-       } else if (i % 2 === 1) {
-           // Odd indices: positive numbers (1, 2, 3, 4, ...)
-           sequence.push((i + 1) / 2);
-       } else {
-           // Even indices: negative numbers (-1, -2, -3, -4, ...)
-           sequence.push(-i / 2);
-       }
-   }
-   return sequence;
+        // create the basic subContextStr that can be used
+        // by any bizCardDiv or bizResumeDiv
+        let subContextStr = `(z:${sceneZ},#:${jobNumber},#skl:${numJobSkills}`;
+
+        // if a bizCardDivClone is available in the DOM, the SkillBadges component
+        // will handle badge creation and positioning automatically through Vue reactivity
+        const bizCardDivClone = getBizCardDivClone(bizCardDiv);
+        if (bizCardDivClone != null) {
+            // The SkillBadges.vue component manages badge positioning automatically
+            // We can get badge counts from the existing badgesInfo if available
+            const existingBadgesInfo = bizCardDivClone.getAttribute('data-badges-info');
+            if (existingBadgesInfo) {
+                try {
+                    const badgesInfo = JSON.parse(existingBadgesInfo);
+                    const aboveCount = badgesInfo.aboveCount || 0;
+                    const levelCount = badgesInfo.levelCount || 0;
+                    const belowCount = badgesInfo.belowCount || 0;
+                    const totalCount = aboveCount + levelCount + belowCount;
+                    subContextStr += `,#bgs:${totalCount} above:${aboveCount},level:${levelCount},below:${belowCount}`;
+                } catch (e) {
+                    console.warn('Failed to parse existing badges info:', e);
+                }
+            }
+        }
+        // close the subContentStr
+        subContextStr += ')';
+        return subContextStr;
+        
+    } catch (error) {
+        console.warn('createBizCardSubContextString: Failed to create context string:', error.message);
+        return '(z:unknown,#:unknown,#skl:unknown)';
+    }
 }
 
+
+
 export function getBizResumeContextStr(bizResumeDiv) {
-    const jobNumber = bizResumeDiv.getAttribute('data-job-number');
-    if (!utils.isNumericString(jobNumber)) throw new Error('getBizResumeDivSubContextString: given non-numeric jobNumber attribute string');
+    const jobNumber = getValidatedJobNumber(bizResumeDiv);
     const jobSkills = getJobSkills(jobNumber);
     const numJobSkills = jobSkills.length;
-    const top = bizResumeDiv.getAttribute("data-sceneTop");
-    const height = bizResumeDiv.getAttribute("data-sceneHeight");
-    const bottom = top + height;
+    
+    // Get the actual DOM bounds instead of relying on potentially NaN data-scene attributes
+    const rect = bizResumeDiv.getBoundingClientRect();
+    const top = rect.top.toFixed(1);
+    const height = rect.height.toFixed(1);
+    const bottom = rect.bottom.toFixed(1);
+    
     const subContextStr = `(#:${jobNumber} #skl:${numJobSkills} top:${top} btm:${bottom})`;
     return subContextStr;
+}
+
+/**
+ * Gets or creates badge information for a biz card div clone.
+ * This is a stub implementation - full badge creation should be handled 
+ * by the SkillBadges Vue component.
+ * @param {HTMLElement} bizCardDivClone - The biz card div clone element
+ * @returns {Object} Badge information with counts and badges array
+ */
+export function getBizCardDivBadges(bizCardDivClone) {
+    if (!bizCardDivClone) throw new Error('getBizCardDivBadges: bizCardDivClone is null');
+    
+    const jobNumber = getValidatedJobNumber(bizCardDivClone);
+    const jobSkills = getJobSkills(jobNumber);
+    
+    // Check if badges info already exists
+    const existingBadgesInfo = bizCardDivClone.getAttribute('data-badges-info');
+    if (existingBadgesInfo) {
+        try {
+            return JSON.parse(existingBadgesInfo);
+        } catch (e) {
+            console.warn('Failed to parse existing badges info, creating new:', e);
+        }
+    }
+    
+    // Create stub badges info - in full implementation, this should interact
+    // with the SkillBadges Vue component to get actual badge positions
+    const badgesInfo = {
+        aboveCount: 0,
+        levelCount: 0, 
+        belowCount: 0,
+        totalCount: 0,
+        badges: jobSkills.map((skill, index) => ({
+            id: `badge-${jobNumber}-${index}`,
+            skill: skill,
+            jobNumber: jobNumber,
+            position: { x: 0, y: 0 }, // Placeholder positions
+            level: 'level' // Placeholder level
+        }))
+    };
+    
+    badgesInfo.totalCount = badgesInfo.badges.length;
+    badgesInfo.levelCount = badgesInfo.totalCount; // All at level for now
+    
+    return badgesInfo;
 }

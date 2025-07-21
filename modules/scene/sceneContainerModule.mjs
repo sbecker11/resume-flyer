@@ -29,6 +29,18 @@ export function initialize() {
     
     return waitForElement().then(() => {
         _isInitialized = true;
+        
+        // Log scene container height as soon as it's available during startup
+        const sceneHeight = _sceneContainer.clientHeight;
+        const sceneOffsetHeight = _sceneContainer.offsetHeight;
+        const sceneBoundingHeight = _sceneContainer.getBoundingClientRect().height;
+        console.log(`[SCENE-CONTAINER-INIT] Scene container height available:`, {
+            clientHeight: sceneHeight,
+            offsetHeight: sceneOffsetHeight,
+            boundingHeight: sceneBoundingHeight,
+            element: _sceneContainer
+        });
+        
         window.CONSOLE_LOG_IGNORE('Scene container initialized');
     });
 }

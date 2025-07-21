@@ -248,7 +248,7 @@ class DebugPanel {
 
         // Add draggable styling
         debugElement.style.cursor = 'move';
-        debugElement.style.userSelect = 'none';
+        debugElement.style.userSelect = 'text';
         debugElement.style.border = '2px dashed #ccc';
         debugElement.style.padding = '5px';
         debugElement.style.backgroundColor = 'rgba(0,0,0,0.8)';

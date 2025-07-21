@@ -50,6 +50,17 @@ export function initialize() {
     };
     
     return waitForElement().then(() => {
+        // Log scene container height during viewport initialization
+        const sceneHeight = _sceneContainer.clientHeight;
+        const sceneOffsetHeight = _sceneContainer.offsetHeight;
+        const sceneBoundingHeight = _sceneContainer.getBoundingClientRect().height;
+        console.log(`[VIEWPORT-INIT] Scene container height during viewport setup:`, {
+            clientHeight: sceneHeight,
+            offsetHeight: sceneOffsetHeight,
+            boundingHeight: sceneBoundingHeight,
+            element: _sceneContainer
+        });
+        
         // Initial calculation
         calculateViewPortProperties();
 
@@ -120,6 +131,15 @@ export function updateViewPort() {
     viewPortProperties.centerY = sceneContainerRect.top + sceneContainerRect.height / 2;
     viewPortProperties.width = sceneContainerRect.width;
     viewPortProperties.height = sceneContainerRect.height;
+    
+    // Log scene container height during viewport updates
+    // console.log(`[VIEWPORT-UPDATE] Scene container height:`, {
+    //     clientHeight: _sceneContainer.clientHeight,
+    //     offsetHeight: _sceneContainer.offsetHeight,
+    //     boundingHeight: sceneContainerRect.height,
+    //     viewportHeight: viewPortProperties.height,
+    //     retries: retryCount
+    // });
     
     // Viewport properties updated
     

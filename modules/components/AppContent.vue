@@ -69,27 +69,35 @@
       :style="parallaxRectBorderStyle"
     ></div>
     
-    <!-- Live Debug Display -->
+    <!-- Live Debug Display - Hidden when badge mode is no-badges OR no job selected -->
     <div 
+      v-show="badgeMode !== 'no-badges' && debugValues['selectedJobNumber'] && debugValues['selectedJobNumber'] !== 'NONE'"
       id="live-debug-display"
+      :style="debugPanelStyle"
       :class="{ 
         'debug-left': appContainerClass === 'scene-left',
         'debug-right': appContainerClass === 'scene-right'
       }"
     >
-      <!-- Job and clone info -->
-      <div class="debug-line">#{{ debugValues['selectedJobNumber'] }}</div>
-      <div class="debug-line">{{ debugValues['cloneCenterY'] }}</div>
-      <div class="debug-line">{{ debugValues['categorySummary'] }}</div>
-      <!-- Related badges positioning -->
-      <div v-for="badge in debugValues['relatedBadgeList']" :key="badge.id" class="debug-line" 
-           :style="{ 
-             fontSize: '12px',
-             border: badge.category === 'LEVEL' ? '2px solid yellow' : 'none',
-             padding: badge.category === 'LEVEL' ? '2px 4px' : '0',
-             margin: badge.category === 'LEVEL' ? '2px 0' : '0'
-           }">
-        {{ badge.displayText }}
+      <!-- Draggable header line -->
+      <div 
+        class="debug-line debug-drag-handle"
+        @mousedown="handleDebugPanelDragStart"
+      >#{{ debugValues['selectedJobNumber'] }}</div>
+      <!-- Text-selectable content lines -->
+      <div class="debug-content" @mousedown.stop>
+        <div class="debug-line">{{ debugValues['cloneCenterY'] }}</div>
+        <div class="debug-line">{{ debugValues['categorySummary'] }}</div>
+        <!-- Related badges positioning -->
+        <div v-for="badge in debugValues['relatedBadgeList']" :key="badge.id" class="debug-line" 
+             :style="{ 
+               fontSize: '12px',
+               border: badge.category === 'LEVEL' ? '2px solid yellow' : 'none',
+               padding: badge.category === 'LEVEL' ? '2px 4px' : '0',
+               margin: badge.category === 'LEVEL' ? '2px 0' : '0'
+             }">
+          {{ badge.displayText }}
+        </div>
       </div>
     </div>
   </div>
@@ -105,9 +113,10 @@ import { useFocalPoint } from '@/modules/composables/useFocalPoint.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useTimeline, initialize as initializeTimeline } from '@/modules/composables/useTimeline.mjs';
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 
 
-import { initializeState } from '@/modules/core/stateManager.mjs';
+import { initializeState, saveState } from '@/modules/core/stateManager.mjs';
 import { jobs as jobsData } from '@/static_content/jobs/jobs.mjs';
 import * as keyDown from '@/modules/core/keyDownModule.mjs';
 import * as sceneContainer from '@/modules/scene/sceneContainerModule.mjs';
@@ -144,19 +153,64 @@ export default {
     ConnectionLines,
     BadgeToggle,
   },
+  mixins: [BaseVueComponentMixin],
+
+  methods: {
+    getComponentDependencies() {
+      return [
+        'useColorPalette',
+        'useViewport',
+        'useBullsEye',
+        'useAimPoint',
+        'useFocalPoint',
+        'useResizeHandle',
+        'useLayoutToggle',
+        'useTimeline',
+        'useStateManager',
+        'useBadgeManager',
+        'useCardsController',
+        'useResumeListController',
+        'useSceneContainer',
+        'useScenePlane',
+        'useSceneViewer',
+        'useResumeViewer',
+        'useViewport',
+      ];
+    },
+
+    async initializeWithDependencies() {
+      // Initialize with dependencies
+      onUnmounted(() => {
+        this.cleanupDependencies();
+      });
+    },
+
+    cleanupDependencies() {
+      // Event listeners are cleaned up in the setup() onUnmounted hook
+    }
+  },
+
   async setup() {
 
-    
+
     // Register lifecycle hooks immediately (before any await statements)
     let handleSceneWidthChanged = null;
+    let handleBadgeModeChanged = null;
     onUnmounted(() => {
       if (handleSceneWidthChanged) {
         window.removeEventListener('scene-width-changed', handleSceneWidthChanged);
+      }
+      if (handleBadgeModeChanged) {
+        badgeManager.removeEventListener('badgeModeChanged', handleBadgeModeChanged);
       }
       if (debugInterval) {
         clearInterval(debugInterval);
       }
       window.removeEventListener('viewport-changed', updateDebugValues);
+      
+      // Clean up debug panel drag listeners
+      document.removeEventListener('mousemove', handleDebugPanelDrag);
+      document.removeEventListener('mouseup', handleDebugPanelDragEnd);
     });
     
     // Initialize reactive composables immediately (before any await statements)
@@ -176,14 +230,140 @@ export default {
     
     // Register lifecycle hooks before any await statements
     onMounted(async () => {
+      // Component mounted
+      
+      // Scene container initialization
+      
       try {
-        window.CONSOLE_LOG_IGNORE('[INIT] AppContent: Starting event-driven initialization');
+        // Starting component initialization
+        
+        // Server-side dependency enforcement check
+        
+        try {
+          // Call server endpoint to check dependencies
+          const response = await fetch('http://localhost:3009/api/check-dependencies');
+          
+          // Parse JSON response even for 400+ status codes
+          let result;
+          try {
+            result = await response.json();
+          } catch (parseError) {
+            console.error('❌ Failed to parse server response as JSON:', parseError);
+            throw new Error(`Server returned status ${response.status} but no valid JSON`);
+          }
+          
+          // Server dependency check response received
+          
+          if (!result.success || response.status === 400) {
+            console.error('DEPENDENCY VIOLATIONS DETECTED - See http://localhost:3009/violations for details');
+            
+            if (result.violations && result.violations.length > 0) {
+              console.error(`Found ${result.violationCount} violations in ${result.summary?.foundComponents || '?'} components`);
+            }
+            
+            // Show detailed compliance report if available
+            if (result.report) {
+              console.error(result.report);
+            }
+            
+            const errorMessage = `
+❌❌❌ DEPENDENCY ENFORCEMENT FAILED ❌❌❌
+
+The server detected ${result.violationCount || 'unknown'} components with dependency violations.
+
+${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v.violations?.join(', ')}`).join('\\n') : 'No violation details available'}
+
+🔧 REQUIRED FIXES:
+1. All components using managers MUST extend BaseComponent
+2. Override getDependencies() method to declare dependencies  
+3. Override initialize() method with setup logic
+4. Override destroy() method with cleanup logic
+
+📋 Check browser console above for detailed violation list.
+📋 Check server console for full compliance report.
+
+🚫 THE APPLICATION WILL NOT START until violations are fixed.
+            `;
+            
+            console.error(errorMessage);
+            
+            // Also display as alert for visibility - split into multiple alerts if needed
+            let alertMessage = `❌ DEPENDENCY VIOLATIONS DETECTED!\n\n`;
+            alertMessage += `Found ${result.violationCount || 'unknown'} violation(s)\n\n`;
+            
+            if (result.violations && result.violations.length > 0) {
+              // First alert: Show all violations summary
+              alertMessage += `ALL VIOLATIONS:\n`;
+              result.violations.forEach((violation, index) => {
+                alertMessage += `${index + 1}. ${violation.name || 'Unknown'} (${violation.file || 'Unknown'})\n`;
+                if (violation.violations && violation.violations.length > 0) {
+                  alertMessage += `   - ${violation.violations[0]}${violation.violations.length > 1 ? ' (+more)' : ''}\n`;
+                }
+              });
+              
+              alertMessage += `\n🔧 GENERAL FIX FOR ALL:\n`;
+              alertMessage += `1. Extend BaseComponent (for .mjs files)\n`;
+              alertMessage += `2. Use BaseVueComponentMixin (for .vue files)\n`;
+              alertMessage += `3. Define getDependencies() method\n`;
+              alertMessage += `4. Define initialize() and destroy() methods\n\n`;
+              
+              alertMessage += `📋 DETAILED REPORT AVAILABLE AT:\n`;
+              alertMessage += `🌐 http://localhost:3009/violations\n\n`;
+              
+              alertMessage += `This page shows all violations with step-by-step fix instructions.\n\n`;
+              alertMessage += `🚫 APPLICATION TERMINATED`;
+              
+                // Redirecting to violations page
+              console.error('Found violations:', result.violationCount);
+              
+              // Redirect to violations page automatically
+              window.location.href = 'http://localhost:3009/violations';
+              
+              // Don't continue with normal app initialization
+              return;
+            } else {
+              alertMessage += `No violation details available in response\n`;
+            }
+            
+            // This code only runs if no violations found (fallback)
+            alert(alertMessage);
+            
+            throw new Error('Server dependency enforcement failed - application terminated');
+          }
+          
+          // Server compliance check passed
+          
+        } catch (error) {
+          if (error.message.includes('dependency enforcement failed') || error.message.includes('application terminated')) {
+            throw error;
+          }
+          
+          // If server check fails, fall back to simple client check
+          console.warn('Server dependency check failed, falling back to client check:', error.message);
+          
+          // Simple client-side check as fallback
+          try {
+            const { badgePositioner } = await import('@/modules/utils/BadgePositioner.mjs');
+            
+            // Check if BadgePositioner is registered
+            const isRegistered = initializationManager.isComponentRegistered?.('BadgePositioner') || false;
+            
+            if (!isRegistered) {
+              throw new Error('BadgePositioner not registered with InitializationManager');
+            }
+            
+            // Client fallback check passed
+            
+          } catch (fallbackError) {
+            console.error('DEPENDENCY VIOLATION DETECTED (Client Fallback): BadgePositioner not registered');
+            throw new Error('Client dependency check failed - application terminated');
+          }
+        }
         
         // Register Timeline as the first component (no dependencies)
         initializationManager.register(
           'Timeline',
           async () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing Timeline');
             initializeTimeline(jobsData);
           },
           [], // No dependencies
@@ -210,11 +390,10 @@ export default {
         initializationManager.register(
           'LayoutToggle',
           () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing LayoutToggle');
-            layoutToggle = useLayoutToggle(); // Initialize and store the composable
+            layoutToggle = useLayoutToggle();
             return layoutToggle;
           },
-          ['StateManager'], // Depends on StateManager being ready first
+          ['StateManager'],
           { priority: 'high' }
         );
         
@@ -223,14 +402,13 @@ export default {
         resumeListController.registerForInitialization();
         
         // Register DebugPanel with its dependencies
-        // debugPanel.registerForInitialization(initializationManager); // Disabled - using custom debug panel
+        debugPanel.registerForInitialization(initializationManager);
         
         
         // Register other components that depend on controllers
         initializationManager.register(
           'Viewport',
           async () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing Viewport systems');
             initializationManager.waitForComponents(['CardsController', 'ResumeListController']);
             viewport.initialize();
             await viewPort.initialize();
@@ -242,7 +420,6 @@ export default {
         initializationManager.register(
           'Layout',
           async () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing Layout systems');
             initializationManager.waitForComponents(['Viewport', 'LayoutToggle']);
             resizeHandle.initializeResizeHandleState(viewport, bullsEye);
             const { applyInitialLayout } = resizeHandle;
@@ -255,7 +432,6 @@ export default {
         initializationManager.register(
           'ReactiveSystems',
           async () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing Reactive systems');
             initializationManager.waitForComponent('Viewport');
             bullsEye.initialize();
             aimPoint.initialize();
@@ -268,7 +444,6 @@ export default {
         initializationManager.register(
           'SceneSystems',
           async () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing Scene systems');
             initializationManager.waitForComponents(['Viewport', 'Layout']);
             await sceneContainer.initialize();
             autoScroll.initialize();
@@ -283,10 +458,9 @@ export default {
         initializationManager.register(
           'SkillBadges',
           async () => {
-            window.CONSOLE_LOG_IGNORE('[INIT] Initializing SkillBadges');
             // Wait for both CardsController and color palette to be ready
             initializationManager.waitForComponents(['CardsController']);
-            colorPalette.readyPromise; // Wait for color palette to load
+            colorPalette.readyPromise;
             
             // Dispatch event to trigger SkillBadges initialization
             window.dispatchEvent(new CustomEvent('skill-badges-init-ready'));
@@ -326,11 +500,12 @@ export default {
           'ConnectionLines'
         ]);
         
-        window.CONSOLE_LOG_IGNORE('[INIT] AppContent: All components initialized successfully');
+        // All components initialized successfully
+        
+        // Scene container post-initialization check complete
         
         // Ensure scene components are properly initialized after initial load
         setTimeout(() => {
-          window.CONSOLE_LOG_IGNORE('[INIT] Triggering post-init scene refresh');
           reinitializeSceneComponents();
         }, 200);
         
@@ -355,6 +530,16 @@ export default {
         // Also update debug values when viewport changes
         window.addEventListener('viewport-changed', updateDebugValues);
         
+        // Listen for badge mode changes to control debug panel visibility
+        handleBadgeModeChanged = (event) => {
+          badgeMode.value = event.detail.mode;
+          // Badge mode changed
+        };
+        badgeManager.addEventListener('badgeModeChanged', handleBadgeModeChanged);
+        
+        // Initialize badge mode with current state
+        badgeMode.value = badgeManager.getMode();
+        
         // Listen for badges-positioned events to update debug display with real bucket info
         window.addEventListener('badges-positioned', (event) => {
           if (event.detail && event.detail.badgeOrder) {
@@ -370,37 +555,40 @@ export default {
           viewportBorderTrigger.value++;
         });
         
+        // Load debug panel position from saved state
+        loadDebugPanelPosition();
+
+        // Add global mouse event listeners for debug panel dragging
+        document.addEventListener('mousemove', handleDebugPanelDrag);
+        document.addEventListener('mouseup', handleDebugPanelDragEnd);
+
         // Add global functions for debugging initialization
         window.checkInitializationStatus = () => {
-          window.CONSOLE_LOG_IGNORE('[INIT] Current initialization status:');
           console.table(initializationManager.getStatus());
         };
         
         window.showDependencyGraph = () => {
-          window.CONSOLE_LOG_IGNORE('[INIT] Dependency graph:');
-          window.CONSOLE_LOG_IGNORE(initializationManager.getDependencyGraph());
+          console.log(initializationManager.getDependencyGraph());
         };
         
         window.validateDependencies = () => {
           const result = initializationManager.validateDependencies();
-          window.CONSOLE_LOG_IGNORE('[INIT] Dependency validation:');
           if (result.isValid) {
-            window.CONSOLE_LOG_IGNORE('✅ Dependency graph is valid');
+            console.log('Dependency graph is valid');
           } else {
-            console.error('❌ Dependency graph has errors:', result.errors);
+            console.error('Dependency graph has errors:', result.errors);
           }
           if (result.warnings.length > 0) {
-            console.warn('⚠️ Warnings:', result.warnings);
+            console.warn('Warnings:', result.warnings);
           }
           return result;
         };
         
         
-        window.CONSOLE_LOG_IGNORE('[INIT] Added window.checkInitializationStatus(), window.showDependencyGraph(), and window.validateDependencies() for debugging');
+        // Debug functions added to window object
         
         // Add scene reinitialization handler for layout changes
         window.addEventListener('scene-reinitialize-needed', (event) => {
-          window.CONSOLE_LOG_IGNORE('[SCENE] Scene reinitialization requested:', event.detail);
           // Ensure we don't start reinitialization during transitions
           if (!window.isLayoutTransitioning) {
             reinitializeSceneComponents();
@@ -414,7 +602,6 @@ export default {
         
         // Add handler for forced scene updates to ensure everything is properly positioned
         window.addEventListener('scene-force-update', (event) => {
-          window.CONSOLE_LOG_IGNORE('[SCENE] Scene force update requested:', event.detail);
           setTimeout(() => {
             forceSceneUpdate();
           }, 100);
@@ -422,7 +609,6 @@ export default {
         
         // Add handler for scene refresh events
         window.addEventListener('scene-refresh-needed', (event) => {
-          window.CONSOLE_LOG_IGNORE('[SCENE] Scene refresh requested');
           // Trigger viewport update to ensure everything is properly positioned
           if (viewPort && viewPort.isInitialized()) {
             viewPort.updateViewPort();
@@ -431,10 +617,9 @@ export default {
         
         // Add handler for page refresh to ensure scene initialization
         window.addEventListener('load', () => {
-          window.CONSOLE_LOG_IGNORE('[SCENE] Page loaded, ensuring scene initialization');
           setTimeout(() => {
             reinitializeSceneComponents();
-          }, 500); // Give time for all components to mount
+          }, 500);
         });
         
       } catch (error) {
@@ -649,18 +834,194 @@ export default {
       return alignment;
     });
 
+    // Computed style for debug panel position based on current orientation
+    const debugPanelStyle = computed(() => {
+      const currentOrientation = appContainerClass.value;
+      const position = debugPanelPosition.value[currentOrientation];
+      
+      if (currentOrientation === 'scene-left') {
+        return {
+          top: `${position.top}px`,
+          left: `${position.left}px`
+        };
+      } else {
+        return {
+          top: `${position.top}px`,
+          right: `${position.right}px`
+        };
+      }
+    });
+
     // Debug values for live display - now using the debug panel component
     const debugValues = ref({
       'sp.job0': 'N/A',      // Job 0 scene coordinates relative to scene plane
       'sp.job0View': 'N/A'   // Job 0 view coordinates relative to scene plane
     });
 
+    // Badge mode state for hiding debug panel when badges are disabled
+    const badgeMode = ref('no-badges');
+
     // Force viewport border reactivity
     const viewportBorderTrigger = ref(0);
+
+    // Debug panel position state - separate positions for each scene orientation
+    const debugPanelPosition = ref({
+      'scene-left': { top: 20, left: 200 },
+      'scene-right': { top: 20, right: 200 }
+    });
+
+    // Load debug panel position from AppState
+    const loadDebugPanelPosition = () => {
+      if (AppState?.debugPanel?.position) {
+        debugPanelPosition.value = {
+          ...debugPanelPosition.value,
+          ...AppState.debugPanel.position
+        };
+        // Debug panel position loaded from state
+      }
+    };
+
+    // Save debug panel position to AppState
+    const saveDebugPanelPosition = () => {
+      if (!AppState.debugPanel) {
+        AppState.debugPanel = {};
+      }
+      AppState.debugPanel.position = { ...debugPanelPosition.value };
+      saveState(AppState);
+      // Debug panel position saved to state
+    };
+
+    // Debug panel drag functionality
+    let isDragging = false;
+    let dragStartPoint = { x: 0, y: 0 };
+    let initialPosition = { top: 0, left: 0, right: 0 };
+    // Debug variables (unused, kept for future debugging)
+    // let lastLoggedMouse = { x: 0, y: 0 };
+    // const MOUSE_EPSILON = 5;
+
+    const handleDebugPanelDragStart = (event) => {
+      isDragging = true;
+      
+      // Save the start drag point position
+      dragStartPoint.x = event.clientX;
+      dragStartPoint.y = event.clientY;
+      
+      // Save the initial panel position
+      const currentOrientation = appContainerClass.value;
+      const currentPos = debugPanelPosition.value[currentOrientation];
+      initialPosition = { ...currentPos };
+      
+      event.preventDefault();
+      // console.log('[Debug] Drag started at:', { x: event.clientX, y: event.clientY, dragStartPoint });
+    };
+
+    const handleDebugPanelDrag = (event) => {
+      if (!isDragging) return;
+      
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Calculate transform from current point position - start drag position
+      const deltaX = event.clientX - dragStartPoint.x;
+      const deltaY = event.clientY - dragStartPoint.y;
+      
+      // console.log(`[Debug] Dragging:`, { currentMouse: { x: event.clientX, y: event.clientY }, dragStartPoint, deltaX, deltaY });
+      
+      const currentOrientation = appContainerClass.value;
+      
+      // Debug logging disabled - uncomment to enable
+      // const mouseDeltaFromLastLog = Math.abs(event.clientX - lastLoggedMouse.x) + Math.abs(event.clientY - lastLoggedMouse.y);
+      // if (mouseDeltaFromLastLog > MOUSE_EPSILON) {
+      //   console.log('[Debug] Drag delta:', { 
+      //     deltaX, 
+      //     deltaY, 
+      //     initial: initialPosition,
+      //     currentMouse: { x: event.clientX, y: event.clientY },
+      //     startMouse: dragStartPoint,
+      //     devicePixelRatio: window.devicePixelRatio
+      //   });
+      //   lastLoggedMouse.x = event.clientX;
+      //   lastLoggedMouse.y = event.clientY;
+      // }
+      
+      if (currentOrientation === 'scene-left') {
+        const newLeft = initialPosition.left + deltaX;
+        const newTop = initialPosition.top + deltaY;
+        
+        
+        // Constrain to viewport bounds
+        const constrainedLeft = Math.max(0, Math.min(newLeft, window.innerWidth - 250));
+        const constrainedTop = Math.max(0, Math.min(newTop, window.innerHeight - 100));
+        
+        debugPanelPosition.value['scene-left'] = {
+          top: constrainedTop,
+          left: constrainedLeft
+        };
+        
+        // Debug logging disabled
+        // console.log('[Debug] Final position applied:', { constrainedLeft, constrainedTop });
+      } else {
+        const newRight = initialPosition.right - deltaX; // Right moves opposite to mouse
+        const newTop = initialPosition.top + deltaY;
+        
+        
+        // Constrain to viewport bounds
+        const constrainedRight = Math.max(0, Math.min(newRight, window.innerWidth - 250));
+        const constrainedTop = Math.max(0, Math.min(newTop, window.innerHeight - 100));
+        
+        debugPanelPosition.value['scene-right'] = {
+          top: constrainedTop,
+          right: constrainedRight
+        };
+      }
+    };
+
+    const handleDebugPanelDragEnd = () => {
+      if (isDragging) {
+        // console.log('[Debug] Drag ended');
+        isDragging = false;
+        saveDebugPanelPosition();
+      }
+    };
+
+    // Helper function to set all debug values to a status message
+    const setDebugValuesToStatus = (status) => {
+      debugValues.value['selectedJobNumber'] = status;
+      debugValues.value['cloneCenterY'] = status;
+      debugValues.value['categorySummary'] = status;
+      debugValues.value['relatedBadgeList'] = [];
+    };
 
     // Function to update debug values using the debug panel component
     const updateDebugValues = () => {
       try {
+        // Check all required dependencies before proceeding
+        
+        // 1. Check if viewport is initialized
+        if (!viewPort || !viewPort.isInitialized()) {
+          setDebugValuesToStatus('VIEWPORT_NOT_READY');
+          return;
+        }
+        
+        // 2. Check if CardsController is ready and has cDivs
+        if (!window.cardsController || !window.cardsController.bizCardDivs || window.cardsController.bizCardDivs.length === 0) {
+          setDebugValuesToStatus('CARDS_NOT_READY');
+          return;
+        }
+        
+        // 3. Check if SelectionManager is ready
+        if (!selectionManager) {
+          setDebugValuesToStatus('SELECTION_NOT_READY');
+          return;
+        }
+        
+        // 4. Check if DebugPanel component is ready
+        if (!debugPanel.isReady()) {
+          setDebugValuesToStatus('DEBUG_PANEL_NOT_READY');
+          return;
+        }
+        
+        // All dependencies ready - proceed with normal update
         if (debugPanel.isReady()) {
           // Get all values from the debug panel
           const values = debugPanel.getAllDebugValues();
@@ -734,23 +1095,33 @@ export default {
             const selectedCDivClone = document.getElementById(`biz-card-div-${selectedJobNumber}-clone`);
             
             if (selectedCDivClone) {
-              // Use the SAME coordinate projection as BadgePositioner
-              const projectedRect = parallax.projectBizCardDivClone ? parallax.projectBizCardDivClone(selectedCDivClone) : null;
-              if (!projectedRect) {
-                debugValues.value['cloneCenterY'] = 'PROJ_ERR';
+              // Get clone position using data attributes (more reliable than parallax function) - using camelCase
+              const sceneTop = parseFloat(selectedCDivClone.getAttribute('data-sceneTop') || '0');
+              const sceneBottom = parseFloat(selectedCDivClone.getAttribute('data-sceneBottom') || '0');
+              
+              // Debug: log all available data attributes on the clone (disabled to prevent loop)
+              // console.log('[Debug] cDiv clone attributes for job', selectedJobNumber, ':', {
+              //   id: selectedCDivClone.id,
+              //   attributes: Array.from(selectedCDivClone.attributes).filter(attr => attr.name.startsWith('data-')).map(attr => ({ name: attr.name, value: attr.value }))
+              // });
+              
+              if (isNaN(sceneTop) || isNaN(sceneBottom) || sceneTop === sceneBottom) {
+                debugValues.value['cloneCenterY'] = `NO_SCENE_DATA (top=${sceneTop}, bottom=${sceneBottom})`;
                 return;
               }
-              const cloneCenterY = (projectedRect.top + projectedRect.bottom) / 2;
               
-              // Calculate clone's bucket number C using EXACT same calculation as BadgePositioner
-              const badgeHeight = 30; // Match BadgePositioner constructor default
-              const badgeSpacing = badgeHeight + 10; // EXACT same calculation: 30 + 10 = 40
-              const sceneContainer = document.getElementById('scene-container');
-              const sceneHeight = sceneContainer ? sceneContainer.clientHeight : 1000;
-              const totalBuckets = Math.floor(sceneHeight / badgeSpacing);
-              const cloneBucketC = Math.max(1, Math.min(totalBuckets, Math.round(cloneCenterY / badgeSpacing) + 1));
+              const cloneCenterY = (sceneTop + sceneBottom) / 2;
               
-              debugValues.value['cloneCenterY'] = `${cloneCenterY.toFixed(1)} (C=${cloneBucketC})`;
+              // Calculate clone's bucket number using BadgePositioner's exact calculation
+              const badgeHeight = 30; // Match BadgePositioner constructor default  
+              const badgeMargin = 10; // Match BadgePositioner constructor default
+              const bucketSpacing = badgeHeight + badgeMargin; // Should be 40px
+              
+              // Use the same bucket calculation as BadgePositioner: ci = floor((centerY-0)/40) 
+              const SCENE_START = 0; // Current buckets start at 0, not 50
+              const bucketIndex = Math.floor((cloneCenterY - SCENE_START) / bucketSpacing);
+              
+              debugValues.value['cloneCenterY'] = `cDiv.centerY:${cloneCenterY.toFixed(1)} at bucket:${bucketIndex}`;
               
               // Find selected badges (badges that match this job)
               const allBadges = document.querySelectorAll('.skill-badge');
@@ -768,8 +1139,8 @@ export default {
               });
               
               // Create focused list for related badges only with ABOVE/LEVEL/BELOW categorization  
-              const cloneTop = projectedRect.top;
-              const cloneBottom = projectedRect.bottom;
+              const cloneTop = sceneTop;
+              const cloneBottom = sceneBottom;
               
               // Check if we have real badge order data from BadgePositioner
               const badgeOrderData = debugValues.value['badgeOrderData'];
@@ -817,17 +1188,22 @@ export default {
               });
               
               // Find the closest badge to clone center
-              const closestBadge = relatedBadgeList.reduce((closest, badge) => 
+              const closestBadge = relatedBadgeList.length > 0 ? relatedBadgeList.reduce((closest, badge) => 
                 badge.distanceToClone < closest.distanceToClone ? badge : closest
-              );
+              ) : null;
               
-              // Add bracket formatting with bucket numbers
+              // Add bracket formatting with bucket numbers and skill names
               relatedBadgeList.forEach(badge => {
-                const bucketText = `B${badge.bucketNumber >= 0 ? '+' + badge.bucketNumber : badge.bucketNumber}`;
-                if (badge.id === closestBadge.id) {
-                  badge.displayText = `[[${badge.category} ${bucketText}]]`; // Double brackets for closest
+                // Get the skill name from the DOM element
+                const badgeElement = document.getElementById(badge.id);
+                const skillName = badgeElement ? badgeElement.textContent : 'unknown';
+                
+                if (closestBadge && badge.id === closestBadge.id) {
+                  // Double brackets for closest: [[35] skill text centerY:123.5
+                  badge.displayText = `[[${badge.bucketNumber}] ${skillName} centerY:${badge.centerY.toFixed(1)}`;
                 } else {
-                  badge.displayText = `[${badge.category} ${bucketText}]`; // Single brackets for selected
+                  // Single brackets for selected: [LEVEL 36] skill text centerY:123.5
+                  badge.displayText = `[${badge.category} ${badge.bucketNumber}] ${skillName} centerY:${badge.centerY.toFixed(1)}`;
                 }
               });
               
@@ -968,14 +1344,14 @@ export default {
         window.dispatchEvent(new CustomEvent('scene-refresh-needed'));
         
       } catch (error) {
-        console.error('[SCENE] ❌ Error during scene reinitialization:', error);
+        console.error('Error during scene reinitialization:', error);
       }
     };
     
     // Function to force scene update after layout changes are complete
     const forceSceneUpdate = async () => {
       try {
-        window.CONSOLE_LOG_IGNORE('[SCENE] Force scene update started');
+        // Force scene update started
         
         // Force viewport recalculation
         if (viewPort && viewPort.isInitialized()) {
@@ -1016,9 +1392,9 @@ export default {
         // Trigger final scene refresh
         window.dispatchEvent(new CustomEvent('scene-refresh-needed'));
         
-        window.CONSOLE_LOG_IGNORE('[SCENE] Force scene update completed');
+        // Force scene update completed
       } catch (error) {
-        console.error('[SCENE] ❌ Error during force scene update:', error);
+        console.error('Error during force scene update:', error);
       }
     };
     
@@ -1042,7 +1418,12 @@ export default {
       resumeViewerLabel,
       timelineAlignment,
       scenePercentage: resizeHandle.percentage,
-      debugValues
+      debugValues,
+      badgeMode,
+      debugPanelStyle,
+      handleDebugPanelDragStart,
+      handleDebugPanelDrag,
+      handleDebugPanelDragEnd
     };
   }
 };
@@ -1202,18 +1583,16 @@ export default {
 /* Live Debug Display */
 #live-debug-display {
   position: fixed;
-  top: 20px;
   z-index: 9999;
   background-color: rgba(0, 0, 0, 0.9);
   color: #00ff00;
   font-family: 'Courier New', monospace;
   font-size: 14px;
-  padding: 12px;
+  padding: 0;
   border-radius: 6px;
   border: 2px solid yellow;
   line-height: 1.4;
-  pointer-events: none;
-  user-select: none;
+  pointer-events: auto;
   white-space: nowrap;
   min-width: 250px;
   max-width: 400px;
@@ -1222,14 +1601,34 @@ export default {
   resize: both;
 }
 
-/* Scene-left: debug display to the right of timeline */
-#live-debug-display.debug-left {
-  left: 200px;
+/* Draggable header - only first line handles drag events */
+.debug-drag-handle {
+  cursor: move;
+  user-select: none;
+  background-color: rgba(255, 255, 0, 0.1);
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 0, 0.3);
+  font-weight: bold;
 }
 
-/* Scene-right: debug display to the left of timeline */
+.debug-drag-handle:hover {
+  background-color: rgba(255, 255, 0, 0.2);
+}
+
+/* Content area - text selectable, no drag */
+.debug-content {
+  padding: 12px;
+  user-select: text;
+  cursor: text;
+}
+
+/* Scene orientation classes - positioning now handled by computed style */
+#live-debug-display.debug-left {
+  /* Position set by debugPanelStyle computed property */
+}
+
 #live-debug-display.debug-right {
-  right: 200px;
+  /* Position set by debugPanelStyle computed property */
 }
 
 .debug-line {

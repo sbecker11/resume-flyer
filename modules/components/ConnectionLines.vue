@@ -4,7 +4,6 @@
     :style="containerStyle"
     class="new-connection-lines"
   >
-    <div id="connection-lines-debug-marker">[ConnectionLines] TEMPLATE RENDERED</div>
     <svg 
       id="new-connection-lines-svg"
       :style="svgStyle"
@@ -53,17 +52,28 @@
 </template>
 
 <script>
-console.log('[ConnectionLines] SCRIPT LOADED');
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { badgeManager } from '@/modules/core/badgeManager.mjs';
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import { eventBus } from '@/modules/utils/eventBus.mjs';
 import { AppState } from '@/modules/core/stateManager.mjs';
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 
 export default {
   name: 'ConnectionLines',
+  mixins: [BaseVueComponentMixin],
+  methods: {
+    getComponentDependencies() {
+      return ['badgeManager', 'eventBus'];
+    },
+    async initializeWithDependencies() {
+      console.log('ConnectionLines: Initialized with dependencies');
+    },
+    cleanupDependencies() {
+      console.log('ConnectionLines: Cleaning up dependencies');
+    }
+  },
   setup() {
-    console.log('[ConnectionLines] setup() called');
     const connections = ref([]);
     const showDebugInfo = ref(false);
     const isConnectionLinesVisible = ref(badgeManager.isConnectionLinesVisible());
@@ -113,6 +123,96 @@ export default {
       };
     }
 
+    function getViewportRelativeCDivPosition(cDivClone) {
+      if (!cDivClone) throw new Error('[ConnectionLines] cDivClone is null or undefined');
+      
+      const sceneContainer = document.getElementById('scene-container');
+      if (!sceneContainer) throw new Error('[ConnectionLines] scene-container not found');
+      
+      // Get scene-relative coordinates from data attributes (using camelCase)
+      const sceneLeft = parseFloat(cDivClone.getAttribute('data-sceneLeft') || '0');
+      const sceneTop = parseFloat(cDivClone.getAttribute('data-sceneTop') || '0');
+      const sceneWidth = parseFloat(cDivClone.getAttribute('data-sceneWidth') || '0');
+      const sceneHeight = parseFloat(cDivClone.getAttribute('data-sceneHeight') || '0');
+      
+      
+      // Calculate viewport-relative position: viewX = sceneX + translateX
+      // where translateX = sceneContainer.width / 2 (parallax transform)
+      const translateX = sceneContainer.clientWidth / 2;
+      const viewLeft = sceneLeft + translateX;
+      const viewTop = sceneTop; // Y coordinate doesn't change with parallax
+      const viewRight = viewLeft + sceneWidth;
+      const viewBottom = viewTop + sceneHeight;
+      const viewCenterY = viewTop + (sceneHeight / 2);
+      
+      
+      return {
+        x: viewLeft,
+        y: viewTop,
+        width: sceneWidth,
+        height: sceneHeight,
+        right: viewRight,
+        bottom: viewBottom,
+        centerY: viewCenterY
+      };
+    }
+
+    function getBadgeViewportPosition(badgeElement) {
+      if (!badgeElement) throw new Error('[ConnectionLines] badgeElement is null or undefined');
+      
+      // Get badge position from style.top (scene coordinate)
+      const sceneY = parseFloat(badgeElement.style.top || '0');
+      const badgeHeight = 30; // Standard badge height
+      const centerY = sceneY + (badgeHeight / 2);
+      
+      // Calculate badge width from text content (approximation)
+      const text = badgeElement.textContent || '';
+      const estimatedWidth = Math.max(60, text.length * 8 + 20); // 8px per char + 20px padding
+      
+      // Badge X position depends on layout orientation
+      const appContainer = document.getElementById('app-container');
+      const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
+      
+      let centerX;
+      if (isSceneLeft) {
+        // Scene-left: badges on left side of scene
+        centerX = estimatedWidth / 2;
+      } else {
+        // Scene-right: badges on right side of scene
+        const sceneContainer = document.getElementById('scene-container');
+        const sceneWidth = sceneContainer ? sceneContainer.clientWidth : 800;
+        centerX = sceneWidth - (estimatedWidth / 2);
+      }
+      
+      
+      return {
+        centerX: centerX,
+        centerY: centerY,
+        width: estimatedWidth,
+        height: badgeHeight
+      };
+    }
+
+    function getComponentDependencies() {
+      return [
+        'badgeManager',
+        'useColorPalette',
+        'useResizeHandle'
+      ];
+    }
+    
+    function initializeWithDependencies() {
+      console.log('[ConnectionLines] initialized with dependencies');
+    }
+
+    function getElementPosition(element) {
+      if (!element) throw new Error('[ConnectionLines] Element is null or undefined');
+      const sceneContent = document.getElementById('scene-content');
+      if (!sceneContent) throw new Error('[ConnectionLines] scene-content element not found');
+      const elementRect = element.getBoundingClientRect();
+      const sceneRect = sceneContent.getBoundingClientRect();
+    }
+
     function createLShapedCurve(pointA, pointB, pointC, radius = 20) {
       const isMovingRight = pointB.x > pointA.x;
       const isMovingDown = pointC.y > pointB.y;
@@ -131,13 +231,12 @@ export default {
     const badgeOrder = ref([]);
 
     function handleBadgesPositioned(event) {
-      console.log('[ConnectionLines] badges-positioned event received, badgeOrder:', event.detail.badgeOrder);
+      console.log('[ConnectionLines] badges-positioned event received!', event.detail);
       if (event.detail && event.detail.badgeOrder) {
         badgeOrder.value = [...event.detail.badgeOrder];
-        console.log('[ConnectionLines] Waiting for nextTick before updating connections...');
+        console.log('[ConnectionLines] Updating connections for', event.detail.badgeOrder.length, 'badges');
         nextTick(() => {
           setTimeout(() => {
-            console.log('[ConnectionLines] Now updating connections after badges positioned');
             updateConnections();
           }, 50);
         });
@@ -145,32 +244,24 @@ export default {
     }
 
     onMounted(() => {
-      console.log('[ConnectionLines] onMounted - setting up event listeners');
       eventBus.on('badges-positioned', handleBadgesPositioned);
+      window.addEventListener('badges-positioned', handleBadgesPositioned);
       window.addEventListener('card-select', handleCardSelect);
       window.addEventListener('card-deselect', handleCardDeselect);
       window.addEventListener('viewport-changed', handleViewportResize);
       window.addEventListener('resize', handleViewportResize);
       badgeManager.addEventListener('badgeModeChanged', handleBadgeModeChange);
       
-      console.log('[ConnectionLines] Requesting initial badges data');
       eventBus.emit('request-badges');
       
-      // Add fallback attempts to ensure connections are drawn after initialization
-      setTimeout(() => {
-        updateConnections();
-      }, 500);
-      
-      setTimeout(() => {
-        updateConnections();
-      }, 1000);
-      
-      setTimeout(() => {
-        updateConnections();
-      }, 2000);
+      // Fallback attempts to ensure connections are drawn
+      setTimeout(() => updateConnections(), 500);
+      setTimeout(() => updateConnections(), 1000);
+      setTimeout(() => updateConnections(), 2000);
     });
     onUnmounted(() => {
       eventBus.off('badges-positioned', handleBadgesPositioned);
+      window.removeEventListener('badges-positioned', handleBadgesPositioned);
       window.removeEventListener('card-select', handleCardSelect);
       window.removeEventListener('card-deselect', handleCardDeselect);
       window.removeEventListener('viewport-changed', handleViewportResize);
@@ -182,8 +273,10 @@ export default {
     function updateConnections() {
       connections.value = [];
       if (!badgeManager.isConnectionLinesVisible()) {
+        // console.log(`[DEBUG] Connection lines not visible - badgeManager.isConnectionLinesVisible() = false`);
         return;
       }
+      // console.log(`[DEBUG] Connection lines visible - proceeding with connection calculation`);
       
       let selectedJobNumber = null;
       let selectedCDiv = document.querySelector('.biz-card-div.selected');
@@ -201,23 +294,37 @@ export default {
       if (!selectedCDiv) {
         throw new Error(`[ConnectionLines] No cDiv clone found for cDivCloneId:${cDivCloneId}`);
       }
-      const cDivPos = getElementPosition(selectedCDiv);
-      if (!cDivPos) {
-        throw new Error('[ConnectionLines] Could not get cDiv position');
+      let cDivPos;
+      try {
+        // Use the new viewport-relative coordinate calculation
+        cDivPos = getViewportRelativeCDivPosition(selectedCDiv);
+        
+        // Validate cDiv position
+        if (!cDivPos || cDivPos.width === 0 || cDivPos.height === 0) {
+          return;
+        }
+      } catch (error) {
+        return;
       }
-      const cDivTop = cDivPos.y;
-      const cDivBottom = cDivPos.y + cDivPos.height;
-      const cDivLeft = cDivPos.x;
-      const cDivRight = cDivPos.x + cDivPos.width;
-      const cDivCenterY = cDivPos.y + cDivPos.height / 2;
-      const cDivWidth = cDivPos.width;
-      const cDivHeight = cDivPos.height;
+      
+      // Get DOM rects and scene transform early
+      const cDivRect = selectedCDiv.getBoundingClientRect();
+      const sceneContainer = document.getElementById('scene-container');
+      const sceneRect = sceneContainer?.getBoundingClientRect();
+      const xTransform = sceneRect ? sceneRect.width / 2 : 0;
+      
+      // Get cDiv scene coordinates from data attributes + X-transform
+      const cDivLeft = parseFloat(selectedCDiv.getAttribute("data-sceneLeft") || "0") + xTransform;
+      const cDivRight = parseFloat(selectedCDiv.getAttribute("data-sceneRight") || "0") + xTransform;
+      const cDivTop = parseFloat(selectedCDiv.getAttribute("data-sceneTop") || "0");
+      const cDivBottom = parseFloat(selectedCDiv.getAttribute("data-sceneBottom") || "0");
+      const cDivCenterY = parseFloat(selectedCDiv.getAttribute("data-sceneCenterY") || "0");
+      const cDivWidth = cDivRight - cDivLeft;
+      // console.log(`[DEBUG] cDiv scene coords from data attrs: top=${cDivTop}, center=${cDivCenterY}, bottom=${cDivBottom}`);
       const padding = 10;
       const arcRadius = 20;
-      console.log(`[ConnectionLines] cDiv bounds: top=${cDivTop.toFixed(1)}, bottom=${cDivBottom.toFixed(1)}, left=${cDivLeft.toFixed(1)}, right=${cDivRight.toFixed(1)}, width=${cDivWidth.toFixed(1)}, height=${cDivHeight.toFixed(1)}`);
       // Build associatedBadges directly from DOM
       const allBadges = Array.from(document.querySelectorAll('.skill-badge'));
-      console.log('[ConnectionLines] ** allBadges.length:', allBadges.length);
       const associatedBadges = allBadges
         .map(el => {
           const id = el.id;
@@ -235,28 +342,31 @@ export default {
           
           const isAssociated = jobNumbers.map(Number).includes(Number(selectedJobNumber));
           
-          if (isAssociated) {
-            console.log("[ConnectionLines] Badge", name, "IS associated with job", selectedJobNumber);
-          }
           
           if (!isAssociated) return null;
           
-          const rect = el.getBoundingClientRect();
-          const sceneContent = document.getElementById('scene-content');
-          const sceneRect = sceneContent ? sceneContent.getBoundingClientRect() : { top: 0 };
-          const centerY = rect.top + rect.height / 2 - sceneRect.top + (sceneContent ? sceneContent.scrollTop : 0);
+          // Use the new viewport-relative badge position calculation
+          const badgePos = getBadgeViewportPosition(el);
           
           // Determine category based on badge position relative to cDiv
           let category;
-          if (centerY < cDivTop) {
+          if (badgePos.centerY < cDivTop) {
             category = 'ABOVE';
-          } else if (centerY > cDivBottom) {
+          } else if (badgePos.centerY > cDivBottom) {
             category = 'BELOW';
           } else {
             category = 'LEVEL';
           }
           
-          return { id, name, jobNumbers, category, centerY };
+          return { 
+            id, 
+            name, 
+            jobNumbers, 
+            category, 
+            centerY: badgePos.centerY,
+            centerX: badgePos.centerX,
+            width: badgePos.width 
+          };
         })
         .filter(Boolean);
       if (associatedBadges.length === 0) {
@@ -267,203 +377,105 @@ export default {
       const below = associatedBadges.filter(b => b.category === 'BELOW');
       const level = associatedBadges.filter(b => b.category === 'LEVEL');
       
-      console.log(`[ConnectionLines] Badge categories: ABOVE=${above.length}, BELOW=${below.length}, LEVEL=${level.length}`);
-      console.log(`[ConnectionLines] ABOVE badges:`, above.map(b => `${b.name}(Y=${b.centerY.toFixed(1)})`));
-      console.log(`[ConnectionLines] BELOW badges:`, below.map(b => `${b.name}(Y=${b.centerY.toFixed(1)})`));
-      console.log(`[ConnectionLines] LEVEL badges:`, level.map(b => `${b.name}(Y=${b.centerY.toFixed(1)})`));
       
-      // Array to collect all connections
+      // Array to collect all connections - SIMPLIFIED: only center badge
       const connectionsArr = [];
-      // ABOVE: terminate at top edge, spaced horizontally (sorted max-x to min-x)
-      const aboveX = distributeHorizontally(above.length, cDivLeft + padding, cDivRight - padding).sort((a, b) => b - a);
-      console.log(`[ConnectionLines] Generated ${above.length} ABOVE termination points (right to left):`, aboveX.map(x => x.toFixed(1)));
-      // BELOW: terminate at bottom edge, spaced horizontally (sorted max-x to min-x)
-      const belowX = distributeHorizontally(below.length, cDivLeft + padding, cDivRight - padding).sort((a, b) => b - a);
-      // LEVEL: terminate at vertical center, spaced vertically
-      const levelY = distributeVertically(level.length, cDivTop + padding, cDivBottom - padding);
-      // Find the badge with the longest string length
-      let maxBadgeStringLength = 0;
-      let maxBadgeX = 0;
-      let maxBadgeWidth = 0;
-      let maxBadgeId = null;
-      associatedBadges.forEach(badge => {
-        const stringLength = badge.name.length;
-        if (stringLength > maxBadgeStringLength) {
-          const el = document.getElementById(badge.id);
-          if (el) {
-            maxBadgeStringLength = stringLength;
-            maxBadgeWidth = el.offsetWidth;
-            maxBadgeX = el.getBoundingClientRect().left;
-            maxBadgeId = badge.id;
-          }
-        }
+      
+      // Find the badge nearest to cDiv centerY (the centered-most badge)
+      const centeredBadge = associatedBadges.reduce((closest, badge) => {
+        const badgeDistance = Math.abs(badge.centerY - cDivCenterY);
+        const closestDistance = Math.abs(closest.centerY - cDivCenterY);
+        return badgeDistance < closestDistance ? badge : closest;
       });
-      // Calculate the edge of the longest badge facing the cDiv
-      let sceneContent = document.getElementById('scene-content');
-      let sceneRect = sceneContent ? sceneContent.getBoundingClientRect() : { left: 0 };
+      
+      if (!centeredBadge) {
+        connections.value = [];
+        return;
+      }
       
       // Determine layout orientation to get the correct edge
       const appContainer = document.getElementById('app-container');
       const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
+      // console.log(`[DEBUG] Layout orientation: isSceneLeft=${isSceneLeft}, appContainer classes:`, appContainer?.classList.toString());
       
-      let badgeEdgeFacingCDiv;
-      if (isSceneLeft) {
-        // Scene-left: badge left edge faces cDiv
-        badgeEdgeFacingCDiv = maxBadgeX - sceneRect.left;
+      // Get badge rect for width calculation only
+      const badgeRect = document.getElementById(centeredBadge.id)?.getBoundingClientRect();
+      
+      // Calculate connection points using scene-container coordinates  
+      const badgeStartX = (badgeRect.x - sceneRect.left) + badgeRect.width;
+      const badgeStartY = centeredBadge.centerY; // Use scene-container Y coordinate
+      
+      // console.log(`[DEBUG] Simple coordinates: badgeStartX=${badgeStartX}, badgeStartY=${badgeStartY}, xTransform=${xTransform}`);
+      
+      // Create a single connection for the centered badge
+      let path, strokeColor, termX, termY;
+      
+      if (centeredBadge.category === 'ABOVE') {
+        // ABOVE: L-shaped connection to top edge of cDiv
+        termX = cDivLeft + (cDivWidth / 2); // Center of cDiv top edge
+        termY = cDivTop;
+        const pointA = { x: badgeStartX, y: badgeStartY };
+        const pointB = { x: termX, y: badgeStartY };
+        const pointC = { x: termX, y: termY };
+        path = createLShapedCurve(pointA, pointB, pointC, arcRadius);
+        strokeColor = 'red';
+      } else if (centeredBadge.category === 'BELOW') {
+        // BELOW: L-shaped connection to bottom edge of cDiv
+        termX = cDivLeft + (cDivWidth / 2); // Center of cDiv bottom edge
+        termY = cDivBottom;
+        const pointA = { x: badgeStartX, y: badgeStartY };
+        const pointB = { x: termX, y: badgeStartY };
+        const pointC = { x: termX, y: termY };
+        path = createLShapedCurve(pointA, pointB, pointC, arcRadius);
+        strokeColor = 'yellow';
       } else {
-        // Scene-right: badge right edge faces cDiv
-        badgeEdgeFacingCDiv = maxBadgeX + maxBadgeWidth - sceneRect.left;
-      }
-      // The edge of the cDiv facing the badges
-      let cDivFacingX;
-      if (isSceneLeft) {
-        // Scene-left: cDiv right edge faces badges
-        cDivFacingX = cDivRight;
-      } else {
-        // Scene-right: cDiv left edge faces badges
-        cDivFacingX = cDivLeft;
+        // LEVEL: Direct horizontal connection to cDiv side
+        if (isSceneLeft) {
+          termX = cDivRight; // Connect to cDiv RIGHT edge
+        } else {
+          termX = cDivLeft; // Connect to cDiv LEFT edge
+        }
+        termY = badgeStartY; // Use badge Y coordinate for horizontal line
+        path = `M ${badgeStartX} ${badgeStartY} H ${termX}`;
+        strokeColor = 'orange';
       }
       
-      // The common x midpoint for all line numbers
-      const commonTextX = (badgeEdgeFacingCDiv + cDivFacingX) / 2;
+      console.log(`[DEBUG] Badge calc: badgeRect.x=${badgeRect.x}, xTransform=${xTransform}, badgeStartX=${badgeStartX} (should be 594)`);
+      console.log(`[DEBUG] cDiv calc: cDivRight=${cDivRight} (should be 408)`);
+      console.log(`[DEBUG] Connection: ${centeredBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) visible=${badgeManager.isConnectionLinesVisible()}`);
+      console.log(`[DEBUG] SVG path: "${path}"`);
       
-      // ABOVE: Sort badges from bottom to top (max-y to min-y) and assign termination points to prevent intersections
-      const sortedAbove = [];
-      const aboveIterator = above.sort((a, b) => b.centerY - a.centerY);
-      aboveIterator.forEach((badge, i) => {
-        const termX = aboveX[i];
-        
-        // Get badge start position
-        let startX;
-        if (isSceneLeft) {
-          startX = getBadgeX(badge.id);
-        } else {
-          startX = getBadgeX(badge.id) + getBadgeWidth(badge.id);
-        }
-        const startY = badge.centerY;
-        
-        const termY = cDivTop;
-        const cornerX = termX;
-        const pointA = { x: startX, y: startY };
-        const pointB = { x: cornerX, y: startY };
-        const pointC = { x: cornerX, y: termY };
-        const path = createLShapedCurve(pointA, pointB, pointC, arcRadius);
-        
-        sortedAbove.push({
-          id: `connection-above-${i}`,
-          path,
-          case: 'ABOVE',
-          skillText: badge.name?.trim() || '',
-          strokeWidth: 2,
-          strokeColor: 'red',
-          lineNumber: i + 1,
-          textX: commonTextX,
-          textY: startY - 5
-        });
-      });
-      sortedAbove.forEach((conn) => {
-        connectionsArr.push(conn);
-      });
-      // BELOW: Sort badges from top to bottom (min-y to max-y) and assign termination points to prevent intersections
-      const sortedBelow = [];
-      const belowIterator = below.sort((a, b) => a.centerY - b.centerY);
-      belowIterator.forEach((badge, i) => {
-        // Get badge start position
-        let startX;
-        if (isSceneLeft) {
-          startX = getBadgeX(badge.id);
-        } else {
-          startX = getBadgeX(badge.id) + getBadgeWidth(badge.id);
-        }
-        const startY = badge.centerY;
-        
-        // Simple iteration - badges and termination points are both properly sorted
-        const termX = belowX[i];
-        const termY = cDivBottom;
-        const cornerX = termX;
-        const pointA = { x: startX, y: startY };
-        const pointB = { x: cornerX, y: startY };
-        const pointC = { x: cornerX, y: termY };
-        const path = createLShapedCurve(pointA, pointB, pointC, arcRadius);
-        
-        sortedBelow.push({
-          id: `connection-below-${i}`,
-          path,
-          case: 'BELOW',
-          skillText: badge.name?.trim() || '',
-          strokeWidth: 2,
-          strokeColor: 'yellow',
-          lineNumber: i + 1,
-          textX: commonTextX,
-          textY: startY - 5
-        });
-      });
-      sortedBelow.forEach((conn) => {
-        connectionsArr.push(conn);
-      });
-      // LEVEL: Sort badges from top to bottom (min-y to max-y) and assign termination points in same order
-      const sortedLevel = [];
-      const levelIterator = level.sort((a, b) => a.centerY - b.centerY);
-      levelIterator.forEach((badge, i) => {
-        // Determine layout orientation
-        const appContainer = document.getElementById('app-container');
-        const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
-        
-        // Start and end points depend on layout
-        let startX, termX;
-        if (isSceneLeft) {
-          // Scene-left: badges on right, cDiv on left
-          // Start from badge left edge, terminate at cDiv right edge
-          startX = getBadgeX(badge.id);
-          termX = cDivRight;
-        } else {
-          // Scene-right: badges on right, cDiv on left  
-          // Start from badge right edge, terminate at cDiv left edge
-          startX = getBadgeX(badge.id) + getBadgeWidth(badge.id);
-          termX = cDivLeft;
-        }
-        
-        const startY = badge.centerY;
-        const termY = levelY[i]; // Simple iteration - both sorted top to bottom
-        const path = `M ${startX} ${startY} H ${termX}`;
-        sortedLevel.push({
-          id: `connection-level-${i}`,
-          path,
-          case: 'LEVEL',
-          skillText: badge.name?.trim() || '',
-          strokeWidth: 2,
-          strokeColor: 'orange',
-          lineNumber: i + 1, // Set line number directly
-          textX: commonTextX,
-          textY: startY - 5
-        });
-      });
-      sortedLevel.forEach((conn) => {
-        connectionsArr.push(conn);
-      });
-      console.log('Generated connections:', connectionsArr);
+      // Create the single connection
+      const connection = {
+        id: 'connection-centered',
+        path,
+        case: centeredBadge.category,
+        skillText: centeredBadge.name?.trim() || '',
+        strokeWidth: 3, // Slightly thicker for visibility
+        strokeColor: strokeColor,
+        lineNumber: 1,
+        textX: (badgeStartX + termX) / 2, // Midpoint between badge and cDiv
+        textY: badgeStartY - 5
+      };
+      
+      connectionsArr.push(connection);
       connections.value = connectionsArr;
-      // Log shouldShowContainer
-      setTimeout(() => {
-        console.log('shouldShowContainer:', shouldShowContainer.value);
-      }, 0);
+      console.log(`[DEBUG] Connections: ${connections.value.length} added to DOM`);
+      console.log(`[DEBUG] SVG container shouldShowContainer: ${connections.value.length > 0 && isConnectionLinesVisible.value}`);
     }
 
-    // Helper functions to get badge X and width by id
-    function getBadgeX(badgeId) {
-      const el = document.getElementById(badgeId);
-      if (!el) throw new Error(`[ConnectionLines] Badge with ID ${badgeId} not found`);
-      const sceneContent = document.getElementById('scene-content');
-      if (!sceneContent) throw new Error('[ConnectionLines] scene-content element not found');
-      const rect = el.getBoundingClientRect();
-      const sceneRect = sceneContent.getBoundingClientRect();
-      const scrollLeft = sceneContent.scrollLeft;
-      return rect.left - sceneRect.left + scrollLeft;
-    }
-    function getBadgeWidth(badgeId) {
-      const el = document.getElementById(badgeId);
-      if (!el) throw new Error(`[ConnectionLines] Badge with ID ${badgeId} not found`);
-      return el.offsetWidth;
+    // Helper function to get badge start position based on scene orientation
+    function getBadgeStartX(badge, isSceneLeft) {
+      const startX = isSceneLeft ? badge.centerX - (badge.width / 2) : badge.centerX + (badge.width / 2);
+      console.log(`[DEBUG] getBadgeStartX: isSceneLeft=${isSceneLeft}, badge.centerX=${badge.centerX}, width=${badge.width}, startX=${startX}`);
+      
+      if (isSceneLeft) {
+        // Scene-left: badges on right → start from badge LEFT edge (facing cDiv)
+        return badge.centerX - (badge.width / 2);
+      } else {
+        // Scene-right: badges on left → start from badge RIGHT edge (facing cDiv)
+        return badge.centerX + (badge.width / 2);
+      }
     }
 
     // Helper functions to distribute points
