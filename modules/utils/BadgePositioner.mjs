@@ -137,24 +137,14 @@ export class BadgePositioner extends BaseComponent {
             allBuckets.push(bucket);
         }
 
-        // Find the center bucket that contains bizCardDivCenterY
-        let centerBucketIndex = -1;
-        for (let i = 0; i < allBuckets.length; i++) {
-            const bucket = allBuckets[i];
-            if (cDiv_centerY >= bucket.top && cDiv_centerY <= bucket.bottom) {
-                centerBucketIndex = i;
-                break;
-            }
-        }
+        // O(1) bucket calculation - direct calculation instead of search
+        const centerBucketIndex = Math.floor(cDiv_centerY / bucketSpacing);
         
-        // REMOVED: Center bucket validation
-        // REMOVED: Error handling for bucket not found
-        // Will crash if centerBucketIndex === -1
-        
-        if (centerBucketIndex === -1) {
-            console.error(`Center bucket not found - no bucket contains cDiv_centerY=${cDiv_centerY}`);
-            // console.log(`[DEBUG] Available buckets:`, allBuckets.map((b, i) => `${i}: ${b.bucketTop}-${b.bucketBottom}`));
-            return { aboveCount: 0, levelCount: 0, belowCount: 0, totalCount: 0 };
+        // Validate the calculated index is within bounds
+        if (centerBucketIndex < 0 || centerBucketIndex >= numBuckets) {
+            const errorMsg = `Center bucket not found: calculated centerBucketIndex=${centerBucketIndex} is out of bounds [0, ${numBuckets-1}] for cDiv_centerY=${cDiv_centerY}. bucketSpacing=${bucketSpacing}`;
+            console.error(errorMsg);
+            throw new Error(errorMsg);
         }
         // console.log(`[DEBUG] Found centerBucketIndex=${centerBucketIndex} for cDiv_centerY=${cDiv_centerY}`);
         

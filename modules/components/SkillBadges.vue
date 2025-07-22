@@ -133,9 +133,14 @@ export default {
     // otherwie, return the clone of the selected cDiv
     const getSelectedCDivClone = () => {
       const selectedJobNumber = getSelectedJobNumber();
-      if ( selectedJobNumber ) {
-        const cDivClone = document.querySelector(`#biz-card-div-${selectedJobNumber}-clone`);
+      if ( selectedJobNumber !== null ) {
+        const cloneId = `biz-card-div-${selectedJobNumber}-clone`;
+        const cDivClone = document.querySelector(`#${cloneId}`);
+        console.log(`[SkillBadges] Looking for clone: ${cloneId}, found:`, !!cDivClone);
         if ( !cDivClone ) {
+          // List all available clones for debugging
+          const allClones = Array.from(document.querySelectorAll('[id*="clone"]'));
+          console.log(`[SkillBadges] Available clones:`, allClones.map(c => c.id));
           throw new Error(`[SkillBadges] cDivClone for selected jobNumber:${selectedJobNumber} not found`);
         }
         return cDivClone;
@@ -184,10 +189,20 @@ export default {
         }
       });
       
-      // Get the cDiv clone bounds
+      // Get the cDiv clone bounds - with retry logic for timing issues
       const selectedCDivClone = getSelectedCDivClone();
       if (!selectedCDivClone) {
-        console.warn('[SkillBadges] No clone found for selected cDiv');
+        console.warn('[SkillBadges] No clone found for selected cDiv - retrying in 100ms');
+        // Retry once after a short delay to handle timing issues
+        setTimeout(() => {
+          const retryClone = getSelectedCDivClone();
+          if (retryClone) {
+            console.log('[SkillBadges] Clone found on retry - positioning badges');
+            positionBadges(); // Recursive call with clone now available
+          } else {
+            console.warn('[SkillBadges] Clone still not found after retry - skipping badge positioning');
+          }
+        }, 100);
         return;
       }
       

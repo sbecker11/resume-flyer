@@ -254,10 +254,13 @@ export default {
       
       eventBus.emit('request-badges');
       
-      // Fallback attempts to ensure connections are drawn
-      setTimeout(() => updateConnections(), 500);
-      setTimeout(() => updateConnections(), 1000);
-      setTimeout(() => updateConnections(), 2000);
+      // Fallback attempts to ensure connections are drawn (only if conditions are met)
+      setTimeout(() => {
+        const selectedCDiv = document.querySelector('.biz-card-div.selected');
+        if (selectedCDiv && badgeManager.isBadgesVisible()) {
+          updateConnections();
+        }
+      }, 500);
     });
     onUnmounted(() => {
       eventBus.off('badges-positioned', handleBadgesPositioned);
@@ -272,20 +275,28 @@ export default {
     // Refactor updateConnections to use badgeOrder
     function updateConnections() {
       connections.value = [];
+      
+      // First check: Are connection lines enabled at all?
       if (!badgeManager.isConnectionLinesVisible()) {
         // console.log(`[DEBUG] Connection lines not visible - badgeManager.isConnectionLinesVisible() = false`);
         return;
       }
-      // console.log(`[DEBUG] Connection lines visible - proceeding with connection calculation`);
       
+      // Second check: Are badges visible? (No connection lines without badges)
+      if (!badgeManager.isBadgesVisible()) {
+        // console.log(`[DEBUG] Badges not visible - no connection lines needed`);
+        return;
+      }
+      
+      // Third check: Is a cDiv selected?
       let selectedJobNumber = null;
       let selectedCDiv = document.querySelector('.biz-card-div.selected');
       if (selectedCDiv) {
         selectedJobNumber = parseInt(selectedCDiv.getAttribute('data-job-number'));
       }
       if (selectedJobNumber === null || isNaN(selectedJobNumber)) {
-        // No cDiv selected - ensure badges are also cleared
-        window.dispatchEvent(new CustomEvent('card-deselect'));
+        // No cDiv selected - clear any existing connections
+        // console.log(`[DEBUG] No cDiv selected - clearing connections`);
         return;
       }
       // Use the job number to get the cDiv clone
@@ -312,6 +323,8 @@ export default {
       const sceneContainer = document.getElementById('scene-container');
       const sceneRect = sceneContainer?.getBoundingClientRect();
       const xTransform = sceneRect ? sceneRect.width / 2 : 0;
+      
+      console.log(`[ConnectionLines] Scene dimensions: container width=${sceneRect?.width}, xTransform=${xTransform}`);
       
       // Get cDiv scene coordinates from data attributes + X-transform
       const cDivLeft = parseFloat(selectedCDiv.getAttribute("data-sceneLeft") || "0") + xTransform;
@@ -411,6 +424,11 @@ export default {
         }
       });
       
+      // Handle case where no badges were found
+      if (leftmostBadgeX === Infinity) {
+        leftmostBadgeX = isSceneLeft ? cDivLeft - 100 : cDivRight + 100; // Default fallback position
+      }
+      
       // Calculate common text X position: midpoint between leftmost badge and cDiv right edge
       const commonTextX = (leftmostBadgeX + cDivRight) / 2;
       
@@ -421,8 +439,10 @@ export default {
         if (!badgeRect) return;
         
         // Calculate connection points using scene-container coordinates  
-        // LEVEL badges start from RIGHT edge in both scene-left and scene-right
-        const badgeStartX = badgeRect.x - sceneRect.left + badgeRect.width; // RIGHT edge for both layouts
+        // LEVEL badges: LEFT edge for scene-left, RIGHT edge for scene-right
+        const badgeStartX = isSceneLeft ? 
+          (badgeRect.x - sceneRect.left) : // LEFT edge for scene-left
+          (badgeRect.x - sceneRect.left + badgeRect.width); // RIGHT edge for scene-right
         const badgeStartY = levelBadge.centerY; // Use scene-container Y coordinate
         
         // LEVEL: Direct horizontal connection to cDiv side
@@ -639,7 +659,24 @@ export default {
     function handleCardDeselect() { 
       connections.value = []; 
     }
-    function handleViewportResize() { updateConnections(); }
+    // Debounced resize handler to wait for resize completion
+    let resizeTimeout = null;
+    function handleViewportResize(event) {
+      const eventType = event?.type || 'unknown';
+      console.log(`[ConnectionLines] ${eventType} event detected`);
+      
+      // Clear any existing timeout
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      
+      // Set a new timeout to update connections after resize finishes
+      resizeTimeout = setTimeout(() => {
+        console.log(`[ConnectionLines] Updating connections after ${eventType} completion`);
+        updateConnections();
+        resizeTimeout = null;
+      }, 150); // Wait 150ms after last resize event
+    }
     function handleBadgesPositioned() { updateConnections(); }
 
     return {

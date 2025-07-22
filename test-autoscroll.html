@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto-scroll Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #scene-container {
+            width: 100%;
+            height: 100vh;
+            overflow-y: scroll;
+            background: linear-gradient(180deg, #1a1a6f 0%, #4d4d4d 50%, #004d00 100%);
+            position: relative;
+        }
+        
+        .content {
+            height: 300vh;
+            padding: 20px;
+            color: white;
+            position: relative;
+        }
+        
+        .marker {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .top-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 20vh;
+            background: rgba(255,0,0,0.1);
+            pointer-events: none;
+            border-bottom: 2px solid red;
+            z-index: 1000;
+        }
+        
+        .bottom-zone {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20vh;
+            background: rgba(0,0,255,0.1);
+            pointer-events: none;
+            border-top: 2px solid blue;
+            z-index: 1000;
+        }
+        
+        .instructions {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h3>Auto-scroll Test</h3>
+        <p>Move mouse to red zone (top 20%) to scroll up</p>
+        <p>Move mouse to blue zone (bottom 20%) to scroll down</p>
+        <p>Middle zone stops auto-scrolling</p>
+    </div>
+    
+    <div class="top-zone"></div>
+    <div class="bottom-zone"></div>
+    
+    <div id="scene-container">
+        <div class="content">
+            <div class="marker" style="top: 10%;">Top of Content</div>
+            <div class="marker" style="top: 25%;">25% Mark</div>
+            <div class="marker" style="top: 50%;">Middle of Content</div>
+            <div class="marker" style="top: 75%;">75% Mark</div>
+            <div class="marker" style="top: 95%;">Bottom of Content</div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-scroll constants (simplified version of the module)
+        const SCROLL_ZONE_PERCENTAGE = 0.20;
+        const MAX_AUTOSCROLL_VELOCITY = 3.0;
+
+        // Auto-scroll state
+        let animationFrameId = null;
+        let currentVelocity = 0;
+        let sceneContainerElement = null;
+
+        // Initialize auto-scroll
+        function initialize() {
+            const container = document.getElementById('scene-container');
+            if (container) {
+                enableMouseBasedScrolling(container);
+                console.log('Auto-scroll initialized on container');
+            } else {
+                console.error('Could not find scene-container');
+            }
+        }
+
+        function startScrolling(velocity) {
+            currentVelocity = velocity;
+            console.log('Starting scroll with velocity:', velocity);
+
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(scrollLoop);
+            }
+        }
+
+        function stopScrolling() {
+            console.log('Stopping scroll');
+            currentVelocity = 0;
+        }
+
+        function scrollLoop() {
+            if (!sceneContainerElement) {
+                animationFrameId = null;
+                return;
+            }
+
+            if (Math.abs(currentVelocity) > 0) {
+                sceneContainerElement.scrollTop += currentVelocity;
+                animationFrameId = requestAnimationFrame(scrollLoop);
+            } else {
+                animationFrameId = null;
+            }
+        }
+
+        function enableMouseBasedScrolling(container) {
+            sceneContainerElement = container;
+
+            container.addEventListener('mousemove', (event) => {
+                const rect = container.getBoundingClientRect();
+                const mouseY = event.clientY - rect.top;
+                const containerHeight = container.clientHeight;
+                const topScrollZone = containerHeight * SCROLL_ZONE_PERCENTAGE;
+                const bottomScrollZone = containerHeight * (1 - SCROLL_ZONE_PERCENTAGE);
+
+                console.log(`Mouse Y: ${mouseY}, Container Height: ${containerHeight}, Top Zone: ${topScrollZone}, Bottom Zone: ${bottomScrollZone}`);
+
+                if (mouseY < topScrollZone) {
+                    // Mouse is in the top zone, scroll up
+                    const intensity = 1 - (mouseY / topScrollZone);
+                    const velocity = -MAX_AUTOSCROLL_VELOCITY * intensity;
+                    console.log('In top zone, intensity:', intensity, 'velocity:', velocity);
+                    startScrolling(velocity);
+                } else if (mouseY > bottomScrollZone) {
+                    // Mouse is in the bottom zone, scroll down
+                    const intensity = (mouseY - bottomScrollZone) / (containerHeight - bottomScrollZone);
+                    const velocity = MAX_AUTOSCROLL_VELOCITY * intensity;
+                    console.log('In bottom zone, intensity:', intensity, 'velocity:', velocity);
+                    startScrolling(velocity);
+                } else {
+                    // Mouse is in the neutral middle zone
+                    console.log('In neutral zone');
+                    stopScrolling();
+                }
+            });
+
+            container.addEventListener('mouseleave', () => {
+                console.log('Mouse left container');
+                stopScrolling();
+            });
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initialize);
+    </script>
+</body>
+</html>

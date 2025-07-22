@@ -303,14 +303,17 @@ class CardsController extends BaseComponent {
         if (sceneHeight < MIN_HEIGHT) {
             sceneHeight = MIN_HEIGHT;
             let newSceneTop = sceneCenterY - MIN_HEIGHT / 2;
+            let newSceneBottom = sceneCenterY + MIN_HEIGHT / 2;
             
-            // Prevent truncation at timeline top by checking boundary
-            if (newSceneTop < 0) {
-                sceneTop = 0;
-                sceneBottom = MIN_HEIGHT;
+            // Only clamp if the card would extend beyond reasonable timeline bounds
+            // Use a small top margin (50px) instead of 0 to allow proper positioning
+            const TIMELINE_TOP_MARGIN = 50;
+            if (newSceneTop < TIMELINE_TOP_MARGIN) {
+                sceneTop = TIMELINE_TOP_MARGIN;
+                sceneBottom = TIMELINE_TOP_MARGIN + MIN_HEIGHT;
             } else {
                 sceneTop = newSceneTop;
-                sceneBottom = sceneCenterY + MIN_HEIGHT / 2;
+                sceneBottom = newSceneBottom;
             }
         }
         
