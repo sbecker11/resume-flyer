@@ -1,11 +1,11 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-22T03:51:15.525Z",
+  "lastUpdated": "2025-07-23T00:06:24.995Z",
   "layout": {
     "panelSizePercentage": 50,
-    "orientation": "scene-left",
-    "scenePercentage": 74.33155080213903,
-    "resumePercentage": 25.668449197860966
+    "orientation": "scene-right",
+    "scenePercentage": 62.35059760956175,
+    "resumePercentage": 37.64940239043825
   },
   "resizeHandle": {
     "steppingEnabled": false,
@@ -15,7 +15,7 @@
     "mode": "locked"
   },
   "badgeToggle": {
-    "mode": "badges-only"
+    "mode": "no-badges"
   },
   "badges": {
     "height": "2.5em",
@@ -48,13 +48,13 @@
       }
     }
   },
-  "selectedJobNumber": 11,
+  "selectedJobNumber": 9,
+  "lastVisitedJobNumber": 9,
   "resume": {
     "sortRule": {
       "field": "startDate",
       "direction": "asc"
-    },
-    "selectedJobNumber": null
+    }
   },
   "theme": {
     "colorPalette": "50_Dark_Grey_Monotone.json",
@@ -437,8 +437,8 @@
   "debugPanel": {
     "position": {
       "scene-left": {
-        "top": 149,
-        "left": 371
+        "top": 260,
+        "left": 602
       },
       "scene-right": {
         "top": 124,

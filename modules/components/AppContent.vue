@@ -504,6 +504,17 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         
         // Scene container post-initialization check complete
         
+        // Check if we should scroll to lastVisitedJobNumber on page load
+        setTimeout(() => {
+          // If selectedJobNumber is null but lastVisitedJobNumber is valid, scroll to it
+          if (AppState.selectedJobNumber === null && AppState.lastVisitedJobNumber !== null && AppState.lastVisitedJobNumber !== undefined) {
+            console.log('[AppContent] Page load: scrolling to lastVisitedJobNumber:', AppState.lastVisitedJobNumber);
+            if (window.cardsController) {
+              window.cardsController.scrollToJobNumber(AppState.lastVisitedJobNumber);
+            }
+          }
+        }, 300);
+        
         // Ensure scene components are properly initialized after initial load
         setTimeout(() => {
           reinitializeSceneComponents();
@@ -987,6 +998,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
     // Helper function to set all debug values to a status message
     const setDebugValuesToStatus = (status) => {
       debugValues.value['selectedJobNumber'] = status;
+      debugValues.value['lastVisitedJobNumber'] = status;
       debugValues.value['cloneCenterY'] = status;
       debugValues.value['categorySummary'] = status;
       debugValues.value['relatedBadgeList'] = [];
@@ -1091,7 +1103,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
           
           if (selectedJobNumber !== null && selectedJobNumber !== undefined) {
             debugValues.value['selectedJobNumber'] = selectedJobNumber;
-            
+
             const selectedCDivClone = document.getElementById(`biz-card-div-${selectedJobNumber}-clone`);
             
             if (selectedCDivClone) {
@@ -1624,11 +1636,11 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
 
 /* Scene orientation classes - positioning now handled by computed style */
 #live-debug-display.debug-left {
-  /* Position set by debugPanelStyle computed property */
+  margin-right: 20px; /* plaeholder */
 }
 
 #live-debug-display.debug-right {
-  /* Position set by debugPanelStyle computed property */
+  margin-left: 20px;  /* placeholder */
 }
 
 .debug-line {

@@ -368,7 +368,7 @@ class CardsController extends BaseComponent {
         }
         
         // set the z-relative style properties
-        bizCardDiv.style.setProperty("z-jobNumber", zUtils.get_zIndexStr_from_z(sceneZ));
+        bizCardDiv.style.setProperty("z-index", zUtils.get_zIndexStr_from_z(sceneZ));
         
         // Only apply depth filters to card divs, not resume divs
         if (!bizCardDiv.classList.contains('biz-resume-div')) {
@@ -662,7 +662,7 @@ class CardsController extends BaseComponent {
         // Gather badges for each job skill using the new badge system
         try {
             const jobNumber = parseInt(bizCardDiv.getAttribute('data-job-number'), 10);
-            const badgesInfo = BizDetailsDivModule.getBizCardDivBadges(clone);
+            const badgesInfo = BizDetailsDivModule.createBadgesInfo(clone);
             // Created badges for selected job
             
             // Store the badges info on the clone for later use

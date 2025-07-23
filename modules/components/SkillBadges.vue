@@ -247,7 +247,7 @@ export default {
       // console.log('[SkillBadges] Calling with:', { relatedBadges: relatedBadges.length, unrelatedBadges: unrelatedBadges.length, cDivBounds });
       
       try {
-        const stats = badgePositioner.positionBadges(relatedBadges, unrelatedBadges, cDivBounds, updatePositions);
+        const stats = badgePositioner.positionBadges(selectedCDivClone, relatedBadges, cDivBounds, updatePositions);
         // console.log('[SkillBadges] BadgePositioner returned stats:', stats);
       } catch (error) {
         console.error('[SkillBadges] BadgePositioner error:', error);
@@ -415,13 +415,11 @@ export default {
               console.log('[SkillBadges] Badge mode OFF - not positioning badges for preselected job');
             }
           } else {
-            // No pre-selected job, just position badges in default state
-            console.log('[SkillBadges] No pre-selected cDiv found - positioning badges in default state');
             if (badgeManager.isBadgesVisible()) {
               positionBadges();
             }
           }
-        }, 200);
+        }, 200); // 200ms delay to allow bizCardDivClone to be created
         
         } catch (error) {
           console.error('[SkillBadges] Initialization failed:', error);

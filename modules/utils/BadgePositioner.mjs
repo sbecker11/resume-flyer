@@ -7,6 +7,7 @@
 import { selectionManager } from '../core/selectionManager.mjs';
 import { BaseComponent } from '../core/abstracts/BaseComponent.mjs';
 import { useTimeline } from '../composables/useTimeline.mjs';
+import { getBizCardDivClone } from '../scene/bizDetailsDivModule.mjs';
 
 // Badge positioning modes relative to bizCardDiv
 const BadgePositionMode = Object.freeze({
@@ -59,19 +60,31 @@ export class BadgePositioner extends BaseComponent {
     /**
      * Position badges around a selected cDiv using sophisticated clustering algorithm
      * Enhanced version of your original createBizCardBadgesInfo logic
+     * @param {HTMLElement} bizCardDiv - The bizCardDiv element to position badges around
      * @param {Array} relatedBadges - Badges related to selected job
-     * @param {Array} unrelatedBadges - Badges not related to selected job  
      * @param {Object} cDivBounds - cDiv boundaries {top, bottom, centerY}
      * @param {Function} updateCallback - Callback to update Vue reactive data
      * @returns {Object} Statistics about badge distribution
      */
-    positionBadges(relatedBadges, unrelatedBadges, cDivBounds, updateCallback = null) {
+    positionBadges(bizCardDiv, relatedBadges, cDivBounds, updateCallback = null) {
         // Positioning badges
         
         // REMOVED: All validation and error checking
+        // REMOVED: unrelatedBadges parameter
         // REMOVED: Input parameter validation  
         // REMOVED: Bounds checking
         // REMOVED: Debug logging
+
+        if (bizCardDiv == null || relatedBadges == null ) {
+            console.error('bizCardDiv is null, cannot position badges');
+            return null;
+        } 
+        const bizCardDivClone = getBizCardDivClone(bizCardDiv);
+        if (bizCardDivClone == null) {
+            console.error('bizCardDivClone is null, cannot position badges');
+            return null;
+        }
+
 
         // Direct destructuring with NO validation
         const cDiv_topY = parseFloat(cDivBounds['top']);
@@ -80,9 +93,6 @@ export class BadgePositioner extends BaseComponent {
         const cDiv_height = cDiv_bottomY - cDiv_topY;
 
         // Enhanced clustering positioning logic
-        
-        // Hide all unrelated badges
-        this.hideUnrelatedBadges(unrelatedBadges, updateCallback);
         
         if (relatedBadges.length === 0) {
             return { aboveCount: 0, levelCount: 0, belowCount: 0, totalCount: 0 };
@@ -122,7 +132,6 @@ export class BadgePositioner extends BaseComponent {
             if (bucketBottom < cDiv_topY) badgeMode = BadgePositionMode.ABOVE;
             if (bucketTop > cDiv_bottomY) badgeMode = BadgePositionMode.BELOW;
             
-            
             const bucket = {
                 top: bucketTop,
                 bottom: bucketBottom,
@@ -146,27 +155,25 @@ export class BadgePositioner extends BaseComponent {
             console.error(errorMsg);
             throw new Error(errorMsg);
         }
-        // console.log(`[DEBUG] Found centerBucketIndex=${centerBucketIndex} for cDiv_centerY=${cDiv_centerY}`);
-        
-        // Algorithm comparison complete
-        
+    
         const centerBucket = allBuckets[centerBucketIndex];
         if (!centerBucket) {
             console.error(`Center bucket not found at index ${centerBucketIndex}`);
             return { aboveCount: 0, levelCount: 0, belowCount: 0, totalCount: 0 };
         }
-        const centerBucket_top = centerBucket['top'];
-        const centerBucket_bottom = centerBucket['bottom'];
-        const centerBucket_badgeMode = centerBucket['badgeMode'];
+        const centerBucket_top = centerBucket.top;
+        const centerBucket_bottom = centerBucket.bottom;
+        const centerBucket_badgeMode = centerBucket.badgeMode;
         
         // Use sophisticated alternating sequence for clustering
-        const alternatingSequence = this.generateAlternatingSequence(Math.max(relatedBadges.length * 4, numBuckets));
+        const L = relatedBadges.length * 2;
+        const alternatingSequence = this.generateAlternatingSequence(L);
 
         let aboveCount = 0;
         let levelCount = 0;
         let belowCount = 0;
-        let numRebucketed = 0;
-        let numBucketed = 0;
+        let numRebucketed = 0;  // number of buckets that were out of bounds and not used
+        let numBucketed = 0;    // number of buckets that were in bounds and used
         const badges = [];
         const positionData = [];
 
@@ -230,45 +237,47 @@ export class BadgePositioner extends BaseComponent {
             // Skill positioned in bucket
         }
 
-        // Fallback: use any remaining unused buckets if we still need more
-        if (badges.length < relatedBadges.length) {
+        // WHY IS THIS HERE?
+        // // Fallback: use any remaining unused buckets if we still need more
+        // if (badges.length < relatedBadges.length) {
             
-            for (let bucketIndex = 0; bucketIndex < allBuckets.length && badges.length < relatedBadges.length; bucketIndex++) {
-                const bucket = allBuckets[bucketIndex];
-                if (!bucket.used) {
-                    const badgeElement = relatedBadges[badges.length];
-                    const badge = {
-                        element: badgeElement,
-                        jobSkill: badgeElement.textContent || `skill-${badges.length}`,
-                        top: bucket.top,
-                        bottom: bucket.bottom,
-                        center: bucket.center,
-                        badgeMode: bucket.badgeMode,
-                        bucketIndex: bucketIndex,
-                        position: bucket.top
-                    };
+        //     for (let bucketIndex = 0; bucketIndex < allBuckets.length && badges.length < relatedBadges.length; bucketIndex++) {
+        //         const bucket = allBuckets[bucketIndex];
+        //         if (!bucket.used) {
+        //             const badgeElement = relatedBadges[badges.length];
+        //             const badge = {
+        //                 element: badgeElement,
+        //                 jobSkill: badgeElement.textContent || `skill-${badges.length}`,
+        //                 top: bucket.top,
+        //                 bottom: bucket.bottom,
+        //                 center: bucket.center,
+        //                 badgeMode: bucket.badgeMode,
+        //                 bucketIndex: bucketIndex,
+        //                 position: bucket.top
+        //             };
 
-                    // Fallback badge assigned to bucket
+        //             // Fallback badge assigned to bucket
 
-                    bucket.used = true;
+        //             bucket.used = true;
                     
-                    if (badge.badgeMode === BadgePositionMode.ABOVE) aboveCount++;
-                    if (badge.badgeMode === BadgePositionMode.LEVEL) levelCount++;
-                    if (badge.badgeMode === BadgePositionMode.BELOW) belowCount++;
+        //             if (badge.badgeMode === BadgePositionMode.ABOVE) aboveCount++;
+        //             if (badge.badgeMode === BadgePositionMode.LEVEL) levelCount++;
+        //             if (badge.badgeMode === BadgePositionMode.BELOW) belowCount++;
                     
-                    badges.push(badge);
-                    positionData.push({
-                        element: badgeElement,
-                        position: bucket.top,
-                        bucketNumber: bucketIndex,
-                        badgeMode: bucket.badgeMode
-                    });
+        //             badges.push(badge);
+        //             positionData.push({
+        //                 element: badgeElement,
+        //                 position: bucket.top,
+        //                 bucketNumber: bucketIndex,
+        //                 badgeMode: bucket.badgeMode
+        //             });
                     
-                    numBucketed++;
-                    // Fallback badge positioned
-                }
-            }
-        }
+        //             numBucketed++;
+        //             // Fallback badge positioned
+        //         }
+        //     }
+        // }
+        // END WHY IS THIS HERE?
 
         const totalCount = aboveCount + levelCount + belowCount;
 
@@ -277,7 +286,7 @@ export class BadgePositioner extends BaseComponent {
             console.warn(`Only positioned ${badges.length} badges out of ${relatedBadges.length} requested`);
         }
 
-        // Clustering complete
+        // // Clustering complete
 
         // Apply positions via callback or DOM
         if (updateCallback) {
@@ -323,6 +332,8 @@ export class BadgePositioner extends BaseComponent {
             }
         }));
 
+        // this is extracted from the bizCardDivClone for bizDetailsDivModule
+        bizCardDivClone.setAttribute('data-badges-info', JSON.stringify(badgesInfo));
         return badgesInfo;
     }
 

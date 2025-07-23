@@ -231,6 +231,11 @@ export default {
     const badgeOrder = ref([]);
 
     function handleBadgesPositioned(event) {
+      // Only process badge positioning if badges are actually visible
+      if (!badgeManager.isBadgesVisible()) {
+        return;
+      }
+      
       console.log('[ConnectionLines] badges-positioned event received!', event.detail);
       if (event.detail && event.detail.badgeOrder) {
         badgeOrder.value = [...event.detail.badgeOrder];
@@ -252,19 +257,22 @@ export default {
       window.addEventListener('resize', handleViewportResize);
       badgeManager.addEventListener('badgeModeChanged', handleBadgeModeChange);
       
-      eventBus.emit('request-badges');
+      // Only request badges if they might be visible
+      if (badgeManager.isBadgesVisible()) {
+        eventBus.emit('request-badges');
+      }
       
-      // Fallback attempts to ensure connections are drawn (only if conditions are met)
-      setTimeout(() => {
-        const selectedCDiv = document.querySelector('.biz-card-div.selected');
-        const badgesExist = document.querySelectorAll('.skill-badge').length > 0;
-        if (selectedCDiv && badgeManager.isBadgesVisible() && badgesExist) {
-          console.log('[ConnectionLines] Fallback: Drawing connections with badges ready');
-          updateConnections();
-        } else {
-          console.log('[ConnectionLines] Fallback: Skipping - badges not ready or conditions not met');
-        }
-      }, 500);
+      // Fallback attempts to ensure connections are drawn (only if badges are visible)
+      if (badgeManager.isBadgesVisible()) {
+        setTimeout(() => {
+          const selectedCDiv = document.querySelector('.biz-card-div.selected');
+          const badgesExist = document.querySelectorAll('.skill-badge').length > 0;
+          if (selectedCDiv && badgeManager.isBadgesVisible() && badgesExist) {
+            console.log('[ConnectionLines] Fallback: Drawing connections with badges ready');
+            updateConnections();
+          }
+        }, 500);
+      }
     });
     onUnmounted(() => {
       eventBus.off('badges-positioned', handleBadgesPositioned);
@@ -278,14 +286,14 @@ export default {
 
     // Refactor updateConnections to use badgeOrder
     function updateConnections() {
-      console.log('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
-      connections.value = [];
-      
-      // First check: Are connection lines enabled at all?
+      // Early return if connection lines are not enabled - avoid all logging
       if (!badgeManager.isConnectionLinesVisible()) {
-        // console.log(`[DEBUG] Connection lines not visible - badgeManager.isConnectionLinesVisible() = false`);
+        connections.value = [];
         return;
       }
+      
+      console.log('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
+      connections.value = [];
       
       // Second check: Are badges visible? (No connection lines without badges)  
       const badgesVisible = badgeManager.isBadgesVisible();
@@ -672,6 +680,10 @@ export default {
       updateConnections();
     }
     function handleCardSelect() {
+      // Only respond to card selection if badges are visible
+      if (!badgeManager.isBadgesVisible()) {
+        return;
+      }
       // Don't update immediately - wait for badges-positioned event
     }
     function handleCardDeselect() { 
@@ -680,6 +692,11 @@ export default {
     // Debounced resize handler to wait for resize completion
     let resizeTimeout = null;
     function handleViewportResize(event) {
+      // Only handle resize events if badges are visible
+      if (!badgeManager.isBadgesVisible()) {
+        return;
+      }
+      
       const eventType = event?.type || 'unknown';
       console.log(`[ConnectionLines] ${eventType} event detected`);
       
@@ -695,7 +712,12 @@ export default {
         resizeTimeout = null;
       }, 150); // Wait 150ms after last resize event
     }
-    function handleBadgesPositioned() { updateConnections(); }
+    function handleBadgesPositioned() { 
+      // Only update connections if badges are visible
+      if (badgeManager.isBadgesVisible()) {
+        updateConnections(); 
+      }
+    }
 
     return {
       connections,

@@ -50,13 +50,15 @@ class SelectionManager extends EventTarget {
         // Update AppState to remember the selected job for hard refresh
         if (AppState) {
             AppState.selectedJobNumber = jobNumber;
+            // Also update lastVisitedJobNumber to remember this selection
+            AppState.lastVisitedJobNumber = jobNumber;
             // Clean up any stale selectedJob field from resume section
             if (AppState.resume && AppState.resume.selectedJob !== undefined) {
                 delete AppState.resume.selectedJob;
                 window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Cleaned up stale selectedJob field from resume section`);
             }
             saveState(AppState);
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Updated AppState selectedJobNumber to ${jobNumber}`);
+            window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Updated AppState selectedJobNumber to ${jobNumber} and lastVisitedJobNumber to ${jobNumber}`);
         }
         
         const event = new CustomEvent('selectionChanged', {
