@@ -1,7 +1,6 @@
 // scene/CardsController.mjs
 
 import { BaseComponent } from '../core/abstracts/BaseComponent.mjs'
-import { selectionManager } from '../core/selectionManager.mjs';
 import * as scenePlane from './scenePlaneModule.mjs';
 import * as utils from '../utils/utils.mjs';
 import * as viewPort from '../core/viewPortModule.mjs';
@@ -40,7 +39,9 @@ const MIN_HEIGHT = 180; // Reduced from 200 for more square aspect
 class CardsController extends BaseComponent {
 
     constructor() {
+        console.log('[DEBUG] CardsController constructor called');
         super('CardsController');
+        console.log('[DEBUG] CardsController super() completed');
 
         // Singleton pattern: return existing instance if one exists
         if (CardsController.instance) {
@@ -56,12 +57,13 @@ class CardsController extends BaseComponent {
         this.currentSortRule = null;
         this.sortedIndices = []; // Maps sorted position to original jobNumber
         this.currentlyHoveredElement = null; // Track currently hovered element
-        this._setupSelectionListeners();
         this._setupColorPaletteListener();
         // The pointer events observer is set up in initialize now
         
         // Listen for sort rule changes from ResumeListController
         this._setupSortListener();
+        
+        // Note: _setupSelectionListeners() moved to initialize() to ensure SelectionManager is ready
         
         // Update existing cDivs to have scene-left and scene-top attributes
         this._updateExistingCDivs();
@@ -71,7 +73,11 @@ class CardsController extends BaseComponent {
     }
 
     getDependencies() {
-        return ['Timeline'];
+        return ['SelectionManager', 'Timeline'];
+    }
+    
+    getPriority() {
+        return 'high';
     }
 
     destroy() {
@@ -101,47 +107,79 @@ class CardsController extends BaseComponent {
     }
 
     async initialize() {
+        console.log('[DEBUG] CardsController.initialize() called');
         if (this.isInitialized) {
+            console.log('[DEBUG] CardsController already initialized, returning early');
             return;
         }
         
+        // 🌱 SPRING BOOT-STYLE: Dependencies are now auto-injected!
+        // this.selectionManager - Available automatically
+        
+        // Debug: Verify dependencies are injected
+        if (!this.selectionManager) {
+            throw new Error('[CardsController] selectionManager not injected properly');
+        }
+        window.CONSOLE_LOG_IGNORE('[CardsController] Dependencies verified: selectionManager is available');
+        
+        // Set up selection listeners now that SelectionManager is guaranteed to be ready
+        this._setupSelectionListeners();
+        
         // Get jobs data from import
         const jobsData = jobs;
+        console.log('[DEBUG] CardsController: jobsData length:', jobsData.length);
         this.originalJobsData = jobsData;
         this.bizCardDivs = await this._createAllBizCardDivs(jobsData);
+        console.log('[DEBUG] CardsController: Created', this.bizCardDivs.length, 'bizCardDivs');
         window.CONSOLE_LOG_IGNORE('[CardsController] Created', this.bizCardDivs.length, 'bizCardDivs');
         
         // Apply the same sort rule as ResumeListController
-        const initialSortRule = AppState.resume.sortRule || { field: 'startDate', direction: 'desc' };
+        const initialSortRule = AppState?.resume?.sortRule || { field: 'startDate', direction: 'desc' };
 
         this.applySortRule(initialSortRule, true);
         
         this.isInitialized = true;
+        console.log('[DEBUG] CardsController.initialize() completed successfully');
 
     }
 
     /**
-     * Register this controller with the initialization manager
-     * This allows other components to wait for CardsController to be ready
+     * Wait for scene-plane element to be created by Vue components
+     * @private
      */
-    registerForInitialization() {
-        initializationManager.register(
-            'CardsController',
-            async () => {
-                // Wait for timeline to be ready
-                await initializationManager.waitForComponent('Timeline');
-                await this.initialize();
-            },
-            ['Timeline'], // Depends on timeline being initialized first
-            { priority: 'high' }
-        );
+    async _waitForScenePlane() {
+        const maxRetries = 50;
+        const retryDelay = 100; // 100ms
+        
+        for (let i = 0; i < maxRetries; i++) {
+            const scenePlaneEl = document.getElementById('scene-plane');
+            
+            if (scenePlaneEl) {
+                console.log('[DEBUG] CardsController: scene-plane element found after', i * retryDelay, 'ms');
+                return scenePlaneEl;
+            }
+            
+            if (i === 0) {
+                console.log('[DEBUG] CardsController: Waiting for scene-plane element to be created...');
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+        
+        console.error('[DEBUG] CardsController: scene-plane element not found after', maxRetries * retryDelay, 'ms');
+        return null;
     }
 
-    async _createAllBizCardDivs(jobsData) {
-        const divs = [];
-        const scenePlaneEl = document.getElementById('scene-plane');
-        if (!scenePlaneEl) {
 
+    async _createAllBizCardDivs(jobsData) {
+        console.log('[DEBUG] CardsController._createAllBizCardDivs called with', jobsData.length, 'jobs');
+        const divs = [];
+        
+        // Wait for scene-plane element to exist (Vue components need to mount first)
+        const scenePlaneEl = await this._waitForScenePlane();
+        console.log('[DEBUG] CardsController: scenePlaneEl:', scenePlaneEl);
+        if (!scenePlaneEl) {
+            console.error('[CardsController] scene-plane element not found after waiting');
             return divs;
         }
 
@@ -164,17 +202,22 @@ class CardsController extends BaseComponent {
             }
         });
 
+        console.log('[DEBUG] CardsController: Creating bizCardDivs for', jobsData.length, 'jobs');
         for (let jobNumber = 0; jobNumber < jobsData.length; jobNumber++) {
             const job = jobsData[jobNumber];
+            console.log(`[DEBUG] CardsController: Creating card ${jobNumber} for job:`, job.employer);
             const bizCardDiv = await this.createBizCardDiv(job, jobNumber, jobsData.length);
+            console.log(`[DEBUG] CardsController: Created bizCardDiv:`, bizCardDiv);
             divs.push(bizCardDiv);
         }
         
-        divs.forEach(card => {
+        console.log('[DEBUG] CardsController: Appending', divs.length, 'cards to scene-plane');
+        divs.forEach((card, index) => {
             if (card instanceof Node) {
+                console.log(`[DEBUG] CardsController: Appending card ${index} to scene-plane`);
                 scenePlaneEl.appendChild(card);
             } else {
-    
+                console.error(`[DEBUG] CardsController: Card ${index} is not a Node:`, card);
             }
         });
         
@@ -292,7 +335,16 @@ class CardsController extends BaseComponent {
         }
 
         // Get the top and bottom positions from timeline
-        const { getPositionForDate } = useTimeline();
+        const { getPositionForDate, isInitialized } = useTimeline();
+        
+        // Verify timeline is initialized before positioning cards
+        if (!isInitialized.value) {
+            console.error('[CardsController] Timeline not initialized - cannot position cards properly');
+            console.error('[CardsController] Job:', job.employer, 'start:', job.start, 'end:', job.end);
+            // Return early to avoid setting invalid coordinates
+            return;
+        }
+        
         let sceneTop = getPositionForDate(endDate);
         let sceneBottom = getPositionForDate(startDate);
 
@@ -379,10 +431,13 @@ class CardsController extends BaseComponent {
     }
 
     _setupSelectionListeners() {
-        selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged.bind(this));
-        selectionManager.addEventListener('selectionCleared', this.handleSelectionCleared.bind(this));
-        selectionManager.addEventListener('hoverChanged', this.handleHoverChanged.bind(this));
-        selectionManager.addEventListener('hoverCleared', this.handleHoverCleared.bind(this));
+        // Use dependency-injected selectionManager
+        this.selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged.bind(this));
+        this.selectionManager.addEventListener('selectionCleared', this.handleSelectionCleared.bind(this));
+        this.selectionManager.addEventListener('hoverChanged', this.handleHoverChanged.bind(this));
+        this.selectionManager.addEventListener('hoverCleared', this.handleHoverCleared.bind(this));
+        this.selectionManager.addEventListener('lastVisitedChanged', this.handleLastVisitedChanged.bind(this));
+        this.selectionManager.addEventListener('lastVisitedCleared', this.handleLastVisitedCleared.bind(this));
     }
 
     _setupColorPaletteListener() {
@@ -751,20 +806,20 @@ class CardsController extends BaseComponent {
         if (!bizCardDiv) return;
         const jobNumber = parseInt(bizCardDiv.getAttribute('data-job-number'), 10);
         const isClone = bizCardDiv.id && bizCardDiv.id.includes('-clone');
-        const isAlreadySelected = selectionManager.getSelectedJobNumber() === jobNumber;
+        const isAlreadySelected = this.selectionManager.getSelectedJobNumber() === jobNumber;
         
         if (isClone) {
             // Allow deselection when clicking the clone
             if (isAlreadySelected) {
-                selectionManager.clearSelection('CardsController.handleBizCardDivClickEvent');
+                this.selectionManager.clearSelection('CardsController.handleBizCardDivClickEvent');
             }
             return;
         }
 
         if (isAlreadySelected) {
-            selectionManager.clearSelection('CardsController.handleBizCardDivClickEvent');
+            this.selectionManager.clearSelection('CardsController.handleBizCardDivClickEvent');
         } else {
-            selectionManager.selectJobNumber(jobNumber, 'CardsController.handleBizCardDivClickEvent');
+            this.selectionManager.selectJobNumber(jobNumber, 'CardsController.handleBizCardDivClickEvent');
         }
     }
 
@@ -776,7 +831,7 @@ class CardsController extends BaseComponent {
         // Allow hover on clones (selected items) for paired rDiv coordination, 
         // but ignore hover on original selected cards
         const isClone = element.id && element.id.includes('-clone');
-        if (selectionManager.getSelectedJobNumber() === jobNumber && !isClone) {
+        if (this.selectionManager.getSelectedJobNumber() === jobNumber && !isClone) {
             return; // Ignore hover on selected original card
         }
         
@@ -834,7 +889,7 @@ class CardsController extends BaseComponent {
         this.currentlyHoveredElement = element;
         
         // Still notify SelectionManager for coordination with other components
-        selectionManager.hoverJobNumber(jobNumber, 'CardsController.handleMouseEnterEvent');
+        this.selectionManager.hoverJobNumber(jobNumber, 'CardsController.handleMouseEnterEvent');
     }
 
     handleMouseLeaveEvent(element) {
@@ -868,7 +923,7 @@ class CardsController extends BaseComponent {
         // Clear tracked hovered element
         this.currentlyHoveredElement = null;
         
-        selectionManager.clearHover('CardsController.handleMouseLeaveEvent');
+        this.selectionManager.clearHover('CardsController.handleMouseLeaveEvent');
     }
 
     handleSelectionChanged(event) {
@@ -919,7 +974,7 @@ class CardsController extends BaseComponent {
 
         // Don't apply hover styling to the cDiv itself if it's selected (non-clone),
         // but still allow the event to proceed for paired rDiv coordination
-        const shouldApplyHoverStyling = selectionManager.getSelectedJobNumber() !== hoveredJobNumber;
+        const shouldApplyHoverStyling = this.selectionManager.getSelectedJobNumber() !== hoveredJobNumber;
 
         if (shouldApplyHoverStyling) {
             // FLICKER FIX: Ensure only one cDiv can be hovered at a time
@@ -989,6 +1044,30 @@ class CardsController extends BaseComponent {
         });
     }
 
+    handleLastVisitedChanged(event) {
+        const { lastVisitedJobNumber, caller } = event.detail;
+        
+        // Visual state is already applied by selectionManager._applyVisualLastVisited()
+        // CardsController just needs to coordinate any additional behavior if needed
+        
+        window.CONSOLE_LOG_IGNORE(`[CardsController] handleLastVisitedChanged: Job ${lastVisitedJobNumber} set as lastVisited from ${caller}`);
+        
+        // Optional: Could add scrolling behavior here if needed
+        // const bizCardDiv = this.getBizCardDivByJobNumber(lastVisitedJobNumber);
+        // if (bizCardDiv) {
+        //     this.scrollBizCardDivIntoView(bizCardDiv, `CardsController.handleLastVisitedChanged from ${caller}`);
+        // }
+    }
+
+    handleLastVisitedCleared(event) {
+        const { previousLastVisitedJobNumber, caller } = event.detail;
+        
+        // Visual state is already cleared by selectionManager._clearVisualLastVisited()
+        // CardsController just needs to coordinate any additional behavior if needed
+        
+        window.CONSOLE_LOG_IGNORE(`[CardsController] handleLastVisitedCleared: Job ${previousLastVisitedJobNumber} cleared from lastVisited by ${caller}`);
+    }
+
     handleColorPaletteChanged(event) {
         const { filename, paletteName, previousFilename } = event.detail;
         
@@ -1016,7 +1095,7 @@ class CardsController extends BaseComponent {
     }
 
     isJobNumberSelected(jobNumber) {
-        return selectionManager.getSelectedJobNumber() === jobNumber;
+        return this.selectionManager.getSelectedJobNumber() === jobNumber;
     }
     
     scrollBizCardDivIntoView(bizCardDiv, caller='') {
@@ -1025,7 +1104,7 @@ class CardsController extends BaseComponent {
     
         // Use centralized smooth scrolling with header positioning
         const headerSelector = '.biz-details-employer, .biz-details-role, .biz-details-dates, .biz-details-z-value, .biz-details-start-date, .biz-details-end-date';
-        selectionManager.smoothScrollElementIntoView(bizCardDiv, sceneContent, headerSelector, `CardsController.${caller}`);
+        this.selectionManager.smoothScrollElementIntoView(bizCardDiv, sceneContent, headerSelector, `CardsController.${caller}`);
     }
 
     setupPointerEventsObserver() {
@@ -1302,7 +1381,10 @@ class CardsController extends BaseComponent {
     }
 }
 
-export const cardsController = new CardsController();
+// Create singleton instance to trigger BaseComponent auto-registration
+console.log('[DEBUG] Creating CardsController instance...');
+const cardsController = new CardsController();
+console.log('[DEBUG] CardsController instance created:', cardsController);
 
 // Global function for testing sorting
 window.testCardsSorting = function() {
