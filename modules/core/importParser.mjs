@@ -170,7 +170,7 @@ class ImportParser {
             // Cache the result
             this.dependencyCache.set(componentName, dependencyArray);
             
-            console.log(`[ImportParser] Auto-discovered dependencies for ${componentName}:`, dependencyArray);
+            window.CONSOLE_LOG_IGNORE(`[ImportParser] Auto-discovered dependencies for ${componentName}:`, dependencyArray);
             
             return dependencyArray;
             

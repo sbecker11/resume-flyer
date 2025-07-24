@@ -113,7 +113,7 @@ export default {
       });
       
       skillBadges.value = badges;
-      // console.log(`[SkillBadges] Created ${badges.length} skill badges`);
+      // window.CONSOLE_LOG_IGNORE(`[SkillBadges] Created ${badges.length} skill badges`);
     };
 
     // return the badges for a given job number
@@ -143,11 +143,11 @@ export default {
       if ( selectedJobNumber !== null ) {
         const cloneId = `biz-card-div-${selectedJobNumber}-clone`;
         const cDivClone = document.querySelector(`#${cloneId}`);
-        console.log(`[SkillBadges] Looking for clone: ${cloneId}, found:`, !!cDivClone);
+        window.CONSOLE_LOG_IGNORE(`[SkillBadges] Looking for clone: ${cloneId}, found:`, !!cDivClone);
         if ( !cDivClone ) {
           // List all available clones for debugging
           const allClones = Array.from(document.querySelectorAll('[id*="clone"]'));
-          console.log(`[SkillBadges] Available clones:`, allClones.map(c => c.id));
+          window.CONSOLE_LOG_IGNORE(`[SkillBadges] Available clones:`, allClones.map(c => c.id));
           throw new Error(`[SkillBadges] cDivClone for selected jobNumber:${selectedJobNumber} not found`);
         }
         return cDivClone;
@@ -170,7 +170,7 @@ export default {
       }
       
       if (!badgeManager.isBadgesVisible()) {
-        console.log('[SkillBadges] Badge mode is -B (OFF) - hiding all badges and skipping positioning');
+        window.CONSOLE_LOG_IGNORE('[SkillBadges] Badge mode is -B (OFF) - hiding all badges and skipping positioning');
         // Hide all badges when mode is -B
         const badgeElements = document.querySelectorAll('.skill-badge');
         badgeElements.forEach(badge => badge.style.display = 'none');
@@ -182,7 +182,7 @@ export default {
       // Get all badge elements
       const badgeElements = document.querySelectorAll('.skill-badge');
       if (badgeElements.length === 0) {
-        console.log('[SkillBadges] No badge elements found');
+        window.CONSOLE_LOG_IGNORE('[SkillBadges] No badge elements found');
         return;
       }
       
@@ -209,7 +209,7 @@ export default {
         setTimeout(() => {
           const retryClone = getSelectedCDivClone();
           if (retryClone) {
-            console.log('[SkillBadges] Clone found on retry - positioning badges');
+            window.CONSOLE_LOG_IGNORE('[SkillBadges] Clone found on retry - positioning badges');
             positionBadges(); // Recursive call with clone now available
           } else {
             console.warn('[SkillBadges] Clone still not found after retry - skipping badge positioning');
@@ -249,13 +249,13 @@ export default {
       };
       
       // DELEGATE ALL POSITIONING LOGIC TO BadgePositioner
-      // console.log('[SkillBadges] Delegating positioning to BadgePositioner...');
-      // console.log('[SkillBadges] badgePositioner object:', badgePositioner);
-      // console.log('[SkillBadges] Calling with:', { relatedBadges: relatedBadges.length, unrelatedBadges: unrelatedBadges.length, cDivBounds });
+      // window.CONSOLE_LOG_IGNORE('[SkillBadges] Delegating positioning to BadgePositioner...');
+      // window.CONSOLE_LOG_IGNORE('[SkillBadges] badgePositioner object:', badgePositioner);
+      // window.CONSOLE_LOG_IGNORE('[SkillBadges] Calling with:', { relatedBadges: relatedBadges.length, unrelatedBadges: unrelatedBadges.length, cDivBounds });
       
       try {
         const stats = badgePositioner.positionBadges(selectedCDivClone, relatedBadges, cDivBounds, updatePositions);
-        // console.log('[SkillBadges] BadgePositioner returned stats:', stats);
+        // window.CONSOLE_LOG_IGNORE('[SkillBadges] BadgePositioner returned stats:', stats);
       } catch (error) {
         console.error('[SkillBadges] BadgePositioner error:', error);
       }
@@ -301,11 +301,11 @@ export default {
     // Event handlers
     const handleCardSelect = (event) => {
       // Handle card selection event
-      // console.log('SkillBadges.handleCardSelect called with event:', event.detail);
+      // window.CONSOLE_LOG_IGNORE('SkillBadges.handleCardSelect called with event:', event.detail);
       const newJobNumber = parseInt(event.detail.selectedJobNumber);
       selectedJobNumber.value = newJobNumber;
       
-      // console.log(`[SkillBadges] Calling positionBadges() for job ${newJobNumber} in 150ms...`);
+      // window.CONSOLE_LOG_IGNORE(`[SkillBadges] Calling positionBadges() for job ${newJobNumber} in 150ms...`);
       setTimeout(() => {
         // Positioning badges for newly selected job
         positionBadges();
@@ -313,7 +313,7 @@ export default {
     };
     
     const handleCardDeselect = () => {
-      console.log('[SkillBadges] handleCardDeselect called - was:', selectedJobNumber.value);
+      window.CONSOLE_LOG_IGNORE('[SkillBadges] handleCardDeselect called - was:', selectedJobNumber.value);
       selectedJobNumber.value = null;
       setTimeout(positionBadges, 50);
     };
@@ -352,8 +352,8 @@ export default {
       const skillBadgesZIndex = AppState.constants.zIndex.bullsEye; // Just below selectedCard (99)
       const isSceneLeft = orientation.value === 'scene-left';
       
-      console.log(`layout: ${orientation.value}`);
-      console.log(`badges: move to ${isSceneLeft ? 'right' : 'left'}`);
+      window.CONSOLE_LOG_IGNORE(`layout: ${orientation.value}`);
+      window.CONSOLE_LOG_IGNORE(`badges: move to ${isSceneLeft ? 'right' : 'left'}`);
       
       return {
         position: 'absolute',
@@ -375,7 +375,7 @@ export default {
       
       // Wait for the InitializationManager to signal that SkillBadges should initialize
       const handleInitReady = async () => {
-        console.log('[SkillBadges] Initializing component...');
+        window.CONSOLE_LOG_IGNORE('[SkillBadges] Initializing component...');
         
         try {
           // Validate dependencies before proceeding
@@ -404,22 +404,22 @@ export default {
           
           // Check if there's a pre-selected cDiv and position badges accordingly
           const preSelectedCDiv = document.querySelector('.biz-card-div.selected');
-          console.log('[SkillBadges] Looking for pre-selected cDiv...', preSelectedCDiv);
+          window.CONSOLE_LOG_IGNORE('[SkillBadges] Looking for pre-selected cDiv...', preSelectedCDiv);
           
           if (preSelectedCDiv) {
             const preSelectedJobNumber = parseInt(preSelectedCDiv.getAttribute('data-job-number'));
-            console.log('[SkillBadges] Found pre-selected cDiv with job number:', preSelectedJobNumber);
-            console.log('[SkillBadges] Badge mode is:', badgeManager.isBadgesVisible() ? 'ON' : 'OFF');
+            window.CONSOLE_LOG_IGNORE('[SkillBadges] Found pre-selected cDiv with job number:', preSelectedJobNumber);
+            window.CONSOLE_LOG_IGNORE('[SkillBadges] Badge mode is:', badgeManager.isBadgesVisible() ? 'ON' : 'OFF');
             
             if (badgeManager.isBadgesVisible()) {
-              console.log('[SkillBadges] Setting selectedJobNumber from', selectedJobNumber.value, 'to', preSelectedJobNumber);
+              window.CONSOLE_LOG_IGNORE('[SkillBadges] Setting selectedJobNumber from', selectedJobNumber.value, 'to', preSelectedJobNumber);
               selectedJobNumber.value = preSelectedJobNumber;
               
               // SkillBadges are now ready with known selectedJobId - trigger repositioning
-              console.log('[SkillBadges] SkillBadges ready with selectedJobId:', preSelectedJobNumber, '- triggering repositioning');
+              window.CONSOLE_LOG_IGNORE('[SkillBadges] SkillBadges ready with selectedJobId:', preSelectedJobNumber, '- triggering repositioning');
               positionBadges();
             } else {
-              console.log('[SkillBadges] Badge mode OFF - not positioning badges for preselected job');
+              window.CONSOLE_LOG_IGNORE('[SkillBadges] Badge mode OFF - not positioning badges for preselected job');
             }
           } else {
             if (badgeManager.isBadgesVisible()) {
@@ -432,7 +432,7 @@ export default {
           console.error('[SkillBadges] Initialization failed:', error);
           // Retry after a delay
           setTimeout(() => {
-            console.log('[SkillBadges] Retrying initialization...');
+            window.CONSOLE_LOG_IGNORE('[SkillBadges] Retrying initialization...');
             handleInitReady();
           }, 1000);
         }
@@ -444,12 +444,12 @@ export default {
       // Also initialize immediately if we're already past the initialization phase
       // (this handles cases where the event was already fired)
       setTimeout(() => {
-        console.log('[SkillBadges] Fallback initialization after 500ms');
+        window.CONSOLE_LOG_IGNORE('[SkillBadges] Fallback initialization after 500ms');
         handleInitReady();
       }, 500);
       // Listen for request-badges event and emit current badgeOrder
       eventBus.on('request-badges', () => {
-        console.log('[SkillBadges] Received request-badges event, emitting current badgeOrder:', badgeOrder.value);
+        window.CONSOLE_LOG_IGNORE('[SkillBadges] Received request-badges event, emitting current badgeOrder:', badgeOrder.value);
         eventBus.emit('badges-positioned', { badgeOrder: [...badgeOrder.value] });
       });
       
@@ -483,7 +483,7 @@ export default {
     
     // Watch for changes to selectedJobNumber
     watch(selectedJobNumber, (newVal, oldVal) => {
-      // console.log('[SkillBadges] selectedJobNumber changed:', oldVal, '→', newVal);
+      // window.CONSOLE_LOG_IGNORE('[SkillBadges] selectedJobNumber changed:', oldVal, '→', newVal);
       try {
         positionBadges();
       } catch (error) {
@@ -510,14 +510,14 @@ export default {
     },
     
     async initialize(dependencies) {
-      console.log('SkillBadges: Initializing with validated dependencies:', Object.keys(dependencies));
+      window.CONSOLE_LOG_IGNORE('SkillBadges: Initializing with validated dependencies:', Object.keys(dependencies));
       this.selectionManager = dependencies.SelectionManager;
       this.badgeManager = dependencies.BadgeManager;
       // Initialization logic moved to setup() function
     },
     
     cleanupDependencies() {
-      console.log('SkillBadges: Cleaning up dependencies');
+      window.CONSOLE_LOG_IGNORE('SkillBadges: Cleaning up dependencies');
       // Cleanup logic if needed
     }
   }

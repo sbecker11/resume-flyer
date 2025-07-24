@@ -24,7 +24,7 @@ class BullsEye extends BaseComponent {
 
     async initialize(dependencies = {}) {
         try {
-            console.log('[BullsEye] Initializing with SceneContainer dependency...');
+            // window.CONSOLE_LOG_IGNORE('[BullsEye] Initializing with SceneContainer dependency...');
             
             // Get SceneContainer from service locator - guaranteed to be ready
             const sceneContainer = initializationManager.getComponent('SceneContainer');
@@ -44,12 +44,12 @@ class BullsEye extends BaseComponent {
                 throw new Error('[BullsEye] #bulls-eye element not found in DOM');
             }
 
-            console.log('[BullsEye] Elements found, setting up centering...');
-            console.log('[BullsEye] Scene container dimensions:', {
-                width: sceneContainerElement.clientWidth,
-                height: sceneContainerElement.clientHeight,
-                rect: sceneContainerElement.getBoundingClientRect()
-            });
+            // window.CONSOLE_LOG_IGNORE('[BullsEye] Elements found, setting up centering...');
+            // window.CONSOLE_LOG_IGNORE('[BullsEye] Scene container dimensions:', {
+            //     width: sceneContainerElement.clientWidth,
+            //     height: sceneContainerElement.clientHeight,
+            //     rect: sceneContainerElement.getBoundingClientRect()
+            // });
 
             // Clear any existing inline styles
             this._bullsEyeElement.style.removeProperty('top');
@@ -59,7 +59,7 @@ class BullsEye extends BaseComponent {
             // Position at scene container center
             this._centerBullsEye(sceneContainerElement);
 
-            console.log('[BullsEye] Initialization complete');
+            // window.CONSOLE_LOG_IGNORE('[BullsEye] Initialization complete');
         } catch (error) {
             console.error('[BullsEye] Initialization failed:', error);
             throw error; // Re-throw so IM knows initialization failed
@@ -71,8 +71,8 @@ class BullsEye extends BaseComponent {
         const centerX = sceneRect.left + sceneRect.width / 2;
         const centerY = sceneRect.top + sceneRect.height / 2;
         
-        console.log('[BullsEye] Centering - sceneRect:', sceneRect);
-        console.log('[BullsEye] Calculated center:', { centerX, centerY });
+        // window.CONSOLE_LOG_IGNORE('[BullsEye] Centering - sceneRect:', sceneRect);
+        // window.CONSOLE_LOG_IGNORE('[BullsEye] Calculated center:', { centerX, centerY });
         
         this._bullsEyeElement.style.position = 'fixed';
         this._bullsEyeElement.style.left = `${centerX}px`;
@@ -80,12 +80,12 @@ class BullsEye extends BaseComponent {
         this._bullsEyeElement.style.transform = 'translate(-50%, -50%)';
         this._bullsEyeElement.style.zIndex = '1000';
         
-        console.log('[BullsEye] Applied styles:', {
-            position: this._bullsEyeElement.style.position,
-            left: this._bullsEyeElement.style.left,
-            top: this._bullsEyeElement.style.top,
-            transform: this._bullsEyeElement.style.transform
-        });
+        // window.CONSOLE_LOG_IGNORE('[BullsEye] Applied styles:', {
+        //     position: this._bullsEyeElement.style.position,
+        //     left: this._bullsEyeElement.style.left,
+        //     top: this._bullsEyeElement.style.top,
+        //     transform: this._bullsEyeElement.style.transform
+        // });
 
         // Force a layout recalculation
         void this._bullsEyeElement.offsetHeight;

@@ -87,7 +87,7 @@ class ResumeListController extends BaseComponent {
   // registerForInitialization() method removed - BaseComponent handles registration automatically
 
   async initialize({ CardsController, JobsDataManager, ColorPaletteManager }) {
-    console.log('[ResumeListController] Initializing with dependencies:', {
+    window.CONSOLE_LOG_IGNORE('[ResumeListController] Initializing with dependencies:', {
       CardsController: !!CardsController,
       JobsDataManager: !!JobsDataManager,
       ColorPaletteManager: !!ColorPaletteManager
@@ -143,7 +143,7 @@ class ResumeListController extends BaseComponent {
         
         // If no saved job index, don't auto-select - let user choose
         if (savedJobNumber === undefined || savedJobNumber === null) {
-          console.log('ResumeListController: No saved job selected - waiting for user selection');
+          window.CONSOLE_LOG_IGNORE('ResumeListController: No saved job selected - waiting for user selection');
           return; // Don't auto-select anything
         }
         // Ensure the saved index is valid before selecting
@@ -151,9 +151,9 @@ class ResumeListController extends BaseComponent {
           window.CONSOLE_LOG_IGNORE('ResumeListController: Selecting saved job index:', savedJobNumber);
           // Add additional delay to ensure infinite scroller is fully positioned
           setTimeout(() => {
-            console.log('ResumeListController: About to select job number:', savedJobNumber);
+            window.CONSOLE_LOG_IGNORE('ResumeListController: About to select job number:', savedJobNumber);
             selectionManager.selectJobNumber(savedJobNumber, 'ResumeListController.initialize');
-            console.log('ResumeListController: Called selectionManager.selectJobNumber');
+            window.CONSOLE_LOG_IGNORE('ResumeListController: Called selectionManager.selectJobNumber');
           }, 200);
         } else {
           // If saved index is invalid (e.g., data changed), select the first item
@@ -205,7 +205,7 @@ class ResumeListController extends BaseComponent {
         // The SelectionManager already handles saving to AppState.selectedJobNumber
         // No need to save resume-specific selection state here
 
-        // console.log(`[DEBUG] ResumeListController.handleSelectionChanged: selectedJobNumber=${selectedJobNumber}, caller=${caller}`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionChanged: selectedJobNumber=${selectedJobNumber}, caller=${caller}`);
 
         // Visual selection is now handled by SelectionManager - no need to call deprecated method
         
@@ -223,7 +223,7 @@ class ResumeListController extends BaseComponent {
 
     handleSelectionCleared(event) {
         const { caller } = event.detail;
-        // console.log(`[DEBUG] ResumeListController.handleSelectionCleared: caller=${caller}`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleSelectionCleared: caller=${caller}`);
         
         // Visual selection clearing is now handled by SelectionManager
         // Note: SelectionManager.clearSelection() is typically called by the component that initiated the clear
@@ -920,10 +920,10 @@ class ResumeListController extends BaseComponent {
   }
 
   scrollToJobNumber(jobNumber, caller = '') {
-    // console.log(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
     
     if (!this.infiniteScroller) {
-      console.log(`[DEBUG] ResumeListController: infiniteScroller is null!`);
+      window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController: infiniteScroller is null!`);
       return;
     }
 
@@ -931,11 +931,11 @@ class ResumeListController extends BaseComponent {
     const sortedIndex = this.sortedIndices.indexOf(jobNumber);
     
     if (sortedIndex === -1) {
-      console.log(`[DEBUG] scrollToJobNumber: jobNumber ${jobNumber} not found in sortedIndices!`);
+      window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: jobNumber ${jobNumber} not found in sortedIndices!`);
       return;
     }
     
-    // console.log(`[DEBUG] scrollToJobNumber: Scrolling to job ${jobNumber} at sorted index ${sortedIndex}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToJobNumber: Scrolling to job ${jobNumber} at sorted index ${sortedIndex}`);
     
     // Direct scroll to the index - this is the single scroll operation
     this.infiniteScroller.scrollToIndex(sortedIndex, true);
@@ -1365,7 +1365,7 @@ class ResumeListController extends BaseComponent {
    * Create all resume divs from card divs
    */
   async createAllBizResumeDivs(bizCardDivs) {
-    console.log('[ResumeListController] createAllBizResumeDivs called with:', bizCardDivs?.length || 0, 'cards');
+    window.CONSOLE_LOG_IGNORE('[ResumeListController] createAllBizResumeDivs called with:', bizCardDivs?.length || 0, 'cards');
     
     if (!bizCardDivs || bizCardDivs.length === 0) {
       console.warn("ResumeListController: Cannot create resume divs, no card divs provided.");
@@ -1389,7 +1389,7 @@ class ResumeListController extends BaseComponent {
       }
     }
     
-    // console.log(`[ResumeListController] Successfully created ${bizResumeDivs.length} resume divs`);
+    // window.CONSOLE_LOG_IGNORE(`[ResumeListController] Successfully created ${bizResumeDivs.length} resume divs`);
     return bizResumeDivs;
   }
   
@@ -1428,7 +1428,7 @@ class ResumeListController extends BaseComponent {
       // Set up mouse listeners for the resume div
       this._setupMouseListeners(bizResumeDiv);
       
-      // if (jobNumber === 21) console.log(`[ResumeListController] Successfully created resume div for job ${jobNumber}`);
+      // if (jobNumber === 21) window.CONSOLE_LOG_IGNORE(`[ResumeListController] Successfully created resume div for job ${jobNumber}`);
       return bizResumeDiv;
     } catch (error) {
       console.error('[ResumeListController] Error creating resume div:', error);
@@ -1502,7 +1502,7 @@ class ResumeListController extends BaseComponent {
   handleBadgeModeChanged(event) {
     const { mode, previousMode, caller } = event.detail;
     
-    console.log(`[DEBUG] ResumeListController.handleBadgeModeChanged: Mode changed from ${previousMode} to ${mode} (caller: ${caller})`);
+    window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleBadgeModeChanged: Mode changed from ${previousMode} to ${mode} (caller: ${caller})`);
     
     // Force recalculation of heights when badge mode changes
     if (this.infiniteScroller) {
@@ -1518,7 +1518,7 @@ class ResumeListController extends BaseComponent {
   handleColorPaletteChanged(event) {
     const { filename, paletteName, previousFilename } = event.detail;
     
-    console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
+    window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
     
     // Apply new palette to all resume divs
     if (this.bizResumeDivs) {
@@ -1532,7 +1532,7 @@ class ResumeListController extends BaseComponent {
       });
     }
     
-    console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Applied new palette to ${this.bizResumeDivs?.length || 0} resume divs`);
+    window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeListController.handleColorPaletteChanged: Applied new palette to ${this.bizResumeDivs?.length || 0} resume divs`);
   }
   
   // endregion

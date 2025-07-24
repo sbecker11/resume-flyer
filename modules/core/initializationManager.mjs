@@ -29,14 +29,14 @@ class InitializationManager {
    * @returns {Promise} Promise that resolves when all components are initialized
    */
   async startApplication() {
-    console.log('[INIT] Starting application initialization...');
-    console.log('[INIT] Currently registered components:', Array.from(this.components.keys()));
+    window.CONSOLE_LOG_IGNORE('[INIT] Starting application initialization...');
+    window.CONSOLE_LOG_IGNORE('[INIT] Currently registered components:', Array.from(this.components.keys()));
     
-    console.log('[INIT] Starting component initialization process');
+    window.CONSOLE_LOG_IGNORE('[INIT] Starting component initialization process');
     
     // Get all components and try to initialize them
     const allComponents = Array.from(this.components.keys());
-    console.log('[INIT] Components to initialize:', allComponents);
+    window.CONSOLE_LOG_IGNORE('[INIT] Components to initialize:', allComponents);
     
     if (allComponents.length === 0) {
       console.warn('[INIT] No components registered! This suggests imports are not triggering registration.');
@@ -48,18 +48,18 @@ class InitializationManager {
     
     // Wait for all initialization promises to complete
     const initPromises = Array.from(this.initializationPromises.values());
-    console.log('[INIT] Waiting for', initPromises.length, 'initialization promises');
+    window.CONSOLE_LOG_IGNORE('[INIT] Waiting for', initPromises.length, 'initialization promises');
     
     try {
       await Promise.all(initPromises);
-      console.log('[INIT] All components initialized successfully');
+      window.CONSOLE_LOG_IGNORE('[INIT] All components initialized successfully');
     } catch (error) {
       console.error('[INIT] Some components failed to initialize:', error);
       throw error;
     }
     
     const finalStatus = this.getStatus();
-    console.log('[INIT] Final component status:', finalStatus);
+    window.CONSOLE_LOG_IGNORE('[INIT] Final component status:', finalStatus);
     return finalStatus;
   }
 
@@ -113,7 +113,7 @@ class InitializationManager {
     // Resolve dependencies if they're a promise (from auto-discovery)
     const resolvedDependencies = await Promise.resolve(dependencies);
     
-    console.log(`[INIT] Registering component: ${componentName} with dependencies: [${resolvedDependencies.join(', ')}]`);
+    window.CONSOLE_LOG_IGNORE(`[INIT] Registering component: ${componentName} with dependencies: [${resolvedDependencies.join(', ')}]`);
     
     // Check for circular dependencies before registering
     if (this.wouldCreateCircularDependency(componentName, resolvedDependencies)) {
@@ -267,7 +267,7 @@ class InitializationManager {
    * @param {string} componentName - Name of the component
    */
   markComponentReady(componentName) {
-    // console.log(`[INIT] Component ready: ${componentName}`);
+    // window.CONSOLE_LOG_IGNORE(`[INIT] Component ready: ${componentName}`);
     this.readyComponents.add(componentName);
     this.eventTarget.dispatchEvent(new CustomEvent('component-ready', { 
       detail: { componentName } 
@@ -325,19 +325,19 @@ class InitializationManager {
    * Check if any components can now be initialized
    */
   async checkDependencies() {
-    console.log('[INIT] checkDependencies() - sorting components by dependency order');
+    window.CONSOLE_LOG_IGNORE('[INIT] checkDependencies() - sorting components by dependency order');
     
     let sortedComponents;
     try {
       sortedComponents = this._getInitializationOrder();
-      console.log('[INIT] Initialization order:', sortedComponents);
+      window.CONSOLE_LOG_IGNORE('[INIT] Initialization order:', sortedComponents);
     } catch (error) {
       console.error('[INIT] Failed to sort components:', error);
       // Fallback to registration order
       sortedComponents = Array.from(this.components.keys());
     }
     
-    console.log('[INIT] checkDependencies() - processing', sortedComponents.length, 'components in order');
+    window.CONSOLE_LOG_IGNORE('[INIT] checkDependencies() - processing', sortedComponents.length, 'components in order');
     
     // Process components in dependency order
     let componentsInitialized = 0;
@@ -348,12 +348,12 @@ class InitializationManager {
       
       if (component.status === 'pending') {
         try {
-          console.log(`[INIT] Processing ${componentName} (${i + 1}/${sortedComponents.length})...`);
+          window.CONSOLE_LOG_IGNORE(`[INIT] Processing ${componentName} (${i + 1}/${sortedComponents.length})...`);
           const canInit = await this.canInitialize(componentName);
-          console.log(`[INIT] ${componentName} canInitialize: ${canInit}`);
+          window.CONSOLE_LOG_IGNORE(`[INIT] ${componentName} canInitialize: ${canInit}`);
           
           if (canInit) {
-            console.log(`[INIT] Initializing ${componentName}...`);
+            window.CONSOLE_LOG_IGNORE(`[INIT] Initializing ${componentName}...`);
             await this.initializeComponent(componentName);
             componentsInitialized++;
           } else {
@@ -363,11 +363,11 @@ class InitializationManager {
           console.error(`[INIT] Error checking/initializing ${componentName}:`, error);
         }
       } else {
-        console.log(`[INIT] ${componentName} already processed - status: ${component.status}`);
+        window.CONSOLE_LOG_IGNORE(`[INIT] ${componentName} already processed - status: ${component.status}`);
       }
     }
     
-    console.log(`[INIT] checkDependencies() complete - initialized ${componentsInitialized} components`);
+    window.CONSOLE_LOG_IGNORE(`[INIT] checkDependencies() complete - initialized ${componentsInitialized} components`);
     
     // Check if any components are still pending
     const stillPending = Array.from(this.components.entries())
@@ -387,11 +387,11 @@ class InitializationManager {
   async canInitialize(componentName) {
     const component = this.components.get(componentName);
     if (!component) {
-      console.log(`[INIT] canInitialize(${componentName}) - component not found`);
+      window.CONSOLE_LOG_IGNORE(`[INIT] canInitialize(${componentName}) - component not found`);
       return false;
     }
     
-    console.log(`[INIT] canInitialize(${componentName}) - dependencies: [${Array.from(component.dependencies).join(', ')}]`);
+    window.CONSOLE_LOG_IGNORE(`[INIT] canInitialize(${componentName}) - dependencies: [${Array.from(component.dependencies).join(', ')}]`);
     
     // Early validation: check if all declared dependencies are registered
     const undefinedDependencies = [];
@@ -413,21 +413,21 @@ class InitializationManager {
         console.warn(`[INIT] Dependency '${depName}' for '${componentName}' not found in initialization promises`);
         return Promise.resolve(); // Allow initialization to continue
       }
-      console.log(`[INIT] ${componentName} waiting for dependency: ${depName}`);
+      window.CONSOLE_LOG_IGNORE(`[INIT] ${componentName} waiting for dependency: ${depName}`);
       return depPromise;
     });
     
-    console.log(`[INIT] ${componentName} waiting for ${dependencyPromises.length} dependency promises`);
+    window.CONSOLE_LOG_IGNORE(`[INIT] ${componentName} waiting for ${dependencyPromises.length} dependency promises`);
     
     if (dependencyPromises.length === 0) {
-      console.log(`[INIT] ${componentName} has no dependencies - can initialize immediately`);
+      window.CONSOLE_LOG_IGNORE(`[INIT] ${componentName} has no dependencies - can initialize immediately`);
       return true;
     }
     
     try {
       // Wait for all dependencies to resolve - no timeout, dependencies must complete
       await Promise.all(dependencyPromises);
-      console.log(`[INIT] ${componentName} all dependencies resolved`);
+      window.CONSOLE_LOG_IGNORE(`[INIT] ${componentName} all dependencies resolved`);
       return true;
     } catch (error) {
       console.error(`[INIT] Dependency initialization failed for ${componentName}:`, error);
@@ -516,6 +516,7 @@ class InitializationManager {
         continue;
       }
       
+      console.log(`[INIT] Adding dependency ${dependencyName} to ${componentName} - instance:`, dependencyInstance);
       dependenciesMap[dependencyName] = dependencyInstance;
     }
     
@@ -537,7 +538,7 @@ class InitializationManager {
       throw new Error(errorMsg);
     }
     
-    console.log(`[INIT] Built dependencies map for ${componentName}:`, Object.keys(dependenciesMap));
+    window.CONSOLE_LOG_IGNORE(`[INIT] Built dependencies map for ${componentName}:`, Object.keys(dependenciesMap));
     return dependenciesMap;
   }
 
@@ -555,7 +556,7 @@ class InitializationManager {
     
     try {
       await initPromise;
-      console.log(`[INIT] waitForComponent('${componentName}') resolved`);
+      window.CONSOLE_LOG_IGNORE(`[INIT] waitForComponent('${componentName}') resolved`);
     } catch (error) {
       console.error(`[INIT] waitForComponent('${componentName}') failed:`, error);
       throw error;
@@ -684,7 +685,7 @@ class InitializationManager {
    */
   getComponent(componentName) {
     // Reduced logging to prevent CLI scroll issues
-    // console.log(`[DEBUG] getComponent('${componentName}') called`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] getComponent('${componentName}') called`);
     
     if (!this.componentRegistry.has(componentName)) {
       // Only warn during startup if component is never expected to be available
@@ -701,7 +702,7 @@ class InitializationManager {
       return null;
     }
     
-    console.log(`[INIT] getComponent('${componentName}') returning component instance`);
+    // window.CONSOLE_LOG_IGNORE(`[INIT] getComponent('${componentName}') returning component instance`);
     return this.componentRegistry.get(componentName);
   }
 
@@ -711,7 +712,7 @@ class InitializationManager {
    * @param {Object} componentInstance - The initialized component instance
    */
   registerComponentInstance(componentName, componentInstance) {
-    // console.log(`[INIT] Registering component instance: ${componentName}`);
+    console.log(`[INIT] Registering component instance: ${componentName}`, componentInstance);
     this.componentRegistry.set(componentName, componentInstance);
   }
 

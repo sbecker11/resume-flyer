@@ -101,7 +101,7 @@ class DependencyChecker {
             console.warn(`[${componentName}] Dependency warnings:\\n${result.warnings.join('\\n')}`);
         }
 
-        console.log(`[${componentName}] ✅ All dependencies validated successfully`);
+        window.CONSOLE_LOG_IGNORE(`[${componentName}] ✅ All dependencies validated successfully`);
         return true;
     }
 
@@ -120,7 +120,7 @@ class DependencyChecker {
             const result = this.checkDependencies(dependencies, componentName);
             
             if (result.valid) {
-                console.log(`[${componentName}] ✅ Dependencies ready after ${Date.now() - startTime}ms`);
+                window.CONSOLE_LOG_IGNORE(`[${componentName}] ✅ Dependencies ready after ${Date.now() - startTime}ms`);
                 return true;
             }
 
@@ -167,7 +167,7 @@ class DependencyChecker {
 
         // Register with InitializationManager
         initializationManager.register(componentName, wrappedInit, dependencies, options);
-        console.log(`[${componentName}] Registered with dependency validation:`, dependencies);
+        window.CONSOLE_LOG_IGNORE(`[${componentName}] Registered with dependency validation:`, dependencies);
     }
 }
 

@@ -142,8 +142,8 @@ class InfiniteScrollingContainer {
     // window.CONSOLE_LOG_IGNORE(`[DEBUG] createClonedStructure: Creating tail clones (last ${cloneCount} items):`);
     for (let i = 0; i < cloneCount; i++) {
       const originalIndex = itemCount - cloneCount + i;
-      // console.log(`Cloning tail item: i=${i}, originalIndex=${originalIndex}, itemCount=${itemCount}, cloneCount=${cloneCount}`);
-      // console.log(`originalItems[${originalIndex}]:`, this.originalItems[originalIndex]);
+      // window.CONSOLE_LOG_IGNORE(`Cloning tail item: i=${i}, originalIndex=${originalIndex}, itemCount=${itemCount}, cloneCount=${cloneCount}`);
+      // window.CONSOLE_LOG_IGNORE(`originalItems[${originalIndex}]:`, this.originalItems[originalIndex]);
       const clone = this.cloneItem(this.originalItems[originalIndex], originalIndex, 'tail');
       const jobNumber = clone.getAttribute('data-job-number');
       // window.CONSOLE_LOG_IGNORE(`  Tail clone ${i}: originalIndex=${originalIndex}, jobNumber=${jobNumber}`);
@@ -640,7 +640,7 @@ class InfiniteScrollingContainer {
     const cloneCount = Math.min(this.options.cloneCount, this.originalItems.length);
     const targetItemIndex = cloneCount + originalIndex; // Account for tail clones
     
-    // console.log(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
+    // window.CONSOLE_LOG_IGNORE(`[DEBUG] scrollToIndex: originalIndex=${originalIndex}, cloneCount=${cloneCount}, targetItemIndex=${targetItemIndex}`);
     
     // Disable seamless transitions during targeted scrolling
     this._isTargetScrolling = true;
@@ -1447,7 +1447,7 @@ class InfiniteScrollingContainer {
     if (!this.resizeTimeoutId) {
       // Only capture on the first resize event, not on subsequent ones
       this.selectedJobNumberBeforeResize = selectionManager?.getSelectedJobNumber() || null;
-      console.log(`[DEBUG] RESIZE: Captured selected job before resize: ${this.selectedJobNumberBeforeResize}`);
+      window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Captured selected job before resize: ${this.selectedJobNumberBeforeResize}`);
     }
     
     // Clear any existing timeout
@@ -1463,11 +1463,11 @@ class InfiniteScrollingContainer {
 
   // Enhanced resize handling method that follows the specific requirements
   handleResizeComplete() {
-    console.log('[DEBUG] InfiniteScroller.handleResizeComplete: Starting enhanced resize handling');
+    window.CONSOLE_LOG_IGNORE('[DEBUG] InfiniteScroller.handleResizeComplete: Starting enhanced resize handling');
     
     // Step 1: Use the selected job number that was captured before resize started
     const selectedJobNumber = this.selectedJobNumberBeforeResize;
-    console.log(`[DEBUG] RESIZE: Selected job to restore: ${selectedJobNumber}`);
+    window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Selected job to restore: ${selectedJobNumber}`);
     
     // Step 2: Set all rDivs (originals and clones) to overflow-y: auto to prevent height changes during width adjustment
     this.setRDivOverflowConstraints(true);
@@ -1484,7 +1484,7 @@ class InfiniteScrollingContainer {
       void this.contentHolder.offsetHeight;
       
       // Step 5: Use updated rDiv heights to compute new vertical positions
-      console.log('[DEBUG] handleResizeComplete: Recalculating heights and positions');
+      window.CONSOLE_LOG_IGNORE('[DEBUG] handleResizeComplete: Recalculating heights and positions');
       const { minTop, maxTop } = this.calculateItemPositions(true);
       const totalHeight = maxTop - minTop;
       this.contentHolder.style.height = `${totalHeight}px`;
@@ -1494,16 +1494,16 @@ class InfiniteScrollingContainer {
       if (selectedJobNumber !== null) {
         // Use a longer delay to ensure all DOM transformations and height calculations are complete
         setTimeout(() => {
-          console.log(`[DEBUG] RESIZE: Restoring selected job ${selectedJobNumber}`);
+          window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Restoring selected job ${selectedJobNumber}`);
           
           // Use ResumeListController for consistent scrolling behavior
           if (window.resumeListController && window.resumeListController.scrollToJobNumber) {
             window.resumeListController.scrollToJobNumber(selectedJobNumber, `InfiniteScroller.handleResizeComplete`);
-            console.log(`[DEBUG] RESIZE: Called ResumeListController.scrollToJobNumber for job ${selectedJobNumber}`);
+            window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Called ResumeListController.scrollToJobNumber for job ${selectedJobNumber}`);
           } else {
             // Fallback to direct scroll (no animation for resize restoration)
             const success = this.scrollToJobNumber(selectedJobNumber, false);
-            console.log(`[DEBUG] RESIZE: Direct scroll result: ${success}`);
+            window.CONSOLE_LOG_IGNORE(`[DEBUG] RESIZE: Direct scroll result: ${success}`);
           }
         }, 50); // Small delay to ensure DOM updates are complete
       }

@@ -24,7 +24,7 @@ export class BadgePositioner extends BaseComponent {
     async initialize({ SelectionManager, BizDetailsDivModule }) {
         this.selectionManager = SelectionManager;
         this.bizDetailsDivModule = BizDetailsDivModule;
-        console.log('[BadgePositioner] Initialized with SelectionManager and BizDetailsDivModule');
+        window.CONSOLE_LOG_IGNORE('[BadgePositioner] Initialized with SelectionManager and BizDetailsDivModule');
     }
     
     destroy() {
@@ -111,7 +111,7 @@ export class BadgePositioner extends BaseComponent {
         
         // N = ceiling((timelineYears * pixelsPerYear - timelineMarginTop) / (badgeHeight + badgeMargin))
         const numBuckets = Math.ceil((timelineYears * PIXELS_PER_YEAR - TIMELINE_MARGIN_TOP) / bucketSpacing);
-        // console.log(`[DEBUG] Bucket calculation: timelineYears=${timelineYears}, numBuckets=${numBuckets}, cDiv_centerY=${cDiv_centerY}`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] Bucket calculation: timelineYears=${timelineYears}, numBuckets=${numBuckets}, cDiv_centerY=${cDiv_centerY}`);
         
         // Dynamic timeline-based bucket calculation complete
         
@@ -181,11 +181,11 @@ export class BadgePositioner extends BaseComponent {
         
         for (let i = 0; i < alternatingSequence.length && badges.length < numJobSkills; i++) {
             const bucketIndex = centerBucketIndex + alternatingSequence[i];
-            // console.log(`[DEBUG] Badge ${i}: centerBucketIndex=${centerBucketIndex} + alternatingSequence[${i}]=${alternatingSequence[i]} = bucketIndex=${bucketIndex}`);
+            // window.CONSOLE_LOG_IGNORE(`[DEBUG] Badge ${i}: centerBucketIndex=${centerBucketIndex} + alternatingSequence[${i}]=${alternatingSequence[i]} = bucketIndex=${bucketIndex}`);
             
             // Skip out of bounds buckets
             if (bucketIndex < 0 || bucketIndex >= numBuckets) {
-                // console.log(`[DEBUG] Skipping out of bounds bucket ${bucketIndex} (valid range: 0-${numBuckets-1})`);
+                // window.CONSOLE_LOG_IGNORE(`[DEBUG] Skipping out of bounds bucket ${bucketIndex} (valid range: 0-${numBuckets-1})`);
                 numRebucketed++;
                 continue;
             }

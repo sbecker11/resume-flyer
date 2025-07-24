@@ -18,7 +18,7 @@ export class IMMigrationValidator extends ComponentScanner {
      * Comprehensive IM migration validation
      */
     async validateIMMigration(projectRoot = '.') {
-        console.log('🔄 Validating IM migration status...');
+        window.CONSOLE_LOG_IGNORE('🔄 Validating IM migration status...');
         
         const results = {
             scannedFiles: 0,
@@ -440,16 +440,16 @@ export class IMMigrationValidator extends ComponentScanner {
     async _analyzeIMResults(results) {
         const { complianceStats, migrationIssues } = results;
         
-        console.log(`📊 IM Migration Analysis Complete:`);
-        console.log(`  - Total Components: ${complianceStats.total}`);
-        console.log(`  - Fully Migrated: ${complianceStats.fullyMigrated}`);
-        console.log(`  - Partially Migrated: ${complianceStats.partiallyMigrated}`);
-        console.log(`  - Not Migrated: ${complianceStats.notMigrated}`);
+        window.CONSOLE_LOG_IGNORE(`📊 IM Migration Analysis Complete:`);
+        window.CONSOLE_LOG_IGNORE(`  - Total Components: ${complianceStats.total}`);
+        window.CONSOLE_LOG_IGNORE(`  - Fully Migrated: ${complianceStats.fullyMigrated}`);
+        window.CONSOLE_LOG_IGNORE(`  - Partially Migrated: ${complianceStats.partiallyMigrated}`);
+        window.CONSOLE_LOG_IGNORE(`  - Not Migrated: ${complianceStats.notMigrated}`);
 
         const migrationRate = complianceStats.total > 0 ? 
             (complianceStats.fullyMigrated / complianceStats.total * 100).toFixed(1) : 100;
         
-        console.log(`📈 Migration Rate: ${migrationRate}%`);
+        window.CONSOLE_LOG_IGNORE(`📈 Migration Rate: ${migrationRate}%`);
 
         // Generate priority recommendations
         results.recommendations = this._generatePriorityRecommendations(migrationIssues);
@@ -666,7 +666,7 @@ Target: 100% migration required
 Run generateMigrationReport() for detailed fix instructions.`);
         }
 
-        console.log('✅ All components have migrated to IM dependency injection pattern');
+        window.CONSOLE_LOG_IGNORE('✅ All components have migrated to IM dependency injection pattern');
         return true;
     }
 }

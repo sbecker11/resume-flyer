@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watchEffect, getCurrentInstance } from 'vue';
 import { useBullsEye } from './useBullsEye.mjs';
 
 // --- Constants ---
@@ -44,11 +44,15 @@ let _updatePositionFromBullsEye = null;
 
 // --- Composable ---
 export function useAimPoint() {
-  // Register cleanup on component unmount
-  // This must be done immediately to avoid Vue lifecycle warnings
-  onUnmounted(() => {
-    cleanup();
-  });
+  // Check if we're inside a Vue component instance
+  const instance = getCurrentInstance();
+  
+  // Register cleanup on component unmount (only if inside a Vue component)
+  if (instance) {
+    onUnmounted(() => {
+      cleanup();
+    });
+  }
 
   const bullsEye = useBullsEye();
 

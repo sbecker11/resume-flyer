@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watchEffect, getCurrentInstance } from 'vue';
 import { useLayoutToggle } from './useLayoutToggle.mjs';
 
 // --- Constants ---
@@ -73,11 +73,15 @@ export function useViewport(label = 'unnamed') {
     return _instance;
   }
 
-  // Register cleanup on component unmount (only for the first instance)
-  // This must be done immediately to avoid Vue lifecycle warnings
-  onUnmounted(() => {
-    cleanup();
-  });
+  // Check if we're inside a Vue component instance
+  const instance = getCurrentInstance();
+  
+  // Register cleanup on component unmount (only if inside a Vue component)
+  if (instance) {
+    onUnmounted(() => {
+      cleanup();
+    });
+  }
 
   // Watch for layout changes and update viewport reactively
   const layoutToggle = useLayoutToggle();

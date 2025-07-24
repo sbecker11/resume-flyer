@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue';
 import { useAimPoint, MODES } from './useAimPoint.mjs';
 import * as mathUtils from '@/modules/utils/mathUtils.mjs';
 import { AppState, saveState } from '@/modules/core/stateManager.mjs';
@@ -28,11 +28,15 @@ function updateFocalPointPosition() {
 
 // --- Composable ---
 export function useFocalPoint() {
-  // Register cleanup on component unmount
-  // This must be done immediately to avoid Vue lifecycle warnings
-  onUnmounted(() => {
-    cleanup();
-  });
+  // Check if we're inside a Vue component instance
+  const instance = getCurrentInstance();
+  
+  // Register cleanup on component unmount (only if inside a Vue component)
+  if (instance) {
+    onUnmounted(() => {
+      cleanup();
+    });
+  }
 
   const aimPoint = useAimPoint();
   const { position: aimPointPosition, mode: aimPointMode } = aimPoint;

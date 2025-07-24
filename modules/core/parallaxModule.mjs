@@ -110,7 +110,7 @@ class ParallaxModule extends BaseComponent {
     calculateParallaxDisplacements() {
         // Use ViewPortModule dependency instead of direct import
         const {x: vpX, y: vpY} = this.viewPortModule.getViewPortOrigin();
-        const focalPosition = focalPointManager.getPosition();
+        const focalPosition = focalPointManager.getFocalPointPosition();
         const {x: fpX, y: fpY} = focalPosition;
 
         //const dh = (scX - fpX) * PARALLAX_X_EXAGGERATION_FACTOR;
@@ -287,6 +287,12 @@ class ParallaxModule extends BaseComponent {
         
         // scene to view transformation
         translateX += this.getSceneContainerWidth()/2;
+        
+        // Apply scene Y position (timeline position) directly - no viewport offset needed
+        const sceneTop = parseFloat(bizCardDiv.getAttribute('data-sceneTop'));
+        if (!isNaN(sceneTop)) {
+            translateY = sceneTop; // Direct mapping: viewY = sceneY
+        }
 
         // only original cDivs with zScale > 0 are subject to parallax
         if (zScale > 0) {

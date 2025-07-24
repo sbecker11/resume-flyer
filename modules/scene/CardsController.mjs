@@ -43,9 +43,9 @@ const MIN_HEIGHT = 180; // Reduced from 200 for more square aspect
 class CardsController extends BaseComponent {
 
     constructor() {
-        console.log('[DEBUG] CardsController constructor called');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController constructor called');
         super('CardsController');
-        console.log('[DEBUG] CardsController super() completed');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController super() completed');
 
         // Singleton pattern: return existing instance if one exists
         if (CardsController.instance) {
@@ -107,7 +107,7 @@ class CardsController extends BaseComponent {
     }
 
     async initialize({ VueDomManager, SceneContainer, BadgeManager, SelectionManager, JobsDataManager, ColorPaletteManager, TimelineManager }) {
-        console.log('[DEBUG] CardsController.initialize() called with dependencies:', { 
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController.initialize() called with dependencies:', { 
             VueDomManager: !!VueDomManager, 
             SceneContainer: !!SceneContainer, 
             BadgeManager: !!BadgeManager, 
@@ -117,7 +117,7 @@ class CardsController extends BaseComponent {
             TimelineManager: !!TimelineManager
         });
         if (this.isInitialized) {
-            console.log('[DEBUG] CardsController already initialized, returning early');
+            window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController already initialized, returning early');
             return;
         }
         
@@ -153,7 +153,7 @@ class CardsController extends BaseComponent {
             throw new Error('[CardsController] ColorPaletteManager dependency not provided');
         }
         
-        console.log('[CardsController] Dependencies injected successfully:', {
+        window.CONSOLE_LOG_IGNORE('[CardsController] Dependencies injected successfully:', {
             vueDomManager: !!this.vueDomManager,
             selectionManager: !!this.selectionManager,
             sceneContainer: !!this.sceneContainer,
@@ -167,14 +167,20 @@ class CardsController extends BaseComponent {
         
         // Get jobs data from JobsDataManager dependency
         const jobsData = this.jobsDataManager.getAllJobs();
-        console.log('[DEBUG] CardsController: jobsData from JobsDataManager:', jobsData);
-        console.log('[DEBUG] CardsController: jobsData length:', jobsData?.length);
-        console.log('[DEBUG] CardsController: Setting originalJobsData...');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: jobsData from JobsDataManager:', jobsData);
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: jobsData length:', jobsData?.length);
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Setting originalJobsData...');
         this.originalJobsData = jobsData;
-        console.log('[DEBUG] CardsController: originalJobsData set:', !!this.originalJobsData);
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: originalJobsData set:', !!this.originalJobsData);
         this.bizCardDivs = await this._createAllBizCardDivs(jobsData);
-        console.log('[DEBUG] CardsController: Created', this.bizCardDivs.length, 'bizCardDivs');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Created', this.bizCardDivs.length, 'bizCardDivs');
         window.CONSOLE_LOG_IGNORE('[CardsController] Created', this.bizCardDivs.length, 'bizCardDivs');
+        
+        // Trigger parallax positioning for all newly created cDivs
+        if (window.refreshAllParallaxTransforms) {
+            window.refreshAllParallaxTransforms();
+            window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Applied parallax transforms to', this.bizCardDivs.length, 'cDivs');
+        }
         
         // Apply the same sort rule as ResumeListController
         const initialSortRule = AppState?.resume?.sortRule || { field: 'startDate', direction: 'desc' };
@@ -182,19 +188,19 @@ class CardsController extends BaseComponent {
         this.applySortRule(initialSortRule, true);
         
         // isInitialized is managed by BaseComponent automatically
-        console.log('[DEBUG] CardsController.initialize() completed successfully');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController.initialize() completed successfully');
 
     }
 
 
 
     async _createAllBizCardDivs(jobsData) {
-        console.log('[DEBUG] CardsController._createAllBizCardDivs called with', jobsData.length, 'jobs');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController._createAllBizCardDivs called with', jobsData.length, 'jobs');
         const divs = [];
         
         // Get scene-plane element - should be available since IM manages Vue DOM lifecycle
         const scenePlaneEl = document.getElementById('scene-plane');
-        console.log('[DEBUG] CardsController: scenePlaneEl:', scenePlaneEl);
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: scenePlaneEl:', scenePlaneEl);
         if (!scenePlaneEl) {
             throw new Error('[CardsController] scene-plane element not found - IM should have ensured DOM readiness');
         }
@@ -218,19 +224,19 @@ class CardsController extends BaseComponent {
             }
         });
 
-        console.log('[DEBUG] CardsController: Creating bizCardDivs for', jobsData.length, 'jobs');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Creating bizCardDivs for', jobsData.length, 'jobs');
         for (let jobNumber = 0; jobNumber < jobsData.length; jobNumber++) {
             const job = jobsData[jobNumber];
-            console.log(`[DEBUG] CardsController: Creating card ${jobNumber} for job:`, job.employer);
+            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Creating card ${jobNumber} for job:`, job.employer);
             const bizCardDiv = await this.createBizCardDiv(job, jobNumber, jobsData.length);
-            console.log(`[DEBUG] CardsController: Created bizCardDiv:`, bizCardDiv);
+            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Created bizCardDiv:`, bizCardDiv);
             divs.push(bizCardDiv);
         }
         
-        console.log('[DEBUG] CardsController: Appending', divs.length, 'cards to scene-plane');
+        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Appending', divs.length, 'cards to scene-plane');
         divs.forEach((card, index) => {
             if (card instanceof Node) {
-                console.log(`[DEBUG] CardsController: Appending card ${index} to scene-plane`);
+                window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Appending card ${index} to scene-plane`);
                 scenePlaneEl.appendChild(card);
             } else {
                 console.error(`[DEBUG] CardsController: Card ${index} is not a Node:`, card);
@@ -426,7 +432,7 @@ class CardsController extends BaseComponent {
         // Log data-scene- values for job 0 only
         const jobNumber = bizCardDiv.getAttribute('data-job-number');
         if (jobNumber === '0') {
-            // console.log('Job 0 data-scene- attributes:', {
+            // window.CONSOLE_LOG_IGNORE('Job 0 data-scene- attributes:', {
             //     'data-sceneTop': bizCardDiv.getAttribute('data-sceneTop'),
             //     'data-sceneBottom': bizCardDiv.getAttribute('data-sceneBottom'),
             //     'data-sceneHeight': bizCardDiv.getAttribute('data-sceneHeight'),
@@ -1222,7 +1228,7 @@ class CardsController extends BaseComponent {
      * Update the sorted indices based on the current sort rule
      */
     updateSortedIndices() {
-        console.log('[DEBUG] updateSortedIndices() called - version check: UPDATED'); // Force cache refresh
+        window.CONSOLE_LOG_IGNORE('[DEBUG] updateSortedIndices() called - version check: UPDATED'); // Force cache refresh
         
         // Safety check - ensure originalJobsData is initialized and is an array
         if (!this.originalJobsData) {

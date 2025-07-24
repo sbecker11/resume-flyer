@@ -61,15 +61,15 @@ class BadgeManager extends BaseComponent {
      * This should be called by the initialization manager after the state has been loaded.
      */
     async initialize(dependencies = {}) {
-        console.log(`[BadgeManager] Initializing - AppState:`, AppState);
-        console.log(`[BadgeManager] AppState.badgeToggle:`, AppState?.badgeToggle);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initializing - AppState:`, AppState);
+        window.CONSOLE_LOG_IGNORE(`[BadgeManager] AppState.badgeToggle:`, AppState?.badgeToggle);
         
         if (AppState?.badgeToggle?.mode) {
             let mode = AppState.badgeToggle.mode;
             this._mode = mode;
-            console.log(`[BadgeManager] Loaded badge mode from app-state.json: ${this._mode}`);
+            window.CONSOLE_LOG_IGNORE(`[BadgeManager] Loaded badge mode from app-state.json: ${this._mode}`);
         } else {
-            console.log(`[BadgeManager] No badge mode found in app-state.json, using default: ${this._mode}`);
+            window.CONSOLE_LOG_IGNORE(`[BadgeManager] No badge mode found in app-state.json, using default: ${this._mode}`);
         }
 
         window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode from state: ${this._mode}`);

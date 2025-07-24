@@ -172,13 +172,13 @@ export default {
 
     async initialize(dependencies) {
       // SceneContainer dependency ensures DOM is ready, now safe to initialize viewport
-      console.log('[AppContent] DOM ready, initializing viewport with dependencies:', Object.keys(dependencies));
+      window.CONSOLE_LOG_IGNORE('[AppContent] DOM ready, initializing viewport with dependencies:', Object.keys(dependencies));
       
       // Get viewport instance from setup and initialize it now that DOM is ready
       const viewport = this.getViewportInstance();
       if (viewport) {
         viewport.initialize();
-        console.log('[AppContent] Viewport initialized successfully');
+        window.CONSOLE_LOG_IGNORE('[AppContent] Viewport initialized successfully');
       }
       
       onUnmounted(() => {
@@ -299,19 +299,19 @@ export default {
     // Register lifecycle hooks before any await statements
     onMounted(() => {
       // Component mounted - DOM elements are ready immediately
-      console.log('[AppContent] Vue mounted - DOM elements ready, dispatching dom-ready event');
+      window.CONSOLE_LOG_IGNORE('[AppContent] Vue mounted - DOM elements ready, dispatching dom-ready event');
       
       // Debug: Check DOM elements exist before dispatching event
-      console.log('[AppContent] DOM Check - scene-container:', !!document.getElementById('scene-container'));
-      console.log('[AppContent] DOM Check - scene-plane:', !!document.getElementById('scene-plane'));
-      console.log('[AppContent] DOM Check - bulls-eye:', !!document.getElementById('bulls-eye'));
-      console.log('[AppContent] DOM Check - aim-point:', !!document.getElementById('aim-point'));
+      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - scene-container:', !!document.getElementById('scene-container'));
+      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - scene-plane:', !!document.getElementById('scene-plane'));
+      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - bulls-eye:', !!document.getElementById('bulls-eye'));
+      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - aim-point:', !!document.getElementById('aim-point'));
       
       window.dispatchEvent(new CustomEvent('vue-dom-ready', { 
         detail: { timestamp: Date.now() } 
       }));
       
-      console.log('[AppContent] vue-dom-ready event dispatched');
+      window.CONSOLE_LOG_IGNORE('[AppContent] vue-dom-ready event dispatched');
       
       // Start async initialization without blocking onMounted
       initializeAsync();
@@ -456,9 +456,9 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         // Timeline is now managed by TimelineManager IM component - no manual initialization needed
         
         // Let InitializationManager handle all BaseComponent initialization
-        console.log('[AppContent] Starting application via InitializationManager...');
+        window.CONSOLE_LOG_IGNORE('[AppContent] Starting application via InitializationManager...');
         const initStatus = await initializationManager.startApplication();
-        console.log('[AppContent] Application initialization complete:', initStatus);
+        window.CONSOLE_LOG_IGNORE('[AppContent] Application initialization complete:', initStatus);
         
         // Initialize coordination systems after BaseComponents are ready
         resizeHandle.initializeResizeHandleState(viewport, bullsEye);
@@ -468,7 +468,6 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         // Initialize scene systems
         autoScroll.initialize();
         await scenePlane.initialize();
-        parallax.initialize(focalPoint);
         
         // Initialize reactive composables that depend on IM components
         bullsEye.initialize();
@@ -522,13 +521,13 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         };
         
         window.showDependencyGraph = () => {
-          console.log(initializationManager.getDependencyGraph());
+          window.CONSOLE_LOG_IGNORE(initializationManager.getDependencyGraph());
         };
         
         window.validateDependencies = () => {
           const result = initializationManager.validateDependencies();
           if (result.isValid) {
-            console.log('Dependency graph is valid');
+            window.CONSOLE_LOG_IGNORE('Dependency graph is valid');
           } else {
             console.error('Dependency graph has errors:', result.errors);
           }
@@ -865,7 +864,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
       initialPosition = { ...currentPos };
       
       event.preventDefault();
-      // console.log('[Debug] Drag started at:', { x: event.clientX, y: event.clientY, dragStartPoint });
+      // window.CONSOLE_LOG_IGNORE('[Debug] Drag started at:', { x: event.clientX, y: event.clientY, dragStartPoint });
     };
 
     const handleDebugPanelDrag = (event) => {
@@ -878,14 +877,14 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
       const deltaX = event.clientX - dragStartPoint.x;
       const deltaY = event.clientY - dragStartPoint.y;
       
-      // console.log(`[Debug] Dragging:`, { currentMouse: { x: event.clientX, y: event.clientY }, dragStartPoint, deltaX, deltaY });
+      // window.CONSOLE_LOG_IGNORE(`[Debug] Dragging:`, { currentMouse: { x: event.clientX, y: event.clientY }, dragStartPoint, deltaX, deltaY });
       
       const currentOrientation = appContainerClass.value;
       
       // Debug logging disabled - uncomment to enable
       // const mouseDeltaFromLastLog = Math.abs(event.clientX - lastLoggedMouse.x) + Math.abs(event.clientY - lastLoggedMouse.y);
       // if (mouseDeltaFromLastLog > MOUSE_EPSILON) {
-      //   console.log('[Debug] Drag delta:', { 
+      //   window.CONSOLE_LOG_IGNORE('[Debug] Drag delta:', { 
       //     deltaX, 
       //     deltaY, 
       //     initial: initialPosition,
@@ -912,7 +911,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         };
         
         // Debug logging disabled
-        // console.log('[Debug] Final position applied:', { constrainedLeft, constrainedTop });
+        // window.CONSOLE_LOG_IGNORE('[Debug] Final position applied:', { constrainedLeft, constrainedTop });
       } else {
         const newRight = initialPosition.right - deltaX; // Right moves opposite to mouse
         const newTop = initialPosition.top + deltaY;
@@ -931,7 +930,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
 
     const handleDebugPanelDragEnd = () => {
       if (isDragging) {
-        // console.log('[Debug] Drag ended');
+        // window.CONSOLE_LOG_IGNORE('[Debug] Drag ended');
         isDragging = false;
         saveDebugPanelPosition();
       }

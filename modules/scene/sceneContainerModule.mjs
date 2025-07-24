@@ -16,7 +16,7 @@ class SceneContainer extends BaseComponent {
     }
 
     async initialize({ VueDomManager }) {
-        console.log('[SceneContainer] Initializing with Vue DOM ready...');
+        window.CONSOLE_LOG_IGNORE('[SceneContainer] Initializing with Vue DOM ready...');
         
         // VueDomManager dependency ensures Vue DOM is ready before we access DOM elements
         this._sceneContainer = document.getElementById('scene-container');
@@ -29,7 +29,7 @@ class SceneContainer extends BaseComponent {
         const sceneHeight = this._sceneContainer.clientHeight;
         const sceneOffsetHeight = this._sceneContainer.offsetHeight;
         const sceneBoundingHeight = this._sceneContainer.getBoundingClientRect().height;
-        console.log(`[SCENE-CONTAINER-INIT] Scene container ready:`, {
+        window.CONSOLE_LOG_IGNORE(`[SCENE-CONTAINER-INIT] Scene container ready:`, {
             clientHeight: sceneHeight,
             offsetHeight: sceneOffsetHeight,
             boundingHeight: sceneBoundingHeight,
@@ -38,7 +38,7 @@ class SceneContainer extends BaseComponent {
         
         // Flexbox layout is managed via CSS - Timeline has order: 0 to ensure it's first
         
-        console.log('[SceneContainer] Initialization complete');
+        window.CONSOLE_LOG_IGNORE('[SceneContainer] Initialization complete');
     }
 
     destroy() {

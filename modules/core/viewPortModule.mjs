@@ -40,13 +40,13 @@ class ViewPortModule extends BaseComponent {
             throw new Error('[VIEWPORT-INIT] scene-container element not found - IM should have ensured DOM readiness');
         }
         
-        console.log('[VIEWPORT-INIT] scene-container element found immediately (IM managed lifecycle)');
+        window.CONSOLE_LOG_IGNORE('[VIEWPORT-INIT] scene-container element found immediately (IM managed lifecycle)');
         
         // Log scene container height during viewport initialization
         const sceneHeight = this._sceneContainer.clientHeight;
         const sceneOffsetHeight = this._sceneContainer.offsetHeight;
         const sceneBoundingHeight = this._sceneContainer.getBoundingClientRect().height;
-        console.log(`[VIEWPORT-INIT] Scene container height during viewport setup:`, {
+        window.CONSOLE_LOG_IGNORE(`[VIEWPORT-INIT] Scene container height during viewport setup:`, {
             clientHeight: sceneHeight,
             offsetHeight: sceneOffsetHeight,
             boundingHeight: sceneBoundingHeight,
@@ -101,7 +101,7 @@ class ViewPortModule extends BaseComponent {
         
         // Skip updates during layout transitions to prevent race conditions
         if (window.isLayoutTransitioning) {
-            console.log('[ViewPort] Skipping update during layout transition');
+            window.CONSOLE_LOG_IGNORE('[ViewPort] Skipping update during layout transition');
             return;
         }
         
@@ -136,7 +136,7 @@ class ViewPortModule extends BaseComponent {
         this.viewPortProperties.height = sceneContainerRect.height;
         
         // Log scene container height during viewport updates
-        // console.log(`[VIEWPORT-UPDATE] Scene container height:`, {
+        // window.CONSOLE_LOG_IGNORE(`[VIEWPORT-UPDATE] Scene container height:`, {
         //     clientHeight: this._sceneContainer.clientHeight,
         //     offsetHeight: this._sceneContainer.offsetHeight,
         //     boundingHeight: sceneContainerRect.height,

@@ -350,10 +350,10 @@ class StateManager extends BaseComponent {
     }
 
     async initialize() {
-        console.log('[StateManager] Initializing state management...');
+        window.CONSOLE_LOG_IGNORE('[StateManager] Initializing state management...');
         this.appState = await this._loadState();
         AppState = this.appState; // Set the global export
-        console.log('[StateManager] State initialized');
+        window.CONSOLE_LOG_IGNORE('[StateManager] State initialized');
     }
 
     destroy() {

@@ -50,7 +50,7 @@ export class BaseComponent {
             
             this.setupEventListeners();
             this.createElements();
-            // console.log('${this.componentName} initialized');
+            // window.CONSOLE_LOG_IGNORE('${this.componentName} initialized');
         }
         
         Component will NOT work until this is fixed.`);
@@ -176,19 +176,19 @@ This is MANDATORY for proper dependency management.`);
                 .filter(p => p && !p.includes('=')) // Skip default values
                 .map(p => p.split(':')[0].trim()); // Handle { VueDomManager: vm } syntax
             
-            console.log(`[BaseComponent] ${this.componentName} parsed destructured dependencies:`, params);
+            window.CONSOLE_LOG_IGNORE(`[BaseComponent] ${this.componentName} parsed destructured dependencies:`, params);
             return params;
         }
         
         // Handle single parameter name (assumes it's a dependencies object)
         const singleParam = paramStr.split('=')[0].trim(); // Remove default values
         if (singleParam && singleParam !== 'dependencies') {
-            console.log(`[BaseComponent] ${this.componentName} single parameter '${singleParam}' found - assuming no dependencies`);
+            window.CONSOLE_LOG_IGNORE(`[BaseComponent] ${this.componentName} single parameter '${singleParam}' found - assuming no dependencies`);
             return [];
         }
         
         // If parameter is named 'dependencies', can't infer specific deps from signature
-        console.log(`[BaseComponent] ${this.componentName} generic 'dependencies' parameter found - no signature parsing possible`);
+        window.CONSOLE_LOG_IGNORE(`[BaseComponent] ${this.componentName} generic 'dependencies' parameter found - no signature parsing possible`);
         return [];
     }
 
@@ -223,7 +223,7 @@ This is MANDATORY for proper dependency management.`);
             const signatureDependencies = this._parseDependenciesFromSignature();
             
             if (signatureDependencies.length > 0) {
-                console.log(`[BaseComponent] ${this.componentName} parsed dependencies from signature:`, signatureDependencies);
+                window.CONSOLE_LOG_IGNORE(`[BaseComponent] ${this.componentName} parsed dependencies from signature:`, signatureDependencies);
                 this.dependencies = signatureDependencies;
             } else {
                 // Fall back to getDependencies method
@@ -253,7 +253,7 @@ This is MANDATORY for proper dependency management.`);
     _registerWithManager() {
         // Create wrapped initialization function
         const wrappedInit = async (dependenciesMap = {}) => {
-            console.log(`🔍 [${this.componentName}] Starting initialization with dependencies:`, Object.keys(dependenciesMap));
+            window.CONSOLE_LOG_IGNORE(`🔍 [${this.componentName}] Starting initialization with dependencies:`, Object.keys(dependenciesMap));
             
             // Simple dependency validation - just check if they're strings
             for (const dep of this.dependencies) {
@@ -269,7 +269,7 @@ This is MANDATORY for proper dependency management.`);
             }
 
             // Call the actual initialize method with dependency injection
-            console.log(`🚀 [${this.componentName}] Starting initialization...`);
+            window.CONSOLE_LOG_IGNORE(`🚀 [${this.componentName}] Starting initialization...`);
             
             // Check if initialize function uses destructured parameters
             const usesDestructuring = this._usesDestructuredParameters();
@@ -286,9 +286,9 @@ This is MANDATORY for proper dependency management.`);
             
             // Register this component instance in the central registry for service lookup
             initializationManager.registerComponentInstance(this.componentName, this);
-            // console.log(`✅ [${this.componentName}] Registered in service locator registry`);
+            // window.CONSOLE_LOG_IGNORE(`✅ [${this.componentName}] Registered in service locator registry`);
             
-            console.log(`✅ [${this.componentName}] Initialization complete`);
+            window.CONSOLE_LOG_IGNORE(`✅ [${this.componentName}] Initialization complete`);
             
             return this;
         };
@@ -326,12 +326,12 @@ This is MANDATORY for proper dependency management.`);
             } else {
                 // Use manually defined dependencies
                 this.dependencies = manualDependencies;
-                // console.log(`[BaseComponent] ${this.componentName} using manual dependencies:`, this.dependencies);
+                // window.CONSOLE_LOG_IGNORE(`[BaseComponent] ${this.componentName} using manual dependencies:`, this.dependencies);
             }
             
             // Create wrapped initialization function
             const wrappedInit = async (dependenciesMap = {}) => {
-                // console.log(`🔍 [${this.componentName}] Validating dependencies...`);
+                // window.CONSOLE_LOG_IGNORE(`🔍 [${this.componentName}] Validating dependencies...`);
                 
                 // Simple dependency validation - just check if they're strings
                 for (const dep of this.dependencies) {
@@ -347,16 +347,16 @@ This is MANDATORY for proper dependency management.`);
                 }
 
                 // Call the actual initialize method with dependency injection
-                // console.log(`🚀 [${this.componentName}] Starting initialization...`);
+                // window.CONSOLE_LOG_IGNORE(`🚀 [${this.componentName}] Starting initialization...`);
                 await this.initialize(dependenciesMap);
                 
                 this.isInitialized = true;
                 
                 // Register this component instance in the central registry for service lookup
                 initializationManager.registerComponentInstance(this.componentName, this);
-                // console.log(`✅ [${this.componentName}] Registered in service locator registry`);
+                // window.CONSOLE_LOG_IGNORE(`✅ [${this.componentName}] Registered in service locator registry`);
                 
-                // console.log(`✅ [${this.componentName}] Initialization complete`);
+                // window.CONSOLE_LOG_IGNORE(`✅ [${this.componentName}] Initialization complete`);
                 
                 return this;
             };
@@ -375,7 +375,7 @@ This is MANDATORY for proper dependency management.`);
                 await initializationManager.checkDependencies();
             }
 
-            // console.log(`📋 [${this.componentName}] Auto-registered with dependencies:`, this.dependencies);
+            // window.CONSOLE_LOG_IGNORE(`📋 [${this.componentName}] Auto-registered with dependencies:`, this.dependencies);
 
         } catch (error) {
             console.error(`❌ [${this.componentName}] Failed to auto-register:`, error);
@@ -429,6 +429,18 @@ This is MANDATORY for proper dependency management.`);
  * Provides similar enforcement for Vue components
  */
 export const BaseVueComponentMixin = {
+    data() {
+        return {
+            _isInitialized: false
+        };
+    },
+    
+    computed: {
+        isInitialized() {
+            return this._isInitialized;
+        }
+    },
+    
     created() {
         this._componentName = this.$options.name || 'UnnamedVueComponent';
         console.log(`🔍 [${this._componentName}] Vue component created - registering with IM...`);
@@ -462,7 +474,7 @@ export const BaseVueComponentMixin = {
         // Wait for IM to initialize this component with its dependencies
         try {
             await initializationManager.waitForComponent(this._componentName);
-            console.log(`✅ [${this._componentName}] Vue component initialization complete via IM`);
+            window.CONSOLE_LOG_IGNORE(`✅ [${this._componentName}] Vue component initialization complete via IM`);
         } catch (error) {
             console.error(`❌ [${this._componentName}] Vue component initialization failed:`, error);
             throw error;
@@ -486,12 +498,15 @@ export const BaseVueComponentMixin = {
             
             // Create wrapped initialization function for IM
             const wrappedInit = async (dependenciesMap = {}) => {
-                console.log(`🔍 [${this._componentName}] Vue component initializing with dependencies:`, Object.keys(dependenciesMap));
+                window.CONSOLE_LOG_IGNORE(`🔍 [${this._componentName}] Vue component initializing with dependencies:`, Object.keys(dependenciesMap));
                 
                 // Call the component's initialize method with dependency injection
                 await this.initialize(dependenciesMap);
                 
-                console.log(`✅ [${this._componentName}] Vue component initialized`);
+                // Mark as initialized
+                this._isInitialized = true;
+                
+                window.CONSOLE_LOG_IGNORE(`✅ [${this._componentName}] Vue component initialized`);
                 return this;
             };
             
@@ -503,7 +518,7 @@ export const BaseVueComponentMixin = {
                 { type: 'vue-component' }
             );
             
-            console.log(`🔍 [${this._componentName}] Vue component registered with IM. Dependencies: [${dependencies.join(', ')}]`);
+            window.CONSOLE_LOG_IGNORE(`🔍 [${this._componentName}] Vue component registered with IM. Dependencies: [${dependencies.join(', ')}]`);
         }
     }
 };
@@ -523,9 +538,9 @@ export class ComponentRegistrationEnforcer {
      * Monitor for component instantiation
      */
     startMonitoring() {
-        // Override console.log to catch component creation patterns
-        const originalLog = console.log;
-        console.log = (...args) => {
+        // Override window.CONSOLE_LOG_IGNORE to catch component creation patterns
+        const originalLog = window.CONSOLE_LOG_IGNORE;
+        window.CONSOLE_LOG_IGNORE = (...args) => {
             const message = args.join(' ');
             
             // Look for component patterns

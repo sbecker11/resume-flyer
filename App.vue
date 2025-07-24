@@ -45,12 +45,12 @@ export default {
     async initialize(dependencies) {
       // App.vue doesn't need initialization - it just loads modules
       // The actual component initialization happens in AppContent.vue
-      console.log('[App] Root component ready - modules imported for IM registration');
+      window.CONSOLE_LOG_IGNORE('[App] Root component ready - modules imported for IM registration');
     },
     
     cleanupDependencies() {
       // App.vue doesn't have any cleanup since it doesn't use managers directly
-      console.log('[App] Root component cleanup - no managers to clean up');
+      window.CONSOLE_LOG_IGNORE('[App] Root component cleanup - no managers to clean up');
     }
   }
 };

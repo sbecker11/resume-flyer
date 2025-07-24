@@ -31,7 +31,7 @@ class BizDetailsDivModule extends BaseComponent {
 
     async initialize(dependencies = {}) {
         this.jobsDataManager = dependencies.JobsDataManager;
-        console.log('[BizDetailsDivModule] Initialized with JobsDataManager');
+        window.CONSOLE_LOG_IGNORE('[BizDetailsDivModule] Initialized with JobsDataManager');
     }
 
     destroy() {
@@ -109,21 +109,21 @@ class BizDetailsDivModule extends BaseComponent {
  */
     getOriginalBizCardDiv(bizCardDiv) {
     if ( bizCardDiv == null ) {
-        console.log("DEBUG: getOriginalBizCardDiv bizCardDiv is null");
+        window.CONSOLE_LOG_IGNORE("DEBUG: getOriginalBizCardDiv bizCardDiv is null");
         return null;
     }
     let id = bizCardDiv.id;
     if ( id.indexOf('-clone') == -1 ) {
-        console.log("DEBUG: getOriginalBizCardDiv: returning id:", bizCardDiv.id);
+        window.CONSOLE_LOG_IGNORE("DEBUG: getOriginalBizCardDiv: returning id:", bizCardDiv.id);
         return bizCardDiv;
     }
     id = id.replace('-clone', '');
     const originalBizCardDiv = document.getElementById(id);
     if ( originalBizCardDiv == null ) {
-        console.log("DEBUG: getOriginalBizCardDiv: originalBizCardDiv not found for id:", id);
+        window.CONSOLE_LOG_IGNORE("DEBUG: getOriginalBizCardDiv: originalBizCardDiv not found for id:", id);
         return null;
     }
-    console.log("DEBUG: getOriginalBizCardDiv: returning originalBizCardDiv.id:", originalBizCardDiv.id);
+    window.CONSOLE_LOG_IGNORE("DEBUG: getOriginalBizCardDiv: returning originalBizCardDiv.id:", originalBizCardDiv.id);
     return originalBizCardDiv;
 }
 
@@ -133,20 +133,20 @@ class BizDetailsDivModule extends BaseComponent {
    */
     getValidatedSceneZ(bizCardDiv) {
     if ( bizCardDiv ==  null ) {
-        // console.log("DEBUG: getValidatedSceneZ: bizCardDiv null");
+        // window.CONSOLE_LOG_IGNORE("DEBUG: getValidatedSceneZ: bizCardDiv null");
         return null;
     }
     const originalBizCardDiv = this.getOriginalBizCardDiv(bizCardDiv); 
     if (!originalBizCardDiv) {
-        // console.log("DEBUG: getValidatedSceneZ: originalBizCardDiv not found for bizCardDiv.id:", bizCardDiv.id);
+        // window.CONSOLE_LOG_IGNORE("DEBUG: getValidatedSceneZ: originalBizCardDiv not found for bizCardDiv.id:", bizCardDiv.id);
         return null;
     }
-    // console.log("DEBUG: getValidatedSceneZ originalBizCardDiv.id:", originalBizCardDiv.id);
+    // window.CONSOLE_LOG_IGNORE("DEBUG: getValidatedSceneZ originalBizCardDiv.id:", originalBizCardDiv.id);
     const sceneZ = originalBizCardDiv.getAttribute('data-sceneZ');
     if ( sceneZ && !utils.isNumericString(sceneZ) ) {
         throw new Error('getValidatedSceneZ: non-numeric sceneZ:', sceneZ);
     }
-    // console.log("DEBUG: getValidatedSceneZ sceneZ:", sceneZ);
+    // window.CONSOLE_LOG_IGNORE("DEBUG: getValidatedSceneZ sceneZ:", sceneZ);
     return parseFloat(sceneZ);
 };
 
@@ -312,7 +312,7 @@ class BizDetailsDivModule extends BaseComponent {
     const bizCardDivId = createBizCardDivId(jobNumber);
     const bizCardDiv = document.getElementById(bizCardDivId);
     if (!bizCardDiv) {
-        console.log("DEBUG: getBizCardDivSceneZ: bizCardDiv not found for jobNumber:", jobNumber);
+        window.CONSOLE_LOG_IGNORE("DEBUG: getBizCardDivSceneZ: bizCardDiv not found for jobNumber:", jobNumber);
         return null;
     }
     const originalBizCardDiv = this.getOriginalBizCardDiv(bizCardDiv);
@@ -334,7 +334,7 @@ class BizDetailsDivModule extends BaseComponent {
         const jobNumber = getValidatedJobNumber(bizCardDiv);
         let sceneZ = this.getValidatedSceneZ(bizCardDiv);
         if ( !sceneZ ) {
-            console.log("DEBUG: createBizCardSubContextString: sceneZ is splat");
+            window.CONSOLE_LOG_IGNORE("DEBUG: createBizCardSubContextString: sceneZ is splat");
             sceneZ = 'splat';
         }
         const jobSkills = this.getJobSkills(jobNumber);

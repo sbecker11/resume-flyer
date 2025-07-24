@@ -149,9 +149,9 @@ function handleSteppingClick(event) {
 
 function handleLayoutToggle(event) {
   event.stopPropagation();
-  console.log('BEFORE toggle:', orientation.value);
+  window.CONSOLE_LOG_IGNORE('BEFORE toggle:', orientation.value);
   toggleOrientation();
-  console.log('AFTER toggle:', orientation.value);
+  window.CONSOLE_LOG_IGNORE('AFTER toggle:', orientation.value);
 }
 </script>
 

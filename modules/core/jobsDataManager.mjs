@@ -58,6 +58,7 @@ class JobsDataManager extends BaseComponent {
             // isInitialized is managed by BaseComponent automatically
             
             console.log(`[JobsDataManager] Successfully initialized with ${this.jobsData.length} jobs`);
+            console.log('[JobsDataManager] Sample job data:', this.jobsData[0]);
             
         } catch (error) {
             console.error('[JobsDataManager] Failed to initialize:', error);

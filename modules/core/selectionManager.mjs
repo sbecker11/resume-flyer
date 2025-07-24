@@ -27,7 +27,7 @@ class SelectionManager extends BaseComponent {
     }
 
     async initialize(dependencies = {}) {
-        console.log('[SelectionManager] Initialized');
+        window.CONSOLE_LOG_IGNORE('[SelectionManager] Initialized');
         // SelectionManager is ready - no special initialization needed
     }
 
@@ -50,9 +50,9 @@ class SelectionManager extends BaseComponent {
     }
 
     selectJobNumber(jobNumber, caller = '') {
-        // console.log(`SelectionManager.selectJobNumber called with jobNumber=${jobNumber}, caller=${caller}`);
+        // window.CONSOLE_LOG_IGNORE(`SelectionManager.selectJobNumber called with jobNumber=${jobNumber}, caller=${caller}`);
         if (this.selectedJobNumber === jobNumber) {
-            console.log(`SelectionManager: Early return - same job already selected: ${jobNumber} from ${caller}`);
+            window.CONSOLE_LOG_IGNORE(`SelectionManager: Early return - same job already selected: ${jobNumber} from ${caller}`);
             return;
         }
 
@@ -103,7 +103,7 @@ class SelectionManager extends BaseComponent {
                 isPaired: true // Flag to indicate both cDiv and rDiv should be selected
             }
         });
-        // console.log(`SelectionManager: Dispatching selectionChanged event:`, event.detail);
+        // window.CONSOLE_LOG_IGNORE(`SelectionManager: Dispatching selectionChanged event:`, event.detail);
         this.dispatchEvent(event);
     }
 

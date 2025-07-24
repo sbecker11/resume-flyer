@@ -21,7 +21,7 @@ class ColorPaletteManager extends BaseComponent {
     }
 
     async initialize(dependencies = {}) {
-        console.log('[ColorPaletteManager] Initializing color palette system...');
+        window.CONSOLE_LOG_IGNORE('[ColorPaletteManager] Initializing color palette system...');
         
         try {
             // Dynamically import the composable to avoid circular dependencies
@@ -34,7 +34,7 @@ class ColorPaletteManager extends BaseComponent {
             // Wait for the color palette system to be ready
             await this.readyPromise;
             
-            console.log('[ColorPaletteManager] Color palette system ready');
+            window.CONSOLE_LOG_IGNORE('[ColorPaletteManager] Color palette system ready');
             
         } catch (error) {
             console.error('[ColorPaletteManager] Failed to initialize:', error);

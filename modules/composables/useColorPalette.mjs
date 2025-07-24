@@ -1,4 +1,4 @@
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, getCurrentInstance } from 'vue';
 import { AppState, saveState, initializeState } from '@/modules/core/stateManager.mjs';
 import * as colorUtils from '@/modules/utils/colorUtils.mjs';
 
@@ -70,8 +70,16 @@ export function useColorPalette() {
         }
     }
 
-    // Load palettes only once when the app starts
-    onMounted(loadPalettes);
+    // Check if we're inside a Vue component instance
+    const instance = getCurrentInstance();
+    
+    // Load palettes only once when the app starts (only if inside a Vue component)
+    if (instance) {
+        onMounted(loadPalettes);
+    } else {
+        // If called outside a component, load immediately
+        loadPalettes();
+    }
 
     function setCurrentPalette(filename) {
         if (filename && filenameToNameMap.value[filename]) {

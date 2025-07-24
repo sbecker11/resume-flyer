@@ -75,7 +75,7 @@ export class RuntimeEnforcement {
                 }
             });
             
-            console.log(`🔍 Intercepted ${managerName} methods`);
+            window.CONSOLE_LOG_IGNORE(`🔍 Intercepted ${managerName} methods`);
         } catch (error) {
             console.warn(`Could not intercept ${managerName}:`, error.message);
         }
@@ -162,7 +162,7 @@ export class RuntimeEnforcement {
         }
         usage.methods.get(managerName).add(methodName);
         
-        console.log(`📱 ${caller.file} used ${managerName}.${methodName}`);
+        window.CONSOLE_LOG_IGNORE(`📱 ${caller.file} used ${managerName}.${methodName}`);
     }
 
     /**
@@ -170,13 +170,13 @@ export class RuntimeEnforcement {
      */
     _trackComponentCreation() {
         // Override console methods to catch component logs
-        const originalConsoleLog = console.log;
+        const originalConsoleLog = window.CONSOLE_LOG_IGNORE;
         const originalConsoleError = console.error;
         
         const componentLogPattern = /\\[(\\w+)\\]|Component (\\w+)|component (\\w+)/i;
         
-        // Intercept console.log
-        console.log = (...args) => {
+        // Intercept window.CONSOLE_LOG_IGNORE
+        window.CONSOLE_LOG_IGNORE = (...args) => {
             const message = args.join(' ');
             const match = message.match(componentLogPattern);
             
@@ -215,7 +215,7 @@ export class RuntimeEnforcement {
                 detected: true
             });
             
-            console.log(`📝 Detected component: ${componentName} (registered: ${isRegistered})`);
+            window.CONSOLE_LOG_IGNORE(`📝 Detected component: ${componentName} (registered: ${isRegistered})`);
         }
     }
 

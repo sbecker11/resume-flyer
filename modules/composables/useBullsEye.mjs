@@ -31,14 +31,14 @@ function updateBullsEyePosition() {
 
 // Immediate update to prevent flickering
 function immediateBullsEyeUpdate(x, y, source = 'unknown') {
-  window.CONSOLE_LOG_IGNORE(`BullsEye: Immediate update from ${source}:`, { x, y });
+  // window.CONSOLE_LOG_IGNORE(`BullsEye: Immediate update from ${source}:`, { x, y });
   
   // If module isn't initialized, try to initialize it first
   if (!bullsEyeModule.isInitialized()) {
     console.warn('BullsEye: BullsEye module not initialized yet, attempting to initialize');
     try {
       bullsEyeModule.initialize();
-      window.CONSOLE_LOG_IGNORE('BullsEye: Module initialized successfully');
+      // window.CONSOLE_LOG_IGNORE('BullsEye: Module initialized successfully');
     } catch (error) {
       console.error('BullsEye: Failed to initialize module:', error);
       // Schedule for later with multiple retries
@@ -52,7 +52,7 @@ function immediateBullsEyeUpdate(x, y, source = 'unknown') {
         }
         
         retryCount++;
-        window.CONSOLE_LOG_IGNORE(`BullsEye: Retry ${retryCount}/${maxRetries} - attempting to initialize and update`);
+        // window.CONSOLE_LOG_IGNORE(`BullsEye: Retry ${retryCount}/${maxRetries} - attempting to initialize and update`);
         
         setTimeout(() => {
           if (bullsEyeModule.isInitialized()) {
@@ -91,12 +91,12 @@ function immediateBullsEyeUpdate(x, y, source = 'unknown') {
   bullsEyeState.value.x = x;
   bullsEyeState.value.y = y;
   
-  window.CONSOLE_LOG_IGNORE('BullsEye: Updated element position and state:', { 
-    elementLeft: bullsEyeElement.style.left,
-    elementTop: bullsEyeElement.style.top,
-    stateX: bullsEyeState.value.x,
-    stateY: bullsEyeState.value.y
-  });
+  // window.CONSOLE_LOG_IGNORE('BullsEye: Updated element position and state:', { 
+  //   elementLeft: bullsEyeElement.style.left,
+  //   elementTop: bullsEyeElement.style.top,
+  //   stateX: bullsEyeState.value.x,
+  //   stateY: bullsEyeState.value.y
+  // });
 }
 
 // Debounced update to prevent flickering (kept for backward compatibility)
@@ -135,11 +135,11 @@ export function useBullsEye() {
 
   // Function to update bullsEye to scene container center
   function updateToSceneCenter() {
-    window.CONSOLE_LOG_IGNORE('BullsEye: updateToSceneCenter called, mode:', _mode);
+    // window.CONSOLE_LOG_IGNORE('BullsEye: updateToSceneCenter called, mode:', _mode);
     
     // Don't try to access InitializationManager until we're ready
     if (!isComponentReady) {
-      console.log('BullsEye: Not ready yet, skipping updateToSceneCenter');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Not ready yet, skipping updateToSceneCenter');
       return;
     }
     
@@ -152,7 +152,7 @@ export function useBullsEye() {
         updateBullsEyePosition();
       }
     } else {
-      window.CONSOLE_LOG_IGNORE('BullsEye: Not in locked mode, skipping update');
+      // window.CONSOLE_LOG_IGNORE('BullsEye: Not in locked mode, skipping update');
     }
   }
 
@@ -170,7 +170,7 @@ export function useBullsEye() {
       const checkBullsEyeReady = () => {
         if (bullsEyeModule.isInitialized()) {
           isComponentReady = true;
-          console.log('[BullsEye] Composable is now ready - BullsEye component initialized');
+          // window.CONSOLE_LOG_IGNORE('[BullsEye] Composable is now ready - BullsEye component initialized');
           updateToSceneCenter();
         } else {
           // Check again in a short while
@@ -185,7 +185,7 @@ export function useBullsEye() {
     const checkBullsEyeReady = () => {
       if (bullsEyeModule.isInitialized()) {
         isComponentReady = true;
-        console.log('[BullsEye] Composable is now ready - BullsEye component initialized (non-Vue context)');
+        // window.CONSOLE_LOG_IGNORE('[BullsEye] Composable is now ready - BullsEye component initialized (non-Vue context)');
         updateToSceneCenter();
       } else {
         // Check again in a short while
@@ -200,7 +200,7 @@ export function useBullsEye() {
     if (!isComponentActive || !isComponentReady) return;
     
     const orientation = layoutToggle.orientation.value;
-    window.CONSOLE_LOG_IGNORE('BullsEye: Layout orientation changed to:', orientation);
+    // window.CONSOLE_LOG_IGNORE('BullsEye: Layout orientation changed to:', orientation);
     
     // Add a small delay to ensure DOM has updated after layout change
     setTimeout(() => {
@@ -217,7 +217,7 @@ export function useBullsEye() {
   // Listen for window resize events
   const handleResize = () => {
     if (!isComponentActive || !isComponentReady) return;
-    window.CONSOLE_LOG_IGNORE('BullsEye: Window resize event received');
+    // window.CONSOLE_LOG_IGNORE('BullsEye: Window resize event received');
     try {
       updateToSceneCenter();
     } catch (error) {
@@ -231,7 +231,7 @@ export function useBullsEye() {
   let sceneContainerObserver = null;
   const handleSceneContainerResize = () => {
     if (!isComponentActive || !isComponentReady) return;
-    window.CONSOLE_LOG_IGNORE('BullsEye: Scene container resize detected');
+    // window.CONSOLE_LOG_IGNORE('BullsEye: Scene container resize detected');
     try {
       updateToSceneCenter();
     } catch (error) {
@@ -248,7 +248,7 @@ export function useBullsEye() {
       if (sceneContainer && window.ResizeObserver) {
         sceneContainerObserver = new ResizeObserver(handleSceneContainerResize);
         sceneContainerObserver.observe(sceneContainer);
-        window.CONSOLE_LOG_IGNORE('BullsEye: Scene container observer established');
+        // window.CONSOLE_LOG_IGNORE('BullsEye: Scene container observer established');
       }
     } else {
       // Try again later if bullsEye module not ready
@@ -265,7 +265,7 @@ export function useBullsEye() {
   // Listen for layout change events - update immediately and then again after transition
   const handleLayoutChange = (event) => {
     if (!isComponentActive) return;
-    console.log('BullsEye: Layout change event received:', event.detail);
+    window.CONSOLE_LOG_IGNORE('BullsEye: Layout change event received:', event.detail);
     
     // Update immediately
     try {
@@ -289,7 +289,7 @@ export function useBullsEye() {
   // Listen for layout toggle button clicks directly
   const handleLayoutToggle = () => {
     if (!isComponentActive) return;
-    console.log('BullsEye: Layout toggle detected');
+    window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle detected');
     
     // Update immediately when toggle is clicked
     try {
@@ -317,9 +317,9 @@ export function useBullsEye() {
     
     if (layoutToggleButton) {
       layoutToggleButton.addEventListener('click', handleLayoutToggle);
-      window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle button listener established');
+      // window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle button listener established');
     } else {
-      window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle button not found, will retry');
+      // window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle button not found, will retry');
       // Retry after DOM is ready
       setTimeout(() => {
         if (!isComponentActive) return;
@@ -337,7 +337,7 @@ export function useBullsEye() {
   // Listen for scene reinitialize events
   const handleSceneReinitialize = (event) => {
     if (!isComponentActive) return;
-    console.log('BullsEye: Scene reinitialize event received:', event.detail);
+    window.CONSOLE_LOG_IGNORE('BullsEye: Scene reinitialize event received:', event.detail);
     
     setTimeout(() => {
       if (!isComponentActive) return;
@@ -353,7 +353,7 @@ export function useBullsEye() {
   // Listen for programmatic soft refresh completion
   const handleSoftRefreshComplete = (event) => {
     if (!isComponentActive) return;
-    console.log('BullsEye: Programmatic soft refresh complete event received:', event.detail);
+    window.CONSOLE_LOG_IGNORE('BullsEye: Programmatic soft refresh complete event received:', event.detail);
     
     setTimeout(() => {
       if (!isComponentActive) return;
@@ -457,14 +457,14 @@ export function useBullsEye() {
                               document.querySelector('#layout-toggle');
     if (layoutToggleButton) {
       layoutToggleButton.removeEventListener('click', handleLayoutToggle);
-      console.log('BullsEye: Layout toggle button listener removed');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Layout toggle button listener removed');
     }
     
     // Disconnect ResizeObserver
     if (sceneContainerObserver) {
       sceneContainerObserver.disconnect();
       sceneContainerObserver = null;
-      console.log('BullsEye: Scene container observer disconnected');
+      window.CONSOLE_LOG_IGNORE('BullsEye: Scene container observer disconnected');
     }
     
     if (_updateTimeout) {

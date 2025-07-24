@@ -29,26 +29,26 @@ export class DependencyEnforcement {
 
         this.enforcementLevel = enforcementLevel;
 
-        console.log(`🔒 Starting dependency enforcement (level: ${enforcementLevel})...`);
+        window.CONSOLE_LOG_IGNORE(`🔒 Starting dependency enforcement (level: ${enforcementLevel})...`);
 
         try {
             // Step 1: Scan project for component violations
-            console.log('📡 Scanning project files...');
+            window.CONSOLE_LOG_IGNORE('📡 Scanning project files...');
             const scanResults = await componentScanner.scanProject(projectRoot);
 
             // Step 2: Validate IM migration status
-            console.log('🔄 Validating IM migration compliance...');
+            window.CONSOLE_LOG_IGNORE('🔄 Validating IM migration compliance...');
             const migrationResults = await imMigrationValidator.validateIMMigration(projectRoot);
 
             // Step 3: Check runtime registration
-            console.log('🔍 Checking runtime component registration...');
+            window.CONSOLE_LOG_IGNORE('🔍 Checking runtime component registration...');
             await this._checkRuntimeRegistration();
 
             // Step 4: Generate reports if requested
             if (generateReport) {
                 const complianceReport = componentScanner.generateReport();
                 const migrationReport = imMigrationValidator.generateMigrationReport();
-                console.log('📋 Compliance reports generated');
+                window.CONSOLE_LOG_IGNORE('📋 Compliance reports generated');
                 
                 // Save reports to files
                 await this._saveReport(complianceReport, 'compliance-report.md');
@@ -64,14 +64,14 @@ export class DependencyEnforcement {
                     await this._enforceWarn();
                     break;
                 case 'DISABLED':
-                    console.log('⚠️ Dependency enforcement DISABLED');
+                    window.CONSOLE_LOG_IGNORE('⚠️ Dependency enforcement DISABLED');
                     break;
                 default:
                     throw new Error(`Invalid enforcement level: ${enforcementLevel}`);
             }
 
             this.isEnforced = true;
-            console.log('✅ Dependency enforcement complete');
+            window.CONSOLE_LOG_IGNORE('✅ Dependency enforcement complete');
 
             return {
                 success: true,
@@ -103,29 +103,29 @@ export class DependencyEnforcement {
      * STRICT enforcement - FAIL application if violations found
      */
     async _enforceStrict() {
-        console.log('🚨 STRICT enforcement mode - application will FAIL if violations found');
+        window.CONSOLE_LOG_IGNORE('🚨 STRICT enforcement mode - application will FAIL if violations found');
         
         // Check general component compliance
         componentScanner.enforceCompliance();
         componentEnforcer.enforceRegistration();
         
         // NEW: Check IM migration compliance
-        console.log('🔄 Enforcing IM migration compliance...');
+        window.CONSOLE_LOG_IGNORE('🔄 Enforcing IM migration compliance...');
         imMigrationValidator.enforceIMCompliance();
         
-        console.log('✅ STRICT enforcement passed - all components compliant and migrated');
+        window.CONSOLE_LOG_IGNORE('✅ STRICT enforcement passed - all components compliant and migrated');
     }
 
     /**
      * WARN enforcement - Log warnings but continue
      */
     async _enforceWarn() {
-        console.log('⚠️ WARN enforcement mode - logging violations as warnings');
+        window.CONSOLE_LOG_IGNORE('⚠️ WARN enforcement mode - logging violations as warnings');
         
         try {
             componentScanner.enforceCompliance();
             componentEnforcer.enforceRegistration();
-            console.log('✅ No general compliance violations found');
+            window.CONSOLE_LOG_IGNORE('✅ No general compliance violations found');
         } catch (error) {
             console.warn('⚠️ COMPLIANCE VIOLATIONS FOUND:', error.message);
             console.warn('⚠️ Application continuing but should be fixed');
@@ -134,7 +134,7 @@ export class DependencyEnforcement {
         // Also check IM migration in warn mode
         try {
             imMigrationValidator.enforceIMCompliance();
-            console.log('✅ No IM migration violations found');
+            window.CONSOLE_LOG_IGNORE('✅ No IM migration violations found');
         } catch (error) {
             console.warn('⚠️ IM MIGRATION VIOLATIONS FOUND:', error.message);
             console.warn('⚠️ Components should be migrated to dependency injection pattern');
@@ -150,10 +150,10 @@ export class DependencyEnforcement {
         
         const registrationReport = componentEnforcer.getRegistrationReport();
         
-        console.log(`📊 Runtime registration status:`);
-        console.log(`  - Known components: ${registrationReport.knownComponents.length}`);
-        console.log(`  - Registered: ${registrationReport.registeredWithManager.length}`);
-        console.log(`  - Unregistered: ${registrationReport.unregisteredComponents.length}`);
+        window.CONSOLE_LOG_IGNORE(`📊 Runtime registration status:`);
+        window.CONSOLE_LOG_IGNORE(`  - Known components: ${registrationReport.knownComponents.length}`);
+        window.CONSOLE_LOG_IGNORE(`  - Registered: ${registrationReport.registeredWithManager.length}`);
+        window.CONSOLE_LOG_IGNORE(`  - Unregistered: ${registrationReport.unregisteredComponents.length}`);
         
         if (registrationReport.unregisteredComponents.length > 0) {
             console.warn('⚠️ Unregistered components detected:', registrationReport.unregisteredComponents);
@@ -169,7 +169,7 @@ export class DependencyEnforcement {
             const reportPath = `./${filename}`;
             
             await fs.writeFile(reportPath, report);
-            console.log(`📄 Report saved to: ${reportPath}`);
+            window.CONSOLE_LOG_IGNORE(`📄 Report saved to: ${reportPath}`);
         } catch (error) {
             console.warn(`⚠️ Could not save report ${filename}:`, error.message);
         }
@@ -181,13 +181,13 @@ export class DependencyEnforcement {
     startRuntimeMonitoring() {
         if (this.enforcementLevel === 'DISABLED') return;
         
-        console.log('👀 Starting runtime dependency monitoring...');
+        window.CONSOLE_LOG_IGNORE('👀 Starting runtime dependency monitoring...');
         
         // Monitor for new component registrations
         const originalRegister = initializationManager.register.bind(initializationManager);
         initializationManager.register = (...args) => {
             const [componentName] = args;
-            console.log(`📝 Component registered: ${componentName}`);
+            window.CONSOLE_LOG_IGNORE(`📝 Component registered: ${componentName}`);
             return originalRegister(...args);
         };
 
@@ -212,7 +212,7 @@ export class DependencyEnforcement {
                         const stack = new Error().stack;
                         const caller = stack.split('\\n')[2]; // Get caller info
                         
-                        console.log(`👂 ${managerName}.addEventListener called from: ${caller}`);
+                        window.CONSOLE_LOG_IGNORE(`👂 ${managerName}.addEventListener called from: ${caller}`);
                         return originalAddEventListener.apply(this, args);
                     };
                 }

@@ -1,5 +1,5 @@
 <template>
-  <svg class="timeline-svg" :style="{ height: timelineHeight + 'px' }">
+  <svg class="timeline-svg" :style="{ height: (timelineHeight?.value || 0) + 'px' }">
     <g v-for="item in years" :key="item.year" class="timeline-year">
       <!-- Debug circle at year position (removed) -->
       
@@ -15,7 +15,7 @@
 
       <!-- Continuous year line (from left edge to end of big year) -->
       <line
-        :x1="alignment === 'left' ? '10px' : '81%'"
+        :x1="alignment === 'left' ? '10px' : 'calc(81% - 42px)'"
         :y1="item.y - 16.67 + 4"
         :x2="alignment === 'left' ? '180px' : '98%'"
         :y2="item.y - 16.67 + 4"
@@ -73,19 +73,41 @@ export default {
   computed: {
     // Calculate years for display
     years() {
-      if (!this.timelineState || !this.timelineState.isInitialized.value) {
+      console.log('[Timeline] years() computed - IM guarantees dependencies are ready:', {
+        hasTimelineState: !!this.timelineState,
+        startYearValue: this.startYear?.value,
+        endYearValue: this.endYear?.value,
+        timelineHeightValue: this.timelineHeight?.value
+      });
+      
+      // IM framework guarantees TimelineManager is ready - no initialization check needed
+      if (!this.timelineState) {
+        console.log('[Timeline] years() - no timeline state available');
         return [];
       }
       
       const yearsList = [];
       const YEAR_HEIGHT = 200;
       
-      for (let year = this.startYear.value; year <= this.endYear.value; year++) {
-        const yearIndex = year - this.startYear.value;
+      console.log('[Timeline] years() - generating years from', this.endYear.value, 'to', this.startYear.value, '(newest first)');
+      
+      // Iterate from newest to oldest year (top to bottom)
+      for (let year = this.endYear.value; year >= this.startYear.value; year--) {
+        const yearIndex = this.endYear.value - year; // 0 for newest year, increases for older years
         const y = (yearIndex + 1) * YEAR_HEIGHT; // Position from top
         yearsList.push({ year, y });
       }
       
+      const firstYear = yearsList[0]?.year;
+      const lastYear = yearsList[yearsList.length - 1]?.year;
+      console.log('[Timeline] years() - generated', yearsList.length, 'years: first =', firstYear, ', last =', lastYear);
+      
+      // Debug: Expected vs actual years
+      const expectedYears = this.endYear.value - this.startYear.value;
+      console.log('[Timeline] Expected years based on range:', expectedYears, '( endYear', this.endYear.value, '- startYear', this.startYear.value, ')');
+      console.log('[Timeline] Actual years generated:', yearsList.length);
+      console.log('[Timeline] years() - first 3:', yearsList.slice(0, 3));
+      console.log('[Timeline] years() - last 3:', yearsList.slice(-3));
       return yearsList;
     }
   },
@@ -100,14 +122,27 @@ export default {
       
       // Dependencies are guaranteed to be available - no null checks needed!
       this.timelineManager = dependencies.TimelineManager;
+      console.log('[Timeline] TimelineManager instance received from IM:', this.timelineManager);
+      console.log('[Timeline] TimelineManager initialized status:', this.timelineManager.isInitialized);
+      console.log('[Timeline] TimelineManager constructor name:', this.timelineManager.constructor.name);
+      console.log('[Timeline] About to call getTimelineState()...');
+      
       this.timelineState = this.timelineManager.getTimelineState();
+      console.log('[Timeline] getTimelineState() call completed');
+      console.log('[Timeline] Timeline state received:', {
+        isInitialized: this.timelineState.isInitialized.value,
+        timelineHeight: this.timelineState.timelineHeight.value,
+        startYear: this.timelineState.startYear.value,
+        endYear: this.timelineState.endYear.value
+      });
       
       // Use TimelineManager data
       this.timelineHeight = this.timelineState.timelineHeight;
       this.startYear = this.timelineState.startYear;
       this.endYear = this.timelineState.endYear;
       
-      console.log('[Timeline] Initialized with TimelineManager');
+      console.log('[Timeline] Initialized with TimelineManager. Timeline height:', this.timelineHeight.value, 'Years:', this.startYear.value, '-', this.endYear.value);
+      console.log('[Timeline] TimelineState isInitialized:', this.timelineState.isInitialized.value);
     },
     
     cleanupDependencies() {
@@ -120,8 +155,7 @@ export default {
   mounted() {
     // Debug the alignment prop - reactive to changes
     watchEffect(() => {
-      // console.log('Timeline alignment prop changed to:', this.alignment);
-      // console.log('Timeline should position years at:', this.alignment === 'left' ? '70px' : 'calc(100% - 150px)');
+      console.log('[Timeline] mounted watchEffect - SVG height:', this.timelineHeight?.value, 'Years array length:', this.years?.length);
     });
   },
   

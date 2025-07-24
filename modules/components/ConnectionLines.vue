@@ -67,11 +67,11 @@ export default {
       return ['BadgeManager'];
     },
     async initialize(dependencies) {
-      console.log('ConnectionLines: Initialized with dependencies:', Object.keys(dependencies));
+      window.CONSOLE_LOG_IGNORE('ConnectionLines: Initialized with dependencies:', Object.keys(dependencies));
       this.badgeManager = dependencies.BadgeManager;
     },
     cleanupDependencies() {
-      console.log('ConnectionLines: Cleaning up dependencies');
+      window.CONSOLE_LOG_IGNORE('ConnectionLines: Cleaning up dependencies');
     }
   },
   setup() {
@@ -203,7 +203,7 @@ export default {
     }
     
     function initializeWithDependencies() {
-      console.log('[ConnectionLines] initialized with dependencies');
+      window.CONSOLE_LOG_IGNORE('[ConnectionLines] initialized with dependencies');
     }
 
     function getElementPosition(element) {
@@ -237,10 +237,10 @@ export default {
         return;
       }
       
-      console.log('[ConnectionLines] badges-positioned event received!', event.detail);
+      window.CONSOLE_LOG_IGNORE('[ConnectionLines] badges-positioned event received!', event.detail);
       if (event.detail && event.detail.badgeOrder) {
         badgeOrder.value = [...event.detail.badgeOrder];
-        console.log('[ConnectionLines] Updating connections for', event.detail.badgeOrder.length, 'badges');
+        window.CONSOLE_LOG_IGNORE('[ConnectionLines] Updating connections for', event.detail.badgeOrder.length, 'badges');
         nextTick(() => {
           setTimeout(() => {
             updateConnections();
@@ -269,7 +269,7 @@ export default {
           const selectedCDiv = document.querySelector('.biz-card-div.selected');
           const badgesExist = document.querySelectorAll('.skill-badge').length > 0;
           if (selectedCDiv && badgeManager.isBadgesVisible() && badgesExist) {
-            console.log('[ConnectionLines] Fallback: Drawing connections with badges ready');
+            window.CONSOLE_LOG_IGNORE('[ConnectionLines] Fallback: Drawing connections with badges ready');
             updateConnections();
           }
         }, 500);
@@ -293,20 +293,20 @@ export default {
         return;
       }
       
-      console.log('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
+      window.CONSOLE_LOG_IGNORE('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
       connections.value = [];
       
       // Second check: Are badges visible? (No connection lines without badges)  
       const badgesVisible = badgeManager.isBadgesVisible();
-      console.log(`[ConnectionLines] Badge manager state: isBadgesVisible()=${badgesVisible}`);
+      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Badge manager state: isBadgesVisible()=${badgesVisible}`);
       
       if (!badgesVisible) {
-        console.log(`[ConnectionLines] Badge mode is -B (OFF) - clearing connections and returning`);
+        window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Badge mode is -B (OFF) - clearing connections and returning`);
         connections.value = [];
         return;
       }
       
-      console.log(`[ConnectionLines] Badge mode is ON (+B) - proceeding with connections`);
+      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Badge mode is ON (+B) - proceeding with connections`);
       
       // Third check: Is a cDiv selected?
       let selectedJobNumber = null;
@@ -316,7 +316,7 @@ export default {
       }
       if (selectedJobNumber === null || isNaN(selectedJobNumber)) {
         // No cDiv selected - clear any existing connections
-        // console.log(`[DEBUG] No cDiv selected - clearing connections`);
+        // window.CONSOLE_LOG_IGNORE(`[DEBUG] No cDiv selected - clearing connections`);
         return;
       }
       // Use the job number to get the cDiv clone
@@ -344,7 +344,7 @@ export default {
       const sceneRect = sceneContainer?.getBoundingClientRect();
       const xTransform = sceneRect ? sceneRect.width / 2 : 0;
       
-      console.log(`[ConnectionLines] Scene dimensions: container width=${sceneRect?.width}, xTransform=${xTransform}`);
+      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Scene dimensions: container width=${sceneRect?.width}, xTransform=${xTransform}`);
       
       // Get cDiv scene coordinates from data attributes + X-transform
       const cDivLeft = parseFloat(selectedCDiv.getAttribute("data-sceneLeft") || "0") + xTransform;
@@ -353,15 +353,15 @@ export default {
       const cDivBottom = parseFloat(selectedCDiv.getAttribute("data-sceneBottom") || "0");
       const cDivCenterY = parseFloat(selectedCDiv.getAttribute("data-sceneCenterY") || "0");
       const cDivWidth = cDivRight - cDivLeft;
-      // console.log(`[DEBUG] cDiv scene coords from data attrs: top=${cDivTop}, center=${cDivCenterY}, bottom=${cDivBottom}`);
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] cDiv scene coords from data attrs: top=${cDivTop}, center=${cDivCenterY}, bottom=${cDivBottom}`);
       const padding = 10;
       const arcRadius = 20;
       // Build associatedBadges directly from DOM
       const allBadges = Array.from(document.querySelectorAll('.skill-badge'));
-      console.log(`[ConnectionLines] Found ${allBadges.length} badge elements in DOM`);
+      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Found ${allBadges.length} badge elements in DOM`);
       
       if (allBadges.length === 0) {
-        console.log(`[ConnectionLines] No badge elements found - not drawing connections`);
+        window.CONSOLE_LOG_IGNORE(`[ConnectionLines] No badge elements found - not drawing connections`);
         return;
       }
       
@@ -438,7 +438,7 @@ export default {
       // Determine layout orientation to get the correct edge
       const appContainer = document.getElementById('app-container');
       const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
-      // console.log(`[DEBUG] Layout orientation: isSceneLeft=${isSceneLeft}, appContainer classes:`, appContainer?.classList.toString());
+      // window.CONSOLE_LOG_IGNORE(`[DEBUG] Layout orientation: isSceneLeft=${isSceneLeft}, appContainer classes:`, appContainer?.classList.toString());
       
       // Calculate common X position for all line numbers
       // Find left-most edge of all badges
@@ -483,7 +483,7 @@ export default {
         path = `M ${badgeStartX} ${badgeStartY} H ${termX}`;
         strokeColor = 'orange';
         
-        console.log(`[DEBUG] LEVEL badge ${index + 1}: ${levelBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY})`);
+        window.CONSOLE_LOG_IGNORE(`[DEBUG] LEVEL badge ${index + 1}: ${levelBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY})`);
       
         // Create the connection for this LEVEL badge
         const connection = {
@@ -542,7 +542,7 @@ export default {
           );
           strokeColor = 'red';
           
-          console.log(`[DEBUG] ABOVE badge ${index + 1}: ${aboveBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
+          window.CONSOLE_LOG_IGNORE(`[DEBUG] ABOVE badge ${index + 1}: ${aboveBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
         
           // Find this badge's line number (1 = topmost, increasing downward)
           const lineNumber = numberedAboveBadges.findIndex(b => b.id === aboveBadge.id) + 1;
@@ -609,7 +609,7 @@ export default {
           );
           strokeColor = 'yellow';
           
-          console.log(`[DEBUG] BELOW badge ${index + 1}: ${belowBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
+          window.CONSOLE_LOG_IGNORE(`[DEBUG] BELOW badge ${index + 1}: ${belowBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
         
           // Find this badge's line number (1 = topmost BELOW badge, increasing downward)
           const lineNumber = numberedBelowBadges.findIndex(b => b.id === belowBadge.id) + 1;
@@ -632,13 +632,13 @@ export default {
       }
       
       connections.value = connectionsArr;
-      console.log(`[DEBUG] ${connectionsArr.length} total connections added to DOM (${levelBadges.length} LEVEL + ${aboveBadges.length} ABOVE + ${belowBadges.length} BELOW)`);
+      window.CONSOLE_LOG_IGNORE(`[DEBUG] ${connectionsArr.length} total connections added to DOM (${levelBadges.length} LEVEL + ${aboveBadges.length} ABOVE + ${belowBadges.length} BELOW)`);
     }
 
     // Helper function to get badge start position based on scene orientation
     function getBadgeStartX(badge, isSceneLeft) {
       const startX = isSceneLeft ? badge.centerX - (badge.width / 2) : badge.centerX + (badge.width / 2);
-      console.log(`[DEBUG] getBadgeStartX: isSceneLeft=${isSceneLeft}, badge.centerX=${badge.centerX}, width=${badge.width}, startX=${startX}`);
+      window.CONSOLE_LOG_IGNORE(`[DEBUG] getBadgeStartX: isSceneLeft=${isSceneLeft}, badge.centerX=${badge.centerX}, width=${badge.width}, startX=${startX}`);
       
       if (isSceneLeft) {
         // Scene-left: badges on right → start from badge LEFT edge (facing cDiv)
@@ -699,7 +699,7 @@ export default {
       }
       
       const eventType = event?.type || 'unknown';
-      console.log(`[ConnectionLines] ${eventType} event detected`);
+      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] ${eventType} event detected`);
       
       // Clear any existing timeout
       if (resizeTimeout) {
@@ -708,7 +708,7 @@ export default {
       
       // Set a new timeout to update connections after resize finishes
       resizeTimeout = setTimeout(() => {
-        console.log(`[ConnectionLines] Updating connections after ${eventType} completion`);
+        window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Updating connections after ${eventType} completion`);
         updateConnections();
         resizeTimeout = null;
       }, 150); // Wait 150ms after last resize event

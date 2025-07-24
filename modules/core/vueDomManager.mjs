@@ -22,13 +22,13 @@ class VueDomManager extends BaseComponent {
     }
 
     async initialize() {
-        console.log('[VueDomManager] Initializing Vue DOM readiness manager...');
+        window.CONSOLE_LOG_IGNORE('[VueDomManager] Initializing Vue DOM readiness manager...');
         
         // Wait for Vue DOM to be ready
         await this.domReadyPromise;
         
         this.isDomReady = true;
-        console.log('[VueDomManager] Vue DOM is ready');
+        window.CONSOLE_LOG_IGNORE('[VueDomManager] Vue DOM is ready');
     }
 
     destroy() {
@@ -49,17 +49,17 @@ class VueDomManager extends BaseComponent {
 
         this.domReadyPromise = new Promise((resolve) => {
             const handleVueDomReady = () => {
-                console.log('[VueDomManager] Vue DOM ready event received');
+                window.CONSOLE_LOG_IGNORE('[VueDomManager] Vue DOM ready event received');
                 window.removeEventListener('vue-dom-ready', handleVueDomReady);
                 resolve();
             };
 
             // Check if Vue DOM is already ready
             if (document.readyState === 'complete' && window.Vue) {
-                console.log('[VueDomManager] Vue DOM already ready');
+                window.CONSOLE_LOG_IGNORE('[VueDomManager] Vue DOM already ready');
                 resolve();
             } else {
-                console.log('[VueDomManager] Waiting for vue-dom-ready event...');
+                window.CONSOLE_LOG_IGNORE('[VueDomManager] Waiting for vue-dom-ready event...');
                 window.addEventListener('vue-dom-ready', handleVueDomReady);
                 
                 // Fallback timeout in case event doesn't fire

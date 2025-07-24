@@ -62,7 +62,7 @@ export default {
     },
     
     async initialize(dependencies) {
-      console.log('[BadgeToggle] initializing with dependencies via IM:', Object.keys(dependencies));
+      window.CONSOLE_LOG_IGNORE('[BadgeToggle] initializing with dependencies via IM:', Object.keys(dependencies));
       
       // Dependencies are guaranteed to be available - no null checks needed!
       this.badgeManager = dependencies.BadgeManager;
@@ -78,11 +78,11 @@ export default {
       this.badgeMode = this.badgeManager.getMode();
       this.selectedJobNumber = this.selectionManager.getSelectedJobNumber();
       
-      console.log(`[BadgeToggle] Initialized - badgeMode=${this.badgeMode}, selectedJobNumber=${this.selectedJobNumber}, disabled=${this.isDisabled}`);
+      window.CONSOLE_LOG_IGNORE(`[BadgeToggle] Initialized - badgeMode=${this.badgeMode}, selectedJobNumber=${this.selectedJobNumber}, disabled=${this.isDisabled}`);
     },
     
     cleanupDependencies() {
-      console.log('[BadgeToggle] cleanup');
+      window.CONSOLE_LOG_IGNORE('[BadgeToggle] cleanup');
       if (this.badgeManager) {
         this.badgeManager.removeEventListener('badgeModeChanged', this.handleBadgeModeChanged);
       }
@@ -100,14 +100,14 @@ export default {
     handleSelectionChanged(event) {
       this.selectedJobNumber = event.detail.selectedJobNumber;
       this.$nextTick(() => {
-        // console.log(`[BadgeToggle] Selection changed to: ${this.selectedJobNumber}, disabled: ${this.isDisabled}`);
+        // window.CONSOLE_LOG_IGNORE(`[BadgeToggle] Selection changed to: ${this.selectedJobNumber}, disabled: ${this.isDisabled}`);
       });
     },
     
     handleSelectionCleared() {
       this.selectedJobNumber = null;
       this.$nextTick(() => {
-        console.log(`[BadgeToggle] Selection cleared, disabled: ${this.isDisabled}`);
+        window.CONSOLE_LOG_IGNORE(`[BadgeToggle] Selection cleared, disabled: ${this.isDisabled}`);
       });
     },
     

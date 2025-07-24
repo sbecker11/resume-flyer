@@ -19,7 +19,7 @@ export class ComponentScanner {
      * Scan project files for components using managers without registration
      */
     async scanProject(projectRoot = '.') {
-        console.log('🔍 Scanning project for unregistered components...');
+        window.CONSOLE_LOG_IGNORE('🔍 Scanning project for unregistered components...');
         
         const results = {
             scannedFiles: 0,
@@ -236,7 +236,7 @@ export class ComponentScanner {
      * Analyze scan results and generate recommendations
      */
     async _analyzeResults(results) {
-        console.log(`📊 Scan complete: ${results.scannedFiles} files, ${results.foundComponents.length} components`);
+        window.CONSOLE_LOG_IGNORE(`📊 Scan complete: ${results.scannedFiles} files, ${results.foundComponents.length} components`);
 
         // Generate recommendations
         results.violatingComponents.forEach(component => {
@@ -255,7 +255,7 @@ export class ComponentScanner {
         const totalComponents = results.foundComponents.length;
         const complianceRate = totalComponents > 0 ? ((totalComponents - unregisteredCount) / totalComponents * 100).toFixed(1) : 100;
 
-        console.log(`📈 Compliance rate: ${complianceRate}% (${totalComponents - unregisteredCount}/${totalComponents} components compliant)`);
+        window.CONSOLE_LOG_IGNORE(`📈 Compliance rate: ${complianceRate}% (${totalComponents - unregisteredCount}/${totalComponents} components compliant)`);
 
         if (unregisteredCount > 0) {
             console.warn(`⚠️  Found ${unregisteredCount} non-compliant components`);
@@ -376,7 +376,7 @@ ALL components using managers MUST:
 Run generateReport() for detailed fix instructions.`);
         }
 
-        console.log('✅ All components are compliant with dependency management requirements');
+        window.CONSOLE_LOG_IGNORE('✅ All components are compliant with dependency management requirements');
         return true;
     }
 }
