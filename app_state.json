@@ -1,21 +1,21 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-24T02:37:58.486Z",
+  "lastUpdated": "2025-07-25T23:53:07.085Z",
   "layout": {
     "panelSizePercentage": 50,
-    "orientation": "scene-right",
-    "scenePercentage": 78.3756345177665,
-    "resumePercentage": 21.6243654822335
+    "orientation": "scene-left",
+    "scenePercentage": 98.18511796733212,
+    "resumePercentage": 1.8148820326678767
   },
   "resizeHandle": {
     "steppingEnabled": true,
-    "stepCount": 5
+    "stepCount": 4
   },
   "focalPoint": {
     "mode": "locked"
   },
   "badgeToggle": {
-    "mode": "no-badges"
+    "mode": "badges-only"
   },
   "badges": {
     "height": "2.5em",
@@ -49,7 +49,7 @@
     }
   },
   "selectedJobNumber": null,
-  "lastVisitedJobNumber": 17,
+  "lastVisitedJobNumber": 0,
   "resume": {
     "sortRule": {
       "field": "startDate",
@@ -73,7 +73,7 @@
       "hovered": {
         "padding": "14px",
         "innerBorderWidth": "2px",
-        "innerBorderColor": "cyan",
+        "innerBorderColor": "blue",
         "outerBorderWidth": "0px",
         "outerBorderColor": "transparent",
         "borderRadius": "25px",
@@ -83,8 +83,8 @@
         "padding": "13px",
         "innerBorderWidth": "3px",
         "innerBorderColor": "purple",
-        "outerBorderWidth": "6px",
-        "outerBorderColor": "gold",
+        "outerBorderWidth": "0px",
+        "outerBorderColor": "transparent",
         "borderRadius": "25px",
         "marginTop": "11px"
       }
@@ -98,20 +98,12 @@
       "hovered": {
         "padding": "14px",
         "innerBorderWidth": "2px",
-        "marginTop": "11px",
-        "innerBorderColor": "cyan",
-        "outerBorderWidth": "0px",
-        "outerBorderColor": "transparent",
-        "borderRadius": "25px"
+        "marginTop": "11px"
       },
       "selected": {
         "padding": "13px",
         "innerBorderWidth": "3px",
-        "marginTop": "11px",
-        "innerBorderColor": "purple",
-        "outerBorderWidth": "6px",
-        "outerBorderColor": "gold",
-        "borderRadius": "25px"
+        "marginTop": "11px"
       }
     }
   },
@@ -433,17 +425,5 @@
       }
     }
   },
-  "colorPalette": "sweeps.json",
-  "debugPanel": {
-    "position": {
-      "scene-left": {
-        "top": 260,
-        "left": 602
-      },
-      "scene-right": {
-        "top": 124,
-        "right": 0
-      }
-    }
-  }
+  "colorPalette": "40 Cosmic.json"
 }

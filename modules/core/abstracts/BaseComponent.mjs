@@ -444,6 +444,7 @@ export const BaseVueComponentMixin = {
     created() {
         this._componentName = this.$options.name || 'UnnamedVueComponent';
         console.log(`🔍 [${this._componentName}] Vue component created - registering with IM...`);
+        console.log(`🔍 [${this._componentName}] Component methods:`, Object.keys(this.$options.methods || {}));
         
         // Check if component has defined initialization method
         if (!this.initialize) {
@@ -467,18 +468,14 @@ export const BaseVueComponentMixin = {
         }
         
         // Register with InitializationManager for proper dependency management
+        console.log(`🔍 [${this._componentName}] Calling _registerVueComponent...`);
         this._registerVueComponent();
+        console.log(`🔍 [${this._componentName}] _registerVueComponent completed`);
     },
 
     async mounted() {
-        // Wait for IM to initialize this component with its dependencies
-        try {
-            await initializationManager.waitForComponent(this._componentName);
-            window.CONSOLE_LOG_IGNORE(`✅ [${this._componentName}] Vue component initialization complete via IM`);
-        } catch (error) {
-            console.error(`❌ [${this._componentName}] Vue component initialization failed:`, error);
-            throw error;
-        }
+        // Vue components mount first, then IM initializes them - this is expected
+        window.CONSOLE_LOG_IGNORE(`🏗️ [${this._componentName}] Vue component mounted, awaiting IM initialization`);
     },
 
     beforeUnmount() {

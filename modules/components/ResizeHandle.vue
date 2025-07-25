@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { useFocalPoint } from '@/modules/composables/useFocalPoint.mjs';
+import { ref, computed, watch } from 'vue';
+import { useAimPoint } from '@/modules/composables/useAimPoint.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import BadgeToggle from '@/modules/components/BadgeToggle.vue';
@@ -62,8 +62,13 @@ const stepRightButton = computed(() => {
 
 const { 
   mode: focalPointMode,
-  cycleMode: cycleFocalPointMode
-} = useFocalPoint();
+  cycleFocalPointMode
+} = useAimPoint();
+
+// Debug watcher to see mode changes
+watch(focalPointMode, (newMode, oldMode) => {
+  console.log(`ResizeHandle: focalPointMode changed from ${oldMode} to ${newMode}`);
+}, { immediate: true });
 
 const {
   orientation,
@@ -93,7 +98,7 @@ const displayedIconMode = computed(() => {
 // The actual icon to show
 const displayIcon = computed(() => {
     const modeToShow = isHovering.value ? nextMode.value : focalPointMode.value;
-    window.CONSOLE_LOG_IGNORE('displayIcon computed:', {
+    console.log('displayIcon computed:', {
         isHovering: isHovering.value,
         currentMode: focalPointMode.value,
         nextMode: nextMode.value,
@@ -127,8 +132,11 @@ const displayStepCount = computed(() => {
 
 // --- Component Methods ---
 function toggleFocalLock(event) {
+  console.log('ResizeHandle: tri-state focal point toggle clicked');
+  console.log('ResizeHandle: Current mode before cycling:', focalPointMode.value);
   event.stopPropagation();
   cycleFocalPointMode();
+  console.log('ResizeHandle: Current mode after cycling:', focalPointMode.value);
   // Mark that we just clicked (don't reset hover state yet)
   hasJustClicked.value = true;
   
@@ -194,7 +202,7 @@ function handleLayoutToggle(event) {
     height: 100%;
     cursor: col-resize;
     background-color: var(--resize-handle-bg-color, #333);
-    z-index: 20;
+    z-index: 10000;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

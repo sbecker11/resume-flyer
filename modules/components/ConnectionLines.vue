@@ -52,32 +52,163 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, getCurrentInstance } from 'vue';
 import { badgeManager } from '@/modules/core/badgeManager.mjs';
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import { eventBus } from '@/modules/utils/eventBus.mjs';
 import { AppState } from '@/modules/core/stateManager.mjs';
 import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
+import { initializationManager } from '@/modules/core/initializationManager.mjs';
 
 export default {
   name: 'ConnectionLines',
   mixins: [BaseVueComponentMixin],
   methods: {
     getComponentDependencies() {
-      return ['BadgeManager'];
+      console.log('[ConnectionLines] getComponentDependencies() called');
+      return ['BadgeManager', 'SceneContainer', 'StateManager'];
     },
-    async initialize(dependencies) {
-      window.CONSOLE_LOG_IGNORE('ConnectionLines: Initialized with dependencies:', Object.keys(dependencies));
+    initialize(dependencies) {
+      console.log('ConnectionLines: Initialized with dependencies:', Object.keys(dependencies));
+      console.log('ConnectionLines: SceneContainer dependency:', dependencies.SceneContainer);
       this.badgeManager = dependencies.BadgeManager;
+      this.sceneContainer = dependencies.SceneContainer;
+      this.stateManager = dependencies.StateManager;
+      // StateManager dependency ensures AppState is ready before component initialization
+      // Bridge to composition API - store dependency for later use
+      this._sceneContainerDependency = dependencies.SceneContainer;
+      
+      // Note: Service registry approach is used instead of direct bridge
+      
+      if (!dependencies.SceneContainer) {
+        console.error('ConnectionLines: SceneContainer dependency is null/undefined!');
+      } else {
+        console.log('ConnectionLines: SceneContainer dependency successfully set!');
+      }
     },
+
+    /**
+     * Template ref injection for app-container element
+     * Replaces getElementById('app-container') calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setAppContainerElement(element) {
+      this.appcontainerElement = element;
+      console.log('[ConnectionLines.vue] app-container element set via template ref');
+      
+      // Apply any setup that was waiting for this element
+      if (this.appcontainerElement) {
+        this._setupAppContainer();
+      }
+    },
+
+    /**
+     * Setup logic for app-container element
+     * Called when element becomes available
+     */
+    _setupAppContainer() {
+      // Add any element-specific setup logic here
+      // This replaces the immediate DOM access from initialize()
+    },
+
+    /**
+     * DOM setup phase - called after Vue DOM is ready
+     * Moved DOM event listeners from onMounted for proper DOM separation
+     */
+    async setupDom() {
+      // DOM event listeners moved from onMounted hook
+      window.addEventListener('badges-positioned', this.handleBadgesPositioned);
+      window.addEventListener('card-select', this.handleCardSelect);
+      window.addEventListener('card-deselect', this.handleCardDeselect);
+      window.addEventListener('viewport-changed', this.handleViewportResize);
+      window.addEventListener('resize', this.handleViewportResize);
+      
+      // Badge manager event listeners
+      if (this.badgeManager) {
+        this.badgeManager.addEventListener('badgeModeChanged', this.handleBadgeModeChange);
+      }
+      
+      console.log('[ConnectionLines.vue] DOM setup complete');
+    },
+
+    // Bridge methods to connect options API to composition API event handlers
+    handleBadgesPositioned(event) {
+      if (this.setupHandlers && this.setupHandlers.handleBadgesPositioned) {
+        this.setupHandlers.handleBadgesPositioned(event);
+      }
+    },
+    
+    handleCardSelect(event) {
+      if (this.setupHandlers && this.setupHandlers.handleCardSelect) {
+        this.setupHandlers.handleCardSelect(event);
+      }
+    },
+    
+    handleCardDeselect(event) {
+      if (this.setupHandlers && this.setupHandlers.handleCardDeselect) {
+        this.setupHandlers.handleCardDeselect(event);
+      }
+    },
+    
+    handleViewportResize(event) {
+      if (this.setupHandlers && this.setupHandlers.handleViewportResize) {
+        this.setupHandlers.handleViewportResize(event);
+      }
+    },
+    
+    handleBadgeModeChange(event) {
+      if (this.setupHandlers && this.setupHandlers.handleBadgeModeChange) {
+        this.setupHandlers.handleBadgeModeChange(event);
+      }
+    },
+
     cleanupDependencies() {
-      window.CONSOLE_LOG_IGNORE('ConnectionLines: Cleaning up dependencies');
+      console.log('ConnectionLines: Cleaning up dependencies');
+      
+      // Clean up DOM event listeners
+      window.removeEventListener('badges-positioned', this.handleBadgesPositioned);
+      window.removeEventListener('card-select', this.handleCardSelect);
+      window.removeEventListener('card-deselect', this.handleCardDeselect);
+      window.removeEventListener('viewport-changed', this.handleViewportResize);
+      window.removeEventListener('resize', this.handleViewportResize);
+      
+      if (this.badgeManager) {
+        this.badgeManager.removeEventListener('badgeModeChanged', this.handleBadgeModeChange);
+      }
     }
   },
-  setup() {
+  setup(props, { expose }) {
     const connections = ref([]);
     const showDebugInfo = ref(false);
     const isConnectionLinesVisible = ref(badgeManager.isConnectionLinesVisible());
+    const sceneContainerRef = ref(null); // Will be set by IM dependency injection
+    
+    // Get current component instance to access _sceneContainerDependency
+    const instance = getCurrentInstance();
+    
+    // Note: Using service registry approach instead of Options API bridge
+    
+    onMounted(() => {
+      // Vue components mount before IM system initializes them
+      // Dependencies will be set later when IM calls initialize()
+      console.log('[ConnectionLines] Vue component mounted, waiting for IM initialization');
+    });
+    
+    // Watch for when IM system sets the dependency
+    const checkForDependency = () => {
+      if (instance?.ctx?._sceneContainerDependency && !sceneContainerRef.value) {
+        sceneContainerRef.value = instance.ctx._sceneContainerDependency;
+        console.log('[ConnectionLines] SceneContainer retrieved from IM dependency injection');
+      }
+    };
+    
+    // Check periodically until dependency is available
+    const dependencyChecker = setInterval(checkForDependency, 100);
+    
+    // Clean up interval when component unmounts
+    onUnmounted(() => {
+      clearInterval(dependencyChecker);
+    });
 
     const shouldShowContainer = computed(() => connections.value.length > 0 && isConnectionLinesVisible.value);
 
@@ -85,14 +216,14 @@ export default {
       position: 'absolute',
       top: '0', left: '0', right: '0', bottom: '0',
       pointerEvents: 'none',
-      zIndex: AppState.constants.zIndex.bullsEye
+      zIndex: AppState?.constants?.zIndex?.bullsEye ?? 95
     }));
     const svgStyle = computed(() => ({
       position: 'absolute',
       top: '0', left: '0', right: '0', bottom: '0',
       pointerEvents: 'none',
       overflow: 'visible',
-      zIndex: AppState.constants.zIndex.bullsEye
+      zIndex: AppState?.constants?.zIndex?.bullsEye ?? 95
     }));
     const debugStyle = computed(() => ({
       position: 'absolute',
@@ -110,8 +241,18 @@ export default {
 
     function getElementPosition(element) {
       if (!element) throw new Error('[ConnectionLines] Element is null or undefined');
-      const sceneContent = document.getElementById('scene-content');
-      if (!sceneContent) throw new Error('[ConnectionLines] scene-content element not found');
+      // Use SceneContainer dependency - get the actual DOM element
+      let sceneContent;
+      if (sceneContainerRef.value?.getSceneContainer) {
+        sceneContent = sceneContainerRef.value.getSceneContainer();
+      } else if (sceneContainerRef.value?.$el) {
+        sceneContent = sceneContainerRef.value.$el;
+      } else {
+        sceneContent = sceneContainerRef.value;
+      }
+      if (!sceneContent) {
+        throw new Error('[ConnectionLines] CRITICAL: scene-content element not found via dependency - IM system failure');
+      }
       const elementRect = element.getBoundingClientRect();
       const sceneRect = sceneContent.getBoundingClientRect();
       const scrollTop = sceneContent.scrollTop;
@@ -127,8 +268,21 @@ export default {
     function getViewportRelativeCDivPosition(cDivClone) {
       if (!cDivClone) throw new Error('[ConnectionLines] cDivClone is null or undefined');
       
-      const sceneContainer = document.getElementById('scene-container');
-      if (!sceneContainer) throw new Error('[ConnectionLines] scene-container not found');
+      // Use SceneContainer dependency - get the actual DOM element
+      let sceneContainer;
+      if (sceneContainerRef.value?.getSceneContainer) {
+        sceneContainer = sceneContainerRef.value.getSceneContainer();
+      } else if (sceneContainerRef.value?.$el) {
+        sceneContainer = sceneContainerRef.value.$el;
+      } else {
+        sceneContainer = sceneContainerRef.value;
+      }
+      
+      if (!sceneContainer) {
+        console.error('[ConnectionLines] scene-container not found. sceneContainerRef.value:', sceneContainerRef.value);
+        console.error('[ConnectionLines] IM system failure - SceneContainer dependency not available');
+        throw new Error('[ConnectionLines] CRITICAL: scene-container not found via dependency - IM system failure');
+      }
       
       // Get scene-relative coordinates from data attributes (using camelCase)
       const sceneLeft = parseFloat(cDivClone.getAttribute('data-sceneLeft') || '0');
@@ -171,7 +325,7 @@ export default {
       const estimatedWidth = Math.max(60, text.length * 8 + 20); // 8px per char + 20px padding
       
       // Badge X position depends on layout orientation
-      const appContainer = document.getElementById('app-container');
+      const appContainer = this.appcontainerElement;
       const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
       
       let centerX;
@@ -180,7 +334,15 @@ export default {
         centerX = estimatedWidth / 2;
       } else {
         // Scene-right: badges on right side of scene
-        const sceneContainer = document.getElementById('scene-container');
+        // Use SceneContainer dependency - get the actual DOM element
+        let sceneContainer;
+        if (sceneContainerRef.value?.getSceneContainer) {
+          sceneContainer = sceneContainerRef.value.getSceneContainer();
+        } else if (sceneContainerRef.value?.$el) {
+          sceneContainer = sceneContainerRef.value.$el;
+        } else {
+          sceneContainer = sceneContainerRef.value;
+        }
         const sceneWidth = sceneContainer ? sceneContainer.clientWidth : 800;
         centerX = sceneWidth - (estimatedWidth / 2);
       }
@@ -203,16 +365,9 @@ export default {
     }
     
     function initializeWithDependencies() {
-      window.CONSOLE_LOG_IGNORE('[ConnectionLines] initialized with dependencies');
+      console.log('[ConnectionLines] initialized with dependencies');
     }
 
-    function getElementPosition(element) {
-      if (!element) throw new Error('[ConnectionLines] Element is null or undefined');
-      const sceneContent = document.getElementById('scene-content');
-      if (!sceneContent) throw new Error('[ConnectionLines] scene-content element not found');
-      const elementRect = element.getBoundingClientRect();
-      const sceneRect = sceneContent.getBoundingClientRect();
-    }
 
     function createLShapedCurve(pointA, pointB, pointC, radius = 20) {
       const isMovingRight = pointB.x > pointA.x;
@@ -237,10 +392,10 @@ export default {
         return;
       }
       
-      window.CONSOLE_LOG_IGNORE('[ConnectionLines] badges-positioned event received!', event.detail);
+      console.log('[ConnectionLines] badges-positioned event received!', event.detail);
       if (event.detail && event.detail.badgeOrder) {
         badgeOrder.value = [...event.detail.badgeOrder];
-        window.CONSOLE_LOG_IGNORE('[ConnectionLines] Updating connections for', event.detail.badgeOrder.length, 'badges');
+        console.log('[ConnectionLines] Updating connections for', event.detail.badgeOrder.length, 'badges');
         nextTick(() => {
           setTimeout(() => {
             updateConnections();
@@ -269,7 +424,7 @@ export default {
           const selectedCDiv = document.querySelector('.biz-card-div.selected');
           const badgesExist = document.querySelectorAll('.skill-badge').length > 0;
           if (selectedCDiv && badgeManager.isBadgesVisible() && badgesExist) {
-            window.CONSOLE_LOG_IGNORE('[ConnectionLines] Fallback: Drawing connections with badges ready');
+            console.log('[ConnectionLines] Fallback: Drawing connections with badges ready');
             updateConnections();
           }
         }, 500);
@@ -293,20 +448,20 @@ export default {
         return;
       }
       
-      window.CONSOLE_LOG_IGNORE('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
+      console.log('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
       connections.value = [];
       
       // Second check: Are badges visible? (No connection lines without badges)  
       const badgesVisible = badgeManager.isBadgesVisible();
-      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Badge manager state: isBadgesVisible()=${badgesVisible}`);
+      console.log(`[ConnectionLines] Badge manager state: isBadgesVisible()=${badgesVisible}`);
       
       if (!badgesVisible) {
-        window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Badge mode is -B (OFF) - clearing connections and returning`);
+        console.log(`[ConnectionLines] Badge mode is -B (OFF) - clearing connections and returning`);
         connections.value = [];
         return;
       }
       
-      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Badge mode is ON (+B) - proceeding with connections`);
+      console.log(`[ConnectionLines] Badge mode is ON (+B) - proceeding with connections`);
       
       // Third check: Is a cDiv selected?
       let selectedJobNumber = null;
@@ -316,7 +471,7 @@ export default {
       }
       if (selectedJobNumber === null || isNaN(selectedJobNumber)) {
         // No cDiv selected - clear any existing connections
-        // window.CONSOLE_LOG_IGNORE(`[DEBUG] No cDiv selected - clearing connections`);
+        // console.log(`[DEBUG] No cDiv selected - clearing connections`);
         return;
       }
       // Use the job number to get the cDiv clone
@@ -340,11 +495,19 @@ export default {
       
       // Get DOM rects and scene transform early
       const cDivRect = selectedCDiv.getBoundingClientRect();
-      const sceneContainer = document.getElementById('scene-container');
+      // Use SceneContainer dependency - get the actual DOM element
+      let sceneContainer;
+      if (sceneContainerRef.value?.getSceneContainer) {
+        sceneContainer = sceneContainerRef.value.getSceneContainer();
+      } else if (sceneContainerRef.value?.$el) {
+        sceneContainer = sceneContainerRef.value.$el;
+      } else {
+        sceneContainer = sceneContainerRef.value;
+      }
       const sceneRect = sceneContainer?.getBoundingClientRect();
       const xTransform = sceneRect ? sceneRect.width / 2 : 0;
       
-      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Scene dimensions: container width=${sceneRect?.width}, xTransform=${xTransform}`);
+      console.log(`[ConnectionLines] Scene dimensions: container width=${sceneRect?.width}, xTransform=${xTransform}`);
       
       // Get cDiv scene coordinates from data attributes + X-transform
       const cDivLeft = parseFloat(selectedCDiv.getAttribute("data-sceneLeft") || "0") + xTransform;
@@ -353,15 +516,15 @@ export default {
       const cDivBottom = parseFloat(selectedCDiv.getAttribute("data-sceneBottom") || "0");
       const cDivCenterY = parseFloat(selectedCDiv.getAttribute("data-sceneCenterY") || "0");
       const cDivWidth = cDivRight - cDivLeft;
-      // window.CONSOLE_LOG_IGNORE(`[DEBUG] cDiv scene coords from data attrs: top=${cDivTop}, center=${cDivCenterY}, bottom=${cDivBottom}`);
+      // console.log(`[DEBUG] cDiv scene coords from data attrs: top=${cDivTop}, center=${cDivCenterY}, bottom=${cDivBottom}`);
       const padding = 10;
       const arcRadius = 20;
       // Build associatedBadges directly from DOM
       const allBadges = Array.from(document.querySelectorAll('.skill-badge'));
-      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Found ${allBadges.length} badge elements in DOM`);
+      console.log(`[ConnectionLines] Found ${allBadges.length} badge elements in DOM`);
       
       if (allBadges.length === 0) {
-        window.CONSOLE_LOG_IGNORE(`[ConnectionLines] No badge elements found - not drawing connections`);
+        console.log(`[ConnectionLines] No badge elements found - not drawing connections`);
         return;
       }
       
@@ -436,9 +599,9 @@ export default {
       }
       
       // Determine layout orientation to get the correct edge
-      const appContainer = document.getElementById('app-container');
+      const appContainer = this.appcontainerElement;
       const isSceneLeft = appContainer ? appContainer.classList.contains('scene-left') : false;
-      // window.CONSOLE_LOG_IGNORE(`[DEBUG] Layout orientation: isSceneLeft=${isSceneLeft}, appContainer classes:`, appContainer?.classList.toString());
+      // console.log(`[DEBUG] Layout orientation: isSceneLeft=${isSceneLeft}, appContainer classes:`, appContainer?.classList.toString());
       
       // Calculate common X position for all line numbers
       // Find left-most edge of all badges
@@ -483,7 +646,7 @@ export default {
         path = `M ${badgeStartX} ${badgeStartY} H ${termX}`;
         strokeColor = 'orange';
         
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] LEVEL badge ${index + 1}: ${levelBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY})`);
+        console.log(`[DEBUG] LEVEL badge ${index + 1}: ${levelBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY})`);
       
         // Create the connection for this LEVEL badge
         const connection = {
@@ -542,7 +705,7 @@ export default {
           );
           strokeColor = 'red';
           
-          window.CONSOLE_LOG_IGNORE(`[DEBUG] ABOVE badge ${index + 1}: ${aboveBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
+          console.log(`[DEBUG] ABOVE badge ${index + 1}: ${aboveBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
         
           // Find this badge's line number (1 = topmost, increasing downward)
           const lineNumber = numberedAboveBadges.findIndex(b => b.id === aboveBadge.id) + 1;
@@ -609,7 +772,7 @@ export default {
           );
           strokeColor = 'yellow';
           
-          window.CONSOLE_LOG_IGNORE(`[DEBUG] BELOW badge ${index + 1}: ${belowBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
+          console.log(`[DEBUG] BELOW badge ${index + 1}: ${belowBadge.id} (${badgeStartX}, ${badgeStartY}) → (${termX}, ${termY}) L-shaped non-intersecting`);
         
           // Find this badge's line number (1 = topmost BELOW badge, increasing downward)
           const lineNumber = numberedBelowBadges.findIndex(b => b.id === belowBadge.id) + 1;
@@ -632,13 +795,13 @@ export default {
       }
       
       connections.value = connectionsArr;
-      window.CONSOLE_LOG_IGNORE(`[DEBUG] ${connectionsArr.length} total connections added to DOM (${levelBadges.length} LEVEL + ${aboveBadges.length} ABOVE + ${belowBadges.length} BELOW)`);
+      console.log(`[DEBUG] ${connectionsArr.length} total connections added to DOM (${levelBadges.length} LEVEL + ${aboveBadges.length} ABOVE + ${belowBadges.length} BELOW)`);
     }
 
     // Helper function to get badge start position based on scene orientation
     function getBadgeStartX(badge, isSceneLeft) {
       const startX = isSceneLeft ? badge.centerX - (badge.width / 2) : badge.centerX + (badge.width / 2);
-      window.CONSOLE_LOG_IGNORE(`[DEBUG] getBadgeStartX: isSceneLeft=${isSceneLeft}, badge.centerX=${badge.centerX}, width=${badge.width}, startX=${startX}`);
+      console.log(`[DEBUG] getBadgeStartX: isSceneLeft=${isSceneLeft}, badge.centerX=${badge.centerX}, width=${badge.width}, startX=${startX}`);
       
       if (isSceneLeft) {
         // Scene-left: badges on right → start from badge LEFT edge (facing cDiv)
@@ -699,7 +862,7 @@ export default {
       }
       
       const eventType = event?.type || 'unknown';
-      window.CONSOLE_LOG_IGNORE(`[ConnectionLines] ${eventType} event detected`);
+      console.log(`[ConnectionLines] ${eventType} event detected`);
       
       // Clear any existing timeout
       if (resizeTimeout) {
@@ -708,7 +871,7 @@ export default {
       
       // Set a new timeout to update connections after resize finishes
       resizeTimeout = setTimeout(() => {
-        window.CONSOLE_LOG_IGNORE(`[ConnectionLines] Updating connections after ${eventType} completion`);
+        console.log(`[ConnectionLines] Updating connections after ${eventType} completion`);
         updateConnections();
         resizeTimeout = null;
       }, 150); // Wait 150ms after last resize event

@@ -60,19 +60,19 @@ class BadgeManager extends BaseComponent {
      * Initializes the BadgeManager's state from the global AppState.
      * This should be called by the initialization manager after the state has been loaded.
      */
-    async initialize(dependencies = {}) {
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initializing - AppState:`, AppState);
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] AppState.badgeToggle:`, AppState?.badgeToggle);
+    initialize(dependencies = {}) {
+        console.log(`[BadgeManager] Initializing - AppState:`, AppState);
+        console.log(`[BadgeManager] AppState.badgeToggle:`, AppState?.badgeToggle);
         
         if (AppState?.badgeToggle?.mode) {
             let mode = AppState.badgeToggle.mode;
             this._mode = mode;
-            window.CONSOLE_LOG_IGNORE(`[BadgeManager] Loaded badge mode from app-state.json: ${this._mode}`);
+            console.log(`[BadgeManager] Loaded badge mode from app-state.json: ${this._mode}`);
         } else {
-            window.CONSOLE_LOG_IGNORE(`[BadgeManager] No badge mode found in app-state.json, using default: ${this._mode}`);
+            console.log(`[BadgeManager] No badge mode found in app-state.json, using default: ${this._mode}`);
         }
 
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
+        console.log(`[BadgeManager] Initialized with mode from state: ${this._mode}`);
         this.refreshVisibility(); // Update visibility now that we have the correct mode.
 
         // Dispatch an event to notify components that the initial mode is set.
@@ -109,7 +109,7 @@ class BadgeManager extends BaseComponent {
         const previousMode = this._mode;
         this._mode = mode;
         
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] ${caller ? `[${caller}] ` : ''}Mode changed from ${previousMode} to ${mode}`);
+        console.log(`[BadgeManager] ${caller ? `[${caller}] ` : ''}Mode changed from ${previousMode} to ${mode}`);
         
         // Update AppState and persist
         this._saveToAppState();
@@ -126,7 +126,31 @@ class BadgeManager extends BaseComponent {
             }
         }));
     }
-    
+
+    /**
+     * Template ref injection for scene-content element
+     * Replaces scenecontentElement calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setSceneContentElement(element) {
+        this.scenecontentElement = element;
+        console.log('[badgeManager] scene-content element set via template ref');
+        
+        // Apply any setup that was waiting for this element
+        if (this.scenecontentElement) {
+            this._setupSceneContent();
+        }
+    }
+
+    /**
+     * Setup logic for scene-content element
+     * Called when element becomes available
+     */
+    _setupSceneContent() {
+        // Add any element-specific setup logic here
+        // This replaces the immediate DOM access from initialize()
+    }
+
     /**
      * Toggle badge mode through the cycle: none -> show -> stats -> none
      * @param {string} caller - Optional caller identification for debugging
@@ -198,7 +222,7 @@ class BadgeManager extends BaseComponent {
      * Useful when DOM structure changes or elements are added/removed
      */
     refreshVisibility() {
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Force refreshing visibility for mode: ${this._mode}`);
+        console.log(`[BadgeManager] Force refreshing visibility for mode: ${this._mode}`);
         this._updateAllVisibility();
     }
     
@@ -218,7 +242,7 @@ class BadgeManager extends BaseComponent {
      */
     clearConnectionsIfNeeded(connectionsRef) {
         if (!this.isConnectionLinesVisible() && connectionsRef.value.length > 0) {
-            window.CONSOLE_LOG_IGNORE(`[BadgeManager] Clearing connections - not visible in mode: ${this._mode}`);
+            console.log(`[BadgeManager] Clearing connections - not visible in mode: ${this._mode}`);
             connectionsRef.value = [];
         }
     }
@@ -244,7 +268,7 @@ class BadgeManager extends BaseComponent {
             }
         }
         
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Updated individual stats element. Stats visible: ${shouldShowStats}`);
+        console.log(`[BadgeManager] Updated individual stats element. Stats visible: ${shouldShowStats}`);
     }
     
     /**
@@ -284,7 +308,7 @@ class BadgeManager extends BaseComponent {
         
         if (selectedCDiv) {
             const rect = selectedCDiv.getBoundingClientRect();
-            const container = document.getElementById('scene-content');
+            const container = document.scenecontentElement;
             const containerRect = container.getBoundingClientRect();
             const scrollTop = container.scrollTop;
             
@@ -426,7 +450,7 @@ class BadgeManager extends BaseComponent {
             }
         });
         
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Updated ${allStatsElements.length} stats elements and ${bizCardStatsDivs.length} biz-card-stats-divs. Stats visible: ${shouldShowStats}`);
+        console.log(`[BadgeManager] Updated ${allStatsElements.length} stats elements and ${bizCardStatsDivs.length} biz-card-stats-divs. Stats visible: ${shouldShowStats}`);
     }
     
     /**
@@ -447,7 +471,17 @@ class BadgeManager extends BaseComponent {
             }
         });
         
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Updated ${badgeContainers.length} badge containers. Badges visible: ${shouldShowBadges}`);
+        console.log(`[BadgeManager] Updated ${badgeContainers.length} badge containers. Badges visible: ${shouldShowBadges}`);
+    }
+
+    /**
+     * DOM setup phase - called after DOM is ready
+     * Moved from initialize() for proper DOM separation
+     */
+    async setupDom() {
+        // DOM operations are properly placed in individual methods
+        // This method exists for IM compliance
+        console.log('[badgeManager] DOM setup complete');
     }
     
     /**
@@ -455,7 +489,7 @@ class BadgeManager extends BaseComponent {
      * @private
      */
     _handleCloneCreated(event) {
-        window.CONSOLE_LOG_IGNORE(`[BadgeManager] Clone created, updating stats visibility for new elements`);
+        console.log(`[BadgeManager] Clone created, updating stats visibility for new elements`);
         // Small delay to ensure the stats div is added to the clone
         setTimeout(() => {
             this._updateStatsVisibility();

@@ -7,7 +7,7 @@ import { BaseComponent } from './abstracts/BaseComponent.mjs';
 import * as zUtils from '../utils/zUtils.mjs';
 import * as mathUtils from '../utils/mathUtils.mjs';
 import { selectionManager } from './selectionManager.mjs';
-import { focalPointManager } from './focalPointManager.mjs';
+import { focalPointManager } from '../composables/useFocalPoint.mjs';
 
 export const TEST_PARALLAX = false;
 export const EPSILON = 0.01
@@ -25,7 +25,7 @@ class ParallaxModule extends BaseComponent {
     }
 
     getDependencies() {
-        return ['ViewPortModule']; // Wait for ViewPortModule to be ready
+        return ['ViewportManager']; // Wait for ViewportManager to be ready
     }
 
     updateSceneContainerRect() {
@@ -58,9 +58,9 @@ class ParallaxModule extends BaseComponent {
         }
     }
 
-    async initialize(dependencies = {}) {
-        // ViewPortModule dependency is guaranteed to be ready
-        this.viewPortModule = dependencies.ViewPortModule;
+    initialize(dependencies = {}) {
+        // ViewportManager dependency is guaranteed to be ready via IM injection
+        this.viewportManager = dependencies.ViewportManager;
 
         // Listen for viewport-changed event to update the rect
         window.addEventListener('viewport-changed', this.boundUpdateSceneContainerRect);
@@ -108,9 +108,10 @@ class ParallaxModule extends BaseComponent {
     // which is scaled according to the scene-Z of each bizCardDiv
     // this is called by the event listener in initialize()
     calculateParallaxDisplacements() {
-        // Use ViewPortModule dependency instead of direct import
-        const {x: vpX, y: vpY} = this.viewPortModule.getViewPortOrigin();
-        const focalPosition = focalPointManager.getFocalPointPosition();
+        // Use ViewportManager dependency injected via IM framework
+        const {x: vpX, y: vpY} = this.viewportManager.getViewPortOrigin();
+        // Access current focal point position from reactive state
+        const focalPosition = focalPointManager.focalPointState.value.current;
         const {x: fpX, y: fpY} = focalPosition;
 
         //const dh = (scX - fpX) * PARALLAX_X_EXAGGERATION_FACTOR;
@@ -285,8 +286,14 @@ class ParallaxModule extends BaseComponent {
         let translateX = 0;
         let translateY = 0;
         
-        // scene to view transformation
-        translateX += this.getSceneContainerWidth()/2;
+        // scene to view transformation - account for scene container position
+        const sceneContainer = document.getElementById('scene-container');
+        if (sceneContainer) {
+            const sceneRect = sceneContainer.getBoundingClientRect();
+            translateX += sceneRect.left + sceneRect.width / 2;
+        } else {
+            translateX += this.getSceneContainerWidth()/2; // fallback
+        }
         
         // Apply scene Y position (timeline position) directly - no viewport offset needed
         const sceneTop = parseFloat(bizCardDiv.getAttribute('data-sceneTop'));

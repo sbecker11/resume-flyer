@@ -61,28 +61,24 @@ export default {
       return ['BadgeManager', 'SelectionManager'];
     },
     
-    async initialize(dependencies) {
-      window.CONSOLE_LOG_IGNORE('[BadgeToggle] initializing with dependencies via IM:', Object.keys(dependencies));
+    initialize(dependencies) {
+      console.log('[BadgeToggle] initializing with dependencies via IM:', Object.keys(dependencies));
       
       // Dependencies are guaranteed to be available - no null checks needed!
       this.badgeManager = dependencies.BadgeManager;
       this.selectionManager = dependencies.SelectionManager;
       
-      // Set up event listeners
-      this.badgeManager.addEventListener('badgeModeChanged', this.handleBadgeModeChanged);
-      this.selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged);
-      this.selectionManager.addEventListener('selectionCleared', this.handleSelectionCleared);
+      // Event listeners moved to setupDom() method
       
-      // Initialize with current values
-      await this.$nextTick();
+      // Initialize with current values - dependencies guaranteed ready by IM
       this.badgeMode = this.badgeManager.getMode();
       this.selectedJobNumber = this.selectionManager.getSelectedJobNumber();
       
-      window.CONSOLE_LOG_IGNORE(`[BadgeToggle] Initialized - badgeMode=${this.badgeMode}, selectedJobNumber=${this.selectedJobNumber}, disabled=${this.isDisabled}`);
+      console.log(`[BadgeToggle] Initialized - badgeMode=${this.badgeMode}, selectedJobNumber=${this.selectedJobNumber}, disabled=${this.isDisabled}`);
     },
     
     cleanupDependencies() {
-      window.CONSOLE_LOG_IGNORE('[BadgeToggle] cleanup');
+      console.log('[BadgeToggle] cleanup');
       if (this.badgeManager) {
         this.badgeManager.removeEventListener('badgeModeChanged', this.handleBadgeModeChanged);
       }
@@ -107,7 +103,7 @@ export default {
     handleSelectionCleared() {
       this.selectedJobNumber = null;
       this.$nextTick(() => {
-        window.CONSOLE_LOG_IGNORE(`[BadgeToggle] Selection cleared, disabled: ${this.isDisabled}`);
+        console.log(`[BadgeToggle] Selection cleared, disabled: ${this.isDisabled}`);
       });
     },
     
@@ -141,6 +137,20 @@ export default {
     handleMouseLeave() {
       this.isHovering = false;
       this.hasJustClicked = false;
+    },
+
+    /**
+     * DOM setup phase - called after Vue DOM is ready
+     * Moved from initialize() for proper DOM separation
+     */
+    async setupDom() {
+      // DOM operations moved from initialize()
+      // Set up event listeners that were moved from initialize()
+      this.badgeManager.addEventListener('badgeModeChanged', this.handleBadgeModeChanged);
+      this.selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged);
+      this.selectionManager.addEventListener('selectionCleared', this.handleSelectionCleared);
+      
+      console.log('[BadgeToggle.vue] DOM setup complete');
     }
   },
   

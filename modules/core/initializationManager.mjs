@@ -20,6 +20,15 @@ class InitializationManager {
     InitializationManager.instance = this;
   }
 
+  /**
+   * Indicates this manager is allowed to use async methods
+   * InitializationManager is the framework itself and coordinates async operations
+   * @returns {boolean}
+   */
+  asyncAllowed() {
+    return true;
+  }
+
 
 
 

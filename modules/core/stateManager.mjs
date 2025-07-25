@@ -349,6 +349,15 @@ class StateManager extends BaseComponent {
         return 'highest'; // Initialize first
     }
 
+    /**
+     * Indicates this component is allowed to use async initialization
+     * StateManager needs async to load state from server
+     * @returns {boolean}
+     */
+    asyncAllowed() {
+        return true;
+    }
+
     async initialize() {
         window.CONSOLE_LOG_IGNORE('[StateManager] Initializing state management...');
         this.appState = await this._loadState();

@@ -1,10 +1,10 @@
 #aim-point {
     position: fixed;
-    width: 10px;
-    height: 10px;
+    width: 4px;
+    height: 4px;
     border-radius: 50%;
     background-color: red;
-    border: 0.5px solid white;
+    border: none;
     z-index: 9998; /* Second highest - below focalPoint, above bullsEye */
     pointer-events: none; /* Let all events pass through */
     top: 0;

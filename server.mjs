@@ -338,7 +338,7 @@ function generateViolationsHTML(scanResults, report) {
             <div class="stat-label">Violations</div>
         </div>
         <div class="stat-item">
-            <button class="refresh-btn" onclick="window.location.reload()">🔄 Refresh</button>
+            <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
         </div>
     </div>
 `;
@@ -356,9 +356,10 @@ function generateViolationsHTML(scanResults, report) {
                 <div class="violation-body">
                     <div class="issues-list">
                         <h4>🚨 Issues Found:</h4>
-                        ${violation.violations.map(issue => 
-                            `<div class="issue-item">• ${issue}</div>`
-                        ).join('')}
+                        ${violation.violations.map(issue => {
+                            const issueText = typeof issue === 'string' ? issue : (issue.message || issue.toString());
+                            return `<div class="issue-item">• ${issueText}</div>`;
+                        }).join('')}
                     </div>
                     
                     <div class="fix-section">
@@ -416,7 +417,7 @@ function generateFixInstructions(violation) {
                 <li><strong>Open file:</strong> <code class="code">${violation.file}</code></li>
                 <li><strong>Add import:</strong> <code class="code">import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';</code></li>
                 <li><strong>Add mixin:</strong> <code class="code">mixins: [BaseVueComponentMixin]</code></li>
-                <li><strong>Add initialize method:</strong> <code class="code">async initialize(dependencies) { /* setup with dependencies.Manager1, dependencies.Manager2 */ }</code></li>
+                <li><strong>Add initialize method:</strong> <code class="code">initialize(dependencies) { /* and save references */ this.component1 = dependencies.component1; }</code></li>
                 <li><strong>Add cleanup method:</strong> <code class="code">cleanupDependencies() { /* cleanup */ }</code></li>
             </ol>
         `;
@@ -427,24 +428,27 @@ function generateFixInstructions(violation) {
                 <li><strong>Open file:</strong> <code class="code">${violation.file}</code></li>
         `;
 
+        // Helper function to get violation text (handles both string and object violations)
+        const getViolationText = (v) => typeof v === 'string' ? v : (v.message || v.toString());
+        
         // Check for specific violation types and add targeted instructions
-        if (violation.violations && violation.violations.some(v => v.includes('manually set this.isInitialized'))) {
+        if (violation.violations && violation.violations.some(v => getViolationText(v).includes('manually set this.isInitialized'))) {
             instructions += `
                 <li><strong>Remove manual isInitialized assignments:</strong> Delete lines with <code class="code">this.isInitialized = true</code> or <code class="code">this.isInitialized = false</code></li>
                 <li><strong>BaseComponent handles this automatically:</strong> After your <code class="code">initialize()</code> method completes, BaseComponent sets <code class="code">this.isInitialized = true</code></li>
                 <li><strong>Only read, don't write:</strong> Use <code class="code">if (this.isInitialized)</code> to check status, but never assign values</li>
             `;
-        } else if (violation.violations && violation.violations.some(v => v.includes('custom isInitialized getter'))) {
+        } else if (violation.violations && violation.violations.some(v => getViolationText(v).includes('custom isInitialized getter'))) {
             instructions += `
                 <li><strong>Remove custom getter:</strong> Delete <code class="code">get isInitialized() { ... }</code> method</li>
                 <li><strong>BaseComponent provides this:</strong> Use <code class="code">this.isInitialized</code> directly as a property</li>
             `;
-        } else if (violation.violations && violation.violations.some(v => v.includes('private _isInitialized'))) {
+        } else if (violation.violations && violation.violations.some(v => getViolationText(v).includes('private _isInitialized'))) {
             instructions += `
                 <li><strong>Remove private property:</strong> Delete <code class="code">this._isInitialized</code> assignments and references</li>
                 <li><strong>Use BaseComponent's property:</strong> Replace with <code class="code">this.isInitialized</code></li>
             `;
-        } else if (violation.violations && violation.violations.some(v => v.includes('getIsInitialized'))) {
+        } else if (violation.violations && violation.violations.some(v => getViolationText(v).includes('getIsInitialized'))) {
             instructions += `
                 <li><strong>Remove deprecated method:</strong> Delete <code class="code">getIsInitialized()</code> method</li>
                 <li><strong>Use property access:</strong> Replace <code class="code">component.getIsInitialized()</code> with <code class="code">component.isInitialized</code></li>

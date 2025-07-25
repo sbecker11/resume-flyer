@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { AppState, saveState } from '../core/stateManager.mjs';
+import { initializationManager } from '../core/initializationManager.mjs';
 
 /**
  * Programmatic soft refresh - mimics what Cmd+R does
@@ -20,16 +21,18 @@ function programmaticSoftRefresh() {
   }
   
   // Step 2: Force complete viewport reinitialization
-  if (window.viewPortModule) {
+  const viewportManager = initializationManager.getComponent('ViewportManager');
+  if (viewportManager) {
     // Force viewport to recalculate everything from scratch
-    window.viewPortModule.updateViewPort();
+    viewportManager.updateViewportProperties();
   }
   
   // Step 3: Reinitialize all positioning systems in the correct order
   setTimeout(() => {
     // Reinitialize viewport first
-    if (window.viewPortModule) {
-      window.viewPortModule.updateViewPort();
+    const viewportManager = initializationManager.getComponent('ViewportManager');
+    if (viewportManager) {
+      viewportManager.updateViewportProperties();
     }
     
     // Then reinitialize bullsEye

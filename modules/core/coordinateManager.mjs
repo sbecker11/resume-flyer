@@ -76,13 +76,6 @@ class CoordinateManager extends BaseComponent {
         }
     }
 
-    /**
-     * Initialize the coordinate manager
-     */
-    async initialize() {
-        // isInitialized is managed by BaseComponent automatically
-        window.CONSOLE_LOG_IGNORE('[COORDS] Coordinate manager initialized');
-    }
 
     destroy() {
         this.coordinateSystems.clear();
@@ -111,7 +104,7 @@ class CoordinateManager extends BaseComponent {
         return []; // CoordinateManager is a fundamental utility with no IM dependencies
     }
 
-    async initialize(dependencies = {}) {
+    initialize(dependencies = {}) {
         window.CONSOLE_LOG_IGNORE('[CoordinateManager] Initialized');
         // Ready to register coordinate systems
     }

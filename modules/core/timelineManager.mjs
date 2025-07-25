@@ -41,7 +41,7 @@ class TimelineManager extends BaseComponent {
         return ['JobsDataManager']; // TimelineManager depends on JobsDataManager for job data
     }
 
-    async initialize({ JobsDataManager }) {
+    initialize({ JobsDataManager }) {
         console.log('[TimelineManager] Initializing with JobsDataManager...');
         
         this.jobsDataManager = JobsDataManager;
@@ -177,10 +177,17 @@ class TimelineManager extends BaseComponent {
         const targetTime = date.getTime();
         
         // Calculate position (0 at top for newest dates, increasing downward for older dates)
-        // Reverse the interpolation: newer dates (higher time values) get smaller Y positions (top)
-        const position = linearInterp(targetTime, endTime, startTime, TIMELINE_PADDING_TOP, this._timelineHeight - TIMELINE_PADDING_TOP);
+        // Newer dates (endTime) map to top (0)
+        // Older dates (startTime) map to bottom (this._timelineHeight)
+        const position = linearInterp(
+            targetTime,                           // x: target date time
+            startTime,                           // x0: timeline start (older dates)
+            this._timelineHeight,                // y0: bottom position (older dates)
+            endTime,                             // x1: timeline end (newer dates)
+            0                                    // y1: top position (newer dates)
+        );
         
-        return Math.max(TIMELINE_PADDING_TOP, Math.min(this._timelineHeight, position));
+        return Math.max(0, Math.min(this._timelineHeight, position));
     }
 
     /**

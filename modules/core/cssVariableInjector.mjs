@@ -1,22 +1,36 @@
 // modules/core/cssVariableInjector.mjs
 
+import { BaseComponent } from './abstracts/BaseComponent.mjs';
 import { AppState } from './stateManager.mjs';
 
 /**
  * Injects AppState constants as CSS custom properties
  * This allows real-time updates to styling values from the token editor
  */
-export class CSSVariableInjector {
+export class CSSVariableInjector extends BaseComponent {
     constructor() {
+        super('CSSVariableInjector');
         this.root = document.documentElement;
-        this.initialized = false;
+    }
+
+    getDependencies() {
+        return ['StateManager'];
     }
 
     /**
      * Initialize and inject all CSS variables from AppState
      */
+    initialize(dependencies) {
+        this.stateManager = dependencies.StateManager;
+        // StateManager dependency ensures AppState is ready
+        this.injectConstants();
+    }
+
+    /**
+     * Legacy init method for backward compatibility
+     */
     init() {
-        if (this.initialized) return;
+        if (this.isInitialized) return;
         
         this.injectConstants();
         this.initialized = true;
@@ -29,7 +43,7 @@ export class CSSVariableInjector {
      * Inject all constants from AppState.constants as CSS custom properties
      */
     injectConstants() {
-        const constants = AppState.constants;
+        const constants = AppState.constants; // StateManager dependency ensures this is ready
         
         // Resize Handle
         this.root.style.setProperty('--resize-handle-width', `${constants.resizeHandle.width}px`);

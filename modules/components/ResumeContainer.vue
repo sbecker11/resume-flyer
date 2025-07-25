@@ -8,7 +8,7 @@ import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 
 
 // Get the same percentage as the resize handle
-const { percentage: scenePercentage } = useResizeHandle();
+const { scenePercentage } = useResizeHandle();
 
 // Calculate resume percentage as 100 minus scene percentage
 const resumePercentage = computed(() => {
@@ -33,9 +33,9 @@ watch(currentSortRule, (newSortRule) => {
 });
 
 // Watch for changes in the color palette selection and save them
-watch(currentPaletteFilename, (newFilename) => {
+watch(currentPaletteFilename, async (newFilename) => {
   if (newFilename) {
-    setCurrentPalette(newFilename);
+    await setCurrentPalette(newFilename);
   }
 });
 
@@ -111,8 +111,7 @@ function selectPrevious() {
 </template>
 
 <script>
-import { BaseVueComponentMixin } from
-'@/modules/core/abstracts/BaseComponent.mjs';
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 
 export default {
   name: 'ResumeContainer',
@@ -121,7 +120,7 @@ export default {
     getComponentDependencies() {
       return ['SelectionManager'];
     },
-    async initialize(dependencies) {
+    initialize(dependencies) {
       window.CONSOLE_LOG_IGNORE("ResumeContainer initialized with dependencies:", Object.keys(dependencies));
       // Using the imported selectionManager instead of dependency injection
       // since it's already available from the import

@@ -26,31 +26,31 @@ import '@/modules/core/badgeManager.mjs';
 import '@/modules/utils/BadgePositioner.mjs';
 import '@/modules/scene/bizDetailsDivModule.mjs';
 import '@/modules/scene/CardsController.mjs';
+import '@/modules/composables/useViewport.mjs'; // Import to register ViewportManager
+import '@/modules/composables/useBullsEye.mjs'; // Import to register BullsEyeManager
+import '@/modules/composables/useAimPoint.mjs'; // Import to register AimPointManager
+import '@/modules/composables/useFocalPoint.mjs'; // Import to register FocalPointManager
+import '@/modules/composables/useResizeHandle.mjs'; // Import to register ResizeHandleManager
 
 export default {
   name: 'App',
   mixins: [BaseVueComponentMixin],
-  
   components: {
     AppContent
   },
   
   methods: {
     getComponentDependencies() {
-      // App.vue is a root component that only imports modules for side-effects
-      // It doesn't directly use any managers, but the imports trigger registration
-      return [];
+      return []; // App.vue doesn't need dependencies - just imports for registration
     },
     
-    async initialize(dependencies) {
-      // App.vue doesn't need initialization - it just loads modules
-      // The actual component initialization happens in AppContent.vue
-      window.CONSOLE_LOG_IGNORE('[App] Root component ready - modules imported for IM registration');
+    initialize(dependencies) {
+      // App.vue doesn't need initialization - just a container for AppContent
+      console.log('[App.vue] Container initialized');
     },
     
     cleanupDependencies() {
-      // App.vue doesn't have any cleanup since it doesn't use managers directly
-      window.CONSOLE_LOG_IGNORE('[App] Root component cleanup - no managers to clean up');
+      // No dependencies to clean up
     }
   }
 };

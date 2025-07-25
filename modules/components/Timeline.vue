@@ -117,7 +117,7 @@ export default {
       return ['TimelineManager'];
     },
     
-    async initialize(dependencies) {
+    initialize(dependencies) {
       console.log('[Timeline] initializing with dependencies:', Object.keys(dependencies));
       
       // Dependencies are guaranteed to be available - no null checks needed!

@@ -26,9 +26,18 @@ class SelectionManager extends BaseComponent {
         return []; // SelectionManager is a fundamental component with no IM dependencies
     }
 
-    async initialize(dependencies = {}) {
-        window.CONSOLE_LOG_IGNORE('[SelectionManager] Initialized');
+    initialize(dependencies = {}) {
+        console.log('[SelectionManager] Initialized');
         // SelectionManager is ready - no special initialization needed
+    }
+
+    /**
+     * DOM setup phase - called after DOM is ready
+     * SelectionManager doesn't need DOM operations in initialize
+     */
+    async setupDom() {
+        // SelectionManager operates on events, not direct DOM access
+        console.log('[SelectionManager] DOM setup complete');
     }
 
     destroy() {
@@ -50,9 +59,9 @@ class SelectionManager extends BaseComponent {
     }
 
     selectJobNumber(jobNumber, caller = '') {
-        // window.CONSOLE_LOG_IGNORE(`SelectionManager.selectJobNumber called with jobNumber=${jobNumber}, caller=${caller}`);
+        // console.log(`SelectionManager.selectJobNumber called with jobNumber=${jobNumber}, caller=${caller}`);
         if (this.selectedJobNumber === jobNumber) {
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: Early return - same job already selected: ${jobNumber} from ${caller}`);
+            console.log(`SelectionManager: Early return - same job already selected: ${jobNumber} from ${caller}`);
             return;
         }
 
@@ -64,7 +73,7 @@ class SelectionManager extends BaseComponent {
         // CRITICAL: Clear any existing selection first before setting new selection
         if (this.selectedJobNumber !== null) {
             const previousJobNumber = this.selectedJobNumber;
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Clearing previous selection ${previousJobNumber} before selecting ${jobNumber}`);
+            console.log(`SelectionManager: [${caller}] Clearing previous selection ${previousJobNumber} before selecting ${jobNumber}`);
             this.selectedJobNumber = null; // Clear the selection
             this._clearAllVisualSelection(); // Clear all visual states
             this.dispatchEvent(new CustomEvent('selectionCleared', {
@@ -76,7 +85,7 @@ class SelectionManager extends BaseComponent {
             }));
         }
 
-        // window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager: [${caller}] Selecting job number: ${jobNumber} (was: ${this.selectedJobNumber})`);
+        // console.log(`[DEBUG] SelectionManager: [${caller}] Selecting job number: ${jobNumber} (was: ${this.selectedJobNumber})`);
         this.selectedJobNumber = jobNumber;
         
         // Apply visual selection to all elements
@@ -90,10 +99,10 @@ class SelectionManager extends BaseComponent {
             // Clean up any stale selectedJob field from resume section
             if (AppState.resume && AppState.resume.selectedJob !== undefined) {
                 delete AppState.resume.selectedJob;
-                window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Cleaned up stale selectedJob field from resume section`);
+                console.log(`SelectionManager: [${caller}] Cleaned up stale selectedJob field from resume section`);
             }
             saveState(AppState);
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Updated AppState selectedJobNumber to ${jobNumber} and lastVisitedJobNumber to ${jobNumber}`);
+            console.log(`SelectionManager: [${caller}] Updated AppState selectedJobNumber to ${jobNumber} and lastVisitedJobNumber to ${jobNumber}`);
         }
         
         const event = new CustomEvent('selectionChanged', {
@@ -103,14 +112,14 @@ class SelectionManager extends BaseComponent {
                 isPaired: true // Flag to indicate both cDiv and rDiv should be selected
             }
         });
-        // window.CONSOLE_LOG_IGNORE(`SelectionManager: Dispatching selectionChanged event:`, event.detail);
+        // console.log(`SelectionManager: Dispatching selectionChanged event:`, event.detail);
         this.dispatchEvent(event);
     }
 
     clearSelection(caller = '') {
         if (this.selectedJobNumber === null) return;
         
-        window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Clearing selection.`);
+        console.log(`SelectionManager: [${caller}] Clearing selection.`);
         this.selectedJobNumber = null;
         
         // Clear all visual selection states
@@ -122,10 +131,10 @@ class SelectionManager extends BaseComponent {
             // Clean up any stale selectedJob field from resume section
             if (AppState.resume && AppState.resume.selectedJob !== undefined) {
                 delete AppState.resume.selectedJob;
-                window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Cleaned up stale selectedJob field from resume section during clear`);
+                console.log(`SelectionManager: [${caller}] Cleaned up stale selectedJob field from resume section during clear`);
             }
             saveState(AppState);
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Updated AppState selectedJobNumber to null`);
+            console.log(`SelectionManager: [${caller}] Updated AppState selectedJobNumber to null`);
         }
         
         this.dispatchEvent(new CustomEvent('selectionCleared', {
@@ -139,7 +148,7 @@ class SelectionManager extends BaseComponent {
     hoverJobNumber(jobNumber, caller = '') {
         if (this.hoveredJobNumber === jobNumber) return;
 
-        window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Hovering job number: ${jobNumber}`);
+        console.log(`SelectionManager: [${caller}] Hovering job number: ${jobNumber}`);
         this.hoveredJobNumber = jobNumber;
         this.dispatchEvent(new CustomEvent('hoverChanged', {
             detail: {
@@ -153,7 +162,7 @@ class SelectionManager extends BaseComponent {
     clearHover(caller = '') {
         if (this.hoveredJobNumber === null) return;
 
-        window.CONSOLE_LOG_IGNORE(`SelectionManager: [${caller}] Clearing hover.`);
+        console.log(`SelectionManager: [${caller}] Clearing hover.`);
         this.hoveredJobNumber = null;
         this.dispatchEvent(new CustomEvent('hoverCleared', {
             detail: {
@@ -181,7 +190,7 @@ class SelectionManager extends BaseComponent {
      */
     smoothScrollElementIntoView(element, container, headerSelector = '.biz-details-employer, .biz-details-role, .biz-details-dates, .biz-details-z-value', caller = '') {
         if (!element || !container) {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager.smoothScrollElementIntoView: Missing element or container from ${caller}`);
+            console.log(`[DEBUG] SelectionManager.smoothScrollElementIntoView: Missing element or container from ${caller}`);
             return false;
         }
 
@@ -209,13 +218,13 @@ class SelectionManager extends BaseComponent {
         // Calculate optimal scroll position
         const scrollTarget = Math.max(0, elementTop + headerOffset - this.smoothScrollConfig.topMargin);
         
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager.smoothScrollElementIntoView: ${caller} - Element top: ${elementTop}, Header offset: ${headerOffset}, Target: ${scrollTarget}`);
+        console.log(`[DEBUG] SelectionManager.smoothScrollElementIntoView: ${caller} - Element top: ${elementTop}, Header offset: ${headerOffset}, Target: ${scrollTarget}`);
 
         // Check if already at correct position
         const currentScrollTop = container.scrollTop;
         const scrollDifference = Math.abs(currentScrollTop - scrollTarget);
         if (scrollDifference < this.smoothScrollConfig.tolerance) {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager.smoothScrollElementIntoView: ${caller} - Already positioned (difference: ${scrollDifference}px)`);
+            console.log(`[DEBUG] SelectionManager.smoothScrollElementIntoView: ${caller} - Already positioned (difference: ${scrollDifference}px)`);
             return false;
         }
 
@@ -225,7 +234,7 @@ class SelectionManager extends BaseComponent {
             behavior: this.smoothScrollConfig.behavior
         });
 
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager.smoothScrollElementIntoView: ${caller} - Smooth scroll initiated`);
+        console.log(`[DEBUG] SelectionManager.smoothScrollElementIntoView: ${caller} - Smooth scroll initiated`);
         return true;
     }
 
@@ -238,7 +247,7 @@ class SelectionManager extends BaseComponent {
             ...this.smoothScrollConfig,
             ...config
         };
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] SelectionManager: Smooth scroll config updated:`, this.smoothScrollConfig);
+        console.log(`[DEBUG] SelectionManager: Smooth scroll config updated:`, this.smoothScrollConfig);
     }
 
     /**
@@ -251,24 +260,24 @@ class SelectionManager extends BaseComponent {
         const cDiv = document.querySelector(`.biz-card-div[data-job-number="${jobNumber}"]`);
         if (cDiv) {
             cDiv.classList.add('selected');
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: Applied 'selected' to cDiv for job ${jobNumber}`);
+            console.log(`SelectionManager: Applied 'selected' to cDiv for job ${jobNumber}`);
         }
 
         // Apply selection to cDiv clone
         const cDivClone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         if (cDivClone) {
             cDivClone.classList.add('selected');
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: Applied 'selected' to cDiv clone for job ${jobNumber}`);
+            console.log(`SelectionManager: Applied 'selected' to cDiv clone for job ${jobNumber}`);
         }
 
         // Apply selection to rDiv (resume card)
         const rDiv = document.querySelector(`.biz-resume-div[data-job-number="${jobNumber}"]`);
         if (rDiv) {
             rDiv.classList.add('selected');
-            window.CONSOLE_LOG_IGNORE(`SelectionManager: Applied 'selected' to rDiv for job ${jobNumber}`);
+            console.log(`SelectionManager: Applied 'selected' to rDiv for job ${jobNumber}`);
         }
 
-        window.CONSOLE_LOG_IGNORE(`SelectionManager: Applied visual selection to job ${jobNumber}`);
+        console.log(`SelectionManager: Applied visual selection to job ${jobNumber}`);
     }
 
     /**
@@ -292,7 +301,7 @@ class SelectionManager extends BaseComponent {
             clone.classList.remove('selected', 'hovered');
         });
 
-        window.CONSOLE_LOG_IGNORE(`SelectionManager: Cleared all visual selection states`);
+        console.log(`SelectionManager: Cleared all visual selection states`);
     }
 }
 

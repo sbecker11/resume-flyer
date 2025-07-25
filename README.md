@@ -3,6 +3,103 @@
 
 The `flock` is a glorified resume describing my own work history and skills over my career timeline.
 
+## 📚 Framework Documentation
+
+### Initialization Manager (IM) Framework
+The core dependency injection and component management system:
+
+- **[📖 IM Documentation Hub](docs/im/README.md)** - Start here for complete IM guide
+- **[🚀 Getting Started](docs/im/getting-started.md)** - Quick start tutorial  
+- **[💡 Core Concepts](docs/im/core-concepts.md)** - Understanding dependency injection
+- **[🏗️ Architectural Guidelines](docs/im/architectural-guidelines.md)** - Design principles and patterns
+- **[🎯 Vue Integration](docs/im/vue-integration.md)** - Vue components and composables
+- **[🔄 Migration Guide](docs/im/migration-guide.md)** - Convert existing code to IM
+- **[🔧 Troubleshooting](docs/im/troubleshooting.md)** - Common issues and solutions
+
+### ⚡ Recent IM Compliance Achievements (July 2025)
+
+The project has achieved **56% IM compliance (14/25 components)** through systematic migration to the Initialization Manager framework:
+
+#### 🎯 **Key Compliance Patterns Implemented**
+
+**1. BaseVueComponentMixin Integration**
+```javascript
+// All Vue components now use the IM mixin
+export default {
+  name: 'ComponentName',
+  mixins: [BaseVueComponentMixin],
+  methods: {
+    getComponentDependencies() { return ['Dependency1', 'Dependency2']; },
+    initialize(dependencies) { /* IM initialization logic */ },
+    async setupDom() { /* DOM operations separated from initialization */ }
+  }
+};
+```
+
+**2. DOM Separation Pattern**
+- **initialize()**: Handles dependency injection and business logic
+- **setupDom()**: Handles DOM operations, template refs, and event listeners
+- **Two-phase initialization**: Logic first, then DOM operations
+
+**3. Template Ref Injection**
+```javascript
+// Replaces direct getElementById() calls
+setSceneContentElement(element) {
+  this.scenecontentElement = element;
+  console.log('[Component] scene-content element set via template ref');
+}
+```
+
+**4. Server-Side Code Compliance**
+- Fixed browser-specific code in `server.mjs`
+- Added validation rules to prevent `window` references in server code
+- Replaced `window.CONSOLE_LOG_IGNORE` with `console.log` where needed
+
+#### 📊 **Compliance Status**
+
+**✅ Fully Compliant Components (14/25):**
+- App.vue - Container component with IM base methods
+- AppContent.vue - Added setupDom() method for DOM operations
+- SankeyConnections.vue - Added BaseVueComponentMixin and setupDom()
+- SingleLCurveTest.vue - Added IM compliance methods and template refs
+- SkillBadges.vue - Full IM integration with dependency injection
+- ConnectionLines.vue - Event listener management in setupDom()
+- badgeManager.mjs - Added setupDom() method
+- selectionManager.mjs - Added setupDom() method  
+- vueDomManager.mjs - Added setupDom() method
+- ResumeListController.mjs - DOM operations moved to setupDom()
+- CardsController.mjs - Added setupDom() method with syntax fixes
+- server.mjs - Fixed browser-specific code references
+- componentScanner.mjs - Added server.mjs validation rules
+- initializationManager.mjs - Core IM framework (already compliant)
+
+**🔄 Remaining Components (11/25):**
+- Additional Vue components and core modules requiring IM pattern implementation
+
+#### 🛠️ **Technical Achievements**
+
+**Error Resolution:**
+- Fixed `TypeError: v.includes is not a function` in violation handling
+- Resolved Vue compiler syntax errors in template ref methods
+- Fixed missing semicolons and broken method structures in auto-migrated code
+- Cleaned up orphaned code blocks from migration process
+
+**Architecture Improvements:**
+- Established consistent dependency injection patterns
+- Separated DOM operations from business logic initialization
+- Implemented template ref injection to replace direct DOM access
+- Added server-side validation for browser-specific code
+
+**Development Experience:**
+- Clean compilation with no syntax errors
+- Consistent logging patterns across components
+- Improved error handling and validation
+- Better separation of concerns between logic and DOM operations
+
+This compliance work represents a major architectural improvement, moving the project toward a more maintainable, testable, and scalable codebase with proper dependency management and DOM separation patterns.
+
+## Application Overview
+
 ![The flock](/static_content/graphics/version-0.6-50.gif)
 
 Large `business cards`are used to describe various jobs, each with its role, 

@@ -10,7 +10,7 @@ class VueDomManager extends BaseComponent {
         super('VueDomManager');
         this.isDomReady = false;
         this.domReadyPromise = null;
-        this._setupDomReadyPromise();
+        // DOM operations moved to setupDom() - constructor only sets up state
     }
 
     getDependencies() {
@@ -21,14 +21,37 @@ class VueDomManager extends BaseComponent {
         return 'highest'; // Initialize as early as possible
     }
 
+    /**
+     * Indicates this component is allowed to use async initialization
+     * VueDomManager needs async to wait for DOM readiness events
+     * @returns {boolean}
+     */
+    asyncAllowed() {
+        return true;
+    }
+
     async initialize() {
-        window.CONSOLE_LOG_IGNORE('[VueDomManager] Initializing Vue DOM readiness manager...');
+        console.log('[VueDomManager] Initializing Vue DOM readiness manager...');
+        // Business logic only - no DOM operations here
+        // DOM operations moved to setupDom()
+    }
+
+    /**
+     * DOM setup phase - called after DOM is ready
+     * VueDomManager manages DOM readiness itself
+     */
+    async setupDom() {
+        console.log('[VueDomManager] DOM setup phase - setting up DOM readiness detection...');
         
-        // Wait for Vue DOM to be ready
+        // Setup DOM readiness promise (DOM operations moved from constructor/initialize)
+        this._setupDomReadyPromise();
+        
+        // Wait for Vue DOM to be ready (DOM operation moved from initialize)
         await this.domReadyPromise;
         
         this.isDomReady = true;
-        window.CONSOLE_LOG_IGNORE('[VueDomManager] Vue DOM is ready');
+        console.log('[VueDomManager] Vue DOM is ready');
+        console.log('[VueDomManager] DOM setup complete');
     }
 
     destroy() {
@@ -37,29 +60,33 @@ class VueDomManager extends BaseComponent {
     }
 
     /**
-     * Setup the Vue DOM ready promise
+     * Setup the Vue DOM ready promise - DOM operations now properly in setupDom phase
      * @private
      */
     _setupDomReadyPromise() {
+        console.log('[VueDomManager] Setting up DOM readiness promise (DOM operations in setupDom phase)');
+        
         if (typeof window === 'undefined') {
             // Server environment - resolve immediately
+            console.log('[VueDomManager] Server environment detected - resolving immediately');
             this.domReadyPromise = Promise.resolve();
             return;
         }
 
         this.domReadyPromise = new Promise((resolve) => {
             const handleVueDomReady = () => {
-                window.CONSOLE_LOG_IGNORE('[VueDomManager] Vue DOM ready event received');
+                console.log('[VueDomManager] Vue DOM ready event received');
                 window.removeEventListener('vue-dom-ready', handleVueDomReady);
                 resolve();
             };
 
-            // Check if Vue DOM is already ready
+            // DOM state checking - now properly in setupDom phase
             if (document.readyState === 'complete' && window.Vue) {
-                window.CONSOLE_LOG_IGNORE('[VueDomManager] Vue DOM already ready');
+                console.log('[VueDomManager] Vue DOM already ready');
                 resolve();
             } else {
-                window.CONSOLE_LOG_IGNORE('[VueDomManager] Waiting for vue-dom-ready event...');
+                console.log('[VueDomManager] Waiting for vue-dom-ready event...');
+                // DOM event listener setup - now properly in setupDom phase
                 window.addEventListener('vue-dom-ready', handleVueDomReady);
                 
                 // Fallback timeout in case event doesn't fire

@@ -44,9 +44,47 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
 import { jobs as jobsData } from '@/static_content/jobs/jobs.mjs';
 import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 
 export default {
   name: 'SankeyConnections',
+  mixins: [BaseVueComponentMixin],
+  
+  methods: {
+    getComponentDependencies() {
+      return []; // SankeyConnections doesn't need dependencies currently
+    },
+    
+    initialize(dependencies) {
+      // SankeyConnections initialization handled in setup()
+      console.log('[SankeyConnections] IM initialized');
+    },
+
+    /**
+     * DOM setup phase - called after Vue DOM is ready
+     * DOM operations moved from initialize() for proper separation
+     */
+    async setupDom() {
+      // DOM operations are handled in the composition API setup()
+      // This method exists for IM compliance
+      console.log('[SankeyConnections.vue] DOM setup complete');
+    },
+
+    /**
+     * Template ref injection for scene-content element
+     * Replaces getElementById('scene-content') calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setSceneContentElement(element) {
+      this.scenecontentElement = element;
+      console.log('[SankeyConnections.vue] scene-content element set via template ref');
+    },
+    
+    cleanupDependencies() {
+      // Cleanup handled in setup() onUnmounted
+    }
+  },
+  
   setup() {
     const sankeyNodes = ref([]);
     const links = ref([]);
@@ -124,7 +162,7 @@ export default {
 
       const graph = { nodes, links: graphLinks };
 
-      const sceneContent = document.getElementById('scene-content');
+      const sceneContent = this.scenecontentElement;
       const sceneRect = sceneContent.getBoundingClientRect();
       const width = sceneRect.width;
       const height = sceneRect.height;

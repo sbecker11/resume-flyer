@@ -22,34 +22,38 @@ class BullsEye extends BaseComponent {
         return 'medium'; // Initialize after SceneContainer but before other components
     }
 
-    async initialize(dependencies = {}) {
+    initialize(dependencies = {}) {
         try {
-            // window.CONSOLE_LOG_IGNORE('[BullsEye] Initializing with SceneContainer dependency...');
-            
-            // Get SceneContainer from service locator - guaranteed to be ready
+            // Get SceneContainer from service locator - functional reference only
             const sceneContainer = initializationManager.getComponent('SceneContainer');
             if (!sceneContainer) {
                 throw new Error('[BullsEye] SceneContainer not available from service locator');
             }
 
-            // Get the scene container element - guaranteed to exist
-            const sceneContainerElement = sceneContainer.getSceneContainer();
-            if (!sceneContainerElement) {
-                throw new Error('[BullsEye] SceneContainer element not ready');
-            }
+            // Store reference for later DOM access
+            this.sceneContainer = sceneContainer;
+            window.CONSOLE_LOG_IGNORE('[BullsEye] Functional initialization complete');
+        } catch (error) {
+            console.error('[BullsEye] Initialization failed:', error);
+            throw error; // Re-throw so IM knows initialization failed
+        }
+    }
 
+    async setupDom() {
+        try {
+            window.CONSOLE_LOG_IGNORE('[BullsEye] Setting up DOM access...');
+            
             // Find the bulls-eye element
             this._bullsEyeElement = document.getElementById('bulls-eye');
             if (!this._bullsEyeElement) {
                 throw new Error('[BullsEye] #bulls-eye element not found in DOM');
             }
 
-            // window.CONSOLE_LOG_IGNORE('[BullsEye] Elements found, setting up centering...');
-            // window.CONSOLE_LOG_IGNORE('[BullsEye] Scene container dimensions:', {
-            //     width: sceneContainerElement.clientWidth,
-            //     height: sceneContainerElement.clientHeight,
-            //     rect: sceneContainerElement.getBoundingClientRect()
-            // });
+            // Get scene container element (should be ready after SceneContainer.setupDom())
+            const sceneContainerElement = this.sceneContainer.getSceneContainer();
+            if (!sceneContainerElement) {
+                throw new Error('[BullsEye] SceneContainer element not ready');
+            }
 
             // Clear any existing inline styles
             this._bullsEyeElement.style.removeProperty('top');
@@ -59,20 +63,36 @@ class BullsEye extends BaseComponent {
             // Position at scene container center
             this._centerBullsEye(sceneContainerElement);
 
-            // window.CONSOLE_LOG_IGNORE('[BullsEye] Initialization complete');
+            window.CONSOLE_LOG_IGNORE('[BullsEye] DOM setup complete');
         } catch (error) {
-            console.error('[BullsEye] Initialization failed:', error);
-            throw error; // Re-throw so IM knows initialization failed
+            console.error('[BullsEye] DOM setup failed:', error);
+            throw error;
         }
     }
 
     _centerBullsEye(sceneContainerElement) {
         const sceneRect = sceneContainerElement.getBoundingClientRect();
+        
+        // 🛡️ CRITICAL: Fail fast on invalid geometry during development
+        if (!sceneRect || sceneRect.width <= 0 || sceneRect.height <= 0) {
+            throw new Error(`[BullsEye] Invalid sceneRect dimensions - SceneContainer geometry not ready: ${JSON.stringify({
+                width: sceneRect?.width,
+                height: sceneRect?.height,
+                left: sceneRect?.left,
+                top: sceneRect?.top
+            })}`);
+        }
+        
         const centerX = sceneRect.left + sceneRect.width / 2;
         const centerY = sceneRect.top + sceneRect.height / 2;
         
-        // window.CONSOLE_LOG_IGNORE('[BullsEye] Centering - sceneRect:', sceneRect);
-        // window.CONSOLE_LOG_IGNORE('[BullsEye] Calculated center:', { centerX, centerY });
+        // 🛡️ Fail fast on NaN calculations
+        if (isNaN(centerX) || isNaN(centerY)) {
+            throw new Error(`[BullsEye] NaN detected in center calculations: centerX=${centerX}, centerY=${centerY}, sceneRect=${JSON.stringify(sceneRect)}`);
+        }
+        
+        window.CONSOLE_LOG_IGNORE('[BullsEye] Centering - sceneRect:', sceneRect);
+        window.CONSOLE_LOG_IGNORE('[BullsEye] Calculated center:', { centerX, centerY });
         
         this._bullsEyeElement.style.position = 'fixed';
         this._bullsEyeElement.style.left = `${centerX}px`;
@@ -109,6 +129,27 @@ class BullsEye extends BaseComponent {
             Math.pow(bullsEyeCenter.y - referenceCenter.y, 2)
         );
         window.CONSOLE_LOG_IGNORE('[BullsEye] Distance from scene center:', distance.toFixed(2) + 'px');
+    }
+
+    getPosition() {
+        if (!this._bullsEyeElement) {
+            // Return scene container center as fallback
+            const sceneContainer = this.sceneContainer?.getSceneContainer();
+            if (sceneContainer) {
+                const rect = sceneContainer.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
+            return { x: 0, y: 0 }; // Ultimate fallback
+        }
+        
+        const rect = this._bullsEyeElement.getBoundingClientRect();
+        return {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        };
     }
 
     destroy() {

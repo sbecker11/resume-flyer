@@ -3,6 +3,7 @@
     <!-- Scene Container -->
     <div 
       id="scene-container" 
+      ref="sceneContainerRef"
       :style="sceneContainerStyle" 
       @click="handleSceneContainerClick"
       :class="{ 'container-first': firstContainer === 'scene-container', 'container-second': secondContainer === 'scene-container' }"
@@ -10,7 +11,7 @@
       <div id="scene-content">
         <div id="scene-plane-top-gradient"></div>
         <div id="scene-plane-btm-gradient"></div>
-        <div id="scene-plane">
+        <div id="scene-plane" ref="scenePlaneRef">
           <Timeline :alignment="timelineAlignment" />
           <!-- <SankeyConnections /> -->
           <SkillBadges />
@@ -43,12 +44,13 @@
       <ResizeHandle v-if="appContainerClass === 'scene-right'" />
     </div>
 
-    <div id="aim-point"></div>
-    <div id="bulls-eye">+</div>
+    <div id="aim-point" ref="aimPointRef"></div>
+    <div id="bulls-eye" ref="bullsEyeRef">+</div>
     <div 
       id="focal-point" 
+      ref="focalPointRef"
       :style="focalPointStyle" 
-      :class="{ locked: focalPoint.value?.isLocked, dragging: focalPoint.value?.isDragging }"
+      :class="{ locked: focalPointIsLocked, dragging: focalPointIsDragging }"
     >⦻</div>
     
     <!-- Viewport Rectangle Border -->
@@ -104,13 +106,13 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, watchEffect } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watchEffect, getCurrentInstance } from 'vue';
 import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
-import { useViewport } from '@/modules/composables/useViewport.mjs';
-import { useBullsEye } from '@/modules/composables/useBullsEye.mjs';
-import { useAimPoint } from '@/modules/composables/useAimPoint.mjs';
-import { useFocalPoint } from '@/modules/composables/useFocalPoint.mjs';
-import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
+// Removed duplicate useViewport import - using the one below
+// IM-managed: BullsEyeManager
+// IM-managed: AimPointManager
+// IM-managed: FocalPointManager
+// IM-managed: ResizeHandleManager
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useTimeline, initialize as initializeTimeline } from '@/modules/composables/useTimeline.mjs';
 import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
@@ -120,9 +122,9 @@ import { initializeState, saveState } from '@/modules/core/stateManager.mjs';
 // Remove direct jobs import - will use JobsDataManager
 import * as keyDown from '@/modules/core/keyDownModule.mjs';
 import { sceneContainer } from '@/modules/scene/sceneContainerModule.mjs';
-import * as viewPort from '@/modules/core/viewPortModule.mjs';
+// IM-managed: ViewportManager
 import { cardsController } from '@/modules/scene/CardsController.mjs';
-import '@/modules/core/aimPoint.mjs';
+// Removed old aimPoint.mjs - now using useAimPoint composable
 import '@/modules/core/bullsEye.mjs'; // Import to trigger BullsEye instance creation
 import * as resizeHandle from '@/modules/resize/resizeHandler.mjs';
 import { resumeListController } from '@/modules/resume/ResumeListController.mjs';
@@ -163,36 +165,127 @@ export default {
   },
   mixins: [BaseVueComponentMixin],
 
+  // Module-level variables to store IM dependencies (accessible by both methods and setup)
+  data() {
+    return {
+      imDependencies: {
+        viewportManager: null,
+        bullsEyeManager: null,
+        aimPointManager: null,
+        focalPointManager: null,
+        resizeHandleManager: null
+      }
+    };
+  },
+
   methods: {
     getComponentDependencies() {
       return [
         'SceneContainer', // Ensure DOM is ready before using viewport and composables
+        'ViewportManager',
+        'BullsEyeManager', 
+        'AimPointManager',
+        'FocalPointManager',
+        'ResizeHandleManager'
       ];
     },
 
-    async initialize(dependencies) {
-      // SceneContainer dependency ensures DOM is ready, now safe to initialize viewport
-      window.CONSOLE_LOG_IGNORE('[AppContent] DOM ready, initializing viewport with dependencies:', Object.keys(dependencies));
-      
-      // Get viewport instance from setup and initialize it now that DOM is ready
-      const viewport = this.getViewportInstance();
-      if (viewport) {
-        viewport.initialize();
-        window.CONSOLE_LOG_IGNORE('[AppContent] Viewport initialized successfully');
+    initialize(dependencies) {
+      // Validate all required dependencies are present
+      const requiredDeps = ['SceneContainer', 'ViewportManager', 'BullsEyeManager', 'AimPointManager', 'FocalPointManager', 'ResizeHandleManager'];
+      for (const dep of requiredDeps) {
+        if (!dependencies[dep]) {
+          throw new Error(`[AppContent] Missing required dependency: ${dep}`);
+        }
       }
       
-      onUnmounted(() => {
-        this.cleanupDependencies();
-      });
+      // Store IM-managed dependencies
+      this.sceneContainer = dependencies.SceneContainer;
+      this.viewportManager = dependencies.ViewportManager;
+      this.bullsEyeManager = dependencies.BullsEyeManager;
+      this.aimPointManager = dependencies.AimPointManager; 
+      this.focalPointManager = dependencies.FocalPointManager;
+      this.resizeHandleManager = dependencies.ResizeHandleManager;
+      
+      // Also set the data references for computed properties
+      this.imDependencies.viewportManager = dependencies.ViewportManager;
+      this.imDependencies.bullsEyeManager = dependencies.BullsEyeManager;
+      this.imDependencies.aimPointManager = dependencies.AimPointManager;
+      this.imDependencies.focalPointManager = dependencies.FocalPointManager;
+      this.imDependencies.resizeHandleManager = dependencies.ResizeHandleManager;
+      
+      console.log('[AppContent] IM dependencies initialized:', Object.keys(dependencies));
     },
 
     cleanupDependencies() {
       // Event listeners are cleaned up in the setup() onUnmounted hook
     },
+
+    /**
+     * DOM setup phase - called after Vue DOM is ready
+     * DOM operations moved from initialize() for proper separation
+     */
+    async setupDom() {
+      // DOM operations that were in initialize/setup can be moved here
+      console.log('[AppContent.vue] DOM setup phase started');
+      
+      // Most DOM operations are handled in the composition API setup()
+      // This method exists for IM compliance
+      
+      console.log('[AppContent.vue] DOM setup complete');
+    },
     
     getViewportInstance() {
       // Access viewport instance returned from setup()
       return this.viewport;
+    },
+
+    /**
+     * Template ref injection for scene-content element
+     * Replaces getElementById('scene-content') calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setSceneContentElement(element) {
+      this.scenecontentElement = element;
+      console.log('[AppContent.vue] scene-content element set via template ref');
+      
+      // Apply any setup that was waiting for this element
+      if (this.scenecontentElement) {
+        this._setupSceneContent();
+      }
+    },
+
+    /**
+     * Template ref injection for scene-plane element
+     * Replaces getElementById('scene-plane') calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setScenePlaneElement(element) {
+      this.sceneplaneElement = element;
+      console.log('[AppContent.vue] scene-plane element set via template ref');
+      
+      // Apply any setup that was waiting for this element
+      if (this.sceneplaneElement) {
+        this._setupScenePlane();
+      }
+    },
+
+    /**
+     * Setup logic for scene-content element
+     * Called when element becomes available
+     */
+    _setupSceneContent() {
+      // Add any element-specific setup logic here
+      // This replaces the immediate DOM access from initialize()
+    },
+
+    /**
+     * Setup logic for scene-plane element
+     * Called when element becomes available
+     */
+    _setupScenePlane() {
+      // Add any element-specific setup logic here
+      // This replaces the immediate DOM access from initialize()
     }
   },
 
@@ -202,6 +295,8 @@ export default {
     let debugInterval;
     const viewportBorderTrigger = ref(0);
     const badgeMode = ref('no-badges');
+
+    // Viewport composable initialized below with other composables
 
     // Simple debug update function - DebugPanel component handles its own state now
     const updateDebugValues = () => {
@@ -216,20 +311,21 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 200));
         
         // PHASE 2: Force layout recalculation and viewport update (CRITICAL FIRST STEP)
-        const sceneContainerElement = document.getElementById('scene-container');
-        if (sceneContainerElement && viewPort) {
+        const sceneContainerElement = sceneContainerRef.value;
+        const viewport = getViewport();
+        if (sceneContainerElement && viewport) {
           // Force layout recalculation
           void sceneContainerElement.offsetHeight;
           
           // Update viewport with new scene container position
-          viewPort.updateViewPort();
+          viewport.updateViewportProperties();
           
           // Critical wait for viewport changes to propagate
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         // PHASE 3: Container scroll reset (before repositioning)
-        const sceneContent = document.getElementById('scene-content');
+        const sceneContent = document.scenecontentElement;
         if (sceneContent) {
           // Reset scroll to ensure correct positioning base
           sceneContent.scrollTop = 0;
@@ -283,11 +379,12 @@ export default {
     
     // Initialize reactive composables immediately (before any await statements)
     // This ensures Vue lifecycle hooks are registered in the correct component context
-    const viewport = useViewport('AppContent');
-    const bullsEye = useBullsEye();
-    const aimPoint = useAimPoint();
-    const focalPoint = useFocalPoint();
-    const resizeHandle = useResizeHandle();
+    // Accessor functions with null safety
+    const getViewport = () => getCurrentInstance()?.ctx?.imDependencies?.viewportManager;
+    const getBullsEye = () => getCurrentInstance()?.ctx?.imDependencies?.bullsEyeManager;
+    const getAimPoint = () => getCurrentInstance()?.ctx?.imDependencies?.aimPointManager;
+    const getFocalPoint = () => getCurrentInstance()?.ctx?.imDependencies?.focalPointManager;
+    const getResizeHandle = () => getCurrentInstance()?.ctx?.imDependencies?.resizeHandleManager;
     useTimeline();
     
     // Declare layoutToggle - will be initialized by InitializationManager
@@ -299,19 +396,20 @@ export default {
     // Register lifecycle hooks before any await statements
     onMounted(() => {
       // Component mounted - DOM elements are ready immediately
-      window.CONSOLE_LOG_IGNORE('[AppContent] Vue mounted - DOM elements ready, dispatching dom-ready event');
+      console.log('[AppContent] Vue mounted - DOM elements ready, dispatching dom-ready event');
       
       // Debug: Check DOM elements exist before dispatching event
-      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - scene-container:', !!document.getElementById('scene-container'));
-      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - scene-plane:', !!document.getElementById('scene-plane'));
-      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - bulls-eye:', !!document.getElementById('bulls-eye'));
-      window.CONSOLE_LOG_IGNORE('[AppContent] DOM Check - aim-point:', !!document.getElementById('aim-point'));
+      // Note: Template refs will be available after mount
+      console.log('[AppContent] DOM Check - scene-container via ref:', !!sceneContainerRef.value);
+      console.log('[AppContent] DOM Check - scene-plane:', !!document.sceneplaneElement);
+      console.log('[AppContent] DOM Check - bulls-eye via ref:', !!bullsEyeRef.value);
+      console.log('[AppContent] DOM Check - aim-point via ref:', !!aimPointRef.value);
       
       window.dispatchEvent(new CustomEvent('vue-dom-ready', { 
         detail: { timestamp: Date.now() } 
       }));
       
-      window.CONSOLE_LOG_IGNORE('[AppContent] vue-dom-ready event dispatched');
+      console.log('[AppContent] vue-dom-ready event dispatched');
       
       // Start async initialization without blocking onMounted
       initializeAsync();
@@ -451,28 +549,93 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         layoutToggle = useLayoutToggle();
         
         // Viewport initialization moved to initialize() after DOM is ready
-        // await viewPort.initialize(); // Legacy viewPort still needs initialization
         
         // Timeline is now managed by TimelineManager IM component - no manual initialization needed
         
         // Let InitializationManager handle all BaseComponent initialization
-        window.CONSOLE_LOG_IGNORE('[AppContent] Starting application via InitializationManager...');
+        console.log('[AppContent] Starting application via InitializationManager...');
         const initStatus = await initializationManager.startApplication();
-        window.CONSOLE_LOG_IGNORE('[AppContent] Application initialization complete:', initStatus);
+        console.log('[AppContent] Application initialization complete:', initStatus);
+        
+        // Now that Vue DOM is ready, setup DOM access for components that need it
+        const sceneContainer = initializationManager.getComponent('SceneContainer');
+        if (sceneContainer && sceneContainer.setupDom) {
+            await sceneContainer.setupDom();
+            console.log('[AppContent] SceneContainer DOM setup complete');
+        }
+        
+        // Setup BullsEye DOM after SceneContainer is ready
+        const bullsEye = initializationManager.getComponent('BullsEye');
+        if (bullsEye && bullsEye.setupDom) {
+            await bullsEye.setupDom();
+            console.log('[AppContent] BullsEye DOM setup complete');
+        }
+        
+        // Setup ViewportManager DOM after SceneContainer is ready
+        const viewportManager = initializationManager.getComponent('ViewportManager');
+        if (viewportManager && viewportManager.setupDom) {
+            await viewportManager.setupDom();
+            console.log('[AppContent] ViewportManager DOM setup complete');
+        }
+        
+        // Setup ParallaxModule DOM before CardsController (ParallaxModule needs to be ready for transforms)
+        const parallaxModule = initializationManager.getComponent('ParallaxModule');
+        if (parallaxModule && parallaxModule.setupDom) {
+            await parallaxModule.setupDom();
+            console.log('[AppContent] ParallaxModule DOM setup complete');
+        }
+        
+        // Setup CardsController DOM after ParallaxModule is ready
+        const cardsController = initializationManager.getComponent('CardsController');
+        if (cardsController) {
+            // Inject template ref for scene-plane element
+            if (scenePlaneRef.value && cardsController.setScenePlaneElement) {
+                cardsController.setScenePlaneElement(scenePlaneRef.value);
+                console.log('[AppContent] CardsController scene-plane template ref injected');
+            }
+            
+            if (cardsController.setupDom) {
+                await cardsController.setupDom();
+                console.log('[AppContent] CardsController DOM setup complete');
+            }
+        }
         
         // Initialize coordination systems after BaseComponents are ready
-        resizeHandle.initializeResizeHandleState(viewport, bullsEye);
-        const { applyInitialLayout } = resizeHandle;
-        applyInitialLayout();
+        // ResizeHandleManager is now initialized by IM system - no manual initialization needed
+        const resizeHandle = getResizeHandle();
+        if (resizeHandle) {
+          resizeHandle.applyInitialLayout();
+        }
         
         // Initialize scene systems
         autoScroll.initialize();
-        await scenePlane.initialize();
+        scenePlane.initialize();
         
-        // Initialize reactive composables that depend on IM components
-        bullsEye.initialize();
-        aimPoint.initialize();
-        focalPoint.initialize();
+        // Composable initialization is now handled by IM dependency system
+        
+        // Provide template refs to IM-managed components
+        setTimeout(() => {
+          // Get components directly from IM system
+          const aimPointManager = window.initializationManager?.getComponent('AimPointManager');
+          const focalPointManager = window.initializationManager?.getComponent('FocalPointManager');
+          
+          console.log('[AppContent] Template ref injection - AimPointManager:', !!aimPointManager);
+          console.log('[AppContent] Template ref injection - FocalPointManager:', !!focalPointManager);
+          
+          if (aimPointRef.value && aimPointManager) {
+            console.log('[AppContent] Injecting aim point template ref');
+            aimPointManager.setAimPointElement(aimPointRef.value);
+          } else {
+            console.warn('[AppContent] Cannot inject aim point template ref - missing element or manager');
+          }
+          
+          if (focalPointRef.value && focalPointManager) {
+            console.log('[AppContent] Injecting focal point template ref');
+            focalPointManager.setFocalPointElement(focalPointRef.value);
+          } else {
+            console.warn('[AppContent] Cannot inject focal point template ref - missing element or manager');
+          }
+        }, 100);
         
         // Dispatch events for Vue components that need to know IM components are ready
         window.dispatchEvent(new CustomEvent('skill-badges-init-ready'));
@@ -521,13 +684,13 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         };
         
         window.showDependencyGraph = () => {
-          window.CONSOLE_LOG_IGNORE(initializationManager.getDependencyGraph());
+          console.log(initializationManager.getDependencyGraph());
         };
         
         window.validateDependencies = () => {
           const result = initializationManager.validateDependencies();
           if (result.isValid) {
-            window.CONSOLE_LOG_IGNORE('Dependency graph is valid');
+            console.log('Dependency graph is valid');
           } else {
             console.error('Dependency graph has errors:', result.errors);
           }
@@ -563,8 +726,9 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         // Add handler for scene refresh events
         window.addEventListener('scene-refresh-needed', (event) => {
           // Trigger viewport update to ensure everything is properly positioned
-          if (viewPort) {
-            viewPort.updateViewPort();
+          const viewport = getViewport();
+          if (viewport) {
+            viewport.updateViewportProperties();
           }
         });
         
@@ -584,9 +748,9 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
     initializeAsync();
 
     // Load color palettes at setup level
-    await colorPalette.loadPalettes();
+    colorPalette.loadPalettes();
     
-    await initializeState();
+    initializeState();
     
     // Initialize core services (event system first)
     keyDown.initialize();
@@ -605,13 +769,26 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
     
     // Computed properties
     const focalPointStyle = computed(() => {
-      if (!focalPoint.value) return { left: '0px', top: '0px' };
+      const focalPoint = getFocalPoint();
+      if (!focalPoint || !focalPoint.focalPointState?.value?.current) return { left: '0px', top: '0px' };
+      const position = focalPoint.focalPointState.value.current;
       const style = {
-        left: `${focalPoint.value.position.value.x}px`,
-        top: `${focalPoint.value.position.value.y}px`,
+        left: `${position.x}px`,
+        top: `${position.y}px`,
       };
 
       return style;
+    });
+
+    // Computed properties for focal point state
+    const focalPointIsLocked = computed(() => {
+      const focalPoint = getFocalPoint();
+      return focalPoint ? focalPoint.getMode() === 'locked' : false;
+    });
+
+    const focalPointIsDragging = computed(() => {
+      const focalPoint = getFocalPoint();
+      return focalPoint ? focalPoint.getMode() === 'dragging' : false;
     });
 
     // Computed property for viewport border positioning
@@ -619,15 +796,16 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
       // Force reactivity by accessing the trigger
       viewportBorderTrigger.value;
       
-      if (!viewPort) {
+      const viewport = getViewport();
+      if (!viewport) {
         return { display: 'none' };
       }
 
       try {
-        const vpRect = viewPort.getViewPortRect();
+        const vpRect = viewport.getViewPortRect();
         
         // Get scene container position for absolute positioning
-        const sceneContainer = document.getElementById('scene-container');
+        const sceneContainer = sceneContainerRef.value;
         if (!sceneContainer) {
           return { display: 'none' };
         }
@@ -666,7 +844,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         }
         
         // Get scene container position
-        const sceneContainer = document.getElementById('scene-container');
+        const sceneContainer = sceneContainerRef.value;
         if (!sceneContainer) {
           return { display: 'none' };
         }
@@ -733,7 +911,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
 
     // Create a reactive reference to scene width that updates via events
     // Start with a reasonable default width (50% of window width)
-    const sceneWidth = ref(viewport.value?.width.value || Math.round(window.innerWidth * 0.5));
+    const sceneWidth = ref(Math.round(window.innerWidth * 0.5));
     
     // Set up event listener for scene width changes immediately
     handleSceneWidthChanged = (event) => {
@@ -752,8 +930,14 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
       return window.innerWidth;
     });
 
+    const scenePercentage = computed(() => {
+      const resizeHandle = getResizeHandle();
+      if (!resizeHandle) return 50; // Default fallback
+      return (resizeHandle.sceneWidthInPixels.value / window.innerWidth) * 100;
+    });
+
     const resumePercentage = computed(() => {
-      return 100 - Math.round(resizeHandle.percentage.value);
+      return 100 - Math.round(scenePercentage.value);
     });
 
     // Computed properties for dynamic layout ordering
@@ -864,7 +1048,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
       initialPosition = { ...currentPos };
       
       event.preventDefault();
-      // window.CONSOLE_LOG_IGNORE('[Debug] Drag started at:', { x: event.clientX, y: event.clientY, dragStartPoint });
+      // console.log('[Debug] Drag started at:', { x: event.clientX, y: event.clientY, dragStartPoint });
     };
 
     const handleDebugPanelDrag = (event) => {
@@ -877,14 +1061,14 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
       const deltaX = event.clientX - dragStartPoint.x;
       const deltaY = event.clientY - dragStartPoint.y;
       
-      // window.CONSOLE_LOG_IGNORE(`[Debug] Dragging:`, { currentMouse: { x: event.clientX, y: event.clientY }, dragStartPoint, deltaX, deltaY });
+      // console.log(`[Debug] Dragging:`, { currentMouse: { x: event.clientX, y: event.clientY }, dragStartPoint, deltaX, deltaY });
       
       const currentOrientation = appContainerClass.value;
       
       // Debug logging disabled - uncomment to enable
       // const mouseDeltaFromLastLog = Math.abs(event.clientX - lastLoggedMouse.x) + Math.abs(event.clientY - lastLoggedMouse.y);
       // if (mouseDeltaFromLastLog > MOUSE_EPSILON) {
-      //   window.CONSOLE_LOG_IGNORE('[Debug] Drag delta:', { 
+      //   console.log('[Debug] Drag delta:', { 
       //     deltaX, 
       //     deltaY, 
       //     initial: initialPosition,
@@ -911,7 +1095,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         };
         
         // Debug logging disabled
-        // window.CONSOLE_LOG_IGNORE('[Debug] Final position applied:', { constrainedLeft, constrainedTop });
+        // console.log('[Debug] Final position applied:', { constrainedLeft, constrainedTop });
       } else {
         const newRight = initialPosition.right - deltaX; // Right moves opposite to mouse
         const newTop = initialPosition.top + deltaY;
@@ -930,7 +1114,7 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
 
     const handleDebugPanelDragEnd = () => {
       if (isDragging) {
-        // window.CONSOLE_LOG_IGNORE('[Debug] Drag ended');
+        // console.log('[Debug] Drag ended');
         isDragging = false;
         saveDebugPanelPosition();
       }
@@ -969,19 +1153,21 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         // Force scene update started
         
         // Force viewport recalculation
-        if (viewPort) {
-          viewPort.updateViewPort();
+        const viewport = getViewport();
+        if (viewport) {
+          viewport.updateViewportProperties();
           await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         // Force bullsEye recentering with viewport awareness
+        const bullsEye = initializationManager.getComponent('BullsEye');
         if (bullsEye) {
-          bullsEye.recenterBullsEye();
+          bullsEye.recenter();
           await new Promise(resolve => setTimeout(resolve, 100));
           
           // Force another recenter to ensure proper positioning after viewport changes
           setTimeout(() => {
-            bullsEye.recenterBullsEye();
+            bullsEye.recenter();
           }, 200);
         }
         
@@ -1015,30 +1201,49 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
     
 
     
+    // Template refs for DOM elements created by this component
+    const sceneContainerRef = ref(null);
+    const scenePlaneRef = ref(null);
+    const aimPointRef = ref(null);
+    const bullsEyeRef = ref(null);
+    const focalPointRef = ref(null);
+
     return {
-      focalPoint,
-      viewport,
+      // Computed properties
       focalPointStyle,
       viewportBorderStyle,
       sceneRectBorderStyle,
       parallaxRectBorderStyle,
       sceneContainerStyle,
+      focalPointIsLocked,
+      focalPointIsDragging,
+      
+      // Methods
       handleSceneContainerClick,
+      handleDebugPanelDragStart,
+      handleDebugPanelDrag,
+      handleDebugPanelDragEnd,
+      
+      // Data
       totalWidth,
       sceneWidth,
+      scenePercentage,
       resumePercentage,
       firstContainer,
       secondContainer,
       appContainerClass,
       resumeViewerLabel,
       timelineAlignment,
-      scenePercentage: resizeHandle.percentage,
       debugValues,
       badgeMode,
       debugPanelStyle,
-      handleDebugPanelDragStart,
-      handleDebugPanelDrag,
-      handleDebugPanelDragEnd
+      
+      // Template refs
+      sceneContainerRef,
+      scenePlaneRef,
+      aimPointRef,
+      bullsEyeRef,
+      focalPointRef
     };
   }
 };

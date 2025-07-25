@@ -21,7 +21,7 @@ class JobsDataManager extends BaseComponent {
         return []; // JobsDataManager is a fundamental component with no IM dependencies
     }
 
-    async initialize(dependencies = {}) {
+    initialize(dependencies = {}) {
         console.log('[JobsDataManager] Initializing with job data...');
         
         try {

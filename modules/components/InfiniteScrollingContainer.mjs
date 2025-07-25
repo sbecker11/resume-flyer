@@ -1,12 +1,13 @@
+import { BaseComponent } from '@/modules/core/abstracts/BaseComponent.mjs';
 import { AppState } from '@/modules/core/stateManager.mjs';
-import { selectionManager } from '@/modules/core/selectionManager.mjs';
 
 /**
  * A robust infinite/virtual scrolling container that handles dynamic item heights
  * and maintains the selected item's visibility during resizes.
  */
-export class InfiniteScrollingContainer {
+export class InfiniteScrollingContainer extends BaseComponent {
     constructor(scrollport, contentHolder) {
+        super('InfiniteScrollingContainer');
         this.scrollport = scrollport;
         this.contentHolder = contentHolder;
         this.allItems = [];
@@ -19,6 +20,16 @@ export class InfiniteScrollingContainer {
         // Debounced resize handler
         const resizeObserver = new ResizeObserver(() => this.handleResize());
         resizeObserver.observe(this.scrollport);
+    }
+
+    getDependencies() {
+        return ['StateManager', 'SelectionManager'];
+    }
+
+    initialize(dependencies) {
+        this.stateManager = dependencies.StateManager;
+        this.selectionManager = dependencies.SelectionManager;
+        // StateManager dependency ensures AppState is ready before component initialization
     }
 
     /**
@@ -65,12 +76,8 @@ export class InfiniteScrollingContainer {
      * @returns {number} The margin-top value in pixels.
      */
     getRDivMarginTop() {
-        try {
-            const marginTopStr = AppState.theme?.rDivBorderOverrideSettings?.normal?.marginTop || '0px';
-            return parseInt(marginTopStr, 10) || 0;
-        } catch (e) {
-            return 5; // Fallback
-        }
+        const marginTopStr = AppState.theme?.rDivBorderOverrideSettings?.normal?.marginTop || '0px';
+        return parseInt(marginTopStr, 10) || 0;
     }
 
     /**
@@ -119,7 +126,7 @@ export class InfiniteScrollingContainer {
             window.CONSOLE_LOG_IGNORE('[InfiniteScroller] Resize detected. Recalculating layout...');
 
             // Get the currently selected job number BEFORE recalculating layout
-            const selectedJobNumber = selectionManager.getSelectedJobNumber();
+            const selectedJobNumber = this.selectionManager.getSelectedJobNumber();
 
             // 1. Recalculate all item positions because their heights have changed.
             this.calculateItemPositions(true); // forceRecalculation = true
@@ -131,7 +138,7 @@ export class InfiniteScrollingContainer {
             }
 
             this.resizeTimeoutId = null;
-        }, AppState.constants.performance.debounceTimeout || 150);
+        }, AppState.constants.performance.debounceTimeout);
     }
 
     /**

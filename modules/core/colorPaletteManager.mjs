@@ -4,6 +4,7 @@
  */
 
 import { BaseComponent } from './abstracts/BaseComponent.mjs';
+import { useColorPalette } from '../composables/useColorPalette.mjs';
 
 class ColorPaletteManager extends BaseComponent {
     constructor() {
@@ -20,19 +21,13 @@ class ColorPaletteManager extends BaseComponent {
         return []; // ColorPaletteManager is a fundamental component with no IM dependencies
     }
 
-    async initialize(dependencies = {}) {
+    initialize(dependencies = {}) {
         window.CONSOLE_LOG_IGNORE('[ColorPaletteManager] Initializing color palette system...');
         
         try {
-            // Dynamically import the composable to avoid circular dependencies
-            const { useColorPalette, readyPromise } = await import('../composables/useColorPalette.mjs');
-            
-            // Initialize the composable
+            // Import should be at top of file, not dynamic
+            // Initialize the composable synchronously
             this.composableInstance = useColorPalette();
-            this.readyPromise = readyPromise;
-            
-            // Wait for the color palette system to be ready
-            await this.readyPromise;
             
             window.CONSOLE_LOG_IGNORE('[ColorPaletteManager] Color palette system ready');
             

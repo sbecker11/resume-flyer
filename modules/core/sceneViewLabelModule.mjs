@@ -1,11 +1,10 @@
 import * as domUtils from '../utils/domUtils.mjs';
-import * as viewPort from './viewPortModule.mjs';
+import { initializationManager } from './initializationManager.mjs';
 
 let _sceneViewLabelElement = null;
-let _isInitialized = false;
 
 export function isInitialized() {
-    return _isInitialized;
+    return _sceneViewLabelElement !== null;
 }
 
 function getResizeHandlePosition() {
@@ -26,11 +25,13 @@ function getResizeHandlePosition() {
 }
 
 export function initialize() {
-    if (!viewPort.isInitialized()) {
-        throw new Error("sceneViewLabel requires viewPort to be initialized.");
+    // Get ViewportManager from IM service locator
+    const viewportManager = initializationManager.getComponent('ViewportManager');
+    if (!viewportManager) {
+        throw new Error("sceneViewLabel requires ViewportManager to be initialized.");
     }
     
-    if (_isInitialized) {
+    if (_sceneViewLabelElement) {
         window.CONSOLE_LOG_IGNORE("sceneViewLabel.initialize: already initialized");
         return;
     }
@@ -50,7 +51,7 @@ export function initialize() {
         repositionLabel();
     }, 100);
 
-    _isInitialized = true;
+    // Module initialized when element is found and set up
 }
 
 export function repositionLabel() {

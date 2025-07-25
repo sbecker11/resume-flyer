@@ -343,7 +343,7 @@ throw new Error('Component initialization failed - check component logic');
 // These patterns can be detected with validation rules:
 if (content.includes('document.getElementById') && 
     !hasVueDomDependency(content)) {
-  violations.push('DOM access without VueDomManager dependency');
+  :s.push('DOM access without VueDomManager dependency');
 }
 
 if (content.includes('IM should have ensured')) {
@@ -2637,6 +2637,77 @@ Each component type has specific validation requirements:
 - Must register with IM in setup/mounted
 - Must declare component dependencies
 - Must use service locator for dependency access
+
+### Vue Import Patterns and Dependency Injection
+
+Understanding the difference between importing Vue **composables** vs **components** is crucial for proper IM dependency management:
+
+#### Vue Composables (Reactive Functions)
+**What they are:** JavaScript functions that return reactive state and methods using Vue's Composition API.
+
+**Import pattern:**
+```javascript
+// ✅ Correct - Named import for composables
+import { useAimPoint } from '@/modules/composables/useAimPoint.mjs';
+import { useFocalPoint } from '@/modules/composables/useFocalPoint.mjs';
+import { useBullsEye } from '@/modules/composables/useBullsEye.mjs';
+```
+
+**Usage in IM dependencies:**
+```javascript
+// In your component's initialize method
+initialize(dependencies) {
+  // Dependencies provide instances, not the composable functions
+  this.aimPoint = dependencies.aimPoint;        // Instance from useAimPoint()
+  this.focalPoint = dependencies.focalPoint;    // Instance from useFocalPoint()
+  this.bullsEye = dependencies.bullsEye;        // Instance from useBullsEye()
+}
+```
+
+#### Vue Components (.vue files)
+**What they are:** Single File Components that define templates, scripts, and styles.
+
+**Import pattern:**
+```javascript
+// ✅ Correct - Default import for .vue components
+import SceneContainer from '@/modules/components/SceneContainer.vue';
+import ResizeHandle from '@/modules/components/ResizeHandle.vue';
+
+// ❌ Incorrect - Don't use namespace imports for .vue files
+// import * as UseSceneContainer from "useSceneContainer.vue";  // Wrong!
+```
+
+**Usage in IM dependencies:**
+```javascript
+// In your component's initialize method
+initialize(dependencies) {
+  // Dependencies provide component instances or refs
+  this.sceneContainer = dependencies.sceneContainer;    // Component instance/ref
+  this.resizeHandle = dependencies.resizeHandle;        // Component instance/ref
+}
+```
+
+#### Key Differences Summary
+
+| Type | File Extension | Import Style | IM Registration | Purpose |
+|------|----------------|--------------|-----------------|---------|
+| **Composables** | `.mjs` | Named import `{ useX }` | Singleton instance | Reactive state/logic |
+| **Components** | `.vue` | Default import | Component ref | UI elements |
+
+#### Anti-Pattern: getElementById
+**❌ Never use direct DOM access:**
+```javascript
+// ❌ Bad - bypasses IM dependency system
+this._sceneContainer = document.getElementById('scene-container');
+```
+
+**✅ Use dependency injection instead:**
+```javascript
+// ✅ Good - proper IM dependency pattern
+initialize(dependencies) {
+  this.sceneContainer = dependencies.sceneContainer;  // Reference from IM
+}
+```
 
 This architecture ensures clean separation of concerns, predictable initialization order, and maintainable component relationships throughout the application.
 

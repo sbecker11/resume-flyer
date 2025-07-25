@@ -81,7 +81,12 @@ export function useColorPalette() {
         loadPalettes();
     }
 
-    function setCurrentPalette(filename) {
+    async function setCurrentPalette(filename) {
+        // Wait for palettes to be loaded before proceeding
+        if (isLoading.value) {
+            await readyPromise;
+        }
+        
         if (filename && filenameToNameMap.value[filename]) {
             const previousFilename = currentPaletteFilename.value;
             window.CONSOLE_LOG_IGNORE(`[ColorPalette] setCurrentPalette called: ${previousFilename} → ${filename}`);
@@ -214,6 +219,11 @@ export function useColorPalette() {
  */
 export async function applyPaletteToElement(element) {
     if (!element) return;
+
+    // Wait for palettes to be loaded before applying
+    if (isLoading.value) {
+        await readyPromise;
+    }
 
     // Use a data-attribute for the palette color index, assuming it's set on the element
     const paletteColorIndexAttr = element.getAttribute('data-color-index');

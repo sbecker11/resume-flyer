@@ -37,9 +37,46 @@
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { TARGET_CDIV_JOB_NUMBER } from "@/modules/constants/targetCDiv.mjs";
+import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
 
 export default {
   name: 'SingleLCurveTest',
+  mixins: [BaseVueComponentMixin],
+  
+  methods: {
+    getComponentDependencies() {
+      return []; // SingleLCurveTest doesn't need dependencies currently
+    },
+    
+    initialize(dependencies) {
+      console.log('[SingleLCurveTest] IM initialized');
+    },
+
+    /**
+     * DOM setup phase - called after Vue DOM is ready
+     * DOM operations moved from initialize() for proper separation
+     */
+    async setupDom() {
+      // DOM operations are handled in the composition API setup()
+      // This method exists for IM compliance
+      console.log('[SingleLCurveTest.vue] DOM setup complete');
+    },
+
+    /**
+     * Template ref injection for scene-content element
+     * Replaces getElementById('scene-content') calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setSceneContentElement(element) {
+      this.scenecontentElement = element;
+      console.log('[SingleLCurveTest.vue] scene-content element set via template ref');
+    },
+    
+    cleanupDependencies() {
+      // Cleanup handled in setup() onUnmounted
+    }
+  },
+  
   setup() {
     const showConnection = ref(false);
     const showDebugInfo = ref(true);
@@ -127,7 +164,7 @@ export default {
       if (!selectedCDiv) return;
 
       // Get scene-content for coordinate reference
-      const sceneContent = document.getElementById('scene-content');
+      const sceneContent = this.scenecontentElement;
       if (!sceneContent) return;
 
       const sceneRect = sceneContent.getBoundingClientRect();

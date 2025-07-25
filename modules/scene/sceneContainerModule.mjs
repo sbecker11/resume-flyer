@@ -1,5 +1,5 @@
 import { BaseComponent } from '../core/abstracts/BaseComponent.mjs';
-import * as viewPort from '../core/viewPortModule.mjs';
+import { initializationManager } from '../core/initializationManager.mjs';
 
 /**
  * SceneContainer - Manages the scene container DOM element and provides it to other components
@@ -16,29 +16,55 @@ class SceneContainer extends BaseComponent {
     }
 
     async initialize({ VueDomManager }) {
-        window.CONSOLE_LOG_IGNORE('[SceneContainer] Initializing with Vue DOM ready...');
+        // Get ViewportManager from IM service locator
+        this.viewportManager = initializationManager.getComponent('ViewportManager');
+        window.CONSOLE_LOG_IGNORE('[SceneContainer] Functional initialization complete');
+    }
+
+    async setupDom() {
+        window.CONSOLE_LOG_IGNORE('[SceneContainer] Setting up DOM access with Vue DOM ready...');
         
-        // VueDomManager dependency ensures Vue DOM is ready before we access DOM elements
+        // 🛡️ CRITICAL: Check for duplicate #scene-container elements immediately
+        const sceneContainers = document.querySelectorAll('#scene-container');
+        if (sceneContainers.length > 1) {
+            throw new Error(`DUPLICATE #scene-container elements detected during DOM setup! Found ${sceneContainers.length} elements. Fix DOM duplication before SceneContainer can setup DOM.`);
+        }
+        
+        // Look for the DOM element
         this._sceneContainer = document.getElementById('scene-container');
         
         if (!this._sceneContainer) {
             throw new Error('[SceneContainer] scene-container element not found - check Vue template');
         }
         
-        // Log scene container dimensions once ready
-        const sceneHeight = this._sceneContainer.clientHeight;
-        const sceneOffsetHeight = this._sceneContainer.offsetHeight;
-        const sceneBoundingHeight = this._sceneContainer.getBoundingClientRect().height;
-        window.CONSOLE_LOG_IGNORE(`[SCENE-CONTAINER-INIT] Scene container ready:`, {
-            clientHeight: sceneHeight,
-            offsetHeight: sceneOffsetHeight,
-            boundingHeight: sceneBoundingHeight,
-            element: this._sceneContainer
+        // 🛡️ CRITICAL: Validate scene container geometry immediately - no retries
+        this._validateGeometry();
+        
+        window.CONSOLE_LOG_IGNORE('[SceneContainer] DOM setup complete with valid geometry');
+    }
+
+    _validateGeometry() {
+        // Force layout recalculation once
+        void this._sceneContainer.offsetHeight;
+        void this._sceneContainer.offsetWidth;
+        
+        const rect = this._sceneContainer.getBoundingClientRect();
+        
+        // Fail immediately on any invalid geometry
+        if (rect.width <= 0 || rect.height <= 0) {
+            throw new Error(`[SceneContainer] Invalid dimensions at initialization - fix CSS/layout timing: width=${rect.width}, height=${rect.height}`);
+        }
+        
+        if (isNaN(rect.left) || isNaN(rect.top) || isNaN(rect.width) || isNaN(rect.height)) {
+            throw new Error(`[SceneContainer] NaN geometry at initialization - fix DOM/CSS timing: ${JSON.stringify(rect)}`);
+        }
+        
+        console.log('[SceneContainer] Geometry validated:', {
+            width: rect.width,
+            height: rect.height,
+            left: rect.left,
+            top: rect.top
         });
-        
-        // Flexbox layout is managed via CSS - Timeline has order: 0 to ensure it's first
-        
-        window.CONSOLE_LOG_IGNORE('[SceneContainer] Initialization complete');
     }
 
     destroy() {
@@ -48,6 +74,10 @@ class SceneContainer extends BaseComponent {
 
     // Public API methods
     getSceneContainer() {
+        if (!this._sceneContainer) {
+            // DOM setup hasn't happened yet - this is expected during functional initialization phase
+            return null;
+        }
         return this._sceneContainer;
     }
 
@@ -70,9 +100,12 @@ export function isInitialized() {
 
 // called from updateResumeContainer
 export function updateSceneContainer() {
-    // viewPort updates internal properties and its children
-    // using the current sceneContainer.offsetWidth and resumeContainer.offset
-    viewPort.updateViewPort();
+    // ViewportManager updates internal properties via IM dependency injection
+    if (sceneContainer.viewportManager) {
+        sceneContainer.viewportManager.updateViewportProperties();
+    } else {
+        console.warn('[SceneContainer] ViewportManager not available for updateSceneContainer');
+    }
 }
 
 /**

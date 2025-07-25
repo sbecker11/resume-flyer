@@ -1,72 +1,177 @@
 import { ref, computed, onMounted, onUnmounted, watchEffect, getCurrentInstance } from 'vue';
 import { useLayoutToggle } from './useLayoutToggle.mjs';
+import { BaseComponent } from '@/modules/core/abstracts/BaseComponent.mjs';
 
 // --- Constants ---
 const VIEWPORT_PADDING = 100;
 
-// --- Singleton Pattern ---
+// --- Viewport Manager Component (IM-managed) ---
+export class ViewportManager extends BaseComponent {
+  constructor() {
+    super('ViewportManager');
+    this.sceneContainer = null;
+    this.resizeObserver = null;
+    
+    // Reactive state
+    this.viewportState = ref({
+      padding: VIEWPORT_PADDING,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      centerX: 0,
+      centerY: 0,
+      width: 0,
+      height: 0
+    });
+  }
+
+  getDependencies() {
+    return ['SceneContainer'];
+  }
+
+  initialize(dependencies) {
+    this.sceneContainer = dependencies.SceneContainer;
+    console.log('[ViewportManager] Initialized with SceneContainer dependency - DOM operations moved to setupDom()');
+  }
+
+  /**
+   * DOM setup phase - called after Vue DOM is ready
+   * Moved DOM operations from initialize() for proper DOM separation
+   */
+  async setupDom() {
+    console.log('[ViewportManager] DOM setup phase - setting up viewport calculations...');
+    
+    // Initial calculation (DOM operations moved from initialize)
+    this.updateViewportProperties();
+
+    // Listen for window resize (DOM operations moved from initialize)
+    window.addEventListener('resize', () => this.updateViewportProperties());
+
+    // Add ResizeObserver for scene container (DOM operations moved from initialize)
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => {
+        window.CONSOLE_LOG_IGNORE('Scene container resized, updating viewport...');
+        this.updateViewportProperties();
+      });
+      this.resizeObserver.observe(this.sceneContainer.getSceneContainer());
+    }
+    
+    console.log('[ViewportManager] DOM setup complete');
+  }
+
+  updateViewportProperties() {
+    if (!this.sceneContainer) return;
+
+    const sceneElement = this.sceneContainer.getSceneContainer();
+    const sceneContainerRect = sceneElement.getBoundingClientRect();
+    const sceneWidth = sceneElement.offsetWidth;
+    const viewPortWidth = sceneWidth;
+    const viewPortLeft = 0;
+    const viewPortHeight = sceneContainerRect.height;
+    const viewPortTop = sceneContainerRect.top;
+
+    const newCenterX = sceneContainerRect.left + sceneContainerRect.width / 2;
+    const newCenterY = sceneContainerRect.top + sceneContainerRect.height / 2;
+    
+    window.CONSOLE_LOG_IGNORE('updateViewportProperties: viewPortWidth:', viewPortWidth, 'viewPortHeight:', viewPortHeight, 'centerX:', newCenterX, 'centerY:', newCenterY);
+    
+    this.viewportState.value = {
+      padding: VIEWPORT_PADDING,
+      top: viewPortTop - VIEWPORT_PADDING,
+      left: viewPortLeft - VIEWPORT_PADDING,
+      right: viewPortWidth + 2 * VIEWPORT_PADDING,
+      bottom: viewPortHeight + 2 * VIEWPORT_PADDING,
+      centerX: newCenterX,
+      centerY: newCenterY,
+      width: viewPortWidth,
+      height: viewPortHeight
+    };
+
+    // Dispatch viewport-changed event for backward compatibility
+    const event = new CustomEvent('viewport-changed', {
+      detail: {
+        centerX: this.viewportState.value.centerX,
+        centerY: this.viewportState.value.centerY,
+        width: viewPortWidth,
+        height: viewPortHeight
+      }
+    });
+    window.dispatchEvent(event);
+  }
+
+  setViewPortWidth(newWidth) {
+    if (typeof newWidth !== 'number') {
+      throw new Error(`Viewport.setViewPortWidth: ${newWidth} is not a Number`);
+    }
+
+    window.CONSOLE_LOG_IGNORE(`RESIZE: setViewPortWidth: ${newWidth}`);
+    
+    // Update the entire reactive state object to trigger reactivity
+    this.viewportState.value = {
+      ...this.viewportState.value,
+      width: newWidth,
+      right: newWidth + 2 * VIEWPORT_PADDING
+    };
+
+    // Dispatch viewport-changed event
+    window.dispatchEvent(new CustomEvent('viewport-changed', {
+      detail: {
+        centerX: this.viewportState.value.centerX,
+        centerY: this.viewportState.value.centerY,
+        width: newWidth,
+        height: this.viewportState.value.height
+      }
+    }));
+  }
+
+  getVisualRect() {
+    if (!this.sceneContainer) {
+      return { top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0 };
+    }
+    return this.sceneContainer.getSceneContainer().getBoundingClientRect();
+  }
+
+  getViewPortOrigin() {
+    // API compatibility method for ParallaxModule
+    return {
+      x: this.viewportState.value.centerX,
+      y: this.viewportState.value.centerY
+    };
+  }
+
+  getViewPortRect() {
+    // API compatibility method - returns the viewport rect
+    return {
+      top: this.viewportState.value.top,
+      left: this.viewportState.value.left,
+      right: this.viewportState.value.right,
+      bottom: this.viewportState.value.bottom,
+      width: this.viewportState.value.width,
+      height: this.viewportState.value.height,
+      centerX: this.viewportState.value.centerX,
+      centerY: this.viewportState.value.centerY
+    };
+  }
+
+  destroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    window.removeEventListener('resize', () => this.updateViewportProperties());
+    this.sceneContainer = null;
+  }
+}
+
+// Create singleton instance
+export const viewportManager = new ViewportManager();
+
+// --- Composable Wrapper (for Vue components) ---
 let _instance = null;
 let _instanceCount = 0;
 let _instanceLabels = new Map();
 
-// --- Reactive State ---
-const viewportState = ref({
-  padding: VIEWPORT_PADDING,
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  centerX: 0,
-  centerY: 0,
-  width: 0,
-  height: 0
-});
-
-// --- Private State ---
-let _sceneContainer = null;
-let _resizeObserver = null;
-
-// --- Private Functions ---
-function updateViewportProperties() {
-  if (!_sceneContainer) return;
-
-  const sceneContainerRect = _sceneContainer.getBoundingClientRect();
-  const sceneWidth = _sceneContainer.offsetWidth;
-  const viewPortWidth = sceneWidth;
-  const viewPortLeft = 0;
-  const viewPortHeight = sceneContainerRect.height;
-  const viewPortTop = sceneContainerRect.top;
-
-  const newCenterX = sceneContainerRect.left + sceneContainerRect.width / 2;
-  const newCenterY = sceneContainerRect.top + sceneContainerRect.height / 2;
-  
-  window.CONSOLE_LOG_IGNORE('updateViewportProperties: viewPortWidth:', viewPortWidth, 'viewPortHeight:', viewPortHeight, 'centerX:', newCenterX, 'centerY:', newCenterY);
-  
-  viewportState.value = {
-    padding: VIEWPORT_PADDING,
-    top: viewPortTop - VIEWPORT_PADDING,
-    left: viewPortLeft - VIEWPORT_PADDING,
-    right: viewPortWidth + 2 * VIEWPORT_PADDING,
-    bottom: viewPortHeight + 2 * VIEWPORT_PADDING,
-    centerX: newCenterX,
-    centerY: newCenterY,
-    width: viewPortWidth,
-    height: viewPortHeight
-  };
-
-  // Dispatch viewport-changed event for backward compatibility
-  const event = new CustomEvent('viewport-changed', {
-    detail: {
-      centerX: viewportState.value.centerX,
-      centerY: viewportState.value.centerY,
-      width: viewPortWidth,
-      height: viewPortHeight
-    }
-  });
-  window.dispatchEvent(event);
-}
-
-// --- Composable ---
 export function useViewport(label = 'unnamed') {
   // Singleton check - if instance exists, return it immediately
   if (_instance) {
@@ -91,138 +196,68 @@ export function useViewport(label = 'unnamed') {
     window.CONSOLE_LOG_IGNORE(`[${label}] Layout orientation changed to:`, orientation);
     
     // Trigger viewport recalculation after layout change
-    if (_sceneContainer) {
+    if (viewportManager.sceneContainer) {
       setTimeout(() => {
         // Wait for CSS transitions to complete before updating viewport properties
-        updateViewportProperties();
+        viewportManager.updateViewportProperties();
       }, 350); // Increased delay to match CSS transition duration
     }
   });
 
-  // Increment count only for the first (and only) instance
-  _instanceCount++;
-  const instanceId = `viewport-${_instanceCount}-${label}`;
-  
-  window.CONSOLE_LOG_IGNORE(`RESIZE: Creating viewport instance: ${instanceId}`);
-  // Reactive properties
-  const padding = computed(() => viewportState.value.padding);
-  const top = computed(() => viewportState.value.top);
-  const left = computed(() => viewportState.value.left);
-  const right = computed(() => viewportState.value.right);
-  const bottom = computed(() => viewportState.value.bottom);
-  const centerX = computed(() => viewportState.value.centerX);
-  const centerY = computed(() => viewportState.value.centerY);
-  const width = computed(() => viewportState.value.width);
-  const height = computed(() => viewportState.value.height);
-
-  // Computed properties
-  const origin = computed(() => ({
-    x: centerX.value,
-    y: centerY.value
-  }));
-
-  const rect = computed(() => ({
-    left: left.value,
-    top: top.value,
-    right: right.value,
-    bottom: bottom.value
-  }));
+  // Create computed properties that reference the IM-managed viewport state
+  const padding = computed(() => viewportManager.viewportState.value.padding);
+  const top = computed(() => viewportManager.viewportState.value.top);
+  const left = computed(() => viewportManager.viewportState.value.left);
+  const right = computed(() => viewportManager.viewportState.value.right);
+  const bottom = computed(() => viewportManager.viewportState.value.bottom);
+  const centerX = computed(() => viewportManager.viewportState.value.centerX);
+  const centerY = computed(() => viewportManager.viewportState.value.centerY);
+  const width = computed(() => viewportManager.viewportState.value.width);
+  const height = computed(() => viewportManager.viewportState.value.height);
 
   const visualRect = computed(() => {
-    if (!_sceneContainer) {
-      return { top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0 };
-    }
-    return _sceneContainer.getBoundingClientRect();
+    return viewportManager.getVisualRect();
   });
 
-  // Public functions
+  // Wrapper functions that delegate to the IM-managed instance
   function initialize() {
-    window.CONSOLE_LOG_IGNORE('Viewport initialize called, looking for scene-container...');
-    _sceneContainer = document.getElementById('scene-container');
-    window.CONSOLE_LOG_IGNORE('Scene container found:', _sceneContainer);
-    if (!_sceneContainer) {
-      throw new Error("Viewport element #scene-container not found");
-    }
-
-    // Initial calculation
-    updateViewportProperties();
-
-    // Listen for window resize
-    window.addEventListener('resize', updateViewportProperties);
-
-    // Add ResizeObserver for scene container
-    if (typeof ResizeObserver !== 'undefined') {
-      _resizeObserver = new ResizeObserver(() => {
-        window.CONSOLE_LOG_IGNORE('Scene container resized, updating viewport...');
-        updateViewportProperties();
-      });
-      _resizeObserver.observe(_sceneContainer);
-    }
+    // This is now handled by IM - kept for backward compatibility
+    window.CONSOLE_LOG_IGNORE('useViewport.initialize() called - now handled by ViewportManager via IM');
   }
 
   function isInitialized() {
-    return _sceneContainer !== null;
+    return viewportManager.sceneContainer !== null;
   }
 
   function setViewPortWidth(newWidth) {
-    if (!isInitialized()) {
-      throw new Error("Viewport not yet initialized");
-    }
-    if (typeof newWidth !== 'number') {
-      throw new Error(`Viewport.setViewPortWidth: ${newWidth} is not a Number`);
-    }
-
-    window.CONSOLE_LOG_IGNORE(`RESIZE: setViewPortWidth: ${newWidth}`);
-    
-    // Update the entire reactive state object to trigger reactivity
-    viewportState.value = {
-      ...viewportState.value,
-      width: newWidth,
-      centerX: newWidth / 2
-    };
-
-    // Dispatch viewport-changed event for backward compatibility
-    const event = new CustomEvent('viewport-changed', {
-      detail: {
-        centerX: viewportState.value.centerX,
-        centerY: viewportState.value.centerY,
-        width: newWidth,
-        height: viewportState.value.height
-      }
-    });
-    window.dispatchEvent(event);
-    
-    // Dispatch a custom event for the scene container style
-    const styleEvent = new CustomEvent('scene-width-changed', {
-      detail: { width: newWidth }
-    });
-    window.dispatchEvent(styleEvent);
+    return viewportManager.setViewPortWidth(newWidth);
   }
 
-  function isBizCardDivWithinViewPort(bizCardDiv) {
-    if (!isInitialized()) {
-      throw new Error("Viewport not yet initialized");
-    }
-    const rect = bizCardDiv.getBoundingClientRect();
-    return (
-      rect.right >= left.value &&
-      rect.left <= right.value &&
-      rect.bottom >= top.value &&
-      rect.top <= bottom.value
-    );
+  function updateViewPort() {
+    return viewportManager.updateViewportProperties();
+  }
+
+  function getViewPortRect() {
+    return viewportManager.getViewPortRect();
   }
 
   function cleanup() {
-    if (_resizeObserver) {
-      _resizeObserver.disconnect();
-      _resizeObserver = null;
+    // Cleanup handled by IM lifecycle
+    window.CONSOLE_LOG_IGNORE(`[${label}] Viewport cleanup called`);
+    _instanceCount--;
+    _instanceLabels.delete(label);
+    
+    if (_instanceCount === 0) {
+      _instance = null;
     }
-    window.removeEventListener('resize', updateViewportProperties);
-    _sceneContainer = null;
   }
 
+  // Create the instance
+  _instanceCount++;
+  _instanceLabels.set(label, true);
+  
   const viewportInstance = {
-    // Reactive properties
+    // Reactive state
     padding,
     top,
     left,
@@ -232,31 +267,17 @@ export function useViewport(label = 'unnamed') {
     centerY,
     width,
     height,
-    
-    // Computed properties
-    origin,
-    rect,
     visualRect,
     
-    // Functions
+    // Methods
     initialize,
     isInitialized,
     setViewPortWidth,
-    isBizCardDivWithinViewPort,
-    updateViewportProperties
+    updateViewPort,
+    getViewPortRect,
+    cleanup
   };
 
-  // Store the instance and its label
   _instance = viewportInstance;
-  _instanceLabels.set(viewportInstance, instanceId);
-  
-  // Add a reset function for testing
-  viewportInstance.reset = () => {
-    _instance = null;
-    _instanceCount = 0;
-    _instanceLabels.clear();
-    window.CONSOLE_LOG_IGNORE('RESIZE: Viewport singleton reset');
-  };
-  
   return viewportInstance;
-} 
+}

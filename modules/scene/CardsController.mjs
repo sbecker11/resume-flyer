@@ -3,7 +3,7 @@
 import { BaseComponent } from '../core/abstracts/BaseComponent.mjs'
 import * as scenePlane from './scenePlaneModule.mjs';
 import * as utils from '../utils/utils.mjs';
-import * as viewPort from '../core/viewPortModule.mjs';
+// Removed viewPort import - not used in this module
 import * as BizDetailsDivModule from './bizDetailsDivModule.mjs';
 // Removed useTimeline composable - now using TimelineManager dependency
 import * as dateUtils from '../utils/dateUtils.mjs';
@@ -43,9 +43,9 @@ const MIN_HEIGHT = 180; // Reduced from 200 for more square aspect
 class CardsController extends BaseComponent {
 
     constructor() {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController constructor called');
+        console.log('[DEBUG] CardsController constructor called');
         super('CardsController');
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController super() completed');
+        console.log('[DEBUG] CardsController super() completed');
 
         // Singleton pattern: return existing instance if one exists
         if (CardsController.instance) {
@@ -68,9 +68,7 @@ class CardsController extends BaseComponent {
         this._setupSortListener();
         
         // Note: _setupSelectionListeners() moved to initialize() to ensure SelectionManager is ready
-        
-        // Update existing cDivs to have scene-left and scene-top attributes
-        this._updateExistingCDivs();
+        // Note: _updateExistingCDivs() moved to setupDom() for proper DOM separation
         
         // Store the singleton instance
         CardsController.instance = this;
@@ -92,7 +90,8 @@ class CardsController extends BaseComponent {
 
     _updateExistingCDivs() {
         // Update existing cDivs to have scene-left and scene-top attributes
-        const scenePlaneEl = document.getElementById('scene-plane');
+        // Use template ref instead of document.sceneplaneElement
+        const scenePlaneEl = this.sceneplaneElement;
         if (scenePlaneEl) {
             const existingCards = scenePlaneEl.querySelectorAll('.biz-card-div');
             existingCards.forEach(card => {
@@ -106,8 +105,83 @@ class CardsController extends BaseComponent {
         }
     }
 
-    async initialize({ VueDomManager, SceneContainer, BadgeManager, SelectionManager, JobsDataManager, ColorPaletteManager, TimelineManager }) {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController.initialize() called with dependencies:', { 
+    /**
+     * Template ref injection for scene-plane element
+     * Replaces sceneplaneElement calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setScenePlaneElement(element) {
+        this.sceneplaneElement = element;
+        console.log('[CardsController] scene-plane element set via template ref');
+        
+        // Apply any setup that was waiting for this element
+        if (this.sceneplaneElement) {
+            this._setupScenePlane();
+        }
+    }
+
+    /**
+     * Template ref injection for scene-content element
+     * Replaces scenecontentElement calls
+     * @param {HTMLElement} element - The DOM element from template ref
+     */
+    setSceneContentElement(element) {
+        this.scenecontentElement = element;
+        console.log('[CardsController] scene-content element set via template ref');
+        
+        // Apply any setup that was waiting for this element
+        if (this.scenecontentElement) {
+            this._setupSceneContent();
+        }
+    }
+
+    /**
+     * Setup logic for scene-content element
+     * Called when element becomes available
+     */
+    _setupSceneContent() {
+        // Add any element-specific setup logic here
+        // This replaces the immediate DOM access from initialize()
+    }
+
+    /**
+     * Setup logic for scene-plane element
+     * Called when element becomes available
+     */
+    _setupScenePlane() {
+        // Add any element-specific setup logic here
+        // This replaces the immediate DOM access from initialize()
+    }
+
+    /**
+     * DOM setup phase - called after Vue DOM is ready
+     * DOM operations moved from initialize() for proper separation
+     */
+    async setupDom() {
+        console.log('[CardsController] DOM setup phase - creating business card divs...');
+        
+        // Update existing cDivs (DOM operations moved from constructor)
+        this._updateExistingCDivs();
+        
+        // Create business card divs (DOM operations moved from initialize)
+        if (this.originalJobsData) {
+            this.bizCardDivs = this._createAllBizCardDivs(this.originalJobsData);
+            console.log('[CardsController] Created', this.bizCardDivs.length, 'bizCardDivs in DOM setup phase');
+            
+            // Trigger parallax positioning for all newly created cDivs
+            if (window.refreshAllParallaxTransforms) {
+                window.refreshAllParallaxTransforms();
+                console.log('[CardsController] Applied parallax transforms to', this.bizCardDivs.length, 'cDivs');
+            }
+        } else {
+            console.warn('[CardsController] setupDom called but originalJobsData not available');
+        }
+        
+        console.log('[CardsController] DOM setup complete');
+    }
+
+    initialize({ VueDomManager, SceneContainer, BadgeManager, SelectionManager, JobsDataManager, ColorPaletteManager, TimelineManager }) {
+        console.log('[DEBUG] CardsController.initialize() called with dependencies:', { 
             VueDomManager: !!VueDomManager, 
             SceneContainer: !!SceneContainer, 
             BadgeManager: !!BadgeManager, 
@@ -117,9 +191,12 @@ class CardsController extends BaseComponent {
             TimelineManager: !!TimelineManager
         });
         if (this.isInitialized) {
-            window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController already initialized, returning early');
+            console.log('[DEBUG] CardsController already initialized, returning early');
             return;
         }
+        
+        // Business logic only - no DOM operations here
+        // DOM operations moved to setupDom()
         
         // NEW PATTERN: Dependencies injected directly via destructuring - no manual lookup needed!
         this.vueDomManager = VueDomManager;
@@ -153,7 +230,7 @@ class CardsController extends BaseComponent {
             throw new Error('[CardsController] ColorPaletteManager dependency not provided');
         }
         
-        window.CONSOLE_LOG_IGNORE('[CardsController] Dependencies injected successfully:', {
+        console.log('[CardsController] Dependencies injected successfully:', {
             vueDomManager: !!this.vueDomManager,
             selectionManager: !!this.selectionManager,
             sceneContainer: !!this.sceneContainer,
@@ -165,44 +242,32 @@ class CardsController extends BaseComponent {
         // Set up selection listeners now that SelectionManager is guaranteed to be ready
         this._setupSelectionListeners();
         
-        // Get jobs data from JobsDataManager dependency
+        // Get jobs data from JobsDataManager dependency (business logic only)
         const jobsData = this.jobsDataManager.getAllJobs();
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: jobsData from JobsDataManager:', jobsData);
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: jobsData length:', jobsData?.length);
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Setting originalJobsData...');
+        console.log('[DEBUG] CardsController: jobsData from JobsDataManager:', jobsData);
+        console.log('[DEBUG] CardsController: jobsData length:', jobsData?.length);
+        console.log('[DEBUG] CardsController: Setting originalJobsData...');
         this.originalJobsData = jobsData;
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: originalJobsData set:', !!this.originalJobsData);
-        this.bizCardDivs = await this._createAllBizCardDivs(jobsData);
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Created', this.bizCardDivs.length, 'bizCardDivs');
-        window.CONSOLE_LOG_IGNORE('[CardsController] Created', this.bizCardDivs.length, 'bizCardDivs');
+        console.log('[DEBUG] CardsController: originalJobsData set:', !!this.originalJobsData);
         
-        // Trigger parallax positioning for all newly created cDivs
-        if (window.refreshAllParallaxTransforms) {
-            window.refreshAllParallaxTransforms();
-            window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Applied parallax transforms to', this.bizCardDivs.length, 'cDivs');
-        }
-        
-        // Apply the same sort rule as ResumeListController
+        // Apply the same sort rule as ResumeListController (business logic only)
         const initialSortRule = AppState?.resume?.sortRule || { field: 'startDate', direction: 'desc' };
-
         this.applySortRule(initialSortRule, true);
         
-        // isInitialized is managed by BaseComponent automatically
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController.initialize() completed successfully');
-
+        console.log('[CardsController] Initialization complete - DOM operations moved to setupDom()');
     }
 
 
 
-    async _createAllBizCardDivs(jobsData) {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController._createAllBizCardDivs called with', jobsData.length, 'jobs');
+    _createAllBizCardDivs(jobsData) {
+        console.log('[DEBUG] CardsController._createAllBizCardDivs called with', jobsData.length, 'jobs');
         const divs = [];
         
-        // Get scene-plane element - should be available since IM manages Vue DOM lifecycle
-        const scenePlaneEl = document.getElementById('scene-plane');
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: scenePlaneEl:', scenePlaneEl);
+        // Get scene-plane element using template ref (DOM operation now in setupDom phase)
+        const scenePlaneEl = this.sceneplaneElement;
+        console.log('[DEBUG] CardsController: scenePlaneEl from template ref:', scenePlaneEl);
         if (!scenePlaneEl) {
-            throw new Error('[CardsController] scene-plane element not found - IM should have ensured DOM readiness');
+            throw new Error('[CardsController] scene-plane element not available via template ref - ensure setScenePlaneElement() was called');
         }
 
         // Clear existing business card divs to prevent duplication
@@ -224,19 +289,19 @@ class CardsController extends BaseComponent {
             }
         });
 
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Creating bizCardDivs for', jobsData.length, 'jobs');
+        console.log('[DEBUG] CardsController: Creating bizCardDivs for', jobsData.length, 'jobs');
         for (let jobNumber = 0; jobNumber < jobsData.length; jobNumber++) {
             const job = jobsData[jobNumber];
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Creating card ${jobNumber} for job:`, job.employer);
-            const bizCardDiv = await this.createBizCardDiv(job, jobNumber, jobsData.length);
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Created bizCardDiv:`, bizCardDiv);
+            console.log(`[DEBUG] CardsController: Creating card ${jobNumber} for job:`, job.employer);
+            const bizCardDiv = this.createBizCardDiv(job, jobNumber, jobsData.length);
+            console.log(`[DEBUG] CardsController: Created bizCardDiv:`, bizCardDiv.id);
             divs.push(bizCardDiv);
         }
         
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Appending', divs.length, 'cards to scene-plane');
+        console.log('[DEBUG] CardsController: Appending', divs.length, 'cards to scene-plane');
         divs.forEach((card, index) => {
             if (card instanceof Node) {
-                window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Appending card ${index} to scene-plane`);
+                console.log(`[DEBUG] CardsController: Appending card ${index} to scene-plane`);
                 scenePlaneEl.appendChild(card);
             } else {
                 console.error(`[DEBUG] CardsController: Card ${index} is not a Node:`, card);
@@ -246,7 +311,7 @@ class CardsController extends BaseComponent {
         return divs;
     }
 
-    async createBizCardDiv(job, jobNumber, totalJobs) {
+    createBizCardDiv(job, jobNumber, totalJobs) {
         try {
             const bizCardDiv = document.createElement('div');
             bizCardDiv.className = 'biz-card-div';
@@ -334,11 +399,14 @@ class CardsController extends BaseComponent {
             }
         }
         
-        // If not found in original cards, check for clone
-        const cloneId = `biz-card-${jobNumber}-clone`;
-        const clone = document.getElementById(cloneId);
-        if (clone) {
-            return clone;
+        // If not found in original cards, check for clone using DOM query on scene-plane
+        // Use template ref instead of document.getElementById()
+        if (this.sceneplaneElement) {
+            const cloneId = `biz-card-${jobNumber}-clone`;
+            const clone = this.sceneplaneElement.querySelector(`#${cloneId}`);
+            if (clone) {
+                return clone;
+            }
         }
         
         return null;
@@ -432,7 +500,7 @@ class CardsController extends BaseComponent {
         // Log data-scene- values for job 0 only
         const jobNumber = bizCardDiv.getAttribute('data-job-number');
         if (jobNumber === '0') {
-            // window.CONSOLE_LOG_IGNORE('Job 0 data-scene- attributes:', {
+            // console.log('Job 0 data-scene- attributes:', {
             //     'data-sceneTop': bizCardDiv.getAttribute('data-sceneTop'),
             //     'data-sceneBottom': bizCardDiv.getAttribute('data-sceneBottom'),
             //     'data-sceneHeight': bizCardDiv.getAttribute('data-sceneHeight'),
@@ -491,8 +559,9 @@ class CardsController extends BaseComponent {
         if (!bizCardDiv) return;
 
         // Check if this card already has a clone
+        // Use template ref scoping instead of document.getElementById()
         const existingCloneId = bizCardDiv.id + '-clone';
-        const existingClone = document.getElementById(existingCloneId);
+        const existingClone = this.sceneplaneElement?.querySelector(`#${existingCloneId}`);
         if (existingClone) {
             // Clone already exists, skipping creation
             return;
@@ -524,7 +593,7 @@ class CardsController extends BaseComponent {
         clone.style.zIndex = zUtils.SELECTED_CARD_Z_INDEX;
         
         // Debug: Check what attributes the original has
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Original ${bizCardDiv.id} attributes:`, {
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Original ${bizCardDiv.id} attributes:`, {
             'scene-left': bizCardDiv.getAttribute('scene-left'),
             'scene-top': bizCardDiv.getAttribute('scene-top'),
             'data-sceneLeft': bizCardDiv.getAttribute('data-sceneLeft'),
@@ -534,7 +603,7 @@ class CardsController extends BaseComponent {
         });
         
         // Debug: Check what attributes the clone inherited
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} inherited attributes:`, {
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} inherited attributes:`, {
             'scene-left': clone.getAttribute('scene-left'),
             'scene-top': clone.getAttribute('scene-top'),
             'data-sceneLeft': clone.getAttribute('data-sceneLeft'),
@@ -546,8 +615,8 @@ class CardsController extends BaseComponent {
         // Debug: Check if data-color-index is properly copied
         const originalColorIndex = bizCardDiv.getAttribute('data-color-index');
         const cloneColorIndex = clone.getAttribute('data-color-index');
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Original ${bizCardDiv.id} data-color-index: ${originalColorIndex}`);
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} data-color-index: ${cloneColorIndex}`);
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Original ${bizCardDiv.id} data-color-index: ${originalColorIndex}`);
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} data-color-index: ${cloneColorIndex}`);
         
         // Ensure the clone has the data-color-index attribute
         if (originalColorIndex && !cloneColorIndex) {
@@ -578,7 +647,7 @@ class CardsController extends BaseComponent {
         // Clone scene coordinates verified
         
         // Debug: Verify clone scene coordinates immediately after setting
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} scene coordinates immediately after setting:`, {
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} scene coordinates immediately after setting:`, {
             'scene-left': clone.getAttribute('scene-left'),
             'scene-top': clone.getAttribute('scene-top'),
             'data-sceneLeft': clone.getAttribute('data-sceneLeft'),
@@ -632,7 +701,7 @@ class CardsController extends BaseComponent {
         if (originalSceneCenterY !== null && originalSceneCenterY !== undefined) clone.setAttribute("data-sceneCenterY", originalSceneCenterY);
         
         
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] Clone ${clone.id} positioning properties set (translated):`, {
+        console.log(`[DEBUG] Clone ${clone.id} positioning properties set (translated):`, {
             top: clone.style.top,
             left: clone.style.left,
             bottom: clone.style.bottom,
@@ -698,9 +767,10 @@ class CardsController extends BaseComponent {
         }
 
         // --- Add clone to the scene ---
-        const scenePlaneEl = document.getElementById('scene-plane');
+        // Use template ref instead of document.sceneplaneElement
+        const scenePlaneEl = this.sceneplaneElement;
         if (!scenePlaneEl) {
-            window.CONSOLE_LOG_IGNORE(`CardsController._selectBizCardDiv: scene-plane element not found!`);
+            console.log(`CardsController._selectBizCardDiv: scene-plane element not available via template ref!`);
             return;
         }
         
@@ -713,7 +783,7 @@ class CardsController extends BaseComponent {
         }
         
         // Debug: Check attributes after adding to DOM
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} attributes after adding to DOM:`, {
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} attributes after adding to DOM:`, {
             'scene-left': clone.getAttribute('scene-left'),
             'scene-top': clone.getAttribute('scene-top'),
             'data-sceneLeft': clone.getAttribute('data-sceneLeft'),
@@ -724,7 +794,7 @@ class CardsController extends BaseComponent {
         this.colorPaletteManager.applyPaletteToElement(clone);
         
         // Debug: Check attributes after applying palette
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} attributes after applying palette:`, {
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} attributes after applying palette:`, {
             'scene-left': clone.getAttribute('scene-left'),
             'scene-top': clone.getAttribute('scene-top'),
             'data-sceneLeft': clone.getAttribute('data-sceneLeft'),
@@ -735,7 +805,7 @@ class CardsController extends BaseComponent {
         clone.classList.add('selected');
         
         // Debug: Check attributes after applying styling
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} attributes after applying styling:`, {
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Clone ${clone.id} attributes after applying styling:`, {
             'scene-left': clone.getAttribute('scene-left'),
             'scene-top': clone.getAttribute('scene-top'),
             'data-sceneLeft': clone.getAttribute('data-sceneLeft'),
@@ -783,7 +853,7 @@ class CardsController extends BaseComponent {
         const finalDataSceneLeft = clone.getAttribute('data-sceneLeft');
         const finalDataSceneTop = clone.getAttribute('data-sceneTop');
         
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._selectBizCardDiv: Final clone ${clone.id} scene coordinates:`, {
+        console.log(`[DEBUG] CardsController._selectBizCardDiv: Final clone ${clone.id} scene coordinates:`, {
             'scene-left': finalSceneLeft,
             'scene-top': finalSceneTop,
             'data-sceneLeft': finalDataSceneLeft,
@@ -807,7 +877,8 @@ class CardsController extends BaseComponent {
         if (!bizCardDiv || !bizCardDiv.classList.contains('hasClone')) return;
         
         const cloneId = bizCardDiv.id + '-clone';
-        const clone = document.getElementById(cloneId);
+        // Use template ref scoping instead of document.getElementById()
+        const clone = this.sceneplaneElement?.querySelector(`#${cloneId}`);
         if (clone) {
             // Remove any stats div from the clone
             const statsDiv = clone.querySelector('.biz-card-stats-div');
@@ -977,12 +1048,13 @@ class CardsController extends BaseComponent {
         if (bizCardDiv) {
             // Check if we already have a clone for this card
             const cloneId = bizCardDiv.id + '-clone';
-            let clone = document.getElementById(cloneId);
+            // Use template ref scoping instead of document.getElementById()
+            let clone = this.sceneplaneElement?.querySelector(`#${cloneId}`);
             
             if (!clone) {
                 // Create new clone if it doesn't exist
                 this._selectBizCardDiv(bizCardDiv, `CardsController.handleSelectionChanged from ${caller}`);
-                clone = document.getElementById(cloneId);
+                clone = this.sceneplaneElement?.querySelector(`#${cloneId}`);
             }
             
             // Scroll to the clone (existing or newly created)
@@ -1000,7 +1072,8 @@ class CardsController extends BaseComponent {
     handleSelectionCleared(event) {
         const { caller } = event.detail;
         // Find all original cards that have a clone and deselect them
-        const cardsWithClones = document.querySelectorAll('.biz-card-div.hasClone');
+        // Use template ref scoping instead of document.querySelectorAll()
+        const cardsWithClones = this.sceneplaneElement?.querySelectorAll('.biz-card-div.hasClone') || [];
         cardsWithClones.forEach(card => this._deselectBizCardDiv(card));
         
         // Dispatch custom event for skill badges
@@ -1029,17 +1102,16 @@ class CardsController extends BaseComponent {
                 }
             });
             
-            // Also clear hover from any clones
-            const allClones = document.querySelectorAll('.biz-card-div[id*="-clone"]');
-            allClones.forEach(clone => {
-                if (clone.classList.contains('hovered')) {
-                    clone.classList.remove('hovered');
-                    const isSelected = clone.classList.contains('selected');
-                    if (!isSelected) {
-                        clone.classList.remove('hovered', 'selected');
-                    }
+            // Also clear hover from the single clone (only one clone exists at a time)
+            // Use template ref scoping instead of document.querySelectorAll()
+            const singleClone = this.sceneplaneElement?.querySelector('.biz-card-div[id*="-clone"]');
+            if (singleClone && singleClone.classList.contains('hovered')) {
+                singleClone.classList.remove('hovered');
+                const isSelected = singleClone.classList.contains('selected');
+                if (!isSelected) {
+                    singleClone.classList.remove('hovered', 'selected');
                 }
-            });
+            }
 
             const bizCardDiv = this.getBizCardDivByJobNumber(hoveredJobNumber);
             if (bizCardDiv) {
@@ -1066,22 +1138,23 @@ class CardsController extends BaseComponent {
             }
         });
         
-        // Also clear hover from any clones
-        const allClones = document.querySelectorAll('.biz-card-div[id*="-clone"]');
-        allClones.forEach(clone => {
-            const wasHovered = clone.classList.contains('hovered');
-            const isSelected = clone.classList.contains('selected');
+        // Also clear hover from the single clone (only one clone exists at a time)
+        // Use template ref scoping instead of document.querySelectorAll()
+        const singleClone = this.sceneplaneElement?.querySelector('.biz-card-div[id*="-clone"]');
+        if (singleClone) {
+            const wasHovered = singleClone.classList.contains('hovered');
+            const isSelected = singleClone.classList.contains('selected');
             
-            // Only process clones that were actually hovered
+            // Only process clone that was actually hovered
             if (wasHovered) {
-                clone.classList.remove('hovered');
+                singleClone.classList.remove('hovered');
                 
                 // Reset to normal state (only if not selected)
                 if (!isSelected) {
-                    clone.classList.remove('hovered', 'selected');
+                    singleClone.classList.remove('hovered', 'selected');
                 }
             }
-        });
+        }
     }
 
     handleLastVisitedChanged(event) {
@@ -1090,7 +1163,7 @@ class CardsController extends BaseComponent {
         // Visual state is already applied by selectionManager._applyVisualLastVisited()
         // CardsController just needs to coordinate any additional behavior if needed
         
-        window.CONSOLE_LOG_IGNORE(`[CardsController] handleLastVisitedChanged: Job ${lastVisitedJobNumber} set as lastVisited from ${caller}`);
+        console.log(`[CardsController] handleLastVisitedChanged: Job ${lastVisitedJobNumber} set as lastVisited from ${caller}`);
         
         // Optional: Could add scrolling behavior here if needed
         // const bizCardDiv = this.getBizCardDivByJobNumber(lastVisitedJobNumber);
@@ -1105,13 +1178,13 @@ class CardsController extends BaseComponent {
         // Visual state is already cleared by selectionManager._clearVisualLastVisited()
         // CardsController just needs to coordinate any additional behavior if needed
         
-        window.CONSOLE_LOG_IGNORE(`[CardsController] handleLastVisitedCleared: Job ${previousLastVisitedJobNumber} cleared from lastVisited by ${caller}`);
+        console.log(`[CardsController] handleLastVisitedCleared: Job ${previousLastVisitedJobNumber} cleared from lastVisited by ${caller}`);
     }
 
     handleColorPaletteChanged(event) {
         const { filename, paletteName, previousFilename } = event.detail;
         
-        window.CONSOLE_LOG_IGNORE(`[CardsController] handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
+        console.log(`[CardsController] handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
         
         // Apply new palette to all cards (both originals and clones) and their children
         this.bizCardDivs.forEach(div => {
@@ -1123,15 +1196,16 @@ class CardsController extends BaseComponent {
             }
         });
         
-        // Also apply to any clones that might exist
-        const allClones = document.querySelectorAll('.biz-card-div[id*="-clone"]');
-        allClones.forEach(clone => {
-            this.colorPaletteManager.applyPaletteToElement(clone);
-            const colorElements = clone.querySelectorAll('[data-color-index]');
+        // Also apply to the single clone that might exist (only one clone exists at a time)
+        // Use template ref scoping instead of document.querySelectorAll()
+        const singleClone = this.sceneplaneElement?.querySelector('.biz-card-div[id*="-clone"]');
+        if (singleClone) {
+            this.colorPaletteManager.applyPaletteToElement(singleClone);
+            const colorElements = singleClone.querySelectorAll('[data-color-index]');
             colorElements.forEach(element => this.colorPaletteManager.applyPaletteToElement(element));
-        });
+        }
         
-        window.CONSOLE_LOG_IGNORE(`[CardsController] handleColorPaletteChanged: Applied new palette to ${this.bizCardDivs.length} cards and ${allClones.length} clones`);
+        console.log(`[CardsController] handleColorPaletteChanged: Applied new palette to ${this.bizCardDivs.length} cards and ${singleClone ? '1 clone' : '0 clones'}`);
     }
 
     isJobNumberSelected(jobNumber) {
@@ -1139,8 +1213,9 @@ class CardsController extends BaseComponent {
     }
     
     scrollBizCardDivIntoView(bizCardDiv, caller='') {
-        const sceneContent = document.getElementById('scene-content');
-        if (!sceneContent) throw new Error(`CardsController.scrollBizCardDivIntoView: ${caller} scene-content not found`);
+        // Use template ref instead of document.scenecontentElement
+        const sceneContent = this.scenecontentElement;
+        if (!sceneContent) throw new Error(`CardsController.scrollBizCardDivIntoView: ${caller} scene-content not available via template ref`);
     
         // Use centralized smooth scrolling with header positioning
         const headerSelector = '.biz-details-employer, .biz-details-role, .biz-details-dates, .biz-details-z-value, .biz-details-start-date, .biz-details-end-date';
@@ -1182,7 +1257,7 @@ class CardsController extends BaseComponent {
 
     // Static method to reset the singleton instance
     static reset() {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController: Resetting singleton instance');
+        console.log('[DEBUG] CardsController: Resetting singleton instance');
         if (CardsController.instance) {
             // Clean up any resources if needed
             CardsController.instance.bizCardDivs = [];
@@ -1202,7 +1277,7 @@ class CardsController extends BaseComponent {
      * This only updates the internal sorting state for coordination with ResumeListController
      */
     applySortRule(sortRule, isInitializing = false) {
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.applySortRule: Called with sortRule=`, sortRule, `isInitializing=`, isInitializing);
+        console.log(`[DEBUG] CardsController.applySortRule: Called with sortRule=`, sortRule, `isInitializing=`, isInitializing);
         
         if (!this.originalJobsData) {
             if (isInitializing) {
@@ -1215,20 +1290,20 @@ class CardsController extends BaseComponent {
         
         this.currentSortRule = { ...sortRule };
 
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.applySortRule: Applying sort rule:`, this.currentSortRule);
+        console.log(`[DEBUG] CardsController.applySortRule: Applying sort rule:`, this.currentSortRule);
 
         this.updateSortedIndices();
         
         // Don't automatically scroll to first card - let ResumeListController control selection
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.applySortRule: Sort state updated (no visual changes)`);
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.applySortRule: Sort completed`);
+        console.log(`[DEBUG] CardsController.applySortRule: Sort state updated (no visual changes)`);
+        console.log(`[DEBUG] CardsController.applySortRule: Sort completed`);
     }
 
     /**
      * Update the sorted indices based on the current sort rule
      */
     updateSortedIndices() {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] updateSortedIndices() called - version check: UPDATED'); // Force cache refresh
+        console.log('[DEBUG] updateSortedIndices() called - version check: UPDATED'); // Force cache refresh
         
         // Safety check - ensure originalJobsData is initialized and is an array
         if (!this.originalJobsData) {
@@ -1249,7 +1324,7 @@ class CardsController extends BaseComponent {
             job
         }));
 
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.updateSortedIndices: Sorting by ${this.currentSortRule.field} ${this.currentSortRule.direction}`);
+        console.log(`[DEBUG] CardsController.updateSortedIndices: Sorting by ${this.currentSortRule.field} ${this.currentSortRule.direction}`);
 
         // Sort based on the current rule
         indexedJobs.sort((a, b) => {
@@ -1277,7 +1352,7 @@ class CardsController extends BaseComponent {
 
         // Extract the sorted indices
         this.sortedIndices = indexedJobs.map(item => item.jobNumber);
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.updateSortedIndices: Final sortedIndices=`, this.sortedIndices);
+        console.log(`[DEBUG] CardsController.updateSortedIndices: Final sortedIndices=`, this.sortedIndices);
     }
 
     /**
@@ -1331,13 +1406,13 @@ class CardsController extends BaseComponent {
             const firstJobNumber = this.sortedIndices[0];
             const firstCard = this.getBizCardDivByJobNumber(firstJobNumber);
             if (firstCard) {
-                window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.scrollToFirstCard: Scrolling to first card (job ${firstJobNumber}) at timeline position`);
+                console.log(`[DEBUG] CardsController.scrollToFirstCard: Scrolling to first card (job ${firstJobNumber}) at timeline position`);
                 this.scrollBizCardDivIntoView(firstCard, 'CardsController.scrollToFirstCard');
             } else {
-                window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.scrollToFirstCard: Could not find card for job ${firstJobNumber}`);
+                console.log(`[DEBUG] CardsController.scrollToFirstCard: Could not find card for job ${firstJobNumber}`);
             }
         } else {
-            window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController.scrollToFirstCard: No sorted indices available');
+            console.log('[DEBUG] CardsController.scrollToFirstCard: No sorted indices available');
         }
     }
 
@@ -1381,29 +1456,30 @@ class CardsController extends BaseComponent {
      * Scroll to a specific job number (called by ResumeListController for coordination)
      */
     scrollToJobNumber(jobNumber) {
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.scrollToJobNumber: Scrolling to job ${jobNumber}`);
+        console.log(`[DEBUG] CardsController.scrollToJobNumber: Scrolling to job ${jobNumber}`);
         const card = this.getBizCardDivByJobNumber(jobNumber);
         if (card) {
             // Check if there's a clone (selected card) - if so, scroll to the clone instead of the original
             const cloneId = card.id + '-clone';
-            const clone = document.getElementById(cloneId);
+            // Use template ref scoping instead of document.getElementById()
+            const clone = this.sceneplaneElement?.querySelector(`#${cloneId}`);
             const targetCard = clone || card; // Use clone if it exists, otherwise original card
             
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.scrollToJobNumber: Found card for job ${jobNumber}, scrolling to ${clone ? 'clone' : 'original'}`);
+            console.log(`[DEBUG] CardsController.scrollToJobNumber: Found card for job ${jobNumber}, scrolling to ${clone ? 'clone' : 'original'}`);
             this.scrollBizCardDivIntoView(targetCard, 'CardsController.scrollToJobNumber');
         } else {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController.scrollToJobNumber: Could not find card for job ${jobNumber}`);
+            console.log(`[DEBUG] CardsController.scrollToJobNumber: Could not find card for job ${jobNumber}`);
         }
     }
 
     // Listen for sort rule changes from ResumeListController
     _setupSortListener() {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController._setupSortListener: Setting up sort listener');
+        console.log('[DEBUG] CardsController._setupSortListener: Setting up sort listener');
         
         // Listen for custom events when sort rules change
         window.addEventListener('sort-rule-changed', (event) => {
             const { sortRule } = event.detail;
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Received sort rule change event:`, sortRule);
+            console.log(`[DEBUG] CardsController: Received sort rule change event:`, sortRule);
             this.applySortRule(sortRule);
         });
 
@@ -1413,22 +1489,22 @@ class CardsController extends BaseComponent {
         const maxRetries = 10;
         
         const checkForResumeListController = () => {
-            window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._setupSortListener: Checking for ResumeListController (attempt ${retryCount + 1})`);
+            console.log(`[DEBUG] CardsController._setupSortListener: Checking for ResumeListController (attempt ${retryCount + 1})`);
             
             if (window.resumeListController && window.resumeListController.getCurrentSortRule) {
                 const resumeSortRule = window.resumeListController.getCurrentSortRule();
-                window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController._setupSortListener: Found ResumeListController sort rule:', resumeSortRule);
+                console.log('[DEBUG] CardsController._setupSortListener: Found ResumeListController sort rule:', resumeSortRule);
                 if (resumeSortRule && resumeSortRule.field) {
-                    window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController: Applying initial sort rule from ResumeListController:`, resumeSortRule);
+                    console.log(`[DEBUG] CardsController: Applying initial sort rule from ResumeListController:`, resumeSortRule);
                     this.applySortRule(resumeSortRule);
                 }
             } else {
                 retryCount++;
                 if (retryCount < maxRetries) {
-                    window.CONSOLE_LOG_IGNORE(`[DEBUG] CardsController._setupSortListener: ResumeListController not ready, retrying in 500ms (${retryCount}/${maxRetries})`);
+                    console.log(`[DEBUG] CardsController._setupSortListener: ResumeListController not ready, retrying in 500ms (${retryCount}/${maxRetries})`);
                     setTimeout(checkForResumeListController, 500);
                 } else {
-                    window.CONSOLE_LOG_IGNORE('[DEBUG] CardsController._setupSortListener: ResumeListController not found after max retries, using default sort');
+                    console.log('[DEBUG] CardsController._setupSortListener: ResumeListController not found after max retries, using default sort');
                     // Apply default sort rule if ResumeListController never becomes available
                     this.applySortRule({ field: 'startDate', direction: 'desc' }, true);
                 }
@@ -1445,29 +1521,30 @@ const cardsController = new CardsController();
 
 // Global function for testing sorting
 window.testCardsSorting = function() {
-    window.CONSOLE_LOG_IGNORE('[DEBUG] testCardsSorting: Manual test function called');
+    console.log('[DEBUG] testCardsSorting: Manual test function called');
     if (window.cardsController) {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] testCardsSorting: Triggering sort by employer ascending');
+        console.log('[DEBUG] testCardsSorting: Triggering sort by employer ascending');
         window.cardsController.applySortRule({ field: 'employer', direction: 'asc' });
     } else {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] testCardsSorting: CardsController not found');
+        console.log('[DEBUG] testCardsSorting: CardsController not found');
     }
 };
 
 // Global function for debugging card state
 window.debugCardsState = function() {
-    window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: Current cards state');
+    console.log('[DEBUG] debugCardsState: Current cards state');
     if (window.cardsController) {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: CardsController found');
-        window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: bizCardDivs length:', window.cardsController.bizCardDivs.length);
-        window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: sortedIndices:', window.cardsController.sortedIndices);
-        window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: currentSortRule:', window.cardsController.currentSortRule);
+        console.log('[DEBUG] debugCardsState: CardsController found');
+        console.log('[DEBUG] debugCardsState: bizCardDivs length:', window.cardsController.bizCardDivs.length);
+        console.log('[DEBUG] debugCardsState: sortedIndices:', window.cardsController.sortedIndices);
+        console.log('[DEBUG] debugCardsState: currentSortRule:', window.cardsController.currentSortRule);
         
         // Show all cards in DOM order (timeline positioning)
-        const scenePlaneEl = document.getElementById('scene-plane');
+        // Use template ref instead of document.sceneplaneElement
+        const scenePlaneEl = this.sceneplaneElement;
         if (scenePlaneEl) {
             const cards = scenePlaneEl.querySelectorAll('.biz-card-div:not(.hasClone)');
-            window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: Cards in DOM (timeline order):');
+            console.log('[DEBUG] debugCardsState: Cards in DOM (timeline order):');
             cards.forEach((card, jobNumber) => {
                 // const jobNumber = card.getAttribute('data-job-number');
                 const sceneTop = card.getAttribute('data-sceneTop');
@@ -1475,12 +1552,12 @@ window.debugCardsState = function() {
                 const employerElement = card.querySelector('.biz-details-employer');
                 const role = roleElement ? roleElement.textContent.trim() : 'N/A';
                 const employer = employerElement ? employerElement.textContent.trim() : 'N/A';
-                window.CONSOLE_LOG_IGNORE(`  DOM Index ${jobNumber}: Job ${jobNumber} (top: ${sceneTop}px) -> "${role}" at "${employer}"`);
+                console.log(`  DOM Index ${jobNumber}: Job ${jobNumber} (top: ${sceneTop}px) -> "${role}" at "${employer}"`);
             });
         }
         
         // Show sorted order (for coordination with ResumeListController)
-        window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: Sorted order (for coordination):');
+        console.log('[DEBUG] debugCardsState: Sorted order (for coordination):');
         if (window.cardsController.sortedIndices) {
             window.cardsController.sortedIndices.forEach((jobNumber, sortedIndex) => {
                 const card = window.cardsController.getBizCardDivByJobNumber(jobNumber);
@@ -1489,14 +1566,14 @@ window.debugCardsState = function() {
                     const employerElement = card.querySelector('.biz-details-employer');
                     const role = roleElement ? roleElement.textContent.trim() : 'N/A';
                     const employer = employerElement ? employerElement.textContent.trim() : 'N/A';
-                    window.CONSOLE_LOG_IGNORE(`  Sorted Index ${sortedIndex}: Job ${jobNumber} -> "${role}" at "${employer}"`);
+                    console.log(`  Sorted Index ${sortedIndex}: Job ${jobNumber} -> "${role}" at "${employer}"`);
                 }
             });
         }
         
-        window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: Note: Cards maintain timeline positioning, sorting only affects coordination with resume items');
+        console.log('[DEBUG] debugCardsState: Note: Cards maintain timeline positioning, sorting only affects coordination with resume items');
     } else {
-        window.CONSOLE_LOG_IGNORE('[DEBUG] debugCardsState: CardsController not found');
+        console.log('[DEBUG] debugCardsState: CardsController not found');
     }
 };
 
