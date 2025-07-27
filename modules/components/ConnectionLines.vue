@@ -448,12 +448,12 @@ export default {
         return;
       }
       
-      console.log('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
+      // console.log('🔴🔴🔴 [ConnectionLines] updateConnections() CALLED! 🔴🔴🔴');
       connections.value = [];
       
       // Second check: Are badges visible? (No connection lines without badges)  
       const badgesVisible = badgeManager.isBadgesVisible();
-      console.log(`[ConnectionLines] Badge manager state: isBadgesVisible()=${badgesVisible}`);
+      // console.log(`[ConnectionLines] Badge manager state: isBadgesVisible()=${badgesVisible}`);
       
       if (!badgesVisible) {
         console.log(`[ConnectionLines] Badge mode is -B (OFF) - clearing connections and returning`);
@@ -461,7 +461,7 @@ export default {
         return;
       }
       
-      console.log(`[ConnectionLines] Badge mode is ON (+B) - proceeding with connections`);
+      // console.log(`[ConnectionLines] Badge mode is ON (+B) - proceeding with connections`);
       
       // Third check: Is a cDiv selected?
       let selectedJobNumber = null;
@@ -862,7 +862,7 @@ export default {
       }
       
       const eventType = event?.type || 'unknown';
-      console.log(`[ConnectionLines] ${eventType} event detected`);
+      // console.log(`[ConnectionLines] ${eventType} event detected`);
       
       // Clear any existing timeout
       if (resizeTimeout) {
@@ -871,7 +871,7 @@ export default {
       
       // Set a new timeout to update connections after resize finishes
       resizeTimeout = setTimeout(() => {
-        console.log(`[ConnectionLines] Updating connections after ${eventType} completion`);
+        // console.log(`[ConnectionLines] Updating connections after ${eventType} completion`);
         updateConnections();
         resizeTimeout = null;
       }, 150); // Wait 150ms after last resize event

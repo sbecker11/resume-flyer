@@ -27,6 +27,9 @@ const BIZCARD_MAX_WIDTH_OFFSET = 30; // Reduced from 40
 const BIZCARD_MIN_Z_DIFF = 2;
 const MIN_HEIGHT = 180; // Reduced from 200 for more square aspect
 
+// for debugging scene-to-viewport alignment
+const OVERRIDE_SCENE_HZ = true;
+
 // Timeline functions will be accessed when needed after initialization
 
 /**
@@ -466,10 +469,16 @@ class CardsController extends BaseComponent {
         bizCardDiv.setAttribute("data-sceneHeight", sceneHeight);
         bizCardDiv.setAttribute("data-sceneCenterY", sceneCenterY);
         
-        const sceneCenterX = mathUtils.getRandomSignedOffset(BIZCARD_MAX_X_OFFSET);
-        const sceneWidth = BIZCARD_MEAN_WIDTH + mathUtils.getRandomSignedOffset(BIZCARD_MAX_WIDTH_OFFSET);
-        const sceneLeft = sceneCenterX - sceneWidth / 2;
-        const sceneRight = sceneCenterX + sceneWidth / 2;
+        let sceneCenterX = mathUtils.getRandomSignedOffset(BIZCARD_MAX_X_OFFSET);
+        let sceneWidth = BIZCARD_MEAN_WIDTH + mathUtils.getRandomSignedOffset(BIZCARD_MAX_WIDTH_OFFSET);
+        let sceneLeft = sceneCenterX - sceneWidth / 2;
+        let sceneRight = sceneCenterX + sceneWidth / 2;
+        if ( OVERRIDE_SCENE_HZ ) {
+            sceneCenterX = 0;
+            sceneWidth = BIZCARD_MEAN_WIDTH;
+            sceneLeft = sceneCenterX - sceneWidth / 2;
+            sceneRight = sceneCenterX + sceneWidth / 2;
+        }
         
         bizCardDiv.setAttribute("data-sceneLeft", sceneLeft);
         bizCardDiv.setAttribute("data-sceneRight", sceneRight);

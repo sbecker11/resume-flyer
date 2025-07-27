@@ -279,8 +279,11 @@ class ParallaxModule extends BaseComponent {
         if (sceneZ > 0) 
             zScale = (0.9 - ((sceneZ - zUtils.ALL_CARDS_Z_MIN - 1) / (zUtils.ALL_CARDS_Z_MAX - zUtils.ALL_CARDS_Z_MIN)));
 
-        // uncomment to skip z-depth the parallax effect
-        // zScale = 1;
+        // see CardsController.mjs OVERRIDE_SCENE_HZ
+        const OVERRIDE_SCENE_HZ = true;
+        if ( OVERRIDE_SCENE_HZ ) {
+            zScale = 1;
+        }
 
         // default before parallax
         let translateX = 0;

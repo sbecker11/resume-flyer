@@ -17,7 +17,6 @@ function getDefaultState() {
             orientation: 'scene-left' // Default to scene on left, resume on right
         },
         resizeHandle: {
-            steppingEnabled: true, // Default to stepping/snapping enabled
             stepCount: 4
         },
         focalPoint: {
@@ -300,8 +299,8 @@ async function loadState() {
         // Migrate the state to current version
         const migratedState = migrateState(rawState);
         
-        // Merge the default state into migrated state to ensure all keys exist
-        // This way, default values (like locked focal point mode) take precedence for new fields
+        // Merge the migrated state into default state to ensure all keys exist
+        // This way, saved values take precedence over defaults
         const finalState = deepMerge(getDefaultState(), migratedState);
         
         window.CONSOLE_LOG_IGNORE("Final state after migration and merge:", finalState);

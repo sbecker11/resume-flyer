@@ -113,6 +113,7 @@ import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
 // IM-managed: AimPointManager
 // IM-managed: FocalPointManager
 // IM-managed: ResizeHandleManager
+import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useTimeline, initialize as initializeTimeline } from '@/modules/composables/useTimeline.mjs';
 import { BaseVueComponentMixin } from '@/modules/core/abstracts/BaseComponent.mjs';
@@ -602,9 +603,14 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
         
         // Initialize coordination systems after BaseComponents are ready
         // ResizeHandleManager is now initialized by IM system - no manual initialization needed
-        const resizeHandle = getResizeHandle();
-        if (resizeHandle) {
-          resizeHandle.applyInitialLayout();
+        // Use the singleton directly to ensure we're applying layout to the same instance
+        // that the reactive composable references
+        if (window.initializationManager) {
+          const resizeHandleManager = window.initializationManager.getComponent('ResizeHandleManager');
+          if (resizeHandleManager && resizeHandleManager.applyInitialLayout) {
+            resizeHandleManager.applyInitialLayout();
+            console.log('[AppContent] Applied initial layout via IM');
+          }
         }
         
         // Initialize scene systems
@@ -910,8 +916,8 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
     });
 
     // Create a reactive reference to scene width that updates via events
-    // Start with a reasonable default width (50% of window width)
-    const sceneWidth = ref(Math.round(window.innerWidth * 0.5));
+    // Start with 50% of available space (window width minus 20px resize handle)
+    const sceneWidth = ref(Math.round((window.innerWidth - 20) * 0.5));
     
     // Set up event listener for scene width changes immediately
     handleSceneWidthChanged = (event) => {
@@ -930,14 +936,15 @@ ${result.violations ? result.violations.map(v => `• ${v.name} (${v.file}): ${v
       return window.innerWidth;
     });
 
+    // Calculate percentages from actual displayed widths, not from ResizeHandleManager
     const scenePercentage = computed(() => {
-      const resizeHandle = getResizeHandle();
-      if (!resizeHandle) return 50; // Default fallback
-      return (resizeHandle.sceneWidthInPixels.value / window.innerWidth) * 100;
+      const windowWidth = window.innerWidth;
+      const availableWidth = windowWidth - 20; // Subtract resize handle width
+      return availableWidth > 0 ? Math.round((sceneWidth.value / availableWidth) * 100) : 50;
     });
 
     const resumePercentage = computed(() => {
-      return 100 - Math.round(scenePercentage.value);
+      return 100 - scenePercentage.value;
     });
 
     // Computed properties for dynamic layout ordering

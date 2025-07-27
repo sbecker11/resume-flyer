@@ -91,8 +91,8 @@ class BullsEye extends BaseComponent {
             throw new Error(`[BullsEye] NaN detected in center calculations: centerX=${centerX}, centerY=${centerY}, sceneRect=${JSON.stringify(sceneRect)}`);
         }
         
-        window.CONSOLE_LOG_IGNORE('[BullsEye] Centering - sceneRect:', sceneRect);
-        window.CONSOLE_LOG_IGNORE('[BullsEye] Calculated center:', { centerX, centerY });
+        console.log('[BullsEye] Centering - sceneRect:', sceneRect);
+        console.log('[BullsEye] Calculated center:', { centerX, centerY });
         
         this._bullsEyeElement.style.position = 'fixed';
         this._bullsEyeElement.style.left = `${centerX}px`;
@@ -122,13 +122,13 @@ class BullsEye extends BaseComponent {
             y: rect.top + rect.height / 2
         };
         
-        window.CONSOLE_LOG_IGNORE('[BullsEye] Scene center:', referenceCenter);
-        window.CONSOLE_LOG_IGNORE('[BullsEye] BullsEye center:', bullsEyeCenter);
+        console.log('[BullsEye] Scene center:', referenceCenter);
+        console.log('[BullsEye] BullsEye center:', bullsEyeCenter);
         const distance = Math.sqrt(
             Math.pow(bullsEyeCenter.x - referenceCenter.x, 2) + 
             Math.pow(bullsEyeCenter.y - referenceCenter.y, 2)
         );
-        window.CONSOLE_LOG_IGNORE('[BullsEye] Distance from scene center:', distance.toFixed(2) + 'px');
+        console.log('[BullsEye] Distance from scene center:', distance.toFixed(2) + 'px');
     }
 
     getPosition() {
@@ -166,12 +166,20 @@ class BullsEye extends BaseComponent {
     }
 
     recenter() {
+        console.log('[BullsEye] recenter() called');
         const sceneContainer = initializationManager.getComponent('SceneContainer');
+        console.log('[BullsEye] SceneContainer available:', !!sceneContainer);
+        console.log('[BullsEye] BullsEye element available:', !!this._bullsEyeElement);
         if (sceneContainer && this._bullsEyeElement) {
             const sceneContainerElement = sceneContainer.getSceneContainer();
+            console.log('[BullsEye] SceneContainer element available:', !!sceneContainerElement);
             if (sceneContainerElement) {
+                console.log('[BullsEye] Calling _centerBullsEye()');
                 this._centerBullsEye(sceneContainerElement);
+                console.log('[BullsEye] _centerBullsEye() completed');
             }
+        } else {
+            console.log('[BullsEye] recenter() cannot proceed - missing dependencies');
         }
     }
 }

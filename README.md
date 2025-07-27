@@ -706,8 +706,7 @@ app-container (100vw × 100vh)
 // useResizeHandle.mjs - Core Logic
 export function useResizeHandle() {
   const percentage = ref(50); // Default 50/50 split
-  const steppingEnabled = ref(false);
-  const stepCount = ref(5);
+  const stepCount = ref(1); // 1 = infinity (free drag), 2-10 = discrete steps
   
   // Layout calculation
   const scenePercentage = computed(() => percentage.value);
@@ -735,12 +734,13 @@ const updateLayout = (clientX) => {
   const containerWidth = appContainer.clientWidth;
   const newPercentage = (clientX / containerWidth) * 100;
   
-  // Apply stepping if enabled
-  if (steppingEnabled.value) {
+  // Apply stepping if stepCount > 1 (stepping enabled)
+  if (stepCount.value > 1) {
     const stepSize = 100 / stepCount.value;
     const steppedPercentage = Math.round(newPercentage / stepSize) * stepSize;
     percentage.value = Math.max(0, Math.min(100, steppedPercentage));
   } else {
+    // stepCount === 1 means free dragging (infinity mode)
     percentage.value = Math.max(0, Math.min(100, newPercentage));
   }
   

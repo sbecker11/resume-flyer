@@ -1,8 +1,9 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useAimPoint } from '@/modules/composables/useAimPoint.mjs';
-import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
+import { useResizeHandle, resizeHandleManager } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
+import { AppState, saveState } from '@/modules/core/stateManager.mjs';
 import BadgeToggle from '@/modules/components/BadgeToggle.vue';
 
 // --- Composables ---
@@ -10,7 +11,6 @@ const {
   percentage: scenePercentage, 
   isLeftCollapsed, 
   isRightCollapsed, 
-  steppingEnabled,
   stepCount,
   startDrag, 
   collapseLeft, 
@@ -27,35 +27,52 @@ const isRightDisabled = computed(() => {
   return isRightCollapsed.value || stepCount.value === 1;
 });
 
-// Step buttons that make the container on that side smaller
-const stepLeftButton = computed(() => {
-  // Left arrow makes LEFT side smaller
-  // - scene-left: scene is on left, so decrease scene (collapseLeft)
-  // - scene-right: resume is on left, so increase scene (collapseRight)
-  const action = orientation.value === 'scene-left' ? collapseLeft : collapseRight;
-  const disabled = orientation.value === 'scene-left' ? isLeftDisabled.value : isRightDisabled.value;
+// Step button click handlers with debug logging
+function handleStepLeft(event) {
+  console.log('[ResizeHandle] Step left clicked - DECREASE scene percentage');
+  console.log('[ResizeHandle] Orientation:', orientation.value);
+  console.log('[ResizeHandle] Current percentage:', scenePercentage.value);
+  console.log('[ResizeHandle] Step count:', stepCount.value);
+  console.log('[ResizeHandle] IsLeftDisabled:', isLeftDisabled.value);
+  event.stopPropagation();
   
+  // Left button decreases scene percentage (collapseLeft decreases percentage)
+  console.log('[ResizeHandle] Calling collapseLeft to decrease scene percentage');
+  collapseLeft();
+}
+
+function handleStepRight(event) {
+  console.log('[ResizeHandle] Step right clicked - INCREASE scene percentage');
+  console.log('[ResizeHandle] Orientation:', orientation.value);
+  console.log('[ResizeHandle] Current percentage:', scenePercentage.value);
+  console.log('[ResizeHandle] Step count:', stepCount.value);
+  console.log('[ResizeHandle] IsRightDisabled:', isRightDisabled.value);
+  event.stopPropagation();
+  
+  // Right button increases scene percentage (collapseRight increases percentage)
+  console.log('[ResizeHandle] Calling collapseRight to increase scene percentage');
+  collapseRight();
+}
+
+// Step buttons for resize handle movement
+const stepLeftButton = computed(() => {
+  // Left button moves handle left (right side grows, left side shrinks)
   return {
     id: 'step-left',
-    action: action,
-    disabled: disabled,
-    title: 'Step Left (Make Left Side Smaller)',
+    action: handleStepLeft,
+    disabled: isRightDisabled.value, // Disabled when right side is collapsed
+    title: 'Move Handle Left (Right Side Grows)',
     icon: '‹'
   };
 });
 
 const stepRightButton = computed(() => {
-  // Right arrow makes RIGHT side smaller
-  // - scene-left: resume is on right, so make resume smaller = increase scene (collapseRight)
-  // - scene-right: scene is on right, so make scene smaller = decrease scene (collapseLeft)
-  const action = orientation.value === 'scene-left' ? collapseRight : collapseLeft;
-  const disabled = orientation.value === 'scene-left' ? isRightDisabled.value : isLeftDisabled.value;
-  
+  // Right button moves handle right (left side grows, right side shrinks)  
   return {
     id: 'step-right',
-    action: action,
-    disabled: disabled,
-    title: 'Step Right (Make Right Side Smaller)',
+    action: handleStepRight,
+    disabled: isLeftDisabled.value, // Disabled when left side is collapsed
+    title: 'Move Handle Right (Left Side Grows)',
     icon: '›'
   };
 });
@@ -150,7 +167,22 @@ function toggleFocalLock(event) {
 
 function handleSteppingClick(event) {
   event.stopPropagation();
-  toggleStepping();
+  
+  // Cycle through step counts: 1 -> 2 -> 3 -> ... -> 10 -> 1
+  if (resizeHandleManager) {
+    const currentSteps = resizeHandleManager.stepCount.value;
+    const nextSteps = currentSteps >= 10 ? 1 : currentSteps + 1;
+    resizeHandleManager.stepCount.value = nextSteps;
+    
+    // Update AppState and save
+    if (AppState?.resizeHandle) {
+      AppState.resizeHandle.stepCount = nextSteps;
+      saveState(AppState);
+    }
+    
+    console.log(`[ResizeHandle] Step count changed: ${currentSteps} -> ${nextSteps}`);
+  }
+  
   // Reset hover state when step changes to prevent immediate hover preview
   isSteppingHovering.value = false;
 }
@@ -171,22 +203,25 @@ function handleLayoutToggle(event) {
                     class="toggle-circle" 
                     :class="buttonClasses"
                     @click.stop="toggleFocalLock" 
+                    @mousedown="startDrag"
                     @mouseenter="isHovering = true; hasJustClicked = false"
                     @mouseleave="isHovering = false; hasJustClicked = false"
                     :title="isHovering ? 'Next: ' + nextMode + ' (click to switch)' : 'Current: ' + focalPointMode + ' (hover to preview next)'">
                 <span>{{ displayIcon }}</span>
             </button>
-            <BadgeToggle />
+            <BadgeToggle @mousedown="startDrag" />
             <button id="layout-toggle" 
                     class="toggle-circle" 
                     @click.stop="handleLayoutToggle" 
+                    @mousedown="startDrag"
                     :title="`Layout: ${getOrientationLabel()} (click to swap)`">
                 {{ getToggleButtonText() }}
             </button>
             <button id="stepping-indicator" 
                     class="toggle-circle" 
-                    :class="{ 'inverted': steppingEnabled, 'hovering': isSteppingHovering, 'infinity-mode': stepCount === 1 }"
+                    :class="{ 'hovering': isSteppingHovering, 'infinity-mode': stepCount === 1 }"
                     @click.stop="handleSteppingClick" 
+                    @mousedown="startDrag"
                     @mouseenter="isSteppingHovering = true"
                     @mouseleave="isSteppingHovering = false"
                     :title="stepCount === 1 ? 'Free dragging (no steps)' : `Stepping: ${stepCount} steps`">{{ displayStepCount }}</button>

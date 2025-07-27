@@ -151,4 +151,113 @@ For any component needing DOM separation:
 
 ---
 
-**Session Complete**: DOM separation architecture successfully implemented. BullsEye and SceneContainer now follow proper two-phase initialization pattern, resolving all race condition issues between Vue DOM readiness and IM component initialization.
+## Session Update (2025-07-25) - Focal Point System Implementation
+
+### Major Achievements This Session
+
+#### 1. Fixed Tristate Button Reactivity Issue
+- **Problem**: Tristate button showed mode changes in console but icon remained stuck on locked mode
+- **Root Cause**: AimPointManager mode was not reactive - used `this.mode` instead of reactive ref
+- **Solution**: Changed to `this.modeState = ref(MODES.LOCKED)` and updated all references to `this.modeState.value`
+- **Result**: Tristate button now properly cycles icons: 🔒 → 👁️ → ✋
+
+#### 2. Fixed Aim Point Visibility and Template Ref Injection  
+- **Problem**: "Cannot update position - no element available" error - aim point not visible
+- **Root Cause**: Template ref injection used deprecated `getAimPoint()` accessor instead of IM system
+- **Solution**: Updated AppContent.vue to get AimPointManager directly from `window.initializationManager.getComponent()`
+- **Result**: Aim point now visible as 4px red laser dot positioned correctly
+
+#### 3. Implemented Complete Focal Point System Architecture
+- **Bulls-eye**: Always fixed at viewport center (never moves)
+- **Aim Point**: Red laser dot that shows targeting position based on mode
+- **Focal Point**: Smoothly tracks aim point position with easing animation
+- **Parallax**: Calculated from focal point position relative to bulls-eye
+
+#### 4. Fixed Bulls-eye Movement Issue
+- **Problem**: Bulls-eye was incorrectly moving to mouse positions
+- **Solution**: Removed all `immediateBullsEyeUpdate()` calls and mouse tracking from BullsEyeManager
+- **Protected Functions**: Made `setBullsEye()` and `immediateBullsEyeUpdate()` warn and refuse to move bulls-eye
+- **Result**: Bulls-eye now permanently fixed at viewport center as intended
+
+#### 5. Perfected Three-Mode Focal Point System
+**🔒 LOCKED Mode:**
+- Aim point stays at bulls-eye center
+- Focal point eases to bulls-eye (smooth animation)
+- Perfect for locking parallax at zero offset
+
+**👁️ FOLLOWING Mode:**  
+- Aim point follows mouse cursor continuously
+- Focal point eases to aim point position (smooth animation with delay)
+- Good for smooth parallax effects following mouse
+
+**✋ DRAGGING Mode:**
+- Aim point follows mouse cursor continuously  
+- Focal point snaps immediately to aim point (aggressive/no delay)
+- Perfect for precise, immediate parallax control
+
+#### 6. Enhanced Aim Point Configuration
+- **Size**: Perfected at 4px diameter (2px radius) for optimal visibility
+- **Appearance**: Pure red laser dot with no border
+- **Z-index**: 10000 - appears above bulls-eye and all UI elements
+- **Interaction**: `pointer-events: none` - never handles mouse events, purely visual
+- **Positioning**: Perfect center alignment with `translate(-50%, -50%)`
+
+### Technical Implementation Details
+
+#### Reactive Mode Management
+```javascript
+// AimPointManager now uses reactive mode state
+this.modeState = ref(MODES.LOCKED);
+
+// All mode checks updated to use reactive value
+if (this.modeState.value === MODES.FOLLOWING) { ... }
+```
+
+#### Template Ref Injection Fixed
+```javascript  
+// AppContent.vue now gets managers from IM directly
+const aimPointManager = window.initializationManager?.getComponent('AimPointManager');
+if (aimPointRef.value && aimPointManager) {
+  aimPointManager.setAimPointElement(aimPointRef.value);
+}
+```
+
+#### Focal Point Easing Logic
+```javascript
+// FocalPointManager setTarget method
+if (mode === MODES.DRAGGING) {
+  // Immediate snapping for aggressive control
+  this.focalPointState.value.current.x = x;
+  this.focalPointState.value.current.y = y;
+} else {
+  // Smooth easing for other modes via animation loop
+}
+```
+
+### Current System Status
+- **✅ Tristate Button**: Fully functional with proper icon cycling
+- **✅ Aim Point**: Visible 4px red laser dot, properly positioned
+- **✅ Bulls-eye**: Fixed at viewport center, never moves
+- **✅ Focal Point**: Smooth easing in LOCKED/FOLLOWING, immediate in DRAGGING
+- **✅ Template Refs**: All components properly injected via IM system
+- **✅ Mode Switching**: Clean transitions between all three modes
+- **✅ Parallax Ready**: Complete focal point system ready for parallax calculations
+
+### Key Files Modified This Session
+- `modules/composables/useAimPoint.mjs` - Made mode reactive, added proper mouse event handling
+- `modules/composables/useFocalPoint.mjs` - Fixed template ref sync, implemented mode-based easing
+- `modules/composables/useBullsEye.mjs` - Removed mouse tracking, protected against movement  
+- `modules/components/AppContent.vue` - Fixed template ref injection to use IM system
+- `modules/components/ResizeHandle.vue` - Updated to use useAimPoint for tristate button
+- `modules/core/core.css` - Perfected aim point styling (4px red dot)
+
+### Architecture Notes
+- **Single Source of Truth**: AimPointManager exclusively handles tristate mode logic
+- **Clear Separation**: Bulls-eye (fixed), Aim Point (visual target), Focal Point (animated tracker)  
+- **Proper Event Handling**: Aim point never handles mouse events, purely visual indicator
+- **IM Integration**: All components properly registered and managed by InitializationManager
+- **Vue Reactivity**: Mode changes properly trigger UI updates via reactive refs
+
+---
+
+**Session Complete**: Focal point system fully implemented with tristate button, reactive mode switching, proper aim point visibility, and mode-specific easing behavior. Bulls-eye permanently fixed at viewport center. System ready for parallax-based navigation.
