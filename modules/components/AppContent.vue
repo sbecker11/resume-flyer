@@ -33,7 +33,7 @@
     <div 
       id="focal-point" 
       ref="focalPointRef"
-      :style="focalPointStyle" 
+      :style="focalPointIsDragging ? {} : focalPointStyle" 
       :class="{ locked: focalPointIsLocked, dragging: focalPointIsDragging }"
     >⦻</div>
   </div>

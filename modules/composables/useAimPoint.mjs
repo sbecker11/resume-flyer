@@ -40,7 +40,7 @@ export function useAimPoint() {
 
     aimPointElement.style.position = 'fixed';
     aimPointElement.style.left = `${x.value}px`;
-    aimPointElement.style.top = `${y.value}px`;
+    aimPointElement.style.top = `${y.value + 1.375}px`;
     aimPointElement.style.transform = 'translate(-50%, -50%)';
     aimPointElement.style.zIndex = '101';
     aimPointElement.style.pointerEvents = 'none';
@@ -55,9 +55,26 @@ export function useAimPoint() {
 
   function setFocalPointMode(newMode) {
     focalPointMode.value = newMode;
+    
+    // When switching to locked or dragging mode, position aim point at bulls-eye
+    if (newMode === FOCALPOINT_MODES.LOCKED || newMode === FOCALPOINT_MODES.DRAGGING) {
+      syncWithBullsEye();
+    }
+    
     window.dispatchEvent(new CustomEvent('focal-point-mode-changed', {
       detail: { focalPointMode: newMode }
     }));
+  }
+
+  function syncWithBullsEye() {
+    // Get bulls-eye position if available
+    if (window.bullsEye && window.bullsEye.isReady && window.bullsEye.isReady()) {
+      const bullsEyePosition = window.bullsEye.getPosition();
+      if (bullsEyePosition && bullsEyePosition.x && bullsEyePosition.y) {
+        setAimPoint(bullsEyePosition.x, bullsEyePosition.y, 'bulls-eye-sync');
+        console.log(`[useAimPoint] Synced with bulls-eye: ${bullsEyePosition.x}, ${bullsEyePosition.y}`);
+      }
+    }
   }
 
   function cycleFocalPointMode() {
@@ -69,7 +86,33 @@ export function useAimPoint() {
 
   function cleanup() {
     window.CONSOLE_LOG_IGNORE('AimPoint: Composable cleanup called');
+    document.removeEventListener('mousemove', handleMouseMove);
     _instance = null;
+  }
+
+  // Listen for bulls-eye movements when in locked mode
+  window.addEventListener('bulls-eye-moved', (event) => {
+    if (focalPointMode.value === FOCALPOINT_MODES.LOCKED) {
+      const { position } = event.detail;
+      setAimPoint(position.x, position.y, 'bulls-eye-moved');
+      console.log(`[useAimPoint] Bulls-eye moved, aim point updated to: ${position.x}, ${position.y}`);
+    }
+  });
+
+  // Mouse tracking for following mode only (drag mode parks at bulls-eye)
+  const handleMouseMove = (event) => {
+    if (focalPointMode.value === FOCALPOINT_MODES.FOLLOWING) {
+      setAimPoint(event.clientX, event.clientY, 'mouse-tracking');
+    }
+    // In drag mode, AimPoint stays parked at bulls-eye - no mouse tracking
+  };
+
+  // Add mouse move listener
+  document.addEventListener('mousemove', handleMouseMove);
+
+  // Initial sync if already in locked mode
+  if (focalPointMode.value === FOCALPOINT_MODES.LOCKED) {
+    syncWithBullsEye();
   }
 
   // Create the instance
@@ -89,6 +132,7 @@ export function useAimPoint() {
     cycleFocalPointMode,
     setAimPointElement,
     updatePosition,
+    syncWithBullsEye,
     cleanup
   };
 

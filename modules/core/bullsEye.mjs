@@ -24,6 +24,11 @@ class BullsEye {
         window.addEventListener('resize', () => {
             this._centerBullsEye();
         });
+        
+        // Listen for resize handle changes
+        window.addEventListener('resize-handle-changed', () => {
+            this._centerBullsEye();
+        });
 
         console.log('[BullsEye] Simple initialization complete');
     }
@@ -51,10 +56,14 @@ class BullsEye {
     getPosition() {
         if (!this._bullsEyeElement) return { x: 0, y: 0 };
         
-        const rect = this._bullsEyeElement.getBoundingClientRect();
+        // Return the same coordinate system used for positioning
+        // Parse the left/top values that were set during _centerBullsEye()
+        const left = parseFloat(this._bullsEyeElement.style.left) || 0;
+        const top = parseFloat(this._bullsEyeElement.style.top) || 0;
+        
         return {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2
+            x: left,
+            y: top
         };
     }
 

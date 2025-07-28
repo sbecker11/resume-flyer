@@ -564,3 +564,71 @@ await updateAppState({
 4. **User Experience**: Small positioning adjustments (1px, 6px) can significantly impact visual alignment and user perception of polish
 
 **Session Complete**: Timeline positioning perfected with pixel-precise alignment, font consistency achieved across business cards, app state restoration working reliably, and resize handle buttons behaving intuitively based on layout orientation.
+
+---
+
+## Session Update (2025-07-28) - Bulls-Eye Re-centering & FocalPoint System Fixes
+
+### Major Achievements This Session
+
+#### 1. Fixed Bulls-Eye Re-centering Issue
+- **Problem**: Bulls-eye wasn't re-centering when scene container was resized via resize handle
+- **Root Cause**: Bulls-eye only listened for `window resize` events but not `resize-handle-changed` events
+- **Solution**: Added event listener for `resize-handle-changed` events in `modules/core/bullsEye.mjs`
+- **Result**: Bulls-eye now properly tracks scene container center during both window resizes and resize handle changes
+
+**Technical Implementation:**
+```javascript
+// Listen for resize handle changes
+window.addEventListener('resize-handle-changed', () => {
+    this._centerBullsEye();
+});
+```
+
+#### 2. Server-Side ColorPalette Logging Fix  
+- **Problem**: Server logged `colorPalette: undefined` because it accessed `req.body.colorPalette` instead of nested path
+- **Solution**: Updated server.mjs to use `req.body.theme?.colorPalette` with optional chaining
+- **Result**: Server now correctly logs actual colorPalette values during state saves/loads
+
+#### 3. Fixed FocalPoint/AimPoint Synchronization in Locked Mode
+- **Problem**: When FocalPointMode is locked, AimPoint wasn't positioned on bulls-eye and FocalPoint wasn't easing to AimPoint
+- **Root Cause**: No synchronization logic between AimPoint and bulls-eye position, no easing animation in FocalPoint
+- **Solution**: Added bulls-eye event listening and smooth easing animation system
+
+**Key Implementations:**
+1. **AimPoint Bulls-Eye Sync**: 
+   - Added `syncWithBullsEye()` method to position AimPoint at bulls-eye center
+   - Added `bulls-eye-moved` event listener to track bulls-eye movements in locked mode
+   - Automatic sync when switching to locked mode
+
+2. **FocalPoint Easing Animation**:
+   - Added `setTarget()` method with smooth easing toward AimPoint position
+   - Animation loop using `requestAnimationFrame` with 0.15 easing factor
+   - Immediate positioning in dragging mode, smooth animation in other modes
+   - Continuous watching of AimPoint position changes
+
+**Technical Implementation:**
+```javascript
+// AimPoint automatically syncs with bulls-eye in locked mode
+window.addEventListener('bulls-eye-moved', (event) => {
+  if (focalPointMode.value === FOCALPOINT_MODES.LOCKED) {
+    const { position } = event.detail;
+    setAimPoint(position.x, position.y, 'bulls-eye-moved');
+  }
+});
+
+// FocalPoint eases smoothly toward AimPoint
+function setTarget(newX, newY) {
+  targetX = newX;
+  targetY = newY;
+  if (isDragging.value) {
+    // Immediate positioning in dragging mode
+    x.value = newX; y.value = newY;
+  } else {
+    // Start smooth easing animation
+    startEasing();
+  }
+}
+```
+
+**Result**: Perfect synchronization system where locked mode keeps AimPoint centered on bulls-eye and FocalPoint smoothly animates toward AimPoint position
