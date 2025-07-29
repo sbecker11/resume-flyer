@@ -6,10 +6,10 @@
     @click="handleSceneContainerClick"
     :class="{ 'container-first': firstContainer === 'scene-container', 'container-second': secondContainer === 'scene-container' }"
   >
+    <div id="scene-container-top-gradient"></div>
+    <div id="scene-container-btm-gradient"></div>
     <div id="scene-content" ref="sceneContentRef">
       <div id="scene-plane" ref="scenePlaneRef">
-        <div id="scene-plane-top-gradient"></div>
-        <div id="scene-plane-btm-gradient"></div>
         <Timeline :alignment="timelineAlignment" />
         <!-- BizCardDivs will be dynamically appended here by CardsController -->
       </div>
@@ -116,6 +116,7 @@ defineExpose({
   background: linear-gradient(to bottom, var(--background-light, #2a2a2a), var(--background-dark, #1a1a1a));
   border-right: 1px solid #333;
   flex-shrink: 0;
+  /* Ensure gradients position relative to this container */
 }
 
 #scene-container.container-first {
@@ -132,40 +133,51 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 100%;
+  max-height: var(--timeline-height, 2000px);
   overflow-y: auto;
   overflow-x: visible;
+  /* Limit scroll area to actual timeline content height */
+  padding: 0;
+  margin: 0;
 }
 
 #scene-plane {
   position: relative;
-  width: 500px; /* Fixed width that's wider than most scene containers */
+  width: 100%; /* Match scene-content width instead of fixed 500px */
+  min-width: 500px; /* Ensure minimum width for card positioning */
   height: var(--timeline-height, 2000px);
-  min-height: 100%;
   overflow: visible;
-  /* Fixed width allows child elements to be positioned beyond typical scene container width */
+  /* Height now calculated to exactly match bottom-most content position */
+  /* Removed min-height: 100% to prevent overscroll beyond timeline content */
+  /* Force no extra spacing */
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* Scene gradients - positioned at physical edges of scene-plane */
-#scene-plane-top-gradient {
+/* Scene gradients - positioned to fill full scene-container width */
+#scene-container-top-gradient {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 200px;
+  height: 1000px;
   pointer-events: none;
   z-index: 2;
   background: linear-gradient(to bottom, var(--background-light, #2a2a2a), transparent);
+  /* Positioned as direct child of scene-container for full width */
 }
 
-#scene-plane-btm-gradient {
+#scene-container-btm-gradient {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 200px;
+  height: 1000px;
   pointer-events: none;
   z-index: 2;
   background: linear-gradient(to top, var(--background-dark, #1a1a1a), transparent);
+  /* Restored to 1000px height as requested */
 }
 
 /* =============================================================================

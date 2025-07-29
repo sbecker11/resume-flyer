@@ -17,9 +17,9 @@
       <!-- Continuous year line positioned at month 0 (January) -->
       <line
         :x1="props.alignment === 'left' ? '56px' : '50px'"
-        :y1="item.y + 3"
+        :y1="props.alignment === 'left' ? item.y + 4 : item.y + 3"
         :x2="props.alignment === 'left' ? '180px' : '166px'"
-        :y2="item.y + 2"
+        :y2="props.alignment === 'left' ? item.y + 3 : item.y + 2"
         class="year-tick-line"
       />
       

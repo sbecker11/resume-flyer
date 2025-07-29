@@ -60,7 +60,7 @@ function initialize(jobsData) {
     startYear.value = dateToFractionalYear(timelineStartDate);
     endYear.value = dateToFractionalYear(timelineEndDate);
 
-    // Calculate total timeline height using linear interpolation
+    // Calculate timeline height - back to normal while we find the real issue
     const totalYearSpan = endYear.value - startYear.value;
     timelineHeight.value = (totalYearSpan * YEAR_HEIGHT) + TIMELINE_PADDING_TOP;
     isInitialized.value = true;
@@ -72,9 +72,10 @@ function useTimeline() {
     const years = computed(() => {
         if (!isInitialized.value) return [];
         const yearArray = [];
-        // Display clean integer years from ceiling of start to floor of end
-        const displayStartYear = Math.ceil(startYear.value);
-        const displayEndYear = Math.floor(endYear.value);
+        // Display years to fill the entire calculated timeline height
+        // Use floor/ceil to ensure we cover the full fractional range
+        const displayStartYear = Math.floor(startYear.value);
+        const displayEndYear = Math.ceil(endYear.value);
         
         for (let year = displayEndYear; year >= displayStartYear; year--) {
             // January 1st fractional year is just the integer year (year + 0)
