@@ -94,13 +94,20 @@ html[native-dark-active] #scene-container,
     z-index: 98; /* Bring just below selected card */
 }
 
-/* Selected state */
+/* Selected state with layered purple-white-purple borders using box-shadow */
 .biz-card-div.selected {
     background-color: var(--data-background-color-selected);
     color: var(--data-foreground-color-selected);
     padding: var(--data-selected-padding);
-    border: var(--data-selected-inner-border-width) solid var(--data-selected-inner-border-color);
-    outline: var(--data-selected-outer-border-width) solid var(--data-selected-outer-border-color);
+    
+    /* Layered border effect using box-shadow: 2px purple + 1px white + 5px purple */
+    border: 2px solid purple !important;
+    outline: none !important;
+    box-shadow: 
+        0 0 0 3px white,                           /* 1px white ring (2px border + 1px white = 3px total) */
+        0 0 0 8px purple,                          /* 5px purple outer (3px + 5px = 8px total) */
+        0 3px 12px rgba(128, 0, 128, 0.4) !important; /* Drop shadow for depth */
+    
     border-radius: var(--data-selected-border-radius);
     filter: none !important; /* Override parallax filter */
     z-index: 99; /* Bring to the very front */

@@ -54,9 +54,10 @@ class ResumeListController extends BaseComponent {
     this.sortedIndices = []; // Maps sorted position to original index
     // isInitialized is managed by BaseComponent automatically
     
-    // Set up event listeners for badge mode and color palette changes
+    // Set up event listeners for badge mode, color palette changes, and selection events
     this._setupBadgeModeListener();
     this._setupColorPaletteListener();
+    this._setupSelectionListeners();
     
     // Store the singleton instance
     ResumeListController.instance = this;
@@ -223,11 +224,11 @@ class ResumeListController extends BaseComponent {
         if (caller.includes('initialize')) {
             // During initialization, allow delayed scroll for proper setup
             setTimeout(() => {
-                this.scrollToJobNumber(selectedJobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
+                this.scrollToJobNumberWithSpacing(selectedJobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
             }, 500);
         } else {
             // For direct selections (like clicking a cDiv), scroll immediately
-            this.scrollToJobNumber(selectedJobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
+            this.scrollToJobNumberWithSpacing(selectedJobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
         }
     }
 
@@ -238,6 +239,68 @@ class ResumeListController extends BaseComponent {
         // Visual selection clearing is now handled by SelectionManager
         // Note: SelectionManager.clearSelection() is typically called by the component that initiated the clear
         // ResumeListController just needs to respond to the clear event, not initiate it
+    }
+
+    /**
+     * Handle new job-selected events for bidirectional scrolling
+     */
+    handleJobSelected(event) {
+        const { jobNumber, source } = event.detail;
+        console.log(`[DEBUG] ResumeListController.handleJobSelected: jobNumber=${jobNumber}, source=${source}`);
+        console.log(`[DEBUG] About to call enhanced scrolling for job ${jobNumber}`);
+        
+        // Handle rDiv scrolling for bidirectional scrolling with proper header positioning
+        if (jobNumber !== null && jobNumber !== undefined) {
+            this.scrollToJobNumberWithSpacing(jobNumber, `ResumeListController.handleJobSelected from ${source}`);
+        } else {
+            console.log(`[DEBUG] jobNumber is null/undefined, not scrolling`);
+        }
+    }
+
+    /**
+     * Enhanced scroll method with comfortable spacing for header visibility
+     */
+    scrollToJobNumberWithSpacing(jobNumber, caller = '') {
+        console.log(`[DEBUG] scrollToJobNumberWithSpacing: jobNumber=${jobNumber} from: ${caller}`);
+        
+        // Find the rDiv for this job number
+        const targetDiv = this.bizResumeDivs?.find(div => {
+            const divJobNumber = parseInt(div.getAttribute('data-job-number'), 10);
+            return divJobNumber === jobNumber;
+        });
+
+        if (targetDiv) {
+            console.log(`[DEBUG] Found target rDiv for job ${jobNumber}`);
+            
+            const scrollContainer = this.resumeContentWrapper;
+            const targetRect = targetDiv.getBoundingClientRect();
+            const containerRect = scrollContainer.getBoundingClientRect();
+            
+            console.log(`[DEBUG] Target top: ${targetRect.top}, Container top: ${containerRect.top}, Current scroll: ${scrollContainer.scrollTop}`);
+            
+            // Calculate position to place rDiv 20px from container top for optimal header visibility
+            const desiredPosition = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 20;
+            
+            console.log(`[DEBUG] Desired scroll position: ${desiredPosition}`);
+            
+            scrollContainer.scrollTo({
+                top: desiredPosition,
+                behavior: 'smooth'
+            });
+            
+            console.log(`[DEBUG] Scroll command executed for job ${jobNumber}`);
+        } else {
+            console.warn(`[ResumeListController] Could not find rDiv for job number ${jobNumber}`);
+        }
+    }
+
+    /**
+     * Handle new selection-cleared events for bidirectional scrolling  
+     */
+    handleJobSelectionCleared(event) {
+        console.log(`[DEBUG] ResumeListController.handleJobSelectionCleared`);
+        // Visual clearing handled by SelectionManager and ResumeItemsController
+        // No rDiv scrolling needed when selection is cleared
     }
 
     /**
@@ -1405,7 +1468,9 @@ class ResumeListController extends BaseComponent {
       bizResumeDiv.id = `resume-${jobNumber}`;
       bizResumeDiv.className = 'biz-resume-div';
       bizResumeDiv.setAttribute('data-job-number', jobNumber);
-      bizResumeDiv.setAttribute('data-color-index', bizCardDiv.getAttribute('data-color-index'));
+      const cDivColorIndex = bizCardDiv.getAttribute('data-color-index');
+      bizResumeDiv.setAttribute('data-color-index', cDivColorIndex);
+      console.log(`[DEBUG] ResumeListController - Color index sync - Job ${jobNumber}: cDiv=${cDivColorIndex}, rDiv=${cDivColorIndex}`);
       bizResumeDiv.style.pointerEvents = 'auto';
       
       // const bizResumeDetailsDiv = BizDetailsDivModule.createBizResumeDetailsDiv(bizResumeDiv, bizCardDiv);
@@ -1494,6 +1559,17 @@ class ResumeListController extends BaseComponent {
    */
   _setupColorPaletteListener() {
     window.addEventListener('color-palette-changed', this.handleColorPaletteChanged.bind(this));
+  }
+
+  /**
+   * Set up selection event listeners for bidirectional scrolling
+   */
+  _setupSelectionListeners() {
+    // Listen to both legacy and new selection events
+    selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged.bind(this));
+    selectionManager.addEventListener('job-selected', this.handleJobSelected.bind(this));
+    selectionManager.addEventListener('selectionCleared', this.handleSelectionCleared.bind(this));
+    selectionManager.addEventListener('selection-cleared', this.handleJobSelectionCleared.bind(this));
   }
   
   /**

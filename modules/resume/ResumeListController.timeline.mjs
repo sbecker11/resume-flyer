@@ -40,6 +40,12 @@ class ResumeListController {
     
     // Listen for selection changes to save state
     selectionManager.addEventListener('selectionChanged', this.handleSelectionChanged.bind(this));
+    
+    // Listen for job-selected events (dispatched by cDiv selections)
+    selectionManager.addEventListener('job-selected', this.handleJobSelected.bind(this));
+    
+    // Listen for selection cleared events
+    selectionManager.addEventListener('selection-cleared', this.handleJobSelectionCleared.bind(this));
 
     // Initialize with saved state
     this.applySortRule(AppState.resume.sortRule, true); // isInitializing = true
@@ -85,7 +91,9 @@ class ResumeListController {
         saveState(AppState);
     }
 
-    this.scrollToJobIndex(selectedJobIndex, `ResumeListController.handleSelectionChanged from ${caller}`);
+    // Convert jobIndex to jobNumber for enhanced header scrolling
+    const jobNumber = selectedJobIndex; // In our system, jobIndex equals jobNumber
+    this.scrollToJobNumberWithSpacing(jobNumber, `ResumeListController.handleSelectionChanged from ${caller}`);
 
     // Log the left property of the cDiv
     const cardDiv = cardsController.bizCardDivs[selectedJobIndex];
@@ -94,6 +102,73 @@ class ResumeListController {
       window.CONSOLE_LOG_IGNORE(`cDiv ${selectedJobIndex} left: ${cardLeft}`);
 
       // There are no clones of cDivs, so we don't need to look for them.
+    }
+  }
+
+  // Handle job-selected events (from cDiv clicks)
+  handleJobSelected(event) {
+    const { jobNumber, source } = event.detail;
+    window.CONSOLE_LOG_IGNORE(`[ResumeListController] handleJobSelected: jobNumber=${jobNumber}, source=${source}`);
+    console.log(`[DEBUG] handleJobSelected called with jobNumber=${jobNumber}, source=${source}`);
+    
+    if (jobNumber !== null && jobNumber !== undefined) {
+      console.log(`[DEBUG] About to call scrollToJobNumberWithSpacing for job ${jobNumber}`);
+      // Scroll to the selected job with comfortable spacing
+      this.scrollToJobNumberWithSpacing(jobNumber, `ResumeListController.handleJobSelected from ${source}`);
+      console.log(`[DEBUG] Finished calling scrollToJobNumberWithSpacing for job ${jobNumber}`);
+    } else {
+      console.log(`[DEBUG] jobNumber is null/undefined, not scrolling`);
+    }
+  }
+
+  // Handle selection cleared events  
+  handleJobSelectionCleared(event) {
+    const { caller } = event.detail;
+    window.CONSOLE_LOG_IGNORE(`[ResumeListController] handleJobSelectionCleared from ${caller}`);
+    // No specific action needed for clearing - the selection styling is handled elsewhere
+  }
+
+  // Enhanced scroll method with comfortable spacing for header visibility
+  scrollToJobNumberWithSpacing(jobNumber, caller = '') {
+    window.CONSOLE_LOG_IGNORE(`[ResumeListController] scrollToJobNumberWithSpacing: jobNumber=${jobNumber} from: ${caller}`);
+    
+    if (!this.infiniteScroller) {
+      console.warn('[ResumeListController] infiniteScroller not available for scrolling');
+      return;
+    }
+
+    // Find the rDiv for this job number
+    const targetDiv = this.bizResumeDivs?.find(div => {
+      const divJobNumber = parseInt(div.getAttribute('data-job-number'), 10);
+      return divJobNumber === jobNumber;
+    });
+
+    if (targetDiv) {
+      // Get the header element within the rDiv (employer, role, or dates)
+      const headerElement = targetDiv.querySelector('.biz-details-employer, .biz-details-role, .biz-details-dates');
+      
+      // Simple approach: scroll entire rDiv to 70px from top
+      console.log(`[DEBUG] Scrolling rDiv for job ${jobNumber} to position with 70px spacing`);
+      
+      const scrollContainer = this.resumeContentWrapper;
+      const targetRect = targetDiv.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
+      
+      console.log(`[DEBUG] Target top: ${targetRect.top}, Container top: ${containerRect.top}, Current scroll: ${scrollContainer.scrollTop}`);
+      
+      // Calculate position to place rDiv 70px from container top
+      const desiredPosition = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 70;
+      
+      console.log(`[DEBUG] Desired scroll position: ${desiredPosition}`);
+      
+      scrollContainer.scrollTo({
+        top: desiredPosition,
+        behavior: 'smooth'
+      });
+      
+      console.log(`[DEBUG] Scroll command executed for job ${jobNumber}`);
+    } else {
+      console.warn(`[ResumeListController] Could not find rDiv for job number ${jobNumber}`);
     }
   }
   // endregion
@@ -182,6 +257,10 @@ class ResumeListController {
   }
 
   scrollToJobIndex(jobIndex, caller = '') {
+    console.log(`[DEBUG] OLD scrollToJobIndex called for jobIndex: ${jobIndex} from: ${caller}`);
+    console.log(`[DEBUG] This should not be used anymore - check caller!`);
+    console.trace(); // This will show the call stack
+    
     window.CONSOLE_LOG_IGNORE(`[ResumeListController] scrollToJobIndex called for jobIndex: ${jobIndex} from: ${caller}`);
     window.CONSOLE_LOG_IGNORE(`[ResumeListController] Scroller initialized: ${!!this.infiniteScroller}`);
     if (!this.infiniteScroller) return;

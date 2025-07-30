@@ -322,8 +322,9 @@ export const jobs = [
     "role": "Senior Full-Stack Developer ",
     "start": "2019-11-01",
     "end": "2020-11-01",
-    "Description": "• As a senior full stack developer for [NuSkin](https://www.nuskin.com/us/en/, an international company known for its excellent  skin and beauty products I created new Vue.js, Nuxt, and Vuetify components using [Bash], [Linux], [GitHub], [NodeJS], [HTML] and [CSS].  \n• Internationalized content using Adobe Experience Cloud.",
+    "Description": "• As a senior full stack developer for NuSkin, an international company known for its excellent  skin and beauty products I created new Vue.js, Nuxt, and Vuetify components using [Bash], [Linux], [GitHub], [NodeJS], [HTML] and [CSS].  \n• Internationalized content using Adobe Experience Cloud.",
     "references": [
+      "<div class=\"anchor-ref\"><a href=\"https://www.nuskin.com/us/en/\">[NuSkin]</a></div>",
       "<div class=\"anchor-ref\"><a href=\"https://vuejs.org/\">[Vue.js]</a></div>",
       "<div class=\"anchor-ref\"><a href=\"https://nuxt.com/\">[Nuxt]</a></div>",
       "<div class=\"anchor-ref\"><a href=\"https://vuetifyjs.com/en/\">[Vuetify]</a></div>",
@@ -613,7 +614,7 @@ export const jobs = [
     "role": "Senior Architect ",
     "start": "2006-02-01",
     "end": "2007-12-01",
-    "Description": "• Eleven LLC built mobile apps used by beverage industry distributors to help manage placement  of their products in the shelves and coolers in Resume locations. The work done by the Sierra Vista Group was instrumental in their company being acquired by Trimble. \n• As the architect and team lead, we used [Java], [Bash], [GitHub], [Linux], and  JBoss message-oriented middleware platform, Sybase Anywhere for the client/server based database, and Windows Mobile running on ruggedized mobile devices.",
+    "Description": "• Eleven LLC built mobile apps used by beverage industry distributors to help manage placement  of their products in the shelves and coolers in retail locations. The work done by the Sierra Vista Group was instrumental in their company being acquired by Trimble. \n• As the architect and team lead, we used [Java], [Bash], [GitHub], [Linux], and  JBoss message-oriented middleware platform, Sybase Anywhere for the client/server based database, and Windows Mobile running on ruggedized mobile devices.",
     "references": [
       "<div class=\"anchor-ref\"><a href=\"https://www.eleven.net/\">[Eleven LLC]</a></div>",
       "<div class=\"anchor-ref\"><a href=\"https://help.trimblegeospatial.com/TMM/Home.htm\">[Trimble]</a></div>",
@@ -922,88 +923,3 @@ export const jobs = [
     }
   }
 ];
-
-// Utility functions for job validation
-const toValidNumber = (value, context = 'value') => { const num = Number(value); if (isNaN(num)) throw new Error(`${context} is not a valid number: ${value}`); return num; };
-export const validateJobNumber = (jobNumber) => { const num = toValidNumber(jobNumber, 'jobNumber'); if (num < 0 || num >= jobs.length || !jobs[num]) throw new Error(`Invalid jobNumber: ${jobNumber} (valid range: 0-${jobs.length-1})`); return num; };
-
-/**
- * Gets a validated job number from multiple input types
- * @param {string|HTMLElement|number} val - Can be:
- *   - A string ID like "biz-card-div-5-clone" 
- *   - An HTML element with data-job-number attribute
- *   - A number
- * @returns {number} Validated job number
- * @throws {Error} If job number cannot be extracted or is invalid
- */
-export const getValidatedJobNumber = (val) => {
-    if (val == null || val === undefined) {
-        throw new Error('getValidatedJobNumber: input is null or undefined');
-    }
-    
-    let jobNumberStr = null;
-    
-    try {
-        // If it's an HTML element, try to get data-job-number attribute
-        if (val && typeof val === 'object' && typeof val.getAttribute === 'function') {
-            try {
-                jobNumberStr = val.getAttribute('data-job-number');
-                
-                // If no data-job-number attribute, try parsing the ID
-                if (!jobNumberStr && val.id) {
-                    const match = val.id.match(/^biz-(?:card|resume|card-details|resume-details)-div-(\d+)(?:-clone)?$/);
-                    if (match) {
-                        jobNumberStr = match[1];
-                    }
-                }
-            } catch (domError) {
-                // Element might not be in DOM or have issues - continue to other methods
-                console.warn('getValidatedJobNumber: DOM element access failed:', domError);
-            }
-        }
-        // If it's a string, try to parse as ID or use directly
-        else if (typeof val === 'string') {
-            val = val.trim(); // Remove any whitespace
-            if (val === '') {
-                throw new Error('getValidatedJobNumber: empty string provided');
-            }
-            
-            // First try parsing as an ID pattern
-            const match = val.match(/^biz-(?:card|resume|card-details|resume-details)-div-(\d+)(?:-clone)?$/);
-            if (match) {
-                jobNumberStr = match[1];
-            } else {
-                // Use the string directly (could be a number string)
-                jobNumberStr = val;
-            }
-        }
-        // If it's already a number
-        else if (typeof val === 'number') {
-            if (isNaN(val) || !isFinite(val)) {
-                throw new Error(`getValidatedJobNumber: invalid number: ${val}`);
-            }
-            jobNumberStr = val.toString();
-        }
-        
-        if (!jobNumberStr || jobNumberStr.trim() === '') {
-            throw new Error(`getValidatedJobNumber: cannot extract job number from input: ${typeof val === 'object' ? val.constructor.name : val}`);
-        }
-        
-        // Convert to number and validate
-        const num = toValidNumber(jobNumberStr, 'jobNumber');
-        if (num < 0 || num >= jobs.length) {
-            throw new Error(`Invalid jobNumber: ${num} (valid range: 0-${jobs.length-1})`);
-        }
-        
-        // Additional check - make sure the job actually exists
-        if (!jobs[num]) {
-            throw new Error(`Job at index ${num} does not exist`);
-        }
-        
-        return num;
-        
-    } catch (error) {
-        // Re-throw with more context
-        throw new Error(`getValidatedJobNumber failed for input "${val}" (${typeof val}): ${error.message}`);
-    }
-};

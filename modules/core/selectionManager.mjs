@@ -38,7 +38,7 @@ class SelectionManager {
                 jobNumber, 
                 dataJobObject,
                 previousSelection,
-                source: 'SelectionManager'
+                source: caller // Use the caller parameter to identify the source
             }
         }));
 

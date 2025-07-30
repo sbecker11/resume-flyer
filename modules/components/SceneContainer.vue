@@ -161,11 +161,11 @@ defineExpose({
   top: 0;
   left: 0;
   right: 0;
-  height: 1000px;
+  height: 50vh; /* Use viewport-relative height instead of fixed 1000px */
   pointer-events: none;
   z-index: 2;
   background: linear-gradient(to bottom, var(--background-light, #2a2a2a), transparent);
-  /* Positioned as direct child of scene-container for full width */
+  /* Changed to 50vh to prevent overflow beyond container */
 }
 
 #scene-container-btm-gradient {
@@ -173,11 +173,11 @@ defineExpose({
   bottom: 0;
   left: 0;
   right: 0;
-  height: 1000px;
+  height: 50vh; /* Use viewport-relative height instead of fixed 1000px */
   pointer-events: none;
   z-index: 2;
   background: linear-gradient(to top, var(--background-dark, #1a1a1a), transparent);
-  /* Restored to 1000px height as requested */
+  /* Changed to 50vh to prevent overflow beyond container */
 }
 
 /* =============================================================================

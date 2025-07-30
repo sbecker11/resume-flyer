@@ -7,6 +7,7 @@ import { selectionManager } from '../core/selectionManager.mjs';
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // import { initializationManager } from '../core/initializationManager.mjs'; // IM framework no longer used
 import { badgeManager } from '../core/badgeManager.mjs';
+import { jobs } from '../../static_content/jobs/jobs.mjs';
 // No longer directly manipulating other managers
 // import { bizCardDivManager } from './bizCardDivManager.mjs';
 // import * as scenePlane from './scenePlane.mjs';
@@ -118,17 +119,14 @@ class ResumeItemsController {
         bizResumeDiv.id = this.createBizResumeDivId(jobNumber);
         bizResumeDiv.className = 'biz-resume-div';
         bizResumeDiv.setAttribute('data-job-number', jobNumber);
-        bizResumeDiv.setAttribute('data-color-index', bizCardDiv.getAttribute('data-color-index'));
+        // Set color index to jobNumber (same logic as cDiv) - palette mapping happens in applyPaletteToElement
+        bizResumeDiv.setAttribute('data-color-index', jobNumber);
+        console.log(`[DEBUG] Color index set - Job ${jobNumber}: rDiv data-color-index=${jobNumber}`);
 
         bizResumeDiv.style.pointerEvents = 'auto';
 
-        // const bizResumeDetailsDiv = BizDetailsDivModule.createBizResumeDetailsDiv(bizResumeDiv, bizCardDiv);
-        // bizResumeDiv.appendChild(bizResumeDetailsDiv);
-        
-        // Placeholder: Create basic resume content div
-        const bizResumeDetailsDiv = document.createElement('div');
-        bizResumeDetailsDiv.className = 'biz-resume-details-div';
-        bizResumeDetailsDiv.textContent = `Resume item ${jobNumber} - Details to be implemented`;
+        // Create enhanced resume content with job details
+        const bizResumeDetailsDiv = this.createEnhancedResumeDetailsDiv(jobNumber);
         bizResumeDiv.appendChild(bizResumeDetailsDiv);
 
         // Apply the current color palette
@@ -144,6 +142,160 @@ class ResumeItemsController {
 
     createBizResumeDivId(jobNumber) {
         return `resume-${jobNumber}`;
+    }
+
+    createEnhancedResumeDetailsDiv(jobNumber) {
+        // Get job data for this job number
+        const jobData = jobs[jobNumber];
+        if (!jobData) {
+            console.warn(`Job data not found for job number ${jobNumber}`);
+            const fallbackDiv = document.createElement('div');
+            fallbackDiv.className = 'biz-resume-details-div';
+            fallbackDiv.textContent = `Resume item ${jobNumber} - Job data not found`;
+            return fallbackDiv;
+        }
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'biz-resume-details-div';
+
+        // Create header section
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'resume-header';
+        
+        const employerDiv = document.createElement('div');
+        employerDiv.className = 'biz-details-employer';
+        employerDiv.textContent = jobData.employer || 'Unknown Employer';
+        headerDiv.appendChild(employerDiv);
+
+        const roleDiv = document.createElement('div');
+        roleDiv.className = 'biz-details-role';  
+        roleDiv.textContent = jobData.role || 'Unknown Role';
+        headerDiv.appendChild(roleDiv);
+
+        const datesDiv = document.createElement('div');
+        datesDiv.className = 'biz-details-dates';
+        const startDate = this.formatDate(jobData.start);
+        const endDate = this.formatDate(jobData.end);
+        
+        // Create a flex container for dates and job number
+        datesDiv.style.display = 'flex';
+        datesDiv.style.justifyContent = 'space-between';
+        datesDiv.style.alignItems = 'center';
+        
+        // Left side: date range
+        const dateRange = document.createElement('span');
+        dateRange.textContent = `${startDate} - ${endDate}`;
+        datesDiv.appendChild(dateRange);
+        
+        // Right side: job number
+        const jobNumberSpan = document.createElement('span');
+        jobNumberSpan.className = 'job-number';
+        jobNumberSpan.textContent = `#${jobNumber}`;
+        jobNumberSpan.style.fontWeight = 'bold';
+        jobNumberSpan.style.opacity = '0.8';
+        datesDiv.appendChild(jobNumberSpan);
+        
+        headerDiv.appendChild(datesDiv);
+
+        detailsDiv.appendChild(headerDiv);
+
+        // Create description section
+        if (jobData.Description) {
+            const descDiv = document.createElement('div');
+            descDiv.className = 'resume-description';
+            
+            const descTitle = document.createElement('h4');
+            descTitle.textContent = 'Key Achievements';
+            descDiv.appendChild(descTitle);
+
+            // Parse description and create bullet points with clickable references
+            const descContent = document.createElement('div');
+            descContent.className = 'description-content';
+            this.parseDescriptionToBullets(jobData.Description, descContent, jobData.references);
+            descDiv.appendChild(descContent);
+
+            detailsDiv.appendChild(descDiv);
+        }
+
+        // Create skills section
+        if (jobData['job-skills'] && Object.keys(jobData['job-skills']).length > 0) {
+            const skillsDiv = document.createElement('div');
+            skillsDiv.className = 'resume-skills';
+            
+            const skillsTitle = document.createElement('h4');
+            skillsTitle.textContent = 'Technologies & Skills';
+            skillsDiv.appendChild(skillsTitle);
+
+            const skillsList = document.createElement('div');
+            skillsList.className = 'skills-list';
+            
+            // Create single-line bulleted skills
+            const skillNames = Object.values(jobData['job-skills']);
+            const skillsText = skillNames.join(' • ');
+            skillsList.innerHTML = '<span class="bullet">•</span><span class="skills-text">' + skillsText + '</span>';
+
+            skillsDiv.appendChild(skillsList);
+            detailsDiv.appendChild(skillsDiv);
+        }
+
+        return detailsDiv;
+    }
+
+    formatDate(dateStr) {
+        if (!dateStr) return 'Unknown';
+        if (dateStr === 'CURRENT_DATE' || dateStr.toLowerCase().includes('current') || dateStr.toLowerCase().includes('present')) {
+            return 'Present';
+        }
+        
+        try {
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                return date.toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short' 
+                });
+            }
+        } catch (e) {
+            // Fall through to return original string
+        }
+        
+        return dateStr;
+    }
+
+    parseDescriptionToBullets(description, container, references = []) {
+        if (!description) return;
+        
+        // Create a map of reference terms to URLs
+        const refMap = new Map();
+        if (references && references.length > 0) {
+            references.forEach(refHtml => {
+                // Extract the link text and href from the reference HTML
+                const match = refHtml.match(/<a href="([^"]*)">\[([^\]]*)\]<\/a>/);
+                if (match) {
+                    const [, url, text] = match;
+                    refMap.set(`[${text}]`, url);
+                }
+            });
+        }
+        
+        // Split by various delimiters: bullet points, line breaks, or sentences
+        const parts = description.split(/[•\n]+|(?<=\.)\s+/).filter(part => part.trim().length > 0);
+        
+        parts.forEach(part => {
+            let trimmed = part.trim();
+            if (trimmed.length > 0) {
+                // Replace bracketed terms with clickable links
+                refMap.forEach((url, term) => {
+                    const linkHtml = `<a href="${url}" target="_blank" style="color: inherit; text-decoration: underline; pointer-events: auto; cursor: pointer;">${term}</a>`;
+                    trimmed = trimmed.replace(new RegExp(term.replace(/[[\]]/g, '\\$&'), 'g'), linkHtml);
+                });
+                
+                const bulletPoint = document.createElement('div');
+                bulletPoint.className = 'job-description-item';
+                bulletPoint.innerHTML = '<span class="bullet">•</span><span class="bullet-text">' + trimmed + '</span>';
+                container.appendChild(bulletPoint);
+            }
+        });
     }
 
     getBizResumeDivByJobNumber(jobNumber) {
@@ -245,6 +397,18 @@ class ResumeItemsController {
         if (bizResumeDiv) {
             window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeItemsController.handleSelectionChanged: Found resume div for job ${selectedJobNumber}`);
             bizResumeDiv.classList.add('selected');
+            
+            // Debug color matching
+            const rDivColorIndex = bizResumeDiv.getAttribute('data-color-index');
+            const rDivBgColor = window.getComputedStyle(bizResumeDiv).backgroundColor;
+            const cDiv = document.getElementById(`biz-card-div-${selectedJobNumber}`);
+            const cDivColorIndex = cDiv?.getAttribute('data-color-index');
+            const cDivBgColor = cDiv ? window.getComputedStyle(cDiv).backgroundColor : 'N/A';
+            
+            console.log(`[DEBUG] Color mismatch check - Job ${selectedJobNumber}:`);
+            console.log(`  rDiv color-index: ${rDivColorIndex}, bg: ${rDivBgColor}`);
+            console.log(`  cDiv color-index: ${cDivColorIndex}, bg: ${cDivBgColor}`);
+            console.log(`  Match: ${rDivColorIndex === cDivColorIndex && rDivBgColor === cDivBgColor}`);
             
             // Apply selected state styling using the new system
             bizResumeDiv.classList.add('selected');

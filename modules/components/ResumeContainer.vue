@@ -147,14 +147,17 @@ function selectPrevious() {
 #resume-content-div-wrapper {
     flex-grow: 1;
     /* overflow-y is now controlled by the InfiniteScrollingContainer */
+    overflow-x: hidden; /* Remove horizontal scrollbar */
     background-color: var(--grey-medium);
     color: black;
     position: relative; /* Needed for the absolute positioning of items by the scroller */
+    padding-left: 6px; /* Balance the scrollbar on the right */
     /* overflow is set by InfiniteScrollingContainer.setupContainer() to 'auto' */
 }
 
 #resume-content-div {
     background-color: var(--grey-dark-6);
+    overflow-x: hidden; /* Remove horizontal scrollbar from content div */
 }
 
 /* Custom scrollbar to match the cDiv scrollbar */
@@ -261,43 +264,76 @@ function selectPrevious() {
 <style>
 /* Global styles for rDivs - not scoped to ensure they apply to dynamically created elements */
 
-/* Base rDiv styling */
+/* Base rDiv styling with proper flexbox auto-sizing */
 .biz-resume-div {
-    position: relative !important; /* Force override of any absolute positioning */
-    display: flex !important; /* Use flexbox to allow height adjustment */
-    flex-direction: column; /* Stack children vertically */
+    /* Flexbox container that sizes to fit content */
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch; /* Fill width of container */
+    justify-content: flex-start; /* Start from top */
+    
+    /* Auto-sizing properties */
     width: 100%;
-    border-bottom: 1px solid #eee;
+    height: auto !important; /* Allow height to grow with content */
+    min-height: fit-content;
+    max-height: none; /* No height restrictions */
+    
+    /* Flexbox child behavior */
+    flex-shrink: 0; /* Don't shrink smaller than content */
+    flex-grow: 0; /* Don't grow beyond content */
+    flex-basis: auto; /* Use content size as basis */
+    
+    /* Layout properties */
+    position: relative !important;
     box-sizing: border-box;
-    flex-shrink: 0; /* Prevent items from shrinking, force stacking */
-    min-height: fit-content; /* Allow height to fit content */
-
+    border-bottom: 1px solid #eee;
+    overflow-x: hidden; /* Prevent horizontal scrolling on individual rDivs */
+    
     /* Default state styling using CSS variables */
-    background-color: var(--data-background-color) !important;
-    color: var(--data-foreground-color) !important;
+    background-color: var(--data-background-color, #666666) !important;
+    color: var(--data-foreground-color, #ffffff) !important;
     padding: var(--data-normal-padding);
     border: var(--data-normal-inner-border-width) solid var(--data-normal-inner-border-color);
     outline: var(--data-normal-outer-border-width) solid var(--data-normal-outer-border-color);
     border-radius: var(--data-normal-border-radius) !important;
     margin-top: var(--data-normal-margin-top);
-    transition: background-color 0.2s, color 0.2s, border 0.2s, outline 0.2s;
     
-    /* Force CSS variables to be applied - fallback for cases where variables aren't set */
-    background-color: var(--data-background-color, #666666) !important;
-    color: var(--data-foreground-color, #ffffff) !important;
+    /* Smooth transitions */
+    transition: background-color 0.2s, color 0.2s, border 0.2s, outline 0.2s, height 0.2s;
     
     /* Override any filter interference */
     filter: none !important;
 }
 
 /* 
-  Force the biz-resume-details-div AND all of its children to have a transparent background.
-  This is the definitive fix to ensure the parent's rounded corners and background are visible.
+  Content container that flexes to fit all children
 */
-.biz-resume-div .biz-resume-details-div,
-.biz-resume-div .biz-resume-details-div * {
+.biz-resume-div .biz-resume-details-div {
+    /* Flexbox container for content sections */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    
+    /* Auto-sizing */
+    width: 100%;
+    height: auto;
+    min-height: fit-content;
+    
+    /* Flex child behavior */
+    flex-shrink: 0;
+    flex-grow: 1; /* Grow to fill parent rDiv */
+    flex-basis: auto;
+    
+    /* Styling */
     background-color: transparent !important;
     border-radius: 25px !important;
+    gap: 0; /* Controlled spacing in child sections */
+}
+
+/* Force all nested children to have transparent backgrounds */
+.biz-resume-div .biz-resume-details-div * {
+    background-color: transparent !important;
 }
 
 .job-description-item {
@@ -325,15 +361,211 @@ function selectPrevious() {
     filter: none !important;
 }
 
-/* Selected state */
+/* Selected state with layered purple-white-purple borders using box-shadow */
 .biz-resume-div.selected {
     background-color: var(--data-background-color-selected) !important;
     color: var(--data-foreground-color-selected) !important;
     padding: var(--data-selected-padding);
-    border: var(--data-selected-inner-border-width) solid var(--data-selected-inner-border-color);
-    outline: var(--data-selected-outer-border-width) solid var(--data-selected-outer-border-color);
+    
+    /* Reduce width by 16px to prevent border clipping (8px each side for 8px box-shadow + margins) */
+    width: calc(100% - 16px) !important;
+    margin-left: 8px; /* Center the narrower selected rDiv */
+    margin-right: 8px;
+    
+    /* Layered border effect using box-shadow: 2px purple + 1px white + 5px purple */
+    border: 2px solid purple !important;
+    outline: none !important;
+    box-shadow: 
+        0 0 0 3px white,                           /* 1px white ring (2px border + 1px white = 3px total) */
+        0 0 0 8px purple,                          /* 5px purple outer (3px + 5px = 8px total) */
+        0 3px 12px rgba(128, 0, 128, 0.4) !important; /* Drop shadow for depth */
+    
     border-radius: var(--data-selected-border-radius) !important;
     margin-top: var(--data-selected-margin-top);
     filter: none !important;
+}
+
+/* Enhanced rDiv content styling with flexbox auto-sizing */
+
+/* Header section - flexbox container */
+.resume-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    
+    /* Auto-sizing */
+    width: 100%;
+    height: auto;
+    min-height: fit-content;
+    flex-shrink: 0;
+    
+    /* Visual styling */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.resume-header .biz-details-employer {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 4px;
+    color: inherit;
+    flex-shrink: 0;
+}
+
+.resume-header .biz-details-role {
+    font-size: 14px;
+    font-style: italic;
+    margin-bottom: 4px;
+    color: inherit;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.resume-header .biz-details-dates {
+    font-size: 12px;
+    font-weight: normal;
+    color: inherit;
+    opacity: 0.8;
+    flex-shrink: 0;
+    
+    /* Flex container for dates and job number */
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.resume-header .biz-details-dates .job-number {
+    font-size: 11px;
+    font-weight: bold;
+    color: inherit;
+    opacity: 0.7;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Description section - flexbox container */
+.resume-description {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    
+    /* Auto-sizing */
+    width: 100%;
+    height: auto;
+    min-height: fit-content;
+    flex-shrink: 0;
+    
+    /* Spacing */
+    margin-bottom: 12px;
+}
+
+.resume-description h4 {
+    font-size: 13px;
+    font-weight: bold;
+    margin: 0 0 6px 0;
+    color: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.description-content {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    
+    font-size: 12px;
+    line-height: 1.4;
+    width: 100%;
+    height: auto;
+    flex-shrink: 0;
+}
+
+/* Bulleted description items */
+.description-content .job-description-item {
+    display: flex;
+    align-items: flex-start;
+    margin: 0 0 4px 0;
+    padding: 0;
+    color: inherit;
+    opacity: 0.85;
+    flex-shrink: 0;
+    width: 100%;
+}
+
+.description-content .job-description-item .bullet {
+    flex-shrink: 0;
+    margin-right: 6px;
+    color: inherit;
+    font-weight: bold;
+}
+
+.description-content .job-description-item .bullet-text {
+    flex: 1;
+    color: inherit;
+    line-height: 1.4;
+}
+
+/* Skills section - flexbox container */
+.resume-skills {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    
+    /* Auto-sizing */
+    width: 100%;
+    height: auto;
+    min-height: fit-content;
+    flex-shrink: 0;
+    
+    /* Spacing */
+    margin-top: 12px;
+}
+
+.resume-skills h4 {
+    font-size: 13px;
+    font-weight: bold;
+    margin: 0 0 6px 0;
+    color: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+/* Single-line bulleted skills */
+.skills-list {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    
+    /* Auto-sizing */
+    width: 100%;
+    height: auto;
+    min-height: fit-content;
+    flex-shrink: 0;
+}
+
+.skills-list .bullet {
+    flex-shrink: 0;
+    margin-right: 6px;
+    color: inherit;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.skills-list .skills-text {
+    flex: 1;
+    color: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    opacity: 0.85;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 </style> 

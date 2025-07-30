@@ -147,7 +147,7 @@ export function useCardsController() {
         card.setAttribute('scene-top', y)
         
         // Add color index for palette application
-        card.setAttribute('data-color-index', jobNumber % 7) // Cycle through palette colors
+        card.setAttribute('data-color-index', jobNumber) // Use jobNumber as color index
         
         // Add Z-depth for parallax effects (using original random approach)
         const sceneZ = mathUtils.getRandomInt(zUtils.ALL_CARDS_Z_MIN, zUtils.ALL_CARDS_Z_MAX);
@@ -349,7 +349,7 @@ export function useCardsController() {
             </div>
             <div class="biz-details-dates" style="font-weight: bold; padding: 2px; display: flex; justify-content: space-between;">
                 <span>${originalJobStartDate ? originalJobStartDate.toISOString().slice(0, 10) : 'N/A'} - ${originalJobEndDate ? originalJobEndDate.toISOString().slice(0, 10) : 'N/A'}</span>
-                <span>#${jobNumber} z:${sceneZ}</span>
+                <span> #${jobNumber} z:${sceneZ}</span>
             </div>
             <div class="job-stats" style="font-size: 10px; color: #666; margin-top: 4px;">
                 Skills: ${skillCount} | References: ${job.references ? job.references.length : 0}
@@ -433,7 +433,22 @@ export function useCardsController() {
         card.addEventListener('click', () => {
             console.log(`[CardsController] Card clicked: Job ${jobNumber}`)
             if (selectionManager) {
-                selectionManager.selectJobNumber(jobNumber)
+                selectionManager.selectJobNumber(jobNumber, 'CardsController.click')
+            }
+        })
+        
+        // Add hover handlers for synchronization with rDivs
+        card.addEventListener('mouseenter', () => {
+            console.log(`[CardsController] Card hover: Job ${jobNumber}`)
+            if (selectionManager) {
+                selectionManager.hoverJobNumber(jobNumber, 'CardsController.mouseenter')
+            }
+        })
+        
+        card.addEventListener('mouseleave', () => {
+            console.log(`[CardsController] Card hover end: Job ${jobNumber}`)
+            if (selectionManager) {
+                selectionManager.clearHover('CardsController.mouseleave')
             }
         })
         
@@ -467,6 +482,10 @@ export function useCardsController() {
         selectionManager.addEventListener('job-selected', handleJobSelected)
         selectionManager.addEventListener('selection-cleared', handleSelectionCleared)
         
+        // Listen for hover events to handle cDiv visual feedback
+        selectionManager.addEventListener('job-hovered', handleJobHovered)
+        selectionManager.addEventListener('hoverCleared', handleHoverCleared)
+        
         // Listen for viewport changes to reposition selected clones
         window.addEventListener('viewport-changed', handleViewportChangedForClones)
         window.addEventListener('resize-handle-changed', handleViewportChangedForClones)
@@ -475,8 +494,8 @@ export function useCardsController() {
     
     // Clone management functions
     function handleJobSelected(event) {
-        const { jobNumber, previousSelection } = event.detail
-        console.log(`[useCardsController] Job selected: ${jobNumber}, previous: ${previousSelection}`)
+        const { jobNumber, previousSelection, source } = event.detail
+        console.log(`[useCardsController] Job selected: ${jobNumber}, previous: ${previousSelection}, source: ${source}`)
         
         // Clear any existing clones first (handles previous selection)
         if (previousSelection !== null && previousSelection !== jobNumber) {
@@ -486,11 +505,163 @@ export function useCardsController() {
         
         // Create clone for new selection
         createSelectedClone(jobNumber)
+        
+        // Implement bidirectional scrolling
+        console.log(`[useCardsController] DEBUGGING: Checking bidirectional scroll - source: "${source}", CardsController comparison: ${source !== 'CardsController'}`)
+        if (source !== 'CardsController') {
+            // If selection came from rDiv side, scroll cDiv into view
+            console.log(`[useCardsController] DEBUGGING: Selection from rDiv side, will scroll cDiv into view in 100ms`)
+            setTimeout(() => {
+                console.log(`[useCardsController] DEBUGGING: Executing delayed cDiv scroll now`)
+                scrollCDivIntoView(jobNumber)
+            }, 100) // Small delay for DOM updates
+        } else {
+            console.log(`[useCardsController] DEBUGGING: Selection from cDiv side, skipping cDiv scroll to prevent loop`)
+        }
+        
+        // Always scroll rDiv into view (ResumeListController handles this via its own event listener)
+        // This ensures both panels scroll regardless of which side initiated the selection
     }
     
     function handleSelectionCleared(event) {
         console.log('[useCardsController] Selection cleared, removing clones...')
         removeAllClones()
+    }
+    
+    function handleJobHovered(event) {
+        const { jobNumber } = event.detail
+        console.log(`[useCardsController] Job hovered: ${jobNumber}`)
+        
+        // Clear previous hover states
+        clearAllCardHovers()
+        
+        // Apply hover class to the corresponding cDiv
+        const cardId = createBizCardDivId(jobNumber)
+        const card = document.getElementById(cardId)
+        if (card && !card.classList.contains('selected')) {
+            card.classList.add('hovered')
+            console.log(`[useCardsController] Applied hover to card: ${cardId}`)
+        }
+    }
+    
+    function handleHoverCleared(event) {
+        console.log('[useCardsController] Hover cleared, removing hover from all cards...')
+        clearAllCardHovers()
+    }
+    
+    function clearAllCardHovers() {
+        const scenePlaneElement = document.getElementById('scene-plane')
+        if (!scenePlaneElement) return
+        
+        // Remove hover class from all cards
+        const allCards = scenePlaneElement.querySelectorAll('.biz-card-div')
+        allCards.forEach(card => {
+            card.classList.remove('hovered')
+        })
+    }
+    
+    function scrollCDivIntoView(jobNumber) {
+        console.log(`[useCardsController] DEBUGGING: Scrolling to original cDiv timeline position for job ${jobNumber}`)
+        
+        const cardId = createBizCardDivId(jobNumber)
+        console.log(`[useCardsController] DEBUGGING: Looking for original card position: ${cardId}`)
+        
+        // Always scroll to the original card's timeline position, not the clone
+        // The clone is just a visual indicator at scene center, but we want to show
+        // where this job sits chronologically in the timeline
+        const card = document.getElementById(cardId)
+        console.log(`[useCardsController] DEBUGGING: Original card found:`, !!card)
+        
+        if (card) {
+            // Check if the original card is hidden (has a clone)
+            const isHidden = card.style.display === 'none' || card.classList.contains('hasClone')
+            console.log(`[useCardsController] DEBUGGING: Original card is hidden:`, isHidden)
+            
+            if (isHidden) {
+                // Temporarily show the card for scrolling, then hide it again
+                const originalDisplay = card.style.display
+                card.style.display = 'block'
+                console.log(`[useCardsController] DEBUGGING: Temporarily showing hidden card for scroll`)
+                
+                setTimeout(() => {
+                    // Scroll to show the header elements at the top of the card
+                    // This ensures employer, role, dates are prominently visible
+                    const headerElement = card.querySelector('.biz-details-employer') || card
+                    console.log(`[useCardsController] DEBUGGING: Scrolling to header element:`, !!headerElement)
+                    
+                    headerElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center',  // Center header with space above/below
+                        inline: 'nearest'
+                    })
+                    
+                    // Hide it again after scrolling
+                    setTimeout(() => {
+                        card.style.display = originalDisplay
+                        console.log(`[useCardsController] DEBUGGING: Re-hidden card after scroll`)
+                    }, 50)
+                }, 10)
+                
+            } else {
+                // Card is visible, scroll to show header elements
+                console.log(`[useCardsController] DEBUGGING: Scrolling to visible original card header`)
+                const headerElement = card.querySelector('.biz-details-employer') || card
+                console.log(`[useCardsController] DEBUGGING: Header element found:`, !!headerElement)
+                
+                headerElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center',  // Center header with space above/below
+                    inline: 'nearest'
+                })
+            }
+        }
+        
+        if (!card) {
+            console.warn(`[useCardsController] Cannot scroll - card not found: ${cardId}`)
+            // Let's see what cards do exist
+            const allCards = document.querySelectorAll('.biz-card-div')
+            console.log(`[useCardsController] DEBUGGING: Found ${allCards.length} total cards in DOM`)
+            allCards.forEach((c, i) => {
+                if (i < 5) { // Show first 5 for debugging
+                    console.log(`  Card ${i}: id=${c.id}, jobNumber=${c.getAttribute('data-job-number')}`)
+                }
+            })
+            return false
+        }
+        
+        // Get card position info for debugging
+        const cardRect = card.getBoundingClientRect()
+        console.log(`[useCardsController] DEBUGGING: Card position:`, {
+            top: cardRect.top,
+            left: cardRect.left,
+            width: cardRect.width,
+            height: cardRect.height
+        })
+        
+        // Check if card is already visible
+        const sceneContainer = document.getElementById('scene-container')
+        if (sceneContainer) {
+            const containerRect = sceneContainer.getBoundingClientRect()
+            const isVisible = cardRect.top >= containerRect.top && 
+                             cardRect.bottom <= containerRect.bottom
+            console.log(`[useCardsController] DEBUGGING: Card visible before scroll:`, isVisible)
+        }
+        
+        // Use native scrollIntoView for simple, reliable scrolling
+        try {
+            card.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',  // Center the card vertically in the view
+                inline: 'nearest' // Keep horizontal position as-is
+            })
+            console.log(`[useCardsController] DEBUGGING: scrollIntoView called successfully`)
+        } catch (error) {
+            console.error(`[useCardsController] DEBUGGING: scrollIntoView failed:`, error)
+            return false
+        }
+        
+        console.log(`[useCardsController] Scrolled cDiv ${cardId} into view`)
+        return true
     }
     
     function createSelectedClone(jobNumber) {
@@ -644,6 +815,8 @@ export function useCardsController() {
     onUnmounted(() => {
         selectionManager.removeEventListener('job-selected', handleJobSelected)
         selectionManager.removeEventListener('selection-cleared', handleSelectionCleared)
+        selectionManager.removeEventListener('job-hovered', handleJobHovered)
+        selectionManager.removeEventListener('hoverCleared', handleHoverCleared)
         
         // Remove viewport change listeners
         window.removeEventListener('viewport-changed', handleViewportChangedForClones)
