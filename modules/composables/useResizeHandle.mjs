@@ -252,12 +252,16 @@ function createResizeHandleState() {
         newPercentage = 0;
     } else {
         // Clean integer math - force values to be exact multiples
-        const increment = 100 / stepCount.value; // e.g., 20 for 5 steps
-        const currentBlock = Math.ceil(uiPercentage.value / increment);
+        const increment = 100 / stepCount.value; // e.g., 33.33 for 3 steps
+        
+        // Round current percentage to nearest step to handle floating point precision
+        const currentRounded = Math.round(uiPercentage.value / increment) * increment;
+        const currentBlock = Math.round(currentRounded / increment);
+        
         newPercentage = Math.max(0, currentBlock - 1) * increment;
         
-        // Ensure result is clean integer (no float contamination)
-        newPercentage = Math.round(newPercentage);
+        // Ensure result is clean (handle floating point precision)
+        newPercentage = Math.round(newPercentage * 100) / 100;
         
         console.log('[ResizeHandle] collapseLeft - increment:', increment, 'currentBlock:', currentBlock);
         console.log('[ResizeHandle] collapseLeft - from', uiPercentage.value, '-> newPercentage:', newPercentage);
@@ -280,12 +284,16 @@ function createResizeHandleState() {
         newPercentage = 100;
     } else {
         // Clean integer math - force values to be exact multiples
-        const increment = 100 / stepCount.value; // e.g., 20 for 5 steps
-        const currentBlock = Math.floor(uiPercentage.value / increment);
+        const increment = 100 / stepCount.value; // e.g., 33.33 for 3 steps
+        
+        // Round current percentage to nearest step to handle floating point precision
+        const currentRounded = Math.round(uiPercentage.value / increment) * increment;
+        const currentBlock = Math.round(currentRounded / increment);
+        
         newPercentage = Math.min(100, (currentBlock + 1) * increment);
         
-        // Ensure result is clean integer (no float contamination)
-        newPercentage = Math.round(newPercentage);
+        // Ensure result is clean (handle floating point precision)
+        newPercentage = Math.round(newPercentage * 100) / 100;
         
         console.log('[ResizeHandle] collapseRight - increment:', increment, 'currentBlock:', currentBlock);
         console.log('[ResizeHandle] collapseRight - from', uiPercentage.value, '-> newPercentage:', newPercentage);
