@@ -1,20 +1,18 @@
 {
   "version": "1.2",
-  "lastUpdated": "2025-07-31T17:26:39.674Z",
+  "lastUpdated": "2025-07-31T23:45:33.010Z",
   "layout": {
     "orientation": "scene-left",
-    "scenePercentage": 40,
-    "resumePercentage": 60
+    "scenePercentage": 50,
+    "resumePercentage": 50
   },
   "resizeHandle": {
-    "stepCount": 5
+    "stepCount": 4
   },
   "focalPoint": {
     "mode": "locked"
   },
-  "badgeToggle": {
-    "mode": "no-badges"
-  },
+  "badgeToggle": {},
   "badges": {
     "height": "2.5em",
     "padding": "0.5em 0.75em",

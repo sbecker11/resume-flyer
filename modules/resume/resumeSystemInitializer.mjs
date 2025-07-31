@@ -3,6 +3,7 @@
 import { resumeListController } from './ResumeListController.mjs';
 import { resumeItemsController } from '../scene/ResumeItemsController.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
+import { getBadgeManagerInstance } from '../composables/useBadgeManager.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 
 /**
@@ -75,13 +76,18 @@ export async function initializeResumeSystem() {
         // Get the global jobs dependency manager
         const jobsDependency = getGlobalJobsDependency();
         
-        // Make controllers and selectionManager globally available (as expected by Vue components and other modules)
+        // Make controllers and managers globally available (as expected by Vue components and other modules)
         window.resumeListController = resumeListController;
         window.resumeItemsController = resumeItemsController;
         window.selectionManager = selectionManager;
         
-        // Initialize the controllers themselves
+        // Get badge manager instance from composable for backward compatibility
+        const badgeManager = getBadgeManagerInstance();
+        window.badgeManager = badgeManager;
+        
+        // Initialize the controllers and managers
         resumeItemsController.registerForInitialization();
+        await badgeManager.initialize();
         
         // Register resumeListController as dependent on jobs data
         jobsDependency.registerController('ResumeListController', async (jobsData) => {

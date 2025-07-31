@@ -430,7 +430,8 @@ export function useCardsController() {
         // }
 
         // Add click handler
-        card.addEventListener('click', () => {
+        card.addEventListener('click', (event) => {
+            event.stopPropagation() // Prevent bubbling to scene-plane
             console.log(`[CardsController] Card clicked: Job ${jobNumber}`)
             if (selectionManager) {
                 selectionManager.selectJobNumber(jobNumber, 'CardsController.click')
@@ -451,6 +452,9 @@ export function useCardsController() {
                 selectionManager.clearHover('CardsController.mouseleave')
             }
         })
+        
+        // Create skill badges for this specific cDiv
+        createSkillBadgesForCard(card, job, jobNumber)
         
         return card
     }
@@ -809,6 +813,215 @@ export function useCardsController() {
         }
         
         console.log('[CardsController] ✅ Created yearly grid lines from 1986 to 2026')
+    }
+    
+    // Create skill badges for a specific cDiv
+    function createSkillBadgesForCard(cardElement, job, jobNumber) {
+        const jobSkills = job['job-skills'] || {}
+        const skillEntries = Object.entries(jobSkills)
+        
+        if (skillEntries.length === 0) {
+            return // No skills for this job
+        }
+        
+        // Create bizCardBadgesDiv container for this cDiv
+        const bizCardBadgesDiv = document.createElement('div')
+        bizCardBadgesDiv.className = 'biz-card-badges-div'
+        bizCardBadgesDiv.id = `biz-card-badges-div-${jobNumber}`
+        bizCardBadgesDiv.setAttribute('data-job-number', jobNumber)
+        bizCardBadgesDiv.style.cssText = `
+            position: absolute;
+            left: 100%;
+            margin-left: 8px;
+            top: 0px;
+            width: 140px;
+            height: auto;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+            /* Visual indicators removed */
+        `
+        
+        // Create individual skill badges
+        skillEntries.forEach(([skillId, skillName], index) => {
+            const badge = document.createElement('div')
+            badge.className = 'skill-badge'
+            badge.textContent = skillName
+            badge.style.cssText = `
+                position: absolute;
+                left: 0px;
+                top: ${index * 38}px;
+                height: 28px;
+                min-width: 40px;
+                padding: 0 12px;
+                border-radius: 14px;
+                line-height: 28px;
+                background-color: transparent;
+                color: inherit;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                font-size: 11px;
+                font-weight: 400;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                cursor: pointer;
+                transition: all 0.15s ease;
+                pointer-events: auto;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                white-space: nowrap;
+                box-sizing: border-box;
+                z-index: 101;
+            `
+            
+            bizCardBadgesDiv.appendChild(badge)
+        })
+        
+        // Position badges next to the clone (if it exists) or original card
+        const updateBadgePosition = () => {
+            const scenePlaneElement = document.getElementById('scene-plane')
+            if (!scenePlaneElement) return
+            
+            // First try to find the clone, fallback to original card
+            const cloneElement = document.getElementById(`${cardElement.id}-clone`)
+            const targetElement = cloneElement || cardElement
+            
+            const targetRect = targetElement.getBoundingClientRect()
+            const sceneRect = scenePlaneElement.getBoundingClientRect()
+            const relativeLeft = targetRect.left - sceneRect.left + targetRect.width + 8
+            const relativeTop = targetRect.top - sceneRect.top
+            
+            bizCardBadgesDiv.style.left = `${relativeLeft}px`
+            bizCardBadgesDiv.style.top = `${relativeTop}px`
+            bizCardBadgesDiv.style.marginLeft = '0px' // Reset since we're using absolute positioning
+            
+            console.log(`📍 Positioned badges for job ${jobNumber} next to ${cloneElement ? 'clone' : 'original'} at (${relativeLeft}, ${relativeTop})`)
+        }
+        
+        // Add bizCardBadgesDiv container to scene-plane (not card) to avoid hiding when card is hidden
+        const scenePlaneElement = document.getElementById('scene-plane')
+        if (scenePlaneElement) {
+            scenePlaneElement.appendChild(bizCardBadgesDiv)
+        } else {
+            // Fallback: append to card if scene-plane not found
+            cardElement.appendChild(bizCardBadgesDiv)
+        }
+        
+        // Show badges when card is selected, hide when not
+        const showBadges = () => {
+            console.log(`🟢 SHOWING badges for job ${jobNumber}`)
+            bizCardBadgesDiv.style.display = 'block'
+            
+            // Update position to follow the card (especially important for clones)
+            updateBadgePosition()
+            
+            // Apply clone's background AND font color to badges
+            const cloneElement = document.getElementById(`${cardElement.id}-clone`)
+            const targetElement = cloneElement || cardElement
+            const targetStyle = getComputedStyle(targetElement)
+            
+            const badges = bizCardBadgesDiv.querySelectorAll('.skill-badge')
+            badges.forEach(badge => {
+                // First, copy all the CSS classes from the target element
+                badge.className = 'skill-badge ' + targetElement.className
+                
+                // Copy critical computed styles that might not be inherited through classes
+                const stylesToCopy = [
+                    'backgroundColor', 'color', 
+                    'border', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius',
+                    'borderTop', 'borderRight', 'borderBottom', 'borderLeft',
+                    'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
+                    'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+                    'borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle',
+                    'boxShadow', 'outline', 'outlineColor', 'outlineWidth', 'outlineStyle'
+                ]
+                
+                stylesToCopy.forEach(property => {
+                    if (targetStyle[property] && targetStyle[property] !== 'none' && targetStyle[property] !== '') {
+                        badge.style[property] = targetStyle[property]
+                    }
+                })
+                
+                // Override some badge-specific properties to maintain badge sizing
+                badge.style.height = '28px'
+                badge.style.minWidth = '40px'
+                badge.style.padding = '0 12px'
+                badge.style.lineHeight = '28px'
+                badge.style.fontSize = '11px'
+                badge.style.fontWeight = '400'
+                badge.style.position = 'absolute'
+                badge.style.display = 'flex'
+                badge.style.alignItems = 'center'
+                badge.style.justifyContent = 'center'
+                badge.style.textAlign = 'center'
+                badge.style.whiteSpace = 'nowrap'
+                badge.style.boxSizing = 'border-box'
+                badge.style.cursor = 'pointer'
+                badge.style.transition = 'all 0.15s ease'
+                badge.style.pointerEvents = 'auto'
+                badge.style.zIndex = '101'
+            })
+            
+            console.log(`🎨 Applied styling from ${cloneElement ? 'clone' : 'original'}:`, {
+                element: targetElement.id,
+                classes: targetElement.className,
+                backgroundColor: targetStyle.backgroundColor,
+                color: targetStyle.color,
+                border: targetStyle.border,
+                borderTopColor: targetStyle.borderTopColor,
+                borderRightColor: targetStyle.borderRightColor,
+                borderBottomColor: targetStyle.borderBottomColor,
+                borderLeftColor: targetStyle.borderLeftColor,
+                boxShadow: targetStyle.boxShadow
+            })
+            
+            // Debug: Check if badges are actually visible after a short delay  
+            setTimeout(() => {
+                const isVisible = bizCardBadgesDiv.style.display === 'block'
+                console.log(`🔍 Job ${jobNumber} badges still visible after 500ms: ${isVisible}`)
+            }, 500)
+        }
+        
+        const hideBadges = () => {
+            console.log(`🔴 HIDING badges for job ${jobNumber}`)
+            bizCardBadgesDiv.style.display = 'none'
+        }
+        
+        // Listen for selection events - show badges only when THIS job is selected AND has a clone
+        selectionManager.addEventListener('selectionChanged', (event) => {
+            console.log(`🟡 selectionChanged event for job ${jobNumber}:`, event.detail)
+            if (event.detail.selectedJobNumber === jobNumber) {
+                // Check if this card has a clone (is selected and hidden)
+                const hasClone = cardElement.style.display === 'none' || 
+                               document.getElementById(`${cardElement.id}-clone`) !== null
+                
+                if (hasClone) {
+                    console.log(`🟢 Job ${jobNumber} has clone - SHOWING badges`)
+                    showBadges()
+                } else {
+                    console.log(`🟡 Job ${jobNumber} selected but no clone yet - waiting for clone`)
+                    // Wait a bit for clone creation, then check again
+                    setTimeout(() => {
+                        const cloneExists = document.getElementById(`${cardElement.id}-clone`) !== null
+                        if (cloneExists) {
+                            console.log(`🟢 Clone now exists for job ${jobNumber} - SHOWING badges`)
+                            showBadges()
+                        }
+                    }, 50)
+                }
+            } else {
+                hideBadges()
+            }
+        })
+        
+        selectionManager.addEventListener('selectionCleared', () => {
+            console.log(`🟡 selectionCleared event for job ${jobNumber}`)
+            hideBadges()
+        })
+        
+        // Badges will only show when a clone exists for this card
+        
+        console.log(`✅ Created ${skillEntries.length} skill badges for job ${jobNumber}`)
     }
     
     // Cleanup event listeners on unmount

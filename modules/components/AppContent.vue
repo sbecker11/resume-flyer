@@ -166,6 +166,7 @@ const handleSceneContainerClick = (event) => {
 // =============================================================================
 
 onMounted(async () => {
+  console.log('🔵 [AppContent] MOUNTED - SHOULD LOAD SCENECONTAINER 🔵')
   console.log('[AppContent] 🚀 Starting app-level initialization...')
   
   try {

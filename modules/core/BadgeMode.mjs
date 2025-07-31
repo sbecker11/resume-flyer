@@ -1,14 +1,13 @@
 /**
  * Enumeration for badge display modes
- * Defines the three badge modalities for the application
+ * Simplified to just two modes: hide or show badges with connection lines
  */
 export const BadgeMode = Object.freeze({
-    /** No badges or connection lines are displayed */
-    NONE: 'no-badges',
+    /** No badges or connection lines are displayed (default) */
+    HIDE_BADGES: 'hide-badges',
     
-    /** Badges and connection lines are visible, but no statistics */
-    BADGES_ONLY: 'badges-only',
-    
+    /** Badges and connection lines are visible */
+    SHOW_BADGES: 'show-badges',
 });
 
 /**
@@ -32,12 +31,12 @@ export function isValidBadgeMode(mode) {
  */
 export function getNextBadgeMode(currentMode) {
     switch (currentMode) {
-        case BadgeMode.NONE:
-            return BadgeMode.BADGES_ONLY;
-        case BadgeMode.BADGES_ONLY:
-            return BadgeMode.NONE;
+        case BadgeMode.HIDE_BADGES:
+            return BadgeMode.SHOW_BADGES;
+        case BadgeMode.SHOW_BADGES:
+            return BadgeMode.HIDE_BADGES;
         default:
-            return BadgeMode.NONE;
+            return BadgeMode.HIDE_BADGES;
     }
 }
 
@@ -48,10 +47,10 @@ export function getNextBadgeMode(currentMode) {
  */
 export function getBadgeModeIcon(mode) {
     switch (mode) {
-        case BadgeMode.NONE:
-            return '-B'; // minus B for no badges
-        case BadgeMode.BADGES_ONLY:
-            return '+B'; // plus B for badges only
+        case BadgeMode.HIDE_BADGES:
+            return '-B'; // minus B for hidden badges
+        case BadgeMode.SHOW_BADGES:
+            return '+B'; // plus B for visible badges
         default:
             return '-B';
     }
@@ -64,10 +63,10 @@ export function getBadgeModeIcon(mode) {
  */
 export function getBadgeModeDescription(mode) {
     switch (mode) {
-        case BadgeMode.NONE:
-            return 'No badges or lines shown';
-        case BadgeMode.BADGES_ONLY:
-            return 'Badges and lines visible';
+        case BadgeMode.HIDE_BADGES:
+            return 'Badges hidden';
+        case BadgeMode.SHOW_BADGES:
+            return 'Badges visible';
         default:
             return 'Unknown mode';
     }
@@ -80,10 +79,10 @@ export function getBadgeModeDescription(mode) {
  */
 export function getBadgeModeAction(mode) {
     switch (mode) {
-        case BadgeMode.NONE:
-            return 'Hide badges and lines';
-        case BadgeMode.BADGES_ONLY:
-            return 'Show badges and lines only';
+        case BadgeMode.HIDE_BADGES:
+            return 'Hide badges';
+        case BadgeMode.SHOW_BADGES:
+            return 'Show badges';
         default:
             return 'Unknown action';
     }

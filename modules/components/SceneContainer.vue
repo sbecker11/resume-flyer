@@ -13,6 +13,9 @@
         <Timeline :alignment="timelineAlignment" />
         <!-- BizCardDivs will be dynamically appended here by CardsController -->
       </div>
+      <!-- Skill badges and connection lines overlays -->
+      <!-- <SkillBadges /> DISABLED - using per-cDiv badges instead -->
+      <ConnectionLines />
     </div>
     <div id="scene-view-label">
       <span class="viewer-label">Scene Viewer ({{ roundedScenePercentage }}%)</span>
@@ -25,6 +28,8 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 
 // Vue components
 import Timeline from './Timeline.vue'
+// import SkillBadges from './SkillBadges.vue' // DISABLED - using per-cDiv badges
+import ConnectionLines from './ConnectionLines.vue'
 
 // Scene-specific composables
 import { useCardsController } from '../composables/useCardsController.mjs'
@@ -70,6 +75,7 @@ const handleSceneContainerClick = (event) => {
 
 // Lifecycle
 onMounted(async () => {
+  console.log('🟢 [SceneContainer] MOUNTED - TEMPLATE SHOULD BE VISIBLE 🟢')
   console.log('[SceneContainer] Initializing scene-specific systems...')
   
   try {
@@ -114,7 +120,7 @@ defineExpose({
   position: relative;
   overflow: visible;
   background: linear-gradient(to bottom, var(--background-light, #2a2a2a), var(--background-dark, #1a1a1a));
-  border-right: 1px solid #333;
+  /* border-right: 1px solid #333; */ /* Removed - creating unwanted vertical line */
   flex-shrink: 0;
   /* Ensure gradients position relative to this container */
 }

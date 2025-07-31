@@ -45,10 +45,10 @@ export const z_index_from_z = (z) => { return SUM_Z - z; }
 
 // Special case Z-indices
 export const BULLSEYE_Z_INDEX = 98;            // no parallax
-export const SELECTED_CARD_Z_INDEX = 99;       // no parallax, higher than bulls-eye
+export const FOCAL_POINT_Z_INDEX = 99;         // no parallax
+export const AIM_POINT_Z_INDEX = 100;          // no parallax
+export const SELECTED_CARD_Z_INDEX = 102;      // no parallax, higher than bulls-eye
 export const SELECTED_CARD_Z_VALUE = 0;        // Special value for selected cards, not used for normal parallax
-export const FOCAL_POINT_Z_INDEX = 100;        // no parallax
-export const AIM_POINT_Z_INDEX = 101;          // no parallax
 
 export function get_z_index_from_z(z) {
     if ( (z < ALL_CARDS_Z_MIN) || (z > ALL_CARDS_Z_MAX) ) {
