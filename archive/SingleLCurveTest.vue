@@ -1,0 +1,227 @@
+<template>
+  <div 
+    v-if="showConnection"
+    id="single-l-curve-container"
+    :style="containerStyle"
+    class="single-l-curve-test"
+  >
+    <svg 
+      id="single-l-curve-svg"
+      :style="svgStyle"
+    >
+      <path
+        :d="connectionPath"
+        stroke="#9966cc"
+        stroke-width="3"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="l-curve-path"
+      />
+    </svg>
+    
+    <!-- Debug info -->
+    <div 
+      v-if="showDebugInfo"
+      :style="debugStyle"
+      class="debug-info"
+    >
+      <div>cDiv: ({{ cDivCenterX }}, {{ cDivTop }}-{{ cDivBottom }})</div>
+      <div>Case: {{ pathCase }}</div>
+      <div>Path: {{ connectionPath }}</div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { TARGET_CDIV_JOB_NUMBER } from "@/modules/constants/targetCDiv.mjs";
+
+// Template ref for scene-content element
+const scenecontentElement = ref(null);
+
+/**
+ * Template ref injection for scene-content element
+ * Replaces getElementById('scene-content') calls
+ * @param {HTMLElement} element - The DOM element from template ref
+ */
+const setSceneContentElement = (element) => {
+  scenecontentElement.value = element;
+  console.log('[SingleLCurveTest.vue] scene-content element set via template ref');
+};
+    const showConnection = ref(false);
+    const showDebugInfo = ref(true);
+    const cDivCenterX = ref(0);
+    const cDivTop = ref(0);
+    const cDivBottom = ref(0);
+    const pathCase = ref('');
+    
+    // Create L-shaped curve based on the specification
+    const createLShapedCurve = (pointA, pointB, pointC, radius = 30) => {
+      // Validate input constraints
+      if (pointB.y !== pointA.y || pointC.x !== pointB.x) {
+        throw new Error('Point B must have same y as Point A, and Point C must have same x as Point B');
+      }
+
+      // Determine direction of curve based on relative positions
+      const isMovingRight = pointB.x > pointA.x;
+      const isMovingDown = pointC.y > pointB.y;
+
+      // Calculate control points for the arc
+      const arcStartX = isMovingRight ? pointB.x - radius : pointB.x + radius;
+      const arcStartY = pointB.y;
+      const arcEndX = pointB.x;
+      const arcEndY = isMovingDown ? pointB.y + radius : pointB.y - radius;
+
+      // Build SVG path
+      const path = [
+        `M ${pointA.x} ${pointA.y}`, // Start at point A
+        `H ${arcStartX}`, // Horizontal line to arc start
+        `A ${radius} ${radius} 0 0 ${isMovingRight && isMovingDown || !isMovingRight && !isMovingDown ? 1 : 0} ${arcEndX} ${arcEndY}`, // 90-degree arc
+        `V ${pointC.y}` // Vertical line to point C
+      ];
+
+      return path.join(' ');
+    };
+
+    // Create horizontal line
+    const createHorizontalLine = (pointA, pointB) => {
+      // Validate that points share the same y-coordinate
+      if (pointA.y !== pointB.y) {
+        throw new Error('Points A and B must have the same y-coordinate');
+      }
+
+      // Build SVG path
+      return `M ${pointA.x} ${pointA.y} H ${pointB.x}`;
+    };
+
+    // Calculate the connection path
+    const connectionPath = computed(() => {
+      if (!showConnection.value) return '';
+
+      
+      // Determine which case we're in
+        pathCase.value = 'ABOVE';
+        const endPoint = { x: cDivCenterX.value, y: cDivTop.value };
+        pathCase.value = 'BELOW';
+        const endPoint = { x: cDivCenterX.value, y: cDivBottom.value };
+      } else {
+        pathCase.value = 'LEVEL';
+      }
+    });
+
+    // Get element positions
+    const updatePositions = () => {
+
+      // Find the selected cDiv
+      const selectedCDiv = document.querySelector('.biz-card-div.selected') || 
+                          document.querySelector(`[data-job-number="${TARGET_CDIV_JOB_NUMBER}"]`);
+      if (!selectedCDiv) return;
+
+      // Get scene-content for coordinate reference
+      const sceneContent = scenecontentElement.value;
+      if (!sceneContent) return;
+
+      const sceneRect = sceneContent.getBoundingClientRect();
+      const cDivRect = selectedCDiv.getBoundingClientRect();
+
+      // Calculate positions relative to scene-content
+      
+      cDivCenterX.value = cDivRect.left + cDivRect.width / 2 - sceneRect.left;
+      cDivTop.value = cDivRect.top - sceneRect.top;
+      cDivBottom.value = cDivRect.bottom - sceneRect.top;
+
+      window.CONSOLE_LOG_IGNORE(`[SingleLCurveTest] cDiv: center=(${cDivCenterX.value}, ${(cDivTop.value + cDivBottom.value) / 2}), top=${cDivTop.value}, bottom=${cDivBottom.value}`);
+    };
+
+    // Container style
+    const containerStyle = computed(() => ({
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      zIndex: '100'
+    }));
+
+    // SVG style
+    const svgStyle = computed(() => ({
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '100%',
+      height: '100%',
+      pointerEvents: 'none',
+      overflow: 'visible'
+    }));
+
+    // Debug info style
+    const debugStyle = computed(() => ({
+      position: 'absolute',
+      top: '10px',
+      left: '10px',
+      background: 'rgba(0, 0, 0, 0.8)',
+      color: 'white',
+      padding: '10px',
+      borderRadius: '5px',
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      pointerEvents: 'auto',
+      zIndex: '101'
+    }));
+
+    // Event handlers
+    const handleCardSelect = (event) => {
+      const jobNumber = parseInt(event.detail.jobNumber);
+      if (jobNumber === TARGET_CDIV_JOB_NUMBER) {
+        window.CONSOLE_LOG_IGNORE('[SingleLCurveTest] Card selected, showing connection');
+        showConnection.value = true;
+        setTimeout(() => updatePositions(), 100);
+      }
+    };
+
+    const handleCardDeselect = () => {
+      window.CONSOLE_LOG_IGNORE('[SingleLCurveTest] Card deselected, hiding connection');
+      showConnection.value = false;
+    };
+
+    onMounted(() => {
+      window.addEventListener('card-select', handleCardSelect);
+      window.addEventListener('card-deselect', handleCardDeselect);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener('card-select', handleCardSelect);
+      window.removeEventListener('card-deselect', handleCardDeselect);
+    });
+
+// Variables automatically exposed by script setup
+// Also expose setSceneContentElement for template ref injection
+defineExpose({
+  setSceneContentElement
+});
+</script>
+
+<style scoped>
+.single-l-curve-test {
+  pointer-events: none;
+}
+
+.l-curve-path {
+  transition: stroke-width 0.2s ease;
+}
+
+.l-curve-path:hover {
+  stroke-width: 4;
+}
+
+.debug-info {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.debug-info div {
+  margin-bottom: 2px;
+}
+</style>

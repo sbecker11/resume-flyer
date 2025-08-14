@@ -1,6 +1,7 @@
 import { ref, onMounted, watch, computed, getCurrentInstance } from 'vue';
 import { useAppState } from './useAppState.ts';
 import * as colorUtils from '@/modules/utils/colorUtils.mjs';
+import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
 
 const PALETTE_DIR = './static_content/colorPalettes/';
 const MANIFEST_ENDPOINT = '/api/palette-manifest';
@@ -20,6 +21,7 @@ const currentPaletteFilename = ref(null);
 export function useColorPalette() {
     // Access centralized app state
     const { appState, updateAppState } = useAppState();
+    const elementRegistry = injectGlobalElementRegistry();
 
     async function loadPalettes() {
         if (isLoading.value) return; // Don't reload if already loading
@@ -38,7 +40,7 @@ export function useColorPalette() {
             // console.log('[ColorPalette] AppState is loaded, theme:', appState.value.theme);
             
             // Now it's safe to access appState.
-            currentPaletteFilename.value = appState.value.theme.colorPalette;
+            currentPaletteFilename.value = appState.value["user-settings"].theme.colorPalette;
             // console.log(`[ColorPalette] Initialized currentPaletteFilename from appState.colorPalette: ${appState.value.theme.colorPalette}`);
 
             const response = await fetch(MANIFEST_ENDPOINT);
@@ -79,19 +81,16 @@ export function useColorPalette() {
             // console.log(`[ColorPalette] Updated refs - orderedPaletteNames:`, orderedPaletteNames.value);
             // console.log(`[ColorPalette] Updated refs - filenameToNameMap:`, filenameToNameMap.value);
             
-            // Update appState with loaded palettes
-            await updateAppState({
-                color: {
-                    palettes: tempLoadedColorPalettes
-                }
-            });
+            // Note: We no longer store palettes in appState - they're loaded dynamically
             
             // IMPORTANT: Ensure colorPalette is set correctly in theme section
-            if (!appState.value.theme.colorPalette && Object.keys(tempFilenameToNameMap).length > 0) {
+            if (!appState.value["user-settings"].theme.colorPalette && Object.keys(tempFilenameToNameMap).length > 0) {
                 const firstFilename = Object.keys(tempFilenameToNameMap)[0];
                 await updateAppState({
-                    theme: {
-                        colorPalette: firstFilename
+                    "user-settings": {
+                        theme: {
+                            colorPalette: firstFilename
+                        }
                     }
                 });
                 // console.log(`[ColorPalette] Set theme.colorPalette to: ${firstFilename}`);
@@ -127,11 +126,11 @@ export function useColorPalette() {
         if (filename && filenameToNameMap.value[filename]) {
             const previousFilename = currentPaletteFilename.value;
             window.CONSOLE_LOG_IGNORE(`[ColorPalette] setCurrentPalette called: ${previousFilename} → ${filename}`);
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] appState.theme.colorPalette: ${appState.value?.theme?.colorPalette}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] appState.theme.colorPalette: ${appState.value?.["user-settings"]?.theme?.colorPalette}`);
             window.CONSOLE_LOG_IGNORE(`[ColorPalette] currentPaletteFilename.value: ${currentPaletteFilename.value}`);
             
             // Check if appState and reactive state are in sync
-            if (appState.value?.theme?.colorPalette !== currentPaletteFilename.value) {
+            if (appState.value?.["user-settings"]?.theme?.colorPalette !== currentPaletteFilename.value) {
                 // console.warn(`[ColorPalette] State mismatch detected! appState: ${appState.value?.theme?.colorPalette}, reactive: ${currentPaletteFilename.value}`);
                 window.CONSOLE_LOG_IGNORE(`[ColorPalette] User selected ${filename}, proceeding with user choice`);
             }
@@ -146,10 +145,42 @@ export function useColorPalette() {
             
             // Update appState with new palette selection
             await updateAppState({
-                theme: {
-                    colorPalette: filename
+                "user-settings": {
+                    theme: {
+                        colorPalette: filename
+                    }
                 }
             });
+            
+            elementRegistry.clearAllCache();
+            
+            // Reapply palette to all elements using optimized element registry
+            const elements = elementRegistry.getAllElementsWithColorIndex();
+            for (const element of elements) {
+                await applyPaletteToElement(element);
+            }
+            
+            // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
+            const allRDivs = elementRegistry.getAllBizResumeDivs();
+            for (const rDiv of allRDivs) {
+                if (rDiv.hasAttribute('data-color-index')) {
+                    await applyPaletteToElement(rDiv);
+                }
+            }
+            
+            const allCDivs = elementRegistry.getAllBizCardDivs();
+            const clones = allCDivs.filter(cDiv => cDiv.id.includes('-clone'));
+            console.log(`[ColorPalette] 🔍 Found ${allCDivs.length} total cDivs, ${clones.length} are clones`);
+            if (clones.length > 0) {
+                console.log(`[ColorPalette] 📋 Clone IDs:`, clones.map(c => c.id));
+            }
+            
+            for (const cDiv of allCDivs) {
+                if (cDiv.hasAttribute('data-color-index')) {
+                    console.log(`[ColorPalette] 🎨 Applying palette to ${cDiv.id} (${cDiv.id.includes('-clone') ? 'CLONE' : 'original'})`);
+                    await applyPaletteToElement(cDiv);
+                }
+            }
             
             // Dispatch event for components that need to respond to palette changes
             const paletteName = filenameToNameMap.value[filename];
@@ -161,7 +192,6 @@ export function useColorPalette() {
                 }
             }));
             
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Palette changed from ${previousFilename} to ${filename} (${paletteName}), event dispatched`);
         } else {
             // console.warn(`[ColorPalette] setCurrentPalette called with invalid filename: ${filename}`);
             window.CONSOLE_LOG_IGNORE(`[ColorPalette] Available palettes:`, Object.keys(filenameToNameMap.value));
@@ -189,25 +219,29 @@ export function useColorPalette() {
         
         if (Object.keys(updates).length > 0) {
             await updateAppState({
-                theme: updates
+                "system-constants": {
+                    theme: updates
+                }
             });
         }
         
-        // Reapply palette to all elements to update their data attributes
-        const elements = document.querySelectorAll('[data-color-index]');
+        elementRegistry.clearAllCache();
+        
+        // Reapply palette to all elements using optimized element registry
+        const elements = elementRegistry.getAllElementsWithColorIndex();
         for (const element of elements) {
             await applyPaletteToElement(element);
         }
         
-        // Apply palette to ALL rDivs and cDivs (including clones) regardless of data-color-index
-        const allRDivs = document.querySelectorAll('.biz-resume-div');
+        // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
+        const allRDivs = elementRegistry.getAllBizResumeDivs();
         for (const rDiv of allRDivs) {
             if (rDiv.hasAttribute('data-color-index')) {
                 await applyPaletteToElement(rDiv);
             }
         }
         
-        const allCDivs = document.querySelectorAll('.biz-card-div');
+        const allCDivs = elementRegistry.getAllBizCardDivs();
         for (const cDiv of allCDivs) {
             if (cDiv.hasAttribute('data-color-index')) {
                 await applyPaletteToElement(cDiv);
@@ -219,33 +253,133 @@ export function useColorPalette() {
     async function updateBorderSettings(newBorderSettings) {
         if (newBorderSettings) {
             await updateAppState({
-                theme: {
-                    borderSettings: newBorderSettings
+                "system-constants": {
+                    theme: {
+                        borderSettings: newBorderSettings
+                    }
                 }
             });
         }
         
-        // Reapply palette to all elements to update their data attributes
-        const elements = document.querySelectorAll('[data-color-index]');
+        elementRegistry.clearAllCache();
+        
+        // Reapply palette to all elements using optimized element registry
+        const elements = elementRegistry.getAllElementsWithColorIndex();
         for (const element of elements) {
             await applyPaletteToElement(element);
         }
         
-        // Apply palette to ALL rDivs and cDivs (including clones) regardless of data-color-index
-        const allRDivs = document.querySelectorAll('.biz-resume-div');
+        // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
+        const allRDivs = elementRegistry.getAllBizResumeDivs();
         for (const rDiv of allRDivs) {
             if (rDiv.hasAttribute('data-color-index')) {
                 await applyPaletteToElement(rDiv);
             }
         }
         
-        const allCDivs = document.querySelectorAll('.biz-card-div');
+        const allCDivs = elementRegistry.getAllBizCardDivs();
         for (const cDiv of allCDivs) {
             if (cDiv.hasAttribute('data-color-index')) {
                 await applyPaletteToElement(cDiv);
             }
         }
     }
+
+    // Color palette filename watcher - handles document-level theming
+    watch(currentPaletteFilename, async (newFilename) => {
+        if (!newFilename) return;
+        
+        const paletteName = filenameToNameMap.value[newFilename];
+        const colorPalette = colorPalettes.value[paletteName];
+
+        // Wait for both filename mapping and palette data to be loaded
+        if (!paletteName || !colorPalette || colorPalette.length === 0) return;
+
+        // Apply document-level styles
+        const root = document.documentElement;
+        let darkestColor = colorPalette.reduce((darkest, current) => {
+            return colorUtils.getPerceivedBrightness(current) < colorUtils.getPerceivedBrightness(darkest) ? current : darkest;
+        }, colorPalette[0]);
+
+        const darkHex = darkestColor || "#333333";
+        let rgb = colorUtils.get_RGB_from_Hex(darkHex);
+        let hsv = colorUtils.get_HSV_from_RGB(rgb);
+
+        let darkerHsv = {...hsv};
+        darkerHsv.v *= 0.45; // Much darker for more dramatic contrast
+        darkerHsv.s *= 0.3; // Much less saturated for less vibrant look
+        const darkerRgb = colorUtils.get_RGB_from_HSV(darkerHsv);
+
+        let darkestHsv = {...hsv};
+        darkestHsv.v *= 0.15; // Much darker for more dramatic atmospheric perspective
+        darkestHsv.s *= 0.2; // Much less saturated for less vibrant look
+        const darkestRgb = colorUtils.get_RGB_from_HSV(darkestHsv);
+
+        const darkerRgba = `rgba(${darkerRgb.r}, ${darkerRgb.g}, ${darkerRgb.b}, 1.0)`;
+        const darkestRgba = `rgba(${darkestRgb.r}, ${darkestRgb.g}, ${darkestRgb.b}, 1.0)`;
+
+        root.style.setProperty('--background-light', darkerRgba);
+        root.style.setProperty('--background-dark', darkestRgba);
+
+        elementRegistry.clearAllCache();
+        
+        // Update elements with data-color-index using optimized element registry
+        const elements = elementRegistry.getAllElementsWithColorIndex();
+        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${elements.length} elements with data-color-index to update`);
+        
+        for (const element of elements) {
+            const paletteColorIndexAttr = element.getAttribute("data-color-index");
+            if (paletteColorIndexAttr === null || isNaN(parseInt(paletteColorIndexAttr, 10))) continue;
+            
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating element ${element.id || element.className} with color index ${paletteColorIndexAttr}`);
+            
+            // Use the applyPaletteToElement function to set all data attributes
+            await applyPaletteToElement(element);
+            
+            // Check if colors were actually applied
+            const bgColor = element.getAttribute('data-background-color');
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Element ${element.id || element.className} background color set to: ${bgColor}`);
+        }
+        
+        // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
+        const allRDivs = elementRegistry.getAllBizResumeDivs();
+        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allRDivs.length} rDivs to check for color updates`);
+        for (const rDiv of allRDivs) {
+            if (rDiv.hasAttribute('data-color-index')) {
+                window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating rDiv ${rDiv.id} with color index ${rDiv.getAttribute('data-color-index')}`);
+                await applyPaletteToElement(rDiv);
+            }
+        }
+        
+        const allCDivs = elementRegistry.getAllBizCardDivs();
+        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allCDivs.length} cDivs to check for color updates`);
+        for (const cDiv of allCDivs) {
+            if (cDiv.hasAttribute('data-color-index')) {
+                window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating cDiv ${cDiv.id} with color index ${cDiv.getAttribute('data-color-index')}`);
+                await applyPaletteToElement(cDiv);
+                
+                // Check current styling state
+                const computedStyle = window.getComputedStyle(cDiv);
+                const bgColor = cDiv.getAttribute('data-background-color');
+                window.CONSOLE_LOG_IGNORE(`[ColorPalette] cDiv ${cDiv.id} - data-background-color: ${bgColor}, computed background-color: ${computedStyle.backgroundColor}`);
+            }
+        }
+
+        // After updating all palette data, refresh the current visual state of all elements
+
+    }, { immediate: true }); // Run this watcher as soon as the composable is used
+
+    // Additional watcher to trigger palette application when colorPalettes are loaded
+    watch(colorPalettes, () => {
+        // Trigger palette application when palettes are loaded and we have a current filename
+        if (currentPaletteFilename.value) {
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Palettes loaded, re-applying current palette: ${currentPaletteFilename.value}`);
+            // Re-trigger the main watcher by setting the filename again
+            const filename = currentPaletteFilename.value;
+            currentPaletteFilename.value = null;
+            currentPaletteFilename.value = filename;
+        }
+    }, { deep: true });
 
     // Return all the reactive state and methods
     return {
@@ -312,12 +446,12 @@ export async function applyPaletteToElement(element) {
         return;
     }
 
-    // If the palette is not found or is empty, throw an Error
-    const colorPalette = appState.value.color?.palettes?.[paletteName];
+    // Get palette from the reactive colorPalettes (loaded dynamically, not stored in appState)
+    const colorPalette = colorPalettes.value[paletteName];
     if (!colorPalette) {
         console.error(`[applyPaletteToElement] Color palette not found for name: ${paletteName}`);
-        // console.error(`[applyPaletteToElement] Available palettes:`, Object.keys(appState.value.color?.palettes || {}));
-        // console.error(`[applyPaletteToElement] appState.value.color:`, appState.value.color);
+        console.error(`[applyPaletteToElement] Available palettes:`, Object.keys(colorPalettes.value || {}));
+        console.error(`[applyPaletteToElement] Requested palette name: ${paletteName}`);
         throw new Error(`Color palette not found for name: ${paletteName}`);
     }
 
@@ -326,8 +460,9 @@ export async function applyPaletteToElement(element) {
     const foregroundColor = colorUtils.getContrastingColor(backgroundColor);
 
     // Get brightness factors from global state
-    const brightnessFactorSelected = appState.value.theme?.brightnessFactorSelected || 2.0;
-    const brightnessFactorHovered = appState.value.theme?.brightnessFactorHovered || 1.5;
+    const systemConstants = appState.value["system-constants"];
+    const brightnessFactorSelected = systemConstants?.theme?.brightnessFactorSelected || 2.0;
+    const brightnessFactorHovered = systemConstants?.theme?.brightnessFactorHovered || 1.5;
 
     // Calculate selected state colors (with brightness filter applied)
     const selectedBackgroundColor = colorUtils.adjustBrightness(backgroundColor, brightnessFactorSelected);
@@ -371,15 +506,16 @@ export async function applyPaletteToElement(element) {
     };
 
     // Create a deep copy to avoid readonly proxy issues
-    const borderSettings = appState.value.theme?.borderSettings ? {
-        normal: { ...appState.value.theme.borderSettings.normal },
-        hovered: { ...appState.value.theme.borderSettings.hovered },
-        selected: { ...appState.value.theme.borderSettings.selected }
+    // systemConstants already declared above - reuse it
+    const borderSettings = systemConstants?.theme?.borderSettings ? {
+        normal: { ...systemConstants.theme.borderSettings.normal },
+        hovered: { ...systemConstants.theme.borderSettings.hovered },
+        selected: { ...systemConstants.theme.borderSettings.selected }
     } : defaultBorderSettings;
 
     // apply resume div border override settings if the element is a resume div
     if ( element.classList.contains('biz-resume-div') ) {
-        const rDivBorderOverrideSettings = appState.value.theme?.rDivBorderOverrideSettings;
+        const rDivBorderOverrideSettings = systemConstants?.theme?.rDivBorderOverrideSettings;
         if (rDivBorderOverrideSettings) {
             borderSettings.normal.padding = rDivBorderOverrideSettings.normal.padding;
             borderSettings.normal.innerBorderWidth = rDivBorderOverrideSettings.normal.innerBorderWidth;
@@ -462,97 +598,17 @@ export async function applyPaletteToElement(element) {
     // The normal state will be applied when needed by the state system
 }
 
-// --- Global Watcher ---
-// This watcher runs once and handles applying the color theme to the document
-watch(currentPaletteFilename, async (newFilename) => {
-    if (!newFilename) return;
+export function applySelectedStateColorsToElement(element) {
+    const selectedBgColor = element.getAttribute('data-background-color-selected');
+    const selectedFgColor = element.getAttribute('data-foreground-color-selected');
     
-    const paletteName = filenameToNameMap.value[newFilename];
-    const colorPalette = colorPalettes.value[paletteName];
-
-    // Wait for both filename mapping and palette data to be loaded
-    if (!paletteName || !colorPalette || colorPalette.length === 0) return;
-
-    // Apply document-level styles
-    const root = document.documentElement;
-    let darkestColor = colorPalette.reduce((darkest, current) => {
-        return colorUtils.getPerceivedBrightness(current) < colorUtils.getPerceivedBrightness(darkest) ? current : darkest;
-    }, colorPalette[0]);
-
-    const darkHex = darkestColor || "#333333";
-    let rgb = colorUtils.get_RGB_from_Hex(darkHex);
-    let hsv = colorUtils.get_HSV_from_RGB(rgb);
-
-    let darkerHsv = {...hsv};
-    darkerHsv.v *= 0.45; // Much darker for more dramatic contrast
-    darkerHsv.s *= 0.3; // Much less saturated for less vibrant look
-    const darkerRgb = colorUtils.get_RGB_from_HSV(darkerHsv);
-
-    let darkestHsv = {...hsv};
-    darkestHsv.v *= 0.15; // Much darker for more dramatic atmospheric perspective
-    darkestHsv.s *= 0.2; // Much less saturated for less vibrant look
-    const darkestRgb = colorUtils.get_RGB_from_HSV(darkestHsv);
-
-    const darkerRgba = `rgba(${darkerRgb.r}, ${darkerRgb.g}, ${darkerRgb.b}, 1.0)`;
-    const darkestRgba = `rgba(${darkestRgb.r}, ${darkestRgb.g}, ${darkestRgb.b}, 1.0)`;
-
-    root.style.setProperty('--background-light', darkerRgba);
-    root.style.setProperty('--background-dark', darkestRgba);
-
-    // Update elements with data-color-index
-    const elements = document.querySelectorAll('[data-color-index]');
-    window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${elements.length} elements with data-color-index to update`);
-    
-    for (const element of elements) {
-        const paletteColorIndexAttr = element.getAttribute("data-color-index");
-        if (paletteColorIndexAttr === null || isNaN(parseInt(paletteColorIndexAttr, 10))) continue;
-        
-        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating element ${element.id || element.className} with color index ${paletteColorIndexAttr}`);
-        
-        // Use the applyPaletteToElement function to set all data attributes
-        await applyPaletteToElement(element);
-        
-        // Check if colors were actually applied
-        const bgColor = element.getAttribute('data-background-color');
-        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Element ${element.id || element.className} background color set to: ${bgColor}`);
+    if (selectedBgColor) {
+        element.style.backgroundColor = selectedBgColor;
+    }
+    if (selectedFgColor) {
+        element.style.color = selectedFgColor;
     }
     
-    // Apply palette to ALL rDivs and cDivs (including clones) regardless of data-color-index
-    const allRDivs = document.querySelectorAll('.biz-resume-div');
-    window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allRDivs.length} rDivs to check for color updates`);
-    for (const rDiv of allRDivs) {
-        if (rDiv.hasAttribute('data-color-index')) {
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating rDiv ${rDiv.id} with color index ${rDiv.getAttribute('data-color-index')}`);
-            await applyPaletteToElement(rDiv);
-        }
-    }
-    
-    const allCDivs = document.querySelectorAll('.biz-card-div');
-    window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allCDivs.length} cDivs to check for color updates`);
-    for (const cDiv of allCDivs) {
-        if (cDiv.hasAttribute('data-color-index')) {
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating cDiv ${cDiv.id} with color index ${cDiv.getAttribute('data-color-index')}`);
-            await applyPaletteToElement(cDiv);
-            
-            // Check current styling state
-            const computedStyle = window.getComputedStyle(cDiv);
-            const bgColor = cDiv.getAttribute('data-background-color');
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] cDiv ${cDiv.id} - data-background-color: ${bgColor}, computed background-color: ${computedStyle.backgroundColor}`);
-        }
-    }
+    return { selectedBgColor, selectedFgColor };
+}
 
-    // After updating all palette data, refresh the current visual state of all elements
-
-}, { immediate: true }); // Run this watcher as soon as the composable is used
-
-// Additional watcher to trigger palette application when colorPalettes are loaded
-watch(colorPalettes, () => {
-    // Trigger palette application when palettes are loaded and we have a current filename
-    if (currentPaletteFilename.value) {
-        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Palettes loaded, re-applying current palette: ${currentPaletteFilename.value}`);
-        // Re-trigger the main watcher by setting the filename again
-        const filename = currentPaletteFilename.value;
-        currentPaletteFilename.value = null;
-        currentPaletteFilename.value = filename;
-    }
-}, { deep: true });

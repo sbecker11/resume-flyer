@@ -1,14 +1,16 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useViewport } from './useViewport.mjs'
+import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs'
 
 export function useSceneViewLabel() {
     const sceneViewLabelElement = ref(null)
     const isInitialized = ref(false)
     const { viewport } = useViewport()
+    const elementRegistry = injectGlobalElementRegistry()
 
     function getResizeHandlePosition() {
-        // Find the resize handle element
-        const resizeHandleElement = document.querySelector('#resize-handle')
+        // Find the resize handle element using optimized registry
+        const resizeHandleElement = elementRegistry.getResizeHandle()
         if (!resizeHandleElement) {
             console.log('Resize handle element not found')
             return null
@@ -35,7 +37,7 @@ export function useSceneViewLabel() {
         if (resizeHandlePos) {
             // Position the label at the bottom right of the scene container
             // Calculate position relative to the scene container
-            const sceneContainer = document.getElementById('scene-container')
+            const sceneContainer = elementRegistry.getSceneContainer()
             if (sceneContainer) {
                 const sceneRect = sceneContainer.getBoundingClientRect()
                 
@@ -83,7 +85,7 @@ export function useSceneViewLabel() {
             return
         }
         
-        sceneViewLabelElement.value = document.getElementById("scene-view-label")
+        sceneViewLabelElement.value = elementRegistry.getElement('scene-view-label', 'scene-view-label')
         if (!sceneViewLabelElement.value) {
             throw new Error("sceneViewLabel.initialize: #scene-view-label element not found in DOM")
         }

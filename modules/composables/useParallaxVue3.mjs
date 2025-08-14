@@ -5,6 +5,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useAppStore } from '../stores/appStore.mjs'
 import { useAppContext, provideDependency } from './useAppContext.mjs'
 import * as zUtils from '../utils/zUtils.mjs'
+import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs'
 
 // Parallax constants
 export const PARALLAX_X_EXAGGERATION_FACTOR = 0.9
@@ -18,6 +19,7 @@ const PARALLAX_KEY = Symbol('Parallax')
 export function useParallax() {
   const { store } = useAppStore()
   const appContext = useAppContext()
+  const elementRegistry = injectGlobalElementRegistry()
   
   // Reactive state
   const isInitialized = ref(false)
@@ -110,7 +112,7 @@ export function useParallax() {
       return
     }
     
-    const bizCardDivs = document.getElementsByClassName('biz-card-div')
+    const bizCardDivs = elementRegistry.getAllBizCardDivs()
     console.log(`[Parallax] 🎴 Applying parallax to ${bizCardDivs.length} cards`)
     
     let appliedCount = 0
@@ -150,7 +152,7 @@ export function useParallax() {
   
   // Update scene container rect
   function updateSceneContainerRect() {
-    const sceneContainer = document.getElementById('scene-container')
+    const sceneContainer = elementRegistry.getSceneContainer()
     if (sceneContainer) {
       const rect = sceneContainer.getBoundingClientRect()
       sceneContainerRect.value = {

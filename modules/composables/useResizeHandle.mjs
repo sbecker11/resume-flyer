@@ -2,7 +2,6 @@ import { ref, computed, nextTick, watch } from 'vue';
 import { useLayoutToggle } from './useLayoutToggle.mjs';
 import { useAppState } from './useAppState.ts';
 import { useAppStore } from '../stores/appStore.mjs';
-import { performanceMonitor } from '@/modules/utils/performanceMonitor.mjs';
 import { dragStateManager } from '../core/dragStateManager.mjs';
 
 const HANDLE_WIDTH = 20;
@@ -28,7 +27,7 @@ function createResizeHandleState() {
 
   function initializeState() {
     // Use stored scene percentage directly as UI percentage
-    const storedScenePercentage = appState.value?.layout?.scenePercentage;
+    const storedScenePercentage = appState.value?.["user-settings"]?.layout?.scenePercentage;
     let initialPercentage = DEFAULT_WIDTH_PERCENT;
     
     if (storedScenePercentage !== undefined) {
@@ -39,7 +38,7 @@ function createResizeHandleState() {
       // console.log('  storedScenePercentage:', storedScenePercentage + '%');
       // console.log('  Using directly as initialPercentage:', initialPercentage + '%');
     }
-    stepCount.value = appState.value?.resizeHandle?.stepCount || 1;
+    stepCount.value = appState.value?.["user-settings"]?.resizeHandle?.stepCount || 1;
     // console.log('[ResizeHandle] DEBUG: appState.resizeHandle:', appState.value?.resizeHandle);
     // console.log('[ResizeHandle] DEBUG: stepCount loaded:', stepCount.value);
     
@@ -48,8 +47,7 @@ function createResizeHandleState() {
     
     uiPercentage.value = initialPercentage;
     
-    // Also initialize the appStore with the same value
-    storeActions.setScenePercentage(initialPercentage);
+    // AppStore now reads from centralized state - no need for separate initialization
   }
 
   function initialize() {
@@ -71,7 +69,7 @@ function createResizeHandleState() {
     });
     
     // Watch AppState for stepCount changes
-    watch(() => appState.value?.resizeHandle?.stepCount, (newStepCount) => {
+    watch(() => appState.value?.["user-settings"]?.resizeHandle?.stepCount, (newStepCount) => {
       if (newStepCount !== undefined && stepCount.value !== newStepCount) {
         // console.log('[ResizeHandle] Step count updated from AppState watcher:', stepCount.value, '->', newStepCount);
         stepCount.value = newStepCount;
@@ -186,6 +184,10 @@ function createResizeHandleState() {
         
         // Note: Bulls-eye recentering is now handled by individual components using provide/inject
         // Each component that needs bulls-eye access should use useBullsEyeService()
+        
+        setTimeout(() => {
+          // Bulls-eye recentering handled by individual components
+        }, 150); // Longer delay to allow all layout changes and bulls-eye recentering to complete
       }
     };
     
@@ -240,10 +242,7 @@ function createResizeHandleState() {
 
   async function updateLayout(newUiPercentage, shouldSave = true, isStepOperation = false) {
     // console.log('[ResizeHandle] updateLayout() called with:', newUiPercentage);
-    
-    // Performance monitoring
-    const perfId = performanceMonitor.startTiming('resize_layout');
-    
+        
     try {
         const windowWidth = window.innerWidth;
         const availableWidth = windowWidth - HANDLE_WIDTH; // Total space for both containers
@@ -285,21 +284,22 @@ function createResizeHandleState() {
         // Skip logging when no change detected
         
         // Smart saving strategy with scheduled auto-save
-        if (appState.value?.layout && (finalSceneWidth !== oldSceneWidth || shouldSave)) {
+        if (appState.value?.["user-settings"]?.layout && (finalSceneWidth !== oldSceneWidth || shouldSave)) {
             if (isStepOperation) {
                 // Step operations: save immediately for instant feedback
                 // console.log('[ResizeHandle] Step operation - immediate save:', uiPercentage.value);
                 
                 // Update both appState and appStore
                 await updateAppState({
-                    layout: {
-                        scenePercentage: uiPercentage.value,
-                        resumePercentage: 100 - uiPercentage.value
+                    "user-settings": {
+                        layout: {
+                            scenePercentage: uiPercentage.value,
+                            resumePercentage: 100 - uiPercentage.value
+                        }
                     }
                 }, true); // immediate = true
                 
-                // Update appStore for reactive UI
-                storeActions.setScenePercentage(uiPercentage.value);
+                // AppStore now reads from centralized state - no need for separate update
             } else if (shouldSave && !isDragging.value) {
                 // Drag end: save final position immediately
                 const currentUIPercentage = uiPercentage.value;
@@ -307,25 +307,27 @@ function createResizeHandleState() {
                 
                 // console.log('[ResizeHandle] Drag ended - final save:', currentUIPercentage);
                 await updateAppState({
-                    layout: {
-                        scenePercentage: currentUIPercentage,
-                        resumePercentage: resumeUIPercentage
+                    "user-settings": {
+                        layout: {
+                            scenePercentage: currentUIPercentage,
+                            resumePercentage: resumeUIPercentage
+                        }
                     }
                 }, true); // immediate = true
                 
-                // Update appStore for reactive UI
-                storeActions.setScenePercentage(currentUIPercentage);
+                // AppStore now reads from centralized state - no need for separate update
             } else if (isDragging.value) {
                 // During dragging: queue for auto-save (no API calls) but update appStore for reactive UI
                 await updateAppState({
-                    layout: {
-                        scenePercentage: uiPercentage.value,
-                        resumePercentage: 100 - uiPercentage.value
+                    "user-settings": {
+                        layout: {
+                            scenePercentage: uiPercentage.value,
+                            resumePercentage: 100 - uiPercentage.value
+                        }
                     }
                 }, false); // Queue for auto-save system
                 
-                // Update appStore for reactive UI during drag
-                storeActions.setScenePercentage(uiPercentage.value);
+                // AppStore now reads from centralized state - no need for separate update
                 // console.log('[ResizeHandle] Dragging - queued for auto-save:', uiPercentage.value);
             }
         }
@@ -334,7 +336,6 @@ function createResizeHandleState() {
     } catch (error) {
         console.error('ResizeHandle updateLayout error:', error);
     } finally {
-        performanceMonitor.endTiming(perfId);
     }
   }
 

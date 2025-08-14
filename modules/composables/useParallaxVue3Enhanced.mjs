@@ -45,13 +45,15 @@ export function useParallaxEnhanced() {
     const startTime = performance.now()
     
     try {
-      // Use injected debug function if available, otherwise call legacy version
-      if (debugFunctions?.renderAllCDivs) {
+      // Use injected services if available, otherwise call legacy parallax system
+      if (debugFunctions?.renderAllCDivs && typeof debugFunctions.renderAllCDivs === 'function') {
         debugFunctions.renderAllCDivs()
-      } else if (window.renderAllCDivs) {
-        window.renderAllCDivs()
       } else {
-        console.warn('[ParallaxEnhanced] No render function available')
+        // Fallback: trigger a simple parallax update event instead of calling window.renderAllCDivs
+        console.log('[ParallaxEnhanced] Triggering parallax update event')
+        window.dispatchEvent(new CustomEvent('parallax-render-requested', {
+          detail: { source: 'ParallaxEnhanced', timestamp: Date.now() }
+        }))
       }
       
       const endTime = performance.now()
@@ -124,7 +126,7 @@ export function useParallaxEnhanced() {
     window.getBullsEyePosition = getBullsEyePosition
     window.getFocalPointPosition = getFocalPointPosition
     window.getViewportOrigin = getViewportOrigin
-    window.renderAllCDivs = renderAllCDivs
+    // NOTE: Do NOT assign renderAllCDivs to window to avoid circular reference
     
     console.log('[ParallaxEnhanced] ✅ Initialization complete')
   }

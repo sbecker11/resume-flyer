@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto-Inject Bidirectional Sync Tester</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .status { 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 5px; 
+            border-left: 4px solid #3498db; 
+            background: #ecf0f1; 
+        }
+        .success { border-left-color: #27ae60; background: #d5ead5; }
+        .button { 
+            background: #3498db; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            margin: 10px 0;
+        }
+        .button:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Automated Bidirectional Sync Tester</h1>
+        <p>This page will automatically inject the testing script into your resume application.</p>
+        
+        <div class="status" id="status">
+            📋 Ready to inject automated testing script...
+        </div>
+        
+        <button class="button" onclick="injectTester()">
+            🚀 Inject Automated Tester Into App
+        </button>
+        
+        <div id="instructions" style="display: none;">
+            <h3>✅ Tester Injected Successfully!</h3>
+            <p><strong>What happens now:</strong></p>
+            <ol>
+                <li>The automated tester is now running in your resume app</li>
+                <li>Click any rDiv in your resume app</li>
+                <li>The system will automatically record and analyze the bidirectional sync</li>
+                <li>Press ESC to stop recording and see results</li>
+                <li>View detailed analysis at: <a href="http://localhost:3009/analysis-dashboard" target="_blank">Analysis Dashboard</a></li>
+            </ol>
+            
+            <p><strong>Expected Console Output:</strong></p>
+            <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 12px;">
+🤖 SERVER-INJECTED AUTOMATED TESTER LOADING...
+✅ SERVER-INJECTED AUTOMATED TESTER READY
+🎯 Click any rDiv to automatically start test
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        async function injectTester() {
+            const statusDiv = document.getElementById('status');
+            const instructionsDiv = document.getElementById('instructions');
+            
+            try {
+                statusDiv.innerHTML = '⏳ Injecting automated tester script...';
+                
+                // Open the resume app in a new window
+                const appWindow = window.open('http://localhost:5173', '_blank');
+                
+                if (!appWindow) {
+                    throw new Error('Could not open app window - check popup blocker');
+                }
+                
+                // Wait for the app to load, then inject the script
+                setTimeout(async () => {
+                    try {
+                        // Inject the automated testing script
+                        const script = appWindow.document.createElement('script');
+                        script.src = 'http://localhost:3009/automated-test-script';
+                        appWindow.document.head.appendChild(script);
+                        
+                        statusDiv.innerHTML = '✅ Automated tester successfully injected into resume app!';
+                        statusDiv.className = 'status success';
+                        instructionsDiv.style.display = 'block';
+                        
+                        // Focus the app window
+                        appWindow.focus();
+                        
+                    } catch (error) {
+                        statusDiv.innerHTML = '❌ Failed to inject script: ' + error.message;
+                        console.error('Injection error:', error);
+                    }
+                }, 2000); // Wait 2 seconds for app to load
+                
+            } catch (error) {
+                statusDiv.innerHTML = '❌ Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+        
+        // Auto-inject on page load
+        window.addEventListener('load', () => {
+            // Auto-inject after 1 second
+            setTimeout(() => {
+                console.log('Auto-injecting tester...');
+                injectTester();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

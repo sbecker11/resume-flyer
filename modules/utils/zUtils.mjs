@@ -8,7 +8,6 @@ export const SCENE_Z_INDEX = 1;           // no parallax
 export const SCENE_GRADIENTS_Z_INDEX = 2; // no parallax
 export const TIMELINE_Z_INDEX = 3;         // no parallax
 export const CONNECTION_LINES_Z_INDEX = 4; // no parallax
-export const BADGES_Z_INDEX = 5;           // no parallax  
 export const BACKGROUND_ELEMENTS_MAX_Z_INDEX = 6;
 
 export const ALL_CARDS_Z_INDEX_MIN = 10;

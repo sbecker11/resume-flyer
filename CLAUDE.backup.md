@@ -679,3 +679,56 @@ function setTarget(newX, newY) {
 ```
 
 **Result**: Perfect synchronization system where locked mode keeps AimPoint centered on bulls-eye and FocalPoint smoothly animates toward AimPoint position
+
+---
+
+## Session Update (2025-08-03) - Pre-Creation Architecture Implementation & Timing Fix
+
+### Problem Identified
+The pre-creation architecture implementation had a critical timing issue:
+- `preCreateAllClonesAndBadges()` function was attempting to create clones before original cards existed
+- The function was called with a 500ms delay after `initializeCardsController()` was called
+- However, `cardRegistry.getCardElement(jobNumber)` was returning null for all jobs 0-22
+- Console output showed "Original card not found for job X" for all jobs
+- The "Pre-creation ran" test element was not appearing, confirming execution timing issues
+
+### Root Cause Analysis
+1. **Execution Order**: Pre-creation function ran before original card creation was complete
+2. **Card Registry**: Original cards weren't registered when pre-creation attempted to access them
+3. **Timing Assumptions**: 500ms delay was insufficient for full initialization process
+4. **Architecture Mismatch**: Pre-creation should run after successful card creation, not on a fixed timer
+
+### Technical Context
+- **Pre-Creation Architecture**: User explicitly requested architecture where "1 original cDiv + 1 cloned cDiv + 1 set of badges all created at startup"
+- **Display Toggling**: System should use simple display property changes instead of dynamic creation/destruction
+- **Clone Positioning**: User specified exact positioning: `clone.left = -cDiv.width/2`, `clone.width = cDiv.width`, `clone.top = cDiv.top`, `clone.height = cDiv.height`
+- **Coordinate System**: Parallax rendering system handles coordinate transformations, not clone positioning logic
+
+### Current State
+- Pre-creation function exists and is properly structured
+- Function attempts to create test element and clones for all 23 jobs
+- Original cards are being created successfully by `initializeCardsController()`
+- Card registry is working properly for original cards
+- Issue is purely timing-based execution order
+
+### Solution Required
+Move `preCreateAllClonesAndBadges()` call to execute within `initializeCardsController()` after all original cards have been:
+1. Created successfully
+2. Added to DOM
+3. Registered in card registry
+4. Had color palettes applied
+
+This ensures the pre-creation function has access to fully initialized original cards when creating clones.
+
+### Files Involved
+- `modules/composables/useCardsController.mjs` - Contains both initialization and pre-creation functions
+- Current pre-creation call at lines 602-604 needs to be moved inside the initialization function
+- Function is ready to work once timing issue is resolved
+
+### Expected Outcome
+Once timing is fixed:
+- All 23 clones will be pre-created at startup
+- All badge sets will be pre-created for clones
+- Simple display toggling will handle selection states
+- No dynamic creation/destruction during user interactions
+- Architecture will match user's exact specifications

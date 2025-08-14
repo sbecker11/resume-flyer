@@ -2,6 +2,14 @@
 // Vue 3 reactive store system to replace global singletons
 
 import { reactive, ref, computed, watch } from 'vue'
+import { useAppState } from '../composables/useAppState.ts'
+
+// Get centralized app state
+const { appState, updateAppState } = useAppState()
+
+// Create reactive computed properties that track appState changes
+const orientation = computed(() => appState.value?.["user-settings"]?.layout?.orientation || 'scene-left')
+const scenePercentage = computed(() => appState.value?.["user-settings"]?.layout?.scenePercentage || 50)
 
 // Global app store (replaces window globals and IM singletons)
 export const appStore = reactive({
@@ -9,9 +17,13 @@ export const appStore = reactive({
   isInitialized: false,
   version: '2.1',
   
-  // Layout state
-  orientation: 'scene-left',
-  scenePercentage: 50,
+  // Layout state - now reads from centralized state via computed properties
+  get orientation() {
+    return orientation.value
+  },
+  get scenePercentage() {
+    return scenePercentage.value
+  },
   
   // Color palette state
   currentPalette: null,
@@ -79,14 +91,28 @@ export const appStoreComputed = {
 // Store actions (replaces singleton methods)
 export const appStoreActions = {
   // Layout actions
-  setOrientation(orientation) {
-    appStore.orientation = orientation
+  async setOrientation(orientation) {
+    await updateAppState({
+      "user-settings": {
+        layout: {
+          orientation: orientation
+        }
+      }
+    })
     console.log(`[AppStore] Orientation changed to: ${orientation}`)
   },
   
-  setScenePercentage(percentage) {
-    appStore.scenePercentage = percentage
-    console.log(`[AppStore] Scene percentage: ${appStore.scenePercentage}%`)
+  async setScenePercentage(percentage) {
+    const resumePercentage = 100 - percentage
+    await updateAppState({
+      "user-settings": {
+        layout: {
+          scenePercentage: Math.round(percentage),
+          resumePercentage: Math.round(resumePercentage)
+        }
+      }
+    })
+    console.log(`[AppStore] Scene percentage: ${Math.round(percentage)}%, Resume: ${Math.round(resumePercentage)}%`)
   },
   
   toggleOrientation() {

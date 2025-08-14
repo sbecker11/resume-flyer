@@ -56,26 +56,6 @@ export interface ColorPaletteSelectorEmits {
   'change': [filename: string, paletteName: string];
 }
 
-// BadgeToggle component types
-export interface BadgeToggleProps {
-  // No props currently needed
-}
-
-export interface BadgeToggleEmits {
-  'badge-mode-changed': [mode: string];
-}
-
-// SkillBadges component types
-export interface SkillBadgesProps {
-  jobNumber: number;
-  skills: Record<string, string>;
-  visible?: boolean;
-}
-
-export interface SkillBadgesEmits {
-  'badge-clicked': [skillId: string, skillName: string];
-  'badge-hovered': [skillId: string, skillName: string];
-}
 
 // SceneViewLabel component types
 export interface SceneViewLabelProps {

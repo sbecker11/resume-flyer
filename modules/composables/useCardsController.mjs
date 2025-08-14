@@ -1,32 +1,80 @@
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, inject, computed, watchEffect } from 'vue'
 import { jobs } from '@/static_content/jobs/jobs.mjs'
 import { selectionManager } from '@/modules/core/selectionManager.mjs'
 import { useTimeline, initialize } from '@/modules/composables/useTimeline.mjs'
 import { useColorPalette, applyPaletteToElement, readyPromise } from '@/modules/composables/useColorPalette.mjs'
-import { useBadgeToggle } from '@/modules/composables/useBadgeToggle.mjs'
 import * as dateUtils from '@/modules/utils/dateUtils.mjs'
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs'
 import { linearInterp } from '@/modules/utils/mathUtils.mjs'
 import * as mathUtils from '@/modules/utils/mathUtils.mjs'
 import * as zUtils from '@/modules/utils/zUtils.mjs'
 import * as filters from '@/modules/core/filters.mjs'
+import { useCardRegistry } from '@/modules/composables/useCardRegistry.mjs'
+import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElementRegistry.mjs'
 
 // Timeline constants (matching Timeline.vue)
 const TIMELINE_PADDING_TOP = 0;
 
-// Simple CardsController initialization for Vue setup
+// Vue 3 Reactive Dependencies pattern for CardsController
 export function useCardsController() {
     const isInitialized = ref(false)
     const bizCardDivs = ref([])
     
-    // Get timeline functions
-    const { getPositionForDate, getDateForPosition, isInitialized: timelineInitialized } = useTimeline()
+    // CRITICAL: Inject services - throw error if not provided (no fallbacks)
+    const bullsEyeService = inject('bullsEyeService')
+    const timelineService = inject('timelineService')  
+    const colorPaletteService = inject('colorPaletteService')
+    const sceneContainerService = inject('sceneContainerService')
+    
+    // Fail fast - no fallbacks allowed per user requirement
+    if (!bullsEyeService) throw new Error('[useCardsController] bullsEyeService not provided')
+    if (!timelineService) throw new Error('[useCardsController] timelineService not provided')
+    if (!colorPaletteService) throw new Error('[useCardsController] colorPaletteService not provided')
+    if (!sceneContainerService) throw new Error('[useCardsController] sceneContainerService not provided')
+    
+    // CRITICAL: Reactive computed that tracks when dependencies are ready
+    const allDependenciesReady = computed(() => {
+        const ready = bullsEyeService.isReady?.value && 
+                     timelineService.isReady?.value && 
+                     colorPaletteService.isReady?.value &&
+                     sceneContainerService.isReady?.value
+        
+        console.log('[useCardsController] Dependencies ready:', {
+            bullsEye: bullsEyeService.isReady?.value,
+            timeline: timelineService.isReady?.value,
+            colorPalette: colorPaletteService.isReady?.value,
+            sceneContainer: sceneContainerService.isReady?.value,
+            allReady: ready
+        })
+        
+        return ready
+    })
+    
+    // Get timeline functions EARLY to avoid TDZ errors in init calls triggered by watchers
+    const timelineComposable = useTimeline()
+    const { getPositionForDate, getDateForPosition, isInitialized: timelineInitialized } = timelineComposable
+
+    // CRITICAL: Auto-initialize when all dependencies become ready
+    watchEffect(() => {
+        if (allDependenciesReady.value && !isInitialized.value) {
+            console.log('[useCardsController] All dependencies ready, initializing cards...')
+            
+            // Initialize cards controller
+            initializeCardsController()
+        }
+    })
     
     // Get color palette functions
     const { colorPalettes, currentPaletteFilename } = useColorPalette()
     
-    // Get badge toggle state
-    const { isBadgesVisible } = useBadgeToggle()
+    // Optimized card registry (replaces document.getElementById calls)
+    const cardRegistry = useCardRegistry()
+    
+    // Global element registry for optimized DOM access
+    const elementRegistry = injectGlobalElementRegistry()
+    
+    // Try to get scene-plane element via provide/inject or template refs
+    const scenePlaneElement = inject('scenePlaneElement', null)
 
     async function initializeCardsController() {
         console.log('[DEBUG] initializeCardsController called, isInitialized:', isInitialized.value)
@@ -44,16 +92,20 @@ export function useCardsController() {
                 initialize(jobs)
             }
             
-            // Get the scene plane element
-            const scenePlaneElement = document.getElementById('scene-plane')
-            if (!scenePlaneElement) {
-                console.warn('[CardsController] scene-plane element not found, retrying...')
-                setTimeout(initializeCardsController, 500)
-                return
+            // Get the scene plane element via optimized registry
+            let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+            if (!scenePlaneEl) {
+                // Last resort fallback
+                console.warn('[CardsController] Scene plane not available in registry, retrying...')
+                if (!scenePlaneEl) {
+                    console.warn('[CardsController] scene-plane element not found, retrying...')
+                    setTimeout(initializeCardsController, 500)
+                    return
+                }
             }
 
             // Clear any existing cards
-            const existingCards = scenePlaneElement.querySelectorAll('.biz-card-div')
+            const existingCards = scenePlaneEl.querySelectorAll('.biz-card-div')
             console.log(`[DEBUG] Found ${existingCards.length} existing cards to remove`)
             existingCards.forEach(card => card.remove())
 
@@ -68,11 +120,15 @@ export function useCardsController() {
             for (let index = 0; index < jobs.length; index++) {
                 const job = jobs[index]
                 console.log(`[CardsController] Creating card ${index} for ${job.employer}`)
-                const card = createBizCardDiv(job, index, scenePlaneElement)
+                const card = await createBizCardDiv(job, index, scenePlaneEl)
                 if (card) {
-                    scenePlaneElement.appendChild(card)
+                    scenePlaneEl.appendChild(card)
                     cards.push(card)
+                    
+                    // Register card in optimized registry (replaces future document.getElementById calls)
+                    cardRegistry.registerCardElement(index, card)
                     console.log(`[CardsController] Card ${index} created and appended - position: ${card.style.left}, ${card.style.top}`)
+                    console.log(`[CardsController] Registered card ${index} in optimized registry`)
                     
                     // Apply color palette to the card
                     try {
@@ -101,18 +157,25 @@ export function useCardsController() {
             
             console.log(`[CardsController] ✅ Created ${cards.length} business cards`)
             
+            // CRITICAL: Pre-create all clones after cards are ready
+            setTimeout(async () => {
+                await preCreateAllClones()
+                console.log(`[CardsController] ✅ Pre-created clones`)
+            }, 100)
+            
         } catch (error) {
             console.error('[CardsController] Initialization failed:', error)
-            // Retry after a delay
-            setTimeout(initializeCardsController, 1000)
+            isInitialized.value = false
+            // Don't retry automatically - let reactive dependencies handle it
         }
     }
 
-    function createBizCardDiv(job, jobNumber, scenePlane) {
+    async function createBizCardDiv(job, jobNumber, scenePlane) {
         const cardId = createBizCardDivId(jobNumber)
         
-        // Check if card already exists in DOM
-        if (document.getElementById(cardId)) {
+        // Check if card already exists in registry (no fallback to DOM needed)
+        let existingCard = cardRegistry.getCardElement(jobNumber)
+        if (existingCard) {
             console.log(`[DEBUG] Card ${cardId} already exists, skipping creation`)
             return null
         }
@@ -164,6 +227,23 @@ export function useCardsController() {
         
         // Add color index for palette application
         card.setAttribute('data-color-index', jobNumber) // Use jobNumber as color index
+        
+        // Debug card creation attributes for all jobs (to identify patterns)
+        console.log(`[DEBUG] Job#${jobNumber} - Card creation attributes:`, {
+            id: card.id,
+            dataJobNumber: card.getAttribute('data-job-number'),
+            dataColorIndex: card.getAttribute('data-color-index'),
+            className: card.className,
+            style: card.style.cssText,
+            position: `${card.style.left}, ${card.style.top}`,
+            jobData: {
+                employer: job.employer,
+                role: job.role,
+                start: job.start,
+                end: job.end,
+                skillCount: job['job-skills'] ? Object.keys(job['job-skills']).length : 0
+            }
+        })
         
         // Add Z-depth for parallax effects (using original random approach)
         const sceneZ = mathUtils.getRandomInt(zUtils.ALL_CARDS_Z_MIN, zUtils.ALL_CARDS_Z_MAX);
@@ -372,86 +452,13 @@ export function useCardsController() {
                 Skills: ${skillCount} | References: ${job.references ? job.references.length : 0}
             </div>
         `
-        
-        // Red debug lines commented out
-        // if (sceneTopValue !== 'N/A' && sceneBottomValue !== 'N/A') {
-        //     // Get the scene plane element
-        //     const scenePlane = document.getElementById('scene-plane');
-        //     if (scenePlane) {
-        //         // Get viewport width for line end
-        //         const lineWidth = window.innerWidth;
-        //         
-        //         // Create red line for job END date
-        //         const topLine = document.createElement('div');
-        //         topLine.className = `debug-line-top-job-${jobNumber}`;
-        //         topLine.style.cssText = `
-        //             position: absolute;
-        //             left: 0px;
-        //             top: ${sceneTopValue}px;
-        //             width: ${lineWidth}px;
-        //             height: 2px;
-        //             background-color: red;
-        //             z-index: 998;
-        //             pointer-events: none;
-        //         `;
-        //         scenePlane.appendChild(topLine);
-        //         
-        //         // Add job number and end date label 10px above end date line
-        //         const endDateStr = (job.end === "CURRENT_DATE" || !job.end) ? "CURRENT" : job.end;
-        //         const topLabel = document.createElement('div');
-        //         topLabel.className = `debug-label-top-job-${jobNumber}`;
-        //         topLabel.textContent = `#${jobNumber} ${endDateStr}`;
-        //         topLabel.style.cssText = `
-        //             position: absolute;
-        //             left: 30px;
-        //             top: ${sceneTopValue - 20}px;
-        //             font-size: 16px;
-        //             font-weight: bold;
-        //             color: red;
-        //             z-index: 999;
-        //             pointer-events: none;
-        //         `;
-        //         scenePlane.appendChild(topLabel);
-                
-                // Bottom lines (start dates) commented out - showing only end date lines
-                // const bottomLine = document.createElement('div');
-                // bottomLine.className = `debug-line-bottom-job-${jobNumber}`;
-                // bottomLine.style.cssText = `
-                //     position: absolute;
-                //     left: 0px;
-                //     top: ${sceneBottomValue}px;
-                //     width: ${lineWidth}px;
-                //     height: 3px;
-                //     background-color: red;
-                //     z-index: 999;
-                //     pointer-events: none;
-                // `;
-                // scenePlane.appendChild(bottomLine);
-                
-                // Bottom labels (start dates) commented out - showing only end date labels
-                // const bottomLabel = document.createElement('div');
-                // bottomLabel.className = `debug-label-bottom-job-${jobNumber}`;
-                // bottomLabel.textContent = `#${jobNumber}`;
-                // bottomLabel.style.cssText = `
-                //     position: absolute;
-                //     left: 30px;
-                //     top: ${sceneBottomValue - 15}px;
-                //     font-size: 10px;
-                //     font-weight: bold;
-                //     color: red;
-                //     z-index: 1000;
-                //     pointer-events: none;
-                // `;
-        //         // scenePlane.appendChild(bottomLabel);
-        //     }
-        // }
 
         // Add click handler
         card.addEventListener('click', (event) => {
             event.stopPropagation() // Prevent bubbling to scene-plane
-            console.log(`[CardsController] Card clicked: Job ${jobNumber}`)
+            console.log(`[CardsController] 🎯 cDiv clicked: Job ${jobNumber} - will trigger rDiv header scroll`)
             if (selectionManager) {
-                selectionManager.selectJobNumber(jobNumber, 'CardsController.click')
+                selectionManager.selectJobNumber(jobNumber, 'CardsController.cardClick')
             }
         })
         
@@ -470,8 +477,7 @@ export function useCardsController() {
             }
         })
         
-        // Create skill badges for this specific cDiv
-        createSkillBadgesForCard(card, job, jobNumber)
+        // No additional elements created for cards
         
         return card
     }
@@ -479,14 +485,25 @@ export function useCardsController() {
     // Viewport change handler for repositioning selected clones
     function handleViewportChangedForClones() {
         // Find any existing clones and reposition them to scene center
-        const scenePlaneElement = document.getElementById('scene-plane')
-        if (!scenePlaneElement) return
+        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
         
-        const clones = scenePlaneElement.querySelectorAll('[id$="-clone"]')
+        const clones = scenePlaneEl.querySelectorAll('[id$="-clone"]')
         clones.forEach(clone => {
-            const sceneRect = scenePlaneElement.getBoundingClientRect()
-            const centerX = sceneRect.width / 2
-            clone.style.left = `${centerX - (parseFloat(clone.style.width) || 180) / 2}px`
+            try {
+                const sceneRect = scenePlaneEl.getBoundingClientRect()
+                const centerX = sceneRect.width / 2
+                const cloneWidth = parseFloat(clone.style.width) || 180
+                
+                // Reposition clone to scene center
+                const newCloneLeft = centerX - cloneWidth / 2
+                clone.style.left = `${newCloneLeft}px`
+                
+            } catch (error) {
+                console.warn('[handleViewportChangedForClones] Error repositioning clone:', error)
+                // Fallback positioning
+                clone.style.left = '250px'
+            }
         })
         
         if (clones.length > 0) {
@@ -494,59 +511,307 @@ export function useCardsController() {
         }
     }
 
-    // Set up selection event listeners for clone management
-    onMounted(() => {
-        // Delay to ensure DOM is ready
-        setTimeout(initializeCardsController, 100)
+    // Set up event listeners with retry mechanism
+    const setupEventListeners = () => {
+        console.log('[useCardsController] 🎧 Setting up event listeners...')
+        console.log('[useCardsController] selectionManager availability:', !!selectionManager)
+        console.log('[useCardsController] selectionManager instanceId:', selectionManager?.instanceId)
+        
+        if (!selectionManager) {
+            console.error('[useCardsController] ❌ CRITICAL: selectionManager not available!')
+            return false
+        }
+        
+        // Test a simple event to verify event system works
+        try {
+            console.log('[useCardsController] 🧪 Testing event system...')
+            selectionManager.addEventListener('test-event', () => {
+                console.log('[useCardsController] ✅ Test event received - event system working!')
+            })
+            selectionManager.eventTarget.dispatchEvent(new CustomEvent('test-event'))
+        } catch (error) {
+            console.error('[useCardsController] ❌ Event system test failed:', error)
+            return false
+        }
         
         // Listen for selection events to handle clone creation
-        selectionManager.addEventListener('job-selected', handleJobSelected)
-        selectionManager.addEventListener('selection-cleared', handleSelectionCleared)
+        try {
+            selectionManager.addEventListener('job-selected', handleJobSelected)
+            selectionManager.addEventListener('selection-cleared', handleSelectionCleared)
+            console.log('[useCardsController] ✅ Added job-selected and selection-cleared listeners')
+            console.log('[useCardsController] handleJobSelected type:', typeof handleJobSelected)
+            
+            // Listen for hover events to handle cDiv visual feedback
+            selectionManager.addEventListener('job-hovered', handleJobHovered)
+            selectionManager.addEventListener('hoverCleared', handleHoverCleared)
+            console.log('[useCardsController] ✅ Added hover event listeners')
+            
+            // Listen for viewport changes to reposition selected clones
+            window.addEventListener('viewport-changed', handleViewportChangedForClones)
+            window.addEventListener('resize', handleViewportChangedForClones)
+            
+            // Set a flag to indicate listeners are set up
+            window._cardsControllerListenersReady = true
+            window._cardsControllerSelectionManagerId = selectionManager.instanceId
+            console.log('[useCardsController] 🚀 All event listeners set up and ready!')
+            
+            return true
+        } catch (error) {
+            console.error('[useCardsController] ❌ Failed to set up event listeners:', error)
+            return false
+        }
+    }
+    
+    // CRITICAL FIX: Use window.selectionManager instead of imported selectionManager
+    // This ensures we use the same singleton instance that's available globally
+    const setupEventListenersFixed = () => {
+        console.log('[useCardsController] 🎧 Setting up event listeners (FIXED VERSION)...')
         
-        // Listen for hover events to handle cDiv visual feedback
-        selectionManager.addEventListener('job-hovered', handleJobHovered)
-        selectionManager.addEventListener('hoverCleared', handleHoverCleared)
+        // Use window.selectionManager to ensure we get the same singleton instance
+        const globalSelectionManager = window.selectionManager
+        console.log('[useCardsController] globalSelectionManager availability:', !!globalSelectionManager)
+        console.log('[useCardsController] globalSelectionManager instanceId:', globalSelectionManager?.instanceId)
         
-        // Listen for viewport changes to reposition selected clones
-        window.addEventListener('viewport-changed', handleViewportChangedForClones)
-        window.addEventListener('resize-handle-changed', handleViewportChangedForClones)
-        window.addEventListener('resize', handleViewportChangedForClones)
+        if (!globalSelectionManager) {
+            console.error('[useCardsController] ❌ CRITICAL: window.selectionManager not available!')
+            return false
+        }
+        
+        // Test a simple event to verify event system works
+        try {
+            console.log('[useCardsController] 🧪 Testing event system with global selectionManager...')
+            globalSelectionManager.addEventListener('test-event-fixed', () => {
+                console.log('[useCardsController] ✅ Test event received - global event system working!')
+            })
+            globalSelectionManager.eventTarget.dispatchEvent(new CustomEvent('test-event-fixed'))
+        } catch (error) {
+            console.error('[useCardsController] ❌ Global event system test failed:', error)
+            return false
+        }
+        
+        // Listen for selection events to handle clone creation
+        try {
+            globalSelectionManager.addEventListener('job-selected', handleJobSelected)
+            globalSelectionManager.addEventListener('selection-cleared', handleSelectionCleared)
+            console.log('[useCardsController] ✅ Added job-selected and selection-cleared listeners (FIXED)')
+            console.log('[useCardsController] handleJobSelected type:', typeof handleJobSelected)
+            
+            // Listen for hover events to handle cDiv visual feedback
+            globalSelectionManager.addEventListener('job-hovered', handleJobHovered)
+            globalSelectionManager.addEventListener('hoverCleared', handleHoverCleared)
+            console.log('[useCardsController] ✅ Added hover event listeners (FIXED)')
+            
+            // Listen for viewport changes to reposition selected clones
+            window.addEventListener('viewport-changed', handleViewportChangedForClones)
+            window.addEventListener('resize', handleViewportChangedForClones)
+            
+            // Set a flag to indicate listeners are set up
+            window._cardsControllerListenersReady = true
+            window._cardsControllerSelectionManagerId = globalSelectionManager.instanceId
+            console.log('[useCardsController] 🚀 All event listeners set up and ready (FIXED)!')
+            
+            return true
+        } catch (error) {
+            console.error('[useCardsController] ❌ Failed to set up event listeners (FIXED):', error)
+            return false
+        }
+    }
+    
+    // Try to set up event listeners with retry mechanism
+    let setupAttempts = 0
+    const maxSetupAttempts = 5
+    
+    const attemptSetup = () => {
+        setupAttempts++
+        console.log(`[useCardsController] Setup attempt ${setupAttempts}/${maxSetupAttempts}`)
+        
+        if (window.selectionManager) {
+            const success = setupEventListenersFixed()
+            if (success) {
+                console.log('[useCardsController] ✅ Event listener setup successful!')
+                return
+            }
+        }
+        
+        if (setupAttempts < maxSetupAttempts) {
+            console.log('[useCardsController] ⏰ Retrying setup in 1 second...')
+            setTimeout(attemptSetup, 1000)
+        } else {
+            console.error('[useCardsController] ❌ Failed to set up event listeners after', maxSetupAttempts, 'attempts')
+        }
+    }
+    
+    // Start setup attempts immediately
+    attemptSetup()
+    
+    // Also try in onMounted as backup
+    onMounted(() => {
+        console.log('[useCardsController] onMounted called, listeners ready:', !!window._cardsControllerListenersReady)
+        if (!window._cardsControllerListenersReady && window.selectionManager) {
+            console.log('[useCardsController] Retrying event listener setup in onMounted...')
+            setupEventListenersFixed()
+        }
     })
     
+    // Pre-create all clones at startup
+    async function preCreateAllClones() {
+        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
+        
+        // Add a test element to verify this function ran
+        const testEl = document.createElement('div')
+        testEl.id = 'pre-creation-test'
+        testEl.textContent = 'Pre-creation ran'
+        document.body.appendChild(testEl)
+        
+        // Pre-create clones for all jobs
+        for (let jobNumber = 0; jobNumber < jobs.length; jobNumber++) {
+            const originalCard = cardRegistry.getCardElement(jobNumber)
+            if (!originalCard) {
+                console.warn(`[preCreateAllClones] Original card not found for job ${jobNumber}`)
+                continue
+            }
+            
+            const cloneId = `${originalCard.id}-clone`
+            
+            // Create clone
+            const clone = originalCard.cloneNode(true)
+            clone.id = cloneId
+            clone.classList.add('clone')
+            clone.classList.add('selected') // Clones are always in selected state
+            clone.classList.remove('hovered')
+            clone.classList.remove('hasClone')
+            
+            // CRITICAL: Copy original card's computed width to clone's style
+            const originalRect = originalCard.getBoundingClientRect()
+            clone.style.width = `${originalRect.width}px`
+            
+            // Set clone positioning
+            const originalComputedStyle = window.getComputedStyle(originalCard)
+            const cardWidth = parseFloat(originalComputedStyle.width) || 180
+            const cardHeight = parseFloat(originalComputedStyle.height) || 100
+            const originalTop = originalCard.style.top || originalComputedStyle.top || '0px'
+            
+            // CRITICAL: Position clone centerX = bullsEye centerX
+            // cDiv-clone.left = bullsEye.center.x - cDiv.width/2
+            let bullsEyeCenterX = 0
+            if (bullsEyeService && bullsEyeService.getCenter) {
+                const bullsEyeCenter = bullsEyeService.getCenter()
+                bullsEyeCenterX = bullsEyeCenter ? bullsEyeCenter.x : 0
+                console.log(`[preCreateAllClones] Got bullsEye center from service: ${bullsEyeCenterX}`)
+            } else {
+                // Fallback: assume scene center at viewport center
+                const sceneContainer = elementRegistry.getSceneContainer()
+                if (sceneContainer) {
+                    const rect = sceneContainer.getBoundingClientRect()
+                    bullsEyeCenterX = rect.width / 2
+                } else {
+                    console.warn(`[preCreateAllClones] No bullsEye service or scene container, using x=0`)
+                }
+            }
+            const cloneLeft = bullsEyeCenterX - (cardWidth / 2)
+            clone.style.setProperty('left', `${cloneLeft}px`, 'important')
+            clone.style.setProperty('width', `${cardWidth}px`, 'important')
+            clone.style.setProperty('height', `${cardHeight}px`, 'important')
+            clone.style.setProperty('top', originalTop, 'important')
+            clone.style.setProperty('position', 'absolute', 'important')
+            clone.style.setProperty('z-index', '99', 'important')
+            
+            
+            // CRITICAL: Ensure clone gets full selected styling
+            // Remove any copied styling that interferes with selected state
+            clone.style.removeProperty('border')
+            clone.style.removeProperty('outline')
+            clone.style.removeProperty('box-shadow')
+            clone.style.removeProperty('filter')
+            clone.style.removeProperty('background-color')
+            clone.style.removeProperty('color')
+            clone.style.removeProperty('padding')
+            clone.style.removeProperty('border-radius')
+            
+            // CRITICAL: Force selected styling to override any CSS variables or inherited styles
+            clone.style.setProperty('filter', 'none', 'important') // Override parallax filter
+            clone.style.setProperty('border', '2px solid purple', 'important')
+            clone.style.setProperty('outline', 'none', 'important')
+            clone.style.setProperty('box-shadow', '0 0 0 3px white, 0 0 0 8px purple, 0 3px 12px rgba(128, 0, 128, 0.4)', 'important')
+            
+            // Initially hide the clone
+            clone.style.setProperty('display', 'none', 'important')
+            
+            clone.title = `CLONE of Job ${jobNumber}`
+            
+            // Add to DOM
+            scenePlaneEl.appendChild(clone)
+            
+            // CRITICAL: Apply color palette to clone for proper selected styling
+            try {
+                await applyPaletteToElement(clone)
+                } catch (error) {
+                console.warn(`[preCreateAllClones] ❌ Failed to apply palette to clone ${jobNumber}:`, error)
+            }
+            
+            // Add click handler for deselection
+            clone.addEventListener('click', (event) => {
+                event.stopPropagation()
+                if (selectionManager) {
+                    selectionManager.clearSelection('Clone.click')
+                }
+            })
+            
+            // Removed debug output
+        }
+        
+        // Clones pre-created
+        
+        // Clear element registry cache
+        elementRegistry.clearAllCache()
+    }
+
     // Clone management functions
     function handleJobSelected(event) {
+        console.log(`[CardsController] 🎯 handleJobSelected CALLED!`, event.detail)
         const { jobNumber, previousSelection, source } = event.detail
-        console.log(`[useCardsController] Job selected: ${jobNumber}, previous: ${previousSelection}, source: ${source}`)
+        console.log(`[CardsController] Processing selection for job ${jobNumber} from source: ${source}`)
         
-        // Clear any existing clones first (handles previous selection)
+        // Hide previous selection if exists
         if (previousSelection !== null && previousSelection !== jobNumber) {
-            console.log(`[useCardsController] Clearing previous selection: ${previousSelection}`)
-            removeAllClones()
+            hideJobClone(previousSelection)
+            showJobOriginal(previousSelection)
         }
         
-        // Create clone for new selection
-        createSelectedClone(jobNumber)
+        // Show current selection (cDiv clone)
+        hideJobOriginal(jobNumber)
+        showJobClone(jobNumber)
         
-        // Implement bidirectional scrolling
-        console.log(`[useCardsController] DEBUGGING: Checking bidirectional scroll - source: "${source}", CardsController comparison: ${source !== 'CardsController'}`)
-        if (source !== 'CardsController') {
-            // If selection came from rDiv side, scroll cDiv into view
-            console.log(`[useCardsController] DEBUGGING: Selection from rDiv side, will scroll cDiv into view in 100ms`)
+        // Implement bidirectional scrolling with header targeting
+        if (source && source.includes('ResumeListController')) {
+            // rDiv was selected → scroll cDiv header into view
+            console.log(`[CardsController] 📜 rDiv selected → scrolling cDiv header for job ${jobNumber}`)
             setTimeout(() => {
-                console.log(`[useCardsController] DEBUGGING: Executing delayed cDiv scroll now`)
-                scrollCDivIntoView(jobNumber)
-            }, 100) // Small delay for DOM updates
+                scrollCDivHeaderIntoView(jobNumber)
+            }, 100)
+        } else if (source && source.includes('CardsController')) {
+            // cDiv was selected → scroll rDiv header into view
+            console.log(`[CardsController] 📜 cDiv selected → scrolling rDiv header for job ${jobNumber}`)
+            setTimeout(() => {
+                scrollRDivHeaderIntoView(jobNumber)
+            }, 100)
+        } else if (source && source !== 'CardsController') {
+            // Other source → scroll cDiv (backward compatibility)
+            console.log(`[CardsController] 📜 Other source → scrolling cDiv header for job ${jobNumber}`)
+            setTimeout(() => {
+                scrollCDivHeaderIntoView(jobNumber)
+            }, 100)
         } else {
-            console.log(`[useCardsController] DEBUGGING: Selection from cDiv side, skipping cDiv scroll to prevent loop`)
+            console.log(`[CardsController] 📜 No scroll needed - source: ${source}`)
         }
-        
-        // Always scroll rDiv into view (ResumeListController handles this via its own event listener)
-        // This ensures both panels scroll regardless of which side initiated the selection
     }
     
     function handleSelectionCleared(event) {
-        console.log('[useCardsController] Selection cleared, removing clones...')
-        removeAllClones()
+        console.log('[useCardsController] Selection cleared, hiding all clones and showing originals...')
+        hideAllClones()
+        showAllOriginals()
+        clearAllSelected()
     }
     
     function handleJobHovered(event) {
@@ -556,12 +821,16 @@ export function useCardsController() {
         // Clear previous hover states
         clearAllCardHovers()
         
-        // Apply hover class to the corresponding cDiv
-        const cardId = createBizCardDivId(jobNumber)
-        const card = document.getElementById(cardId)
+        // Apply hover class to the corresponding cDiv using card registry
+        let card = cardRegistry.getCardElement(jobNumber)
+        if (!card) {
+            // Fallback to DOM query during migration period
+            const cardId = createBizCardDivId(jobNumber)
+            card = document.getElementById(cardId)
+        }
         if (card && !card.classList.contains('selected')) {
             card.classList.add('hovered')
-            // console.log(`[useCardsController] Applied hover to card: ${cardId}`)
+            // console.log(`[useCardsController] Applied hover to card: ${card.id}`)
         }
     }
     
@@ -571,28 +840,264 @@ export function useCardsController() {
     }
     
     function clearAllCardHovers() {
-        const scenePlaneElement = document.getElementById('scene-plane')
-        if (!scenePlaneElement) return
+        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
         
         // Remove hover class from all cards
-        const allCards = scenePlaneElement.querySelectorAll('.biz-card-div')
+        const allCards = scenePlaneEl.querySelectorAll('.biz-card-div')
         allCards.forEach(card => {
             card.classList.remove('hovered')
         })
     }
     
-    function scrollCDivIntoView(jobNumber) {
-        console.log(`[useCardsController] DEBUGGING: Scrolling to original cDiv timeline position for job ${jobNumber}`)
+    function clearAllSelected() {
+        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
+        
+        // Remove selected class from all cards (both original and clones)
+        const allCards = scenePlaneEl.querySelectorAll('.biz-card-div')
+        allCards.forEach(card => {
+            card.classList.remove('selected')
+        })
+        
+        console.log(`[useCardsController] ✅ Cleared selected class from all cards`)
+    }
+    
+    // Simple display toggle functions for pre-creation architecture
+    function hideJobOriginal(jobNumber) {
+        const originalCard = cardRegistry.getCardElement(jobNumber)
+        console.log(`[hideJobOriginal] Called for job ${jobNumber}, found card:`, !!originalCard)
+        if (originalCard) {
+            // CRITICAL: Store original position before hiding
+            if (!originalCard._originalLeft) {
+                originalCard._originalLeft = originalCard.style.left || getComputedStyle(originalCard).left
+                originalCard._originalTop = originalCard.style.top || getComputedStyle(originalCard).top
+                originalCard._originalPosition = originalCard.style.position || getComputedStyle(originalCard).position
+                console.log(`[hideJobOriginal] Stored original position: left=${originalCard._originalLeft}, top=${originalCard._originalTop}`)
+            }
+            
+            // CRITICAL: Use multiple hiding methods to ensure original is completely hidden
+            originalCard.style.setProperty('display', 'none', 'important')
+            originalCard.style.setProperty('visibility', 'hidden', 'important')
+            originalCard.style.setProperty('opacity', '0', 'important')
+            originalCard.style.setProperty('z-index', '-9999', 'important')
+            originalCard.style.setProperty('pointer-events', 'none', 'important')
+            originalCard.classList.add('force-hidden-for-clone')
+            console.log(`[hideJobOriginal] ✅ Aggressively hidden original card for job ${jobNumber}`)
+            console.log(`[hideJobOriginal] Computed display after hiding:`, window.getComputedStyle(originalCard).display)
+        } else {
+            console.error(`[hideJobOriginal] ❌ Original card not found for job ${jobNumber}`)
+        }
+    }
+    
+    function showJobOriginal(jobNumber) {
+        const originalCard = cardRegistry.getCardElement(jobNumber)
+        if (originalCard) {
+            // CRITICAL: Restore original position first, then visibility
+            if (originalCard._originalLeft) {
+                originalCard.style.setProperty('left', originalCard._originalLeft, 'important')
+                originalCard.style.setProperty('top', originalCard._originalTop, 'important')
+                originalCard.style.setProperty('position', originalCard._originalPosition, 'important')
+                console.log(`[showJobOriginal] Restored original position: left=${originalCard._originalLeft}, top=${originalCard._originalTop}`)
+            }
+            
+            // CRITICAL: Restore all hidden properties
+            originalCard.style.removeProperty('display')
+            originalCard.style.removeProperty('visibility')
+            originalCard.style.removeProperty('opacity')
+            originalCard.style.removeProperty('z-index')
+            originalCard.style.removeProperty('pointer-events')
+            originalCard.classList.remove('force-hidden-for-clone')
+            console.log(`[showJobOriginal] ✅ Fully restored original card for job ${jobNumber}`)
+        }
+    }
+    
+    function hideJobClone(jobNumber) {
+        const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`)
+        
+        if (clone) {
+            clone.style.setProperty('display', 'none', 'important')
+        }
+        
+        console.log(`[hideJobClone] ✅ Hidden clone for job ${jobNumber}`)
+    }
+    
+    function showJobClone(jobNumber) {
+        const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`)
+        
+        if (clone) {
+            clone.style.removeProperty('display')
+            clone.style.setProperty('display', 'block', 'important')
+        }
+        
+        if (!clone) console.log(`❌ Clone not found for job ${jobNumber}`)
+    }
+    
+    function hideAllClones() {
+        for (let jobNumber = 0; jobNumber < jobs.length; jobNumber++) {
+            hideJobClone(jobNumber)
+        }
+        console.log(`[hideAllClones] ✅ Hidden all clones`)
+    }
+    
+    function showAllOriginals() {
+        for (let jobNumber = 0; jobNumber < jobs.length; jobNumber++) {
+            showJobOriginal(jobNumber)
+        }
+        console.log(`[showAllOriginals] ✅ Shown all original cards`)
+    }
+    
+    // Enhanced cDiv header scroll function
+    function scrollCDivHeaderIntoView(jobNumber) {
+        console.log(`[useCardsController] 📜 SCROLL: Attempting to scroll cDiv HEADER into view for job ${jobNumber}`)
         
         const cardId = createBizCardDivId(jobNumber)
-        console.log(`[useCardsController] DEBUGGING: Looking for original card position: ${cardId}`)
+        console.log(`[useCardsController] SCROLL: Looking for card with ID: ${cardId}`)
         
         // Always scroll to the original card's timeline position, not the clone
-        // The clone is just a visual indicator at scene center, but we want to show
-        // where this job sits chronologically in the timeline
-        const card = document.getElementById(cardId)
-        console.log(`[useCardsController] DEBUGGING: Original card found:`, !!card)
+        let card = cardRegistry.getCardElement(jobNumber)
+        if (!card) {
+            card = document.getElementById(cardId)
+            console.log(`[useCardsController] SCROLL: Card not in registry, found via getElementById:`, !!card)
+        } else {
+            console.log(`[useCardsController] SCROLL: Card found in registry:`, !!card)
+        }
         
+        if (!card) {
+            console.error(`[useCardsController] ❌ SCROLL FAILED: Card not found for job ${jobNumber}`)
+            const allCards = document.querySelectorAll('.biz-card-div')
+            console.log(`[useCardsController] SCROLL: Total cards in DOM: ${allCards.length}`)
+            return
+        }
+        
+        scrollCardHeaderIntoView(card, jobNumber, 'cDiv')
+    }
+    
+    // Legacy function for backward compatibility
+    function scrollCDivIntoView(jobNumber) {
+        console.log(`[useCardsController] 🔄 Legacy scroll call - redirecting to header scroll`)
+        scrollCDivHeaderIntoView(jobNumber)
+    }
+    
+    // New rDiv header scroll function
+    function scrollRDivHeaderIntoView(jobNumber) {
+        console.log(`[useCardsController] 📜 SCROLL: Attempting to scroll rDiv HEADER into view for job ${jobNumber}`)
+        
+        const resumeDiv = document.querySelector(`[data-job-number="${jobNumber}"].biz-resume-div`)
+        if (!resumeDiv) {
+            console.error(`[useCardsController] ❌ SCROLL FAILED: Resume div not found for job ${jobNumber}`)
+            const allResumeDivs = document.querySelectorAll('.biz-resume-div')
+            console.log(`[useCardsController] SCROLL: Total resume divs in DOM: ${allResumeDivs.length}`)
+            return
+        }
+        
+        scrollResumeHeaderIntoView(resumeDiv, jobNumber)
+    }
+    
+    // Generic card header scroll function
+    function scrollCardHeaderIntoView(card, jobNumber, type = 'cDiv') {
+        console.log(`[useCardsController] 📜 Scrolling ${type} header for job ${jobNumber}`)
+        
+        // Find the header element - employer name is typically the main header
+        const headerSelectors = [
+            '.biz-details-employer',
+            '.biz-card-header', 
+            '.job-title',
+            '.company-name',
+            '.biz-details-role'
+        ]
+        
+        let headerElement = null
+        for (const selector of headerSelectors) {
+            headerElement = card.querySelector(selector)
+            if (headerElement) {
+                console.log(`[useCardsController] 📜 Found ${type} header element: ${selector}`)
+                break
+            }
+        }
+        
+        // If no specific header found, use the card itself
+        if (!headerElement) {
+            headerElement = card
+            console.log(`[useCardsController] 📜 No specific header found, using ${type} element itself`)
+        }
+        
+        // Check if the card is hidden (has a clone)
+        const isHidden = card.style.display === 'none' || card.classList.contains('hasClone')
+        console.log(`[useCardsController] 📜 ${type} is hidden: ${isHidden}`)
+        
+        if (isHidden) {
+            // Temporarily show the card for scrolling, then hide it again
+            const originalDisplay = card.style.display
+            card.style.display = 'block'
+            console.log(`[useCardsController] 📜 Temporarily showing hidden ${type} for header scroll`)
+            
+            setTimeout(() => {
+                headerElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center',  // Center header with space above/below
+                    inline: 'nearest'
+                })
+                console.log(`[useCardsController] ✅ ${type} header scrolled into view`)
+                
+                // Hide it again after scrolling
+                setTimeout(() => {
+                    card.style.display = 'none'
+                    card.style.setProperty('display', 'none', 'important')
+                    console.log(`[useCardsController] 📜 Re-hidden ${type} after header scroll`)
+                }, 50)
+            }, 10)
+            
+        } else {
+            // Card is visible, scroll to header directly
+            console.log(`[useCardsController] 📜 Scrolling to visible ${type} header`)
+            headerElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',  // Center header with space above/below
+                inline: 'nearest'
+            })
+            console.log(`[useCardsController] ✅ ${type} header scrolled into view`)
+        }
+    }
+    
+    // Resume header scroll function
+    function scrollResumeHeaderIntoView(resumeDiv, jobNumber) {
+        console.log(`[useCardsController] 📜 Scrolling rDiv header for job ${jobNumber}`)
+        
+        // Find the header element in the resume div
+        const headerSelectors = [
+            '.biz-resume-details-div',
+            '.resume-header',
+            '.job-title',
+            '.company-name'
+        ]
+        
+        let headerElement = null
+        for (const selector of headerSelectors) {
+            headerElement = resumeDiv.querySelector(selector)
+            if (headerElement) {
+                console.log(`[useCardsController] 📜 Found rDiv header element: ${selector}`)
+                break
+            }
+        }
+        
+        // If no specific header found, use the resume div itself
+        if (!headerElement) {
+            headerElement = resumeDiv
+            console.log(`[useCardsController] 📜 No specific rDiv header found, using resume div itself`)
+        }
+        
+        // Scroll the header into view
+        headerElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',  // Center header with space above/below
+            inline: 'nearest'
+        })
+        console.log(`[useCardsController] ✅ rDiv header scrolled into view for job ${jobNumber}`)
+    }
+    
+    // Continue with the rest of the existing function...
+    function continueOriginalScrollLogic(card, jobNumber) {
         if (card) {
             // Check if the original card is hidden (has a clone)
             const isHidden = card.style.display === 'none' || card.classList.contains('hasClone')
@@ -618,8 +1123,9 @@ export function useCardsController() {
                     
                     // Hide it again after scrolling
                     setTimeout(() => {
-                        card.style.display = originalDisplay
-                        console.log(`[useCardsController] DEBUGGING: Re-hidden card after scroll`)
+                        card.style.display = 'none'
+                        card.style.setProperty('display', 'none', 'important')
+                        console.log(`[useCardsController] DEBUGGING: Re-hidden card after scroll with display: none !important`)
                     }, 50)
                 }, 10)
                 
@@ -651,23 +1157,36 @@ export function useCardsController() {
         }
         
         // Get card position info for debugging
-        const cardRect = card.getBoundingClientRect()
-        console.log(`[useCardsController] DEBUGGING: Card position:`, {
-            top: cardRect.top,
-            left: cardRect.left,
-            width: cardRect.width,
-            height: cardRect.height
-        })
-        
-        // Check if card is already visible
-        const sceneContainer = document.getElementById('scene-container')
-        if (sceneContainer) {
-            const containerRect = sceneContainer.getBoundingClientRect()
-            const isVisible = cardRect.top >= containerRect.top && 
-                             cardRect.bottom <= containerRect.bottom
-            console.log(`[useCardsController] DEBUGGING: Card visible before scroll:`, isVisible)
+        let cardRect = null
+        try {
+            cardRect = card.getBoundingClientRect()
+            console.log(`[useCardsController] DEBUGGING: Card position:`, {
+                top: cardRect.top,
+                left: cardRect.left,
+                width: cardRect.width,
+                height: cardRect.height
+            })
+        } catch (error) {
+            console.warn(`[useCardsController] Error getting card position for job ${jobNumber}:`, error)
+            return false
         }
         
+        // Check if card is already visible
+        const sceneContainer = elementRegistry.getSceneContainer()
+        if (sceneContainer && cardRect) {
+            try {
+                const containerRect = sceneContainer.getBoundingClientRect()
+                const isVisible = cardRect.top >= containerRect.top && 
+                                 cardRect.bottom <= containerRect.bottom
+                console.log(`[useCardsController] DEBUGGING: Card visible before scroll:`, isVisible)
+            } catch (error) {
+                console.warn(`[useCardsController] Error checking card visibility for job ${jobNumber}:`, error)
+            }
+        }
+        
+        // TEMPORARILY DISABLED: Auto-scroll for testing
+        console.log(`[useCardsController] DEBUGGING: Auto-scroll DISABLED for testing`)
+        /*
         // Use native scrollIntoView for simple, reliable scrolling
         try {
             card.scrollIntoView({ 
@@ -680,53 +1199,141 @@ export function useCardsController() {
             console.error(`[useCardsController] DEBUGGING: scrollIntoView failed:`, error)
             return false
         }
+        */
         
         console.log(`[useCardsController] Scrolled cDiv ${cardId} into view`)
         return true
     }
     
-    function createSelectedClone(jobNumber) {
-        const scenePlaneElement = document.getElementById('scene-plane')
-        if (!scenePlaneElement) {
-            console.warn('[useCardsController] scene-plane not found for clone creation')
+    async function createSelectedClone(jobNumber) {
+        console.log(`[createSelectedClone] 🚀 Starting clone creation for job ${jobNumber}`)
+        
+        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) {
+            console.error('[createSelectedClone] scene-plane not found for clone creation')
             return
         }
         
-        // Find the original card
-        const originalCardId = createBizCardDivId(jobNumber)
-        const originalCard = document.getElementById(originalCardId)
+        // Find the original card using registry first
+        let originalCard = cardRegistry.getCardElement(jobNumber)
+        if (!originalCard) {
+            const originalCardId = createBizCardDivId(jobNumber)
+            originalCard = document.getElementById(originalCardId)
+        }
         if (!originalCard) {
             console.warn(`[useCardsController] Original card not found for job ${jobNumber}`)
             return
         }
         
         // Check if clone already exists
-        const cloneId = `${originalCardId}-clone`
+        const cloneId = `${originalCard.id}-clone`
         if (document.getElementById(cloneId)) {
             console.log(`[useCardsController] Clone already exists: ${cloneId}`)
             return
         }
         
-        // Create deep clone
+        console.log(`[createSelectedClone] 🎯 About to hide original card: ${originalCard.id}`)
+        
+        // CRITICAL: Simply hide original card with display: none
+        originalCard.classList.add('hasClone')
+        
+        // Store original display value
+        originalCard._originalDisplay = originalCard.style.display || ''
+        
+        // Set display: none with maximum priority
+        originalCard.style.display = 'none'
+        originalCard.style.setProperty('display', 'none', 'important')
+        
+        // Immediate verification
+        const computedStyle = window.getComputedStyle(originalCard)
+        console.log(`[createSelectedClone] After hiding attempt:`)
+        console.log(`  inline display: ${originalCard.style.display}`)
+        console.log(`  computed display: ${computedStyle.display}`)
+        
+        // If it's still not hidden, use setAttribute to override everything
+        if (computedStyle.display !== 'none') {
+            console.error(`🚨 Display hiding failed! Computed display is still: ${computedStyle.display}`)
+            console.log(`🚨 Using setAttribute to force hide...`)
+            const currentStyle = originalCard.getAttribute('style') || ''
+            originalCard.setAttribute('style', currentStyle + '; display: none !important;')
+            
+            // Check again
+            const newComputedStyle = window.getComputedStyle(originalCard)
+            console.log(`  After setAttribute - computed display: ${newComputedStyle.display}`)
+        } else {
+            console.log(`[createSelectedClone] ✅ Original card successfully hidden`)
+        }
+        
+        // MutationObserver removed - it was interfering with simple display:none hiding
+        
+        console.log(`[useCardsController] ✅ Hidden original card ${originalCard.id} BEFORE clone creation:`, {
+            display: originalCard.style.display,
+            visibility: originalCard.style.visibility,
+            opacity: originalCard.style.opacity,
+            hasClone: originalCard.classList.contains('hasClone'),
+            computedDisplay: window.getComputedStyle(originalCard).display
+        })
+        
+        // Debug all jobs - original card analysis before hiding
+        console.log(`[DEBUG] Job#${jobNumber} ANALYSIS - Original card element:`, originalCard)
+        console.log(`[DEBUG] Job#${jobNumber} ANALYSIS - All styles:`, originalCard.style.cssText)
+        console.log(`[DEBUG] Job#${jobNumber} ANALYSIS - All classes:`, originalCard.className)
+        console.log(`[DEBUG] Job#${jobNumber} ANALYSIS - Parent element:`, originalCard.parentElement?.id)
+        
+        // Verify hiding worked immediately
+        const hiddenStyle = window.getComputedStyle(originalCard)
+        console.log(`[DEBUG] Job#${jobNumber} Original card hiding verification:`)
+        console.log(`  inline display: ${originalCard.style.display}`)
+        console.log(`  computed display: ${hiddenStyle.display}`)
+        console.log(`  computed visibility: ${hiddenStyle.visibility}`)
+        console.log(`  computed opacity: ${hiddenStyle.opacity}`)
+        
+        if (hiddenStyle.display !== 'none') {
+            console.error(`🚨 HIDING FAILED! Original card still has computed display: ${hiddenStyle.display}`)
+            // Force hide even more aggressively
+            originalCard.setAttribute('style', 'display: none !important; visibility: hidden !important; opacity: 0 !important; position: absolute !important; left: -9999px !important; top: -9999px !important;')
+            console.log(`[DEBUG] Applied aggressive style override - new computed display: ${window.getComputedStyle(originalCard).display}`)
+        }
+        
+        // Create deep clone AFTER hiding original
         const clone = originalCard.cloneNode(true)
         clone.id = cloneId
         clone.classList.add('selected')
+        clone.classList.add('clone') // CRITICAL: Add .clone class for validation selectors
         clone.classList.remove('hovered')
+        clone.classList.remove('hasClone') // Remove hasClone class from clone
         
-        // Mark original as having a clone and hide it (keep position unchanged)
-        originalCard.classList.add('hasClone')
-        originalCard.style.display = 'none'
+        // CRITICAL: Copy original card's computed width to clone's style
+        const originalRect = originalCard.getBoundingClientRect()
+        clone.style.width = `${originalRect.width}px`
         
-        console.log(`[useCardsController] Hidden original card ${originalCard.id}:`, {
-            display: originalCard.style.display,
-            hasClone: originalCard.classList.contains('hasClone')
-        })
+        // Ensure clone is visible (override any !important hiding styles that might have been copied)
+        clone.style.removeProperty('display')
+        clone.style.removeProperty('visibility') 
+        clone.style.removeProperty('opacity')
+        // Use !important to override any inherited !important hiding styles
+        clone.style.setProperty('display', 'block', 'important')
+        clone.style.setProperty('visibility', 'visible', 'important')
+        clone.style.setProperty('opacity', '1', 'important')
+        clone.style.setProperty('z-index', '99', 'important')
+        clone.style.setProperty('position', 'absolute', 'important')
         
-        // Position clone at scene center (different from original position)
-        const sceneRect = scenePlaneElement.getBoundingClientRect()
-        const centerX = sceneRect.width / 2
-        clone.style.left = `${centerX - (parseFloat(clone.style.width) || 180) / 2}px`
-        clone.style.zIndex = '99' // Above other cards
+        // Position clone at scene left edge (x = 0) with same vertical position as original
+        const leftPos = '0px' // Position at left edge of scene
+        
+        // Get the original card's positioning - check multiple sources
+        const originalComputedStyle = window.getComputedStyle(originalCard)
+        const originalTop = originalCard.style.top || originalComputedStyle.top || originalCard.getAttribute('data-sceneTop') || '0px'
+        const originalHeight = originalCard.style.height || originalComputedStyle.height || originalCard.getAttribute('data-sceneHeight') || 'auto'
+        
+        // Always explicitly set the positioning to match original
+        clone.style.setProperty('left', leftPos, 'important')
+        clone.style.setProperty('top', originalTop, 'important')
+        clone.style.setProperty('height', originalHeight, 'important')
+        
+        console.log(`[useCardsController] Clone positioned: left=${leftPos}, top=${originalTop}, height=${originalHeight}`)
+        console.log(`[DEBUG] Original card positioning: style.top=${originalCard.style.top}, computed.top=${originalComputedStyle.top}, data-sceneTop=${originalCard.getAttribute('data-sceneTop')}`)
+        // z-index already set above with !important
         
         // Get sceneZ from clone to verify it was copied
         const cloneSceneZ = clone.getAttribute('data-sceneZ')
@@ -737,13 +1344,98 @@ export function useCardsController() {
         clone.title = `CLONE of Job ${jobNumber} (sceneZ: ${cloneSceneZ})` // Tooltip to identify clone with sceneZ
         
         // Add clone to DOM
-        scenePlaneElement.appendChild(clone)
+        scenePlaneEl.appendChild(clone)
+        
+        // CRITICAL: Clear element registry cache so color palette system can find the new clone
+        elementRegistry.clearAllCache()
+        
+        // IMMEDIATE VERIFICATION: Check that clone is visible and original is hidden
+        setTimeout(() => {
+            const originalComputedStyle = window.getComputedStyle(originalCard)
+            const cloneComputedStyle = window.getComputedStyle(clone)
+            
+            console.log(`[IMMEDIATE CHECK] Job ${jobNumber} - 10ms after clone creation:`)
+            console.log(`  Original computed display: ${originalComputedStyle.display}`)
+            console.log(`  Clone computed display: ${cloneComputedStyle.display}`)
+            
+            // If original is still visible, try to force hide it again
+            if (originalComputedStyle.display !== 'none') {
+                console.error(`🚨 Original card STILL VISIBLE after hiding! Forcing hide again...`)
+                originalCard.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; position: absolute !important; left: -9999px !important; top: -9999px !important; z-index: -9999 !important; width: 0 !important; height: 0 !important;'
+            }
+        }, 10)
+        
+        // VERIFICATION: Check that clone is visible and original is hidden
+        setTimeout(() => {
+            const originalComputedStyle = window.getComputedStyle(originalCard)
+            const cloneComputedStyle = window.getComputedStyle(clone)
+            
+            const originalVisible = originalComputedStyle.display !== 'none'
+            const cloneVisible = cloneComputedStyle.display !== 'none'
+            
+            console.log(`[useCardsController] 🔍 Clone creation verification for job ${jobNumber}:`)
+            console.log(`   Original visible: ${originalVisible} (should be false)`)
+            console.log(`   Clone visible: ${cloneVisible} (should be true)`)
+            console.log(`   Both visible: ${originalVisible && cloneVisible} ${originalVisible && cloneVisible ? '⚠️ ISSUE!' : '✅ OK'}`)
+            
+            // DEBUGGING: Check clone positioning to see if it's off-screen
+            const cloneRect = clone.getBoundingClientRect()
+            const sceneRect = scenePlaneEl ? scenePlaneEl.getBoundingClientRect() : null
+            console.log(`[DEBUG] Clone positioning for job ${jobNumber}:`)
+            console.log(`   Clone getBoundingClientRect:`, cloneRect)
+            console.log(`   Clone computed left: ${cloneComputedStyle.left}`)
+            console.log(`   Clone computed top: ${cloneComputedStyle.top}`)
+            console.log(`   Clone inline left: ${clone.style.left}`)
+            console.log(`   Clone inline top: ${clone.style.top}`)
+            console.log(`   Scene getBoundingClientRect:`, sceneRect)
+            console.log(`   Clone in viewport: x=${cloneRect.x >= 0 && cloneRect.x < window.innerWidth}, y=${cloneRect.y >= 0 && cloneRect.y < window.innerHeight}`)
+            console.log(`   Clone dimensions: width=${cloneRect.width}, height=${cloneRect.height}`)
+            
+            // If clone is off-screen or has invalid positioning, force it to a visible location
+            if (cloneRect.x < 0 || cloneRect.y < 0 || cloneRect.x > window.innerWidth || cloneRect.y > window.innerHeight || cloneRect.width === 0 || cloneRect.height === 0) {
+                console.warn(`[DEBUG] Clone appears to be off-screen or invalid, forcing to visible position...`)
+                clone.style.setProperty('left', '50px', 'important')
+                clone.style.setProperty('top', '50px', 'important')
+                clone.style.setProperty('width', '180px', 'important')
+                clone.style.setProperty('height', '100px', 'important')
+                console.log(`[DEBUG] Forced clone to position: left=50px, top=50px`)
+            }
+            
+            if (originalVisible && cloneVisible) {
+                console.error(`🚨 CRITICAL: Both original and clone are visible!`)
+                console.log(`   Original computed display: ${originalComputedStyle.display}`)
+                console.log(`   Original inline display: ${originalCard.style.display}`)
+                console.log(`   Original style attribute: ${originalCard.getAttribute('style')}`)
+                console.log(`   Original visibility: ${originalComputedStyle.visibility}`)
+                console.log(`   Original opacity: ${originalComputedStyle.opacity}`)
+                console.log(`   Clone computed display: ${cloneComputedStyle.display}`)
+                console.log(`   Clone inline display: ${clone.style.display}`)
+                
+                // Additional CSS analysis
+                console.log(`[DEBUG] Job#${jobNumber} DETAILED CSS ANALYSIS:`)
+                console.log(`   Original getBoundingClientRect:`, originalCard.getBoundingClientRect())
+                console.log(`   Clone getBoundingClientRect:`, clone.getBoundingClientRect())
+                console.log(`   Original offsetParent:`, originalCard.offsetParent)
+                console.log(`   Clone offsetParent:`, clone.offsetParent)
+                console.log(`   Original classes:`, originalCard.className)
+                console.log(`   Clone classes:`, clone.className)
+                
+                // Try to force hide again
+                console.log(`[DEBUG] Job#${jobNumber} - Attempting FORCE HIDE again...`)
+                originalCard.style.cssText += '; display: none !important; visibility: hidden !important; opacity: 0 !important; position: absolute; left: -9999px !important;'
+                console.log(`[DEBUG] Job#${jobNumber} - After force hide, computed display:`, window.getComputedStyle(originalCard).display)
+            } else if (!originalVisible && cloneVisible) {
+                console.log(`✅ Clone creation successful - original hidden, clone visible`)
+            }
+        }, 10) // Small delay to ensure DOM updates are complete
         
         // Add click handler to clone for deselection
-        clone.addEventListener('click', () => {
-            console.log(`[useCardsController] Clone clicked: clearing selection`)
+        clone.addEventListener('click', (event) => {
+            console.log(`🖱️ [useCardsController] Clone clicked: clearing selection`)
+            console.log(`🖱️ Clone click event:`, event)
+            event.stopPropagation() // Prevent bubbling to scene-plane
             if (selectionManager) {
-                selectionManager.clearSelection()
+                selectionManager.clearSelection('Clone.click')
             }
         })
         
@@ -758,24 +1450,74 @@ export function useCardsController() {
     }
     
     function removeAllClones() {
-        const scenePlaneElement = document.getElementById('scene-plane')
-        if (!scenePlaneElement) return
+        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
         
-        // Find all clones and remove them
-        const clones = scenePlaneElement.querySelectorAll('[id$="-clone"]')
+        // Find and remove all clones
+        const clones = scenePlaneEl.querySelectorAll('[id$="-clone"]')
         clones.forEach(clone => {
             clone.remove()
         })
         
-        // Restore original cards (find by hasClone class)
-        const cardsWithClones = scenePlaneElement.querySelectorAll('.hasClone')
+        // Restore original cards that were hidden (find by hasClone class)
+        const cardsWithClones = scenePlaneEl.querySelectorAll('.hasClone')
         cardsWithClones.forEach(card => {
+            // Restore original display value
+            const originalDisplay = card._originalDisplay
+            if (originalDisplay !== undefined) {
+                card.style.display = originalDisplay
+                delete card._originalDisplay
+            } else {
+                card.style.removeProperty('display')
+            }
+            
+            // Remove clone-related classes
             card.classList.remove('hasClone')
-            card.style.display = 'block'
-            console.log(`[useCardsController] Restored original card ${card.id}`)
+            card.classList.remove('force-hidden-for-clone')
+            
+            console.log(`[removeAllClones] ✅ Restored original card ${card.id} with display: ${card.style.display || 'default'}`)
         })
         
-        console.log(`[useCardsController] ✅ Removed ${clones.length} clones`)
+        // CRITICAL: Clear element registry cache after removing clones
+        elementRegistry.clearAllCache()
+        
+        console.log(`[useCardsController] ✅ Removed ${clones.length} clones and restored ${cardsWithClones.length} original cards`)
+    }
+    
+    function removeSpecificClone(jobNumber) {
+        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
+        
+        // Find and remove the specific clone
+        const cloneId = `biz-card-div-${jobNumber}-clone`
+        const clone = scenePlaneEl.querySelector(`#${cloneId}`)
+        if (clone) {
+            clone.remove()
+            console.log(`[useCardsController] ✅ Removed clone: ${cloneId}`)
+        }
+        
+        // Find and restore the specific original card
+        const originalId = `biz-card-div-${jobNumber}`
+        const originalCard = scenePlaneEl.querySelector(`#${originalId}`)
+        if (originalCard && originalCard.classList.contains('hasClone')) {
+            originalCard.classList.remove('hasClone')
+            originalCard.classList.remove('force-hidden-for-clone')
+            
+            // MutationObserver cleanup removed - no longer using observers
+            
+            // Fully restore original card visibility (override !important declarations)
+            originalCard.style.setProperty('display', 'block', 'important')
+            originalCard.style.setProperty('visibility', 'visible', 'important')
+            originalCard.style.setProperty('opacity', '1', 'important')
+            originalCard.style.removeProperty('position')
+            originalCard.style.removeProperty('left')
+            originalCard.style.removeProperty('z-index')
+            
+            console.log(`[useCardsController] ✅ Restored original card: ${originalId}`)
+        }
+        
+        // CRITICAL: Clear element registry cache after removing clone
+        elementRegistry.clearAllCache()
     }
     
     function createYearlyGridLines(scenePlane) {
@@ -832,292 +1574,6 @@ export function useCardsController() {
         console.log('[CardsController] ✅ Created yearly grid lines from 1986 to 2026')
     }
     
-    // Create skill badges for a specific cDiv
-    function createSkillBadgesForCard(cardElement, job, jobNumber) {
-        const jobSkills = job['job-skills'] || {}
-        const skillEntries = Object.entries(jobSkills)
-        
-        if (skillEntries.length === 0) {
-            return // No skills for this job
-        }
-        
-        // Create bizCardBadgesDiv container for this cDiv
-        const bizCardBadgesDiv = document.createElement('div')
-        bizCardBadgesDiv.className = 'biz-card-badges-div'
-        bizCardBadgesDiv.id = `biz-card-badges-div-${jobNumber}`
-        bizCardBadgesDiv.setAttribute('data-job-number', jobNumber)
-        bizCardBadgesDiv.style.cssText = `
-            position: absolute;
-            left: 100%;
-            margin-left: 8px;
-            top: 0px;
-            width: 140px;
-            height: auto;
-            pointer-events: none;
-            z-index: 100;
-            display: none;
-            /* Visual indicators removed */
-        `
-        
-        // Create individual skill badges
-        skillEntries.forEach(([skillId, skillName], index) => {
-            const badge = document.createElement('div')
-            badge.className = 'skill-badge'
-            badge.textContent = skillName
-            badge.style.cssText = `
-                position: absolute;
-                left: 0px;
-                top: ${index * 38}px;
-                height: 28px;
-                min-width: 40px;
-                padding: 0 12px;
-                border-radius: 14px;
-                line-height: 28px;
-                background-color: transparent;
-                color: inherit;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-                font-size: 11px;
-                font-weight: 400;
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                cursor: pointer;
-                transition: all 0.15s ease;
-                pointer-events: auto;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                white-space: nowrap;
-                box-sizing: border-box;
-                z-index: 101;
-            `
-            
-            bizCardBadgesDiv.appendChild(badge)
-        })
-        
-        // Position badges next to the clone (if it exists) or original card
-        const updateBadgePosition = () => {
-            const scenePlaneElement = document.getElementById('scene-plane')
-            if (!scenePlaneElement) return
-            
-            // First try to find the clone, fallback to original card
-            const cloneElement = document.getElementById(`${cardElement.id}-clone`)
-            const targetElement = cloneElement || cardElement
-            
-            const targetRect = targetElement.getBoundingClientRect()
-            const sceneRect = scenePlaneElement.getBoundingClientRect()
-            const relativeLeft = targetRect.left - sceneRect.left + targetRect.width + 8
-            const relativeTop = targetRect.top - sceneRect.top
-            
-            bizCardBadgesDiv.style.left = `${relativeLeft}px`
-            bizCardBadgesDiv.style.top = `${relativeTop}px`
-            bizCardBadgesDiv.style.marginLeft = '0px' // Reset since we're using absolute positioning
-            
-            // console.log(`📍 Positioned badges for job ${jobNumber} next to ${cloneElement ? 'clone' : 'original'} at (${relativeLeft}, ${relativeTop})`)
-        }
-        
-        // Add bizCardBadgesDiv container to scene-plane (not card) to avoid hiding when card is hidden
-        const scenePlaneElement = document.getElementById('scene-plane')
-        if (scenePlaneElement) {
-            scenePlaneElement.appendChild(bizCardBadgesDiv)
-        } else {
-            // Fallback: append to card if scene-plane not found
-            cardElement.appendChild(bizCardBadgesDiv)
-        }
-        
-        // Show badges when card is selected, hide when not
-        const showBadges = () => {
-            console.log(`🟢 SHOWING badges for job ${jobNumber}`)
-            // Respect global badge toggle state
-            if (isBadgesVisible.value) {
-                bizCardBadgesDiv.style.display = 'block'
-                console.log(`✅ Badges shown for job ${jobNumber} (global toggle: ON)`)
-            } else {
-                bizCardBadgesDiv.style.display = 'none'
-                console.log(`❌ Badges hidden for job ${jobNumber} (global toggle: OFF)`)
-            }
-            
-            // Update position to follow the card (especially important for clones)
-            updateBadgePosition()
-            
-            // Apply clone's background AND font color to badges
-            const cloneElement = document.getElementById(`${cardElement.id}-clone`)
-            const targetElement = cloneElement || cardElement
-            const targetStyle = getComputedStyle(targetElement)
-            
-            const badges = bizCardBadgesDiv.querySelectorAll('.skill-badge')
-            badges.forEach(badge => {
-                // First, copy all the CSS classes from the target element
-                badge.className = 'skill-badge ' + targetElement.className
-                
-                // Copy critical computed styles that might not be inherited through classes
-                const stylesToCopy = [
-                    'backgroundColor', 'color', 
-                    'border', 'borderWidth', 'borderStyle', 'borderColor', 'borderRadius',
-                    'borderTop', 'borderRight', 'borderBottom', 'borderLeft',
-                    'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor',
-                    'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-                    'borderTopStyle', 'borderRightStyle', 'borderBottomStyle', 'borderLeftStyle',
-                    'boxShadow', 'outline', 'outlineColor', 'outlineWidth', 'outlineStyle'
-                ]
-                
-                stylesToCopy.forEach(property => {
-                    if (targetStyle[property] && targetStyle[property] !== 'none' && targetStyle[property] !== '') {
-                        badge.style[property] = targetStyle[property]
-                    }
-                })
-                
-                // Override some badge-specific properties to maintain badge sizing
-                badge.style.height = '28px'
-                badge.style.minWidth = '40px'
-                badge.style.padding = '0 12px'
-                badge.style.lineHeight = '28px'
-                badge.style.fontSize = '11px'
-                badge.style.fontWeight = '400'
-                badge.style.position = 'absolute'
-                badge.style.display = 'flex'
-                badge.style.alignItems = 'center'
-                badge.style.justifyContent = 'center'
-                badge.style.textAlign = 'center'
-                badge.style.whiteSpace = 'nowrap'
-                badge.style.boxSizing = 'border-box'
-                badge.style.cursor = 'pointer'
-                badge.style.transition = 'all 0.15s ease'
-                badge.style.pointerEvents = 'auto'
-                badge.style.zIndex = '101'
-            })
-            
-            console.log(`🎨 Applied styling from ${cloneElement ? 'clone' : 'original'}:`, {
-                element: targetElement.id,
-                classes: targetElement.className,
-                backgroundColor: targetStyle.backgroundColor,
-                color: targetStyle.color,
-                border: targetStyle.border,
-                borderTopColor: targetStyle.borderTopColor,
-                borderRightColor: targetStyle.borderRightColor,
-                borderBottomColor: targetStyle.borderBottomColor,
-                borderLeftColor: targetStyle.borderLeftColor,
-                boxShadow: targetStyle.boxShadow
-            })
-            
-            // Debug: Check if badges are actually visible after a short delay  
-            setTimeout(() => {
-                const isVisible = bizCardBadgesDiv.style.display === 'block'
-                console.log(`🔍 Job ${jobNumber} badges still visible after 500ms: ${isVisible}`)
-            }, 500)
-        }
-        
-        const hideBadges = () => {
-            console.log(`🔴 HIDING badges for job ${jobNumber}`)
-            bizCardBadgesDiv.style.display = 'none'
-        }
-        
-        // Listen for selection events - show badges only when THIS job is selected AND has a clone
-        selectionManager.addEventListener('selectionChanged', (event) => {
-            console.log(`🟡 selectionChanged event for job ${jobNumber}:`, event.detail)
-            if (event.detail.selectedJobNumber === jobNumber) {
-                // Check if this card has a clone (is selected and hidden)
-                const hasClone = cardElement.style.display === 'none' || 
-                               document.getElementById(`${cardElement.id}-clone`) !== null
-                
-                if (hasClone) {
-                    console.log(`🟢 Job ${jobNumber} has clone - SHOWING badges`)
-                    showBadgesWithObserver()
-                } else {
-                    console.log(`🟡 Job ${jobNumber} selected but no clone yet - waiting for clone`)
-                    // Wait a bit for clone creation, then check again
-                    setTimeout(() => {
-                        const cloneExists = document.getElementById(`${cardElement.id}-clone`) !== null
-                        if (cloneExists) {
-                            console.log(`🟢 Clone now exists for job ${jobNumber} - SHOWING badges`)
-                            showBadgesWithObserver()
-                        }
-                    }, 50)
-                }
-            } else {
-                hideBadgesWithObserver()
-            }
-        })
-        
-        selectionManager.addEventListener('selectionCleared', () => {
-            console.log(`🟡 selectionCleared event for job ${jobNumber}`)
-            hideBadgesWithObserver()
-        })
-        
-        // Watch for badge toggle changes - apply to currently selected card
-        watch(isBadgesVisible, (newValue) => {
-            console.log(`🔄 Badge toggle changed for job ${jobNumber}: ${newValue}`)
-            const isCurrentlySelected = selectionManager.getSelectedJobNumber() === jobNumber
-            if (isCurrentlySelected) {
-                console.log(`📋 Job ${jobNumber} is selected - ${newValue ? 'showing' : 'hiding'} badges`)
-                if (newValue) {
-                    showBadgesWithObserver()
-                } else {
-                    hideBadgesWithObserver()
-                }
-            }
-        })
-        
-        // Add resize listeners to maintain badge position relative to clone
-        const handleResize = () => {
-            if (bizCardBadgesDiv.style.display === 'block') {
-                // console.log(`📐 Resize detected - updating badge position for job ${jobNumber}`)
-                updateBadgePosition()
-            }
-        }
-        
-        // Listen for various resize events
-        window.addEventListener('resize', handleResize)
-        window.addEventListener('viewport-changed', handleResize)
-        window.addEventListener('resize-handle-changed', handleResize)
-        
-        // Add ResizeObserver to watch for clone element size/position changes
-        let resizeObserver = null
-        if (window.ResizeObserver) {
-            resizeObserver = new ResizeObserver(() => {
-                if (bizCardBadgesDiv.style.display === 'block') {
-                    console.log(`🔍 ResizeObserver - updating badge position for job ${jobNumber}`)
-                    updateBadgePosition()
-                }
-            })
-        }
-        
-        // Store cleanup function for this badge container
-        bizCardBadgesDiv._cleanup = () => {
-            window.removeEventListener('resize', handleResize)
-            window.removeEventListener('viewport-changed', handleResize)
-            window.removeEventListener('resize-handle-changed', handleResize)
-            if (resizeObserver) {
-                resizeObserver.disconnect()
-            }
-        }
-        
-        // Enhanced show/hide functions with ResizeObserver
-        const showBadgesWithObserver = () => {
-            showBadges()
-            // Start observing the clone element for size/position changes
-            if (resizeObserver) {
-                const cloneElement = document.getElementById(`${cardElement.id}-clone`)
-                if (cloneElement) {
-                    resizeObserver.observe(cloneElement)
-                    console.log(`👁️ Started observing clone ${cloneElement.id} for resize`)
-                }
-            }
-        }
-        
-        const hideBadgesWithObserver = () => {
-            hideBadges()
-            // Stop observing when badges are hidden
-            if (resizeObserver) {
-                resizeObserver.disconnect()
-                console.log(`👁️ Stopped observing for job ${jobNumber}`)
-            }
-        }
-        
-        // Badges will only show when a clone exists for this card
-        
-        console.log(`✅ Created ${skillEntries.length} skill badges for job ${jobNumber}`)
-    }
-    
     // Cleanup event listeners on unmount
     onUnmounted(() => {
         selectionManager.removeEventListener('job-selected', handleJobSelected)
@@ -1127,21 +1583,169 @@ export function useCardsController() {
         
         // Remove viewport change listeners
         window.removeEventListener('viewport-changed', handleViewportChangedForClones)
-        window.removeEventListener('resize-handle-changed', handleViewportChangedForClones)
         window.removeEventListener('resize', handleViewportChangedForClones)
-        
-        // Clean up badge container resize listeners
-        const badgeContainers = document.querySelectorAll('.biz-card-badges-div')
-        badgeContainers.forEach(container => {
-            if (container._cleanup) {
-                container._cleanup()
-            }
-        })
     })
+
+    // Make test function globally available for debugging
+    if (typeof window !== 'undefined') {
+        
+        // Add rDiv to cDiv sync test functions
+        window.testRDivToCDivSync = (jobNumber) => {
+            console.log(`🧪 Testing rDiv to cDiv sync for job ${jobNumber}...`)
+            if (selectionManager) {
+                selectionManager.selectJobNumber(jobNumber, 'ResumeListController.handleBizResumeDivClickEvent')
+            } else {
+                console.error('❌ selectionManager not available')
+            }
+        }
+        
+        window.testScrollCDiv = (jobNumber) => {
+            console.log(`🧪 Testing cDiv scroll for job ${jobNumber}...`)
+            scrollCDivIntoView(jobNumber)
+        }
+        
+        window.debugSelectionSync = () => {
+            console.log('\n🔍 === SELECTION SYNC DEBUG ===')
+            console.log('1. Checking selectionManager instances:')
+            console.log('   - useCardsController selectionManager exists:', !!selectionManager)
+            console.log('   - useCardsController selectionManager instanceId:', selectionManager?.instanceId)
+            console.log('   - window.selectionManager exists:', !!window.selectionManager)
+            console.log('   - window.selectionManager instanceId:', window.selectionManager?.instanceId)
+            console.log('   - Same instance:', selectionManager === window.selectionManager)
+            
+            console.log('\n2. Checking event listener setup:')
+            console.log('   - _cardsControllerListenersReady:', !!window._cardsControllerListenersReady)
+            console.log('   - _cardsControllerSelectionManagerId:', window._cardsControllerSelectionManagerId)
+            console.log('   - handleJobSelected type:', typeof handleJobSelected)
+            
+            console.log('\n3. Checking resume system:')
+            console.log('   - window.resumeListController exists:', !!window.resumeListController)
+            console.log('   - resumeListController.handleBizResumeDivClickEvent type:', typeof window.resumeListController?.handleBizResumeDivClickEvent)
+            
+            console.log('\n4. Checking DOM elements:')
+            const resumeDivs = document.querySelectorAll('.biz-resume-div')
+            const cardDivs = document.querySelectorAll('.biz-card-div')
+            console.log('   - Resume divs found:', resumeDivs.length)
+            console.log('   - Card divs found:', cardDivs.length)
+            
+            // Test event listener count
+            if (selectionManager?.eventTarget) {
+                console.log('\n5. Checking event listeners on selectionManager:')
+                // Try to access event listeners (may not work in all browsers)
+                try {
+                    console.log('   - EventTarget type:', selectionManager.eventTarget.constructor.name)
+                } catch (e) {
+                    console.log('   - Cannot inspect event listeners directly')
+                }
+            }
+            
+            return {
+                selectionManagerOk: !!selectionManager,
+                resumeControllerOk: !!window.resumeListController,
+                resumeDivCount: resumeDivs.length,
+                cardDivCount: cardDivs.length,
+                handleJobSelectedType: typeof handleJobSelected,
+                listenersReady: !!window._cardsControllerListenersReady,
+                sameInstance: selectionManager === window.selectionManager
+            }
+        }
+        
+        // Add automated test runner
+        window.runQuickTest = () => {
+            console.log('🧪 === QUICK SELECTION SYNC TEST ===\n')
+            
+            // Test 1: System availability
+            const hasDebugFunctions = typeof window.debugSelectionSync === 'function'
+            const hasTestFunctions = typeof window.testRDivToCDivSync === 'function'
+            console.log('✅ Debug functions available:', hasDebugFunctions)
+            console.log('✅ Test functions available:', hasTestFunctions)
+            
+            // Test 2: Run system debug
+            if (hasDebugFunctions) {
+                const status = window.debugSelectionSync()
+                console.log('\n📊 System Status:', {
+                    selectionManager: status.selectionManagerOk ? '✅' : '❌',
+                    resumeController: status.resumeControllerOk ? '✅' : '❌',
+                    resumeDivs: status.resumeDivCount > 0 ? '✅' : '❌',
+                    cardDivs: status.cardDivCount > 0 ? '✅' : '❌'
+                })
+            }
+            
+            // Test 3: Try resume click simulation
+            console.log('\n🖱️ Testing resume click simulation...')
+            if (typeof window.testResumeClick === 'function') {
+                window.testResumeClick(5)
+                setTimeout(() => {
+                    console.log('⏱️ Resume click test completed (check logs above)')
+                }, 1000)
+            } else {
+                console.log('❌ testResumeClick not available')
+            }
+            
+            // Test 4: Try direct selection
+            console.log('\n🎯 Testing direct selection...')
+            if (window.selectionManager?.selectJobNumber) {
+                window.selectionManager.selectJobNumber(8, 'quick-test')
+                setTimeout(() => {
+                    console.log('⏱️ Direct selection test completed (check logs above)')
+                }, 1500)
+            } else {
+                console.log('❌ Direct selection not available')
+            }
+            
+            console.log('\n🏁 Quick test completed! Check console output above for detailed results.')
+        }
+        
+        // Add generic job selection test function
+        window.testJobSelection = (jobNumber) => {
+            console.log(`🧪 Testing Job#${jobNumber} selection manually...`)
+            if (selectionManager) {
+                selectionManager.selectJobNumber(jobNumber, 'manual-test')
+                
+                // Additional check after 100ms
+                setTimeout(() => {
+                    const original = document.getElementById(`biz-card-div-${jobNumber}`)
+                    const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`)
+                    
+                    console.log(`🧪 Job#${jobNumber} Test Results:`)
+                    console.log(`  Original exists: ${!!original}`)
+                    console.log(`  Clone exists: ${!!clone}`)
+                    
+                    if (original) {
+                        const originalStyle = window.getComputedStyle(original)
+                        console.log(`  Original display: ${originalStyle.display}`)
+                        console.log(`  Original visibility: ${originalStyle.visibility}`)
+                        console.log(`  Original opacity: ${originalStyle.opacity}`)
+                        console.log(`  Original hasClone class: ${original.classList.contains('hasClone')}`)
+                        console.log(`  Original rect:`, original.getBoundingClientRect())
+                    }
+                    
+                    if (clone) {
+                        const cloneStyle = window.getComputedStyle(clone)
+                        console.log(`  Clone display: ${cloneStyle.display}`)
+                        console.log(`  Clone visibility: ${cloneStyle.visibility}`)
+                        console.log(`  Clone opacity: ${cloneStyle.opacity}`)
+                        console.log(`  Clone rect:`, clone.getBoundingClientRect())
+                    }
+                    
+                    console.log(`  Both visible: ${!!(original && clone && 
+                        window.getComputedStyle(original).display !== 'none' && 
+                        window.getComputedStyle(clone).display !== 'none')} ${
+                        original && clone && 
+                        window.getComputedStyle(original).display !== 'none' && 
+                        window.getComputedStyle(clone).display !== 'none' ? '⚠️ ISSUE!' : '✅ OK'
+                    }`)
+                }, 100)
+            } else {
+                console.error(`❌ selectionManager not available`)
+            }
+        }
+    }
 
     return {
         isInitialized,
         bizCardDivs,
-        initializeCardsController
+        initializeCardsController,
+        preCreateAllClones
     }
 }

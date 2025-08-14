@@ -1,5 +1,4 @@
 import { deepMerge } from '../utils/utils.mjs';
-import { BadgeMode } from './BadgeMode.mjs';
 
 const STORAGE_KEY = 'flockOfPostcards_appState';
 
@@ -21,40 +20,6 @@ export function getDefaultState() {
         },
         focalPoint: {
             mode: 'locked' // Default to locked mode
-        },
-        badgeToggle: {
-            mode: BadgeMode.NONE // Default to no badges shown
-        },
-        badges: {
-            height: '2.5em',
-            padding: '0.5em 0.75em',
-            verticalMargin: '0.1em',
-            borderRadius: '1.25em',
-            borderWidth: '1px',
-            fontSize: '12px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease',
-            spacing: {
-                vertical: 10, // Additional spacing between badges (used by BadgePositioner)
-                horizontal: 10
-            },
-            states: {
-                normal: {
-                    borderWidth: '1px',
-                    transform: 'scale(1.0)',
-                    boxShadow: 'none'
-                },
-                hovered: {
-                    borderWidth: '2px',
-                    transform: 'scale(1.05)',
-                    boxShadow: 'none'
-                },
-                selected: {
-                    borderWidth: '2px',
-                    transform: 'scale(1.1)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-                }
-            }
         },
         selectedJobNumber: null, // No default selection - only use saved state
         lastVisitedJobNumber: null, // Track the last job that was selected
@@ -120,8 +85,6 @@ export function getDefaultState() {
                 scene: 1,
                 sceneGradients: 2,
                 timeline: 3,
-                connectionLines: 4,
-                badges: 5,
                 backgroundMax: 6,
                 cardsMin: 10,
                 cardsMax: 19,

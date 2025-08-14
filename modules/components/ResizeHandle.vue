@@ -5,7 +5,6 @@ import { useFocalPoint } from '@/modules/composables/useFocalPointVue3.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useAppState } from '@/modules/composables/useAppState';
-import BadgeToggle from '@/modules/components/BadgeToggle.vue';
 import type { ResizeHandleProps, ResizeHandleEmits } from '@/modules/types/components';
 import { useBullsEyeService } from '@/modules/core/globalServices';
 
@@ -42,12 +41,26 @@ const { updateAppState, appState } = useAppState();
 // Use Vue 3 provide/inject instead of window.bullsEye
 const bullsEye = useBullsEyeService();
 
-// Initialize step count from AppState
+// Initialize step count from AppState with proper loading handling
 onMounted(() => {
+  // Initial load if AppState is already available
   if (appState.value?.resizeHandle?.stepCount) {
     stepCount.value = appState.value.resizeHandle.stepCount;
+    console.log(`[ResizeHandle] Initialized stepCount from AppState: ${stepCount.value}`);
   }
 });
+
+// Watch for AppState loading completion
+watch(appState, (newState) => {
+  if (newState?.resizeHandle?.stepCount) {
+    stepCount.value = newState.resizeHandle.stepCount;
+    console.log(`[ResizeHandle] Updated stepCount from AppState: ${stepCount.value}`);
+  } else if (newState && !newState.resizeHandle?.stepCount) {
+    // AppState loaded but no stepCount - use default from state
+    stepCount.value = 4; // Default value
+    console.log(`[ResizeHandle] AppState loaded without stepCount, using default: ${stepCount.value}`);
+  }
+}, { immediate: true });
 
 // Computed properties for button states - orientation aware
 const isLeftDisabled: ComputedRef<boolean> = computed(() => {
@@ -325,7 +338,6 @@ function handleResizeHandleClick(event: MouseEvent): void {
                     :title="isHovering ? 'Next: ' + nextMode + ' (click to switch)' : 'Current: ' + focalPointMode + ' (hover to preview next)'">
                 <span>{{ displayIcon }}</span>
             </button>
-            <BadgeToggle />
             <button id="layout-toggle" 
                     class="toggle-circle" 
                     :class="{ 'hovering': isLayoutHovering }"

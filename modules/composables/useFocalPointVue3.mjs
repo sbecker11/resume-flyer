@@ -5,6 +5,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useAppStore } from '../stores/appStore.mjs'
 import { useAppContext, FOCAL_POINT_KEY, provideDependency } from './useAppContext.mjs'
 import { useBullsEyeService } from '../core/globalServices'
+import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs'
 
 // Focal point modes
 export const FOCALPOINT_MODES = {
@@ -19,6 +20,7 @@ const CROSSHAIR_CURSOR = 'url(\'/static_content/icons/x-hairs/icons8-accuracy-32
 export function useFocalPoint() {
   const { store, actions } = useAppStore()
   const appContext = useAppContext()
+  const elementRegistry = injectGlobalElementRegistry()
   
   // Use provide/inject for bulls-eye service
   const bullsEye = useBullsEyeService()
@@ -186,7 +188,7 @@ export function useFocalPoint() {
   
   // Cursor management for drag mode
   function applyCrosshairCursor() {
-    const sceneContainer = document.getElementById('scene-container')
+    const sceneContainer = elementRegistry.getSceneContainer()
     if (sceneContainer) {
       sceneContainer.style.setProperty('cursor', CROSSHAIR_CURSOR, 'important')
       const elements = sceneContainer.querySelectorAll('*')
@@ -197,7 +199,7 @@ export function useFocalPoint() {
   }
   
   function removeCrosshairCursor() {
-    const sceneContainer = document.getElementById('scene-container')
+    const sceneContainer = elementRegistry.getSceneContainer()
     if (sceneContainer) {
       sceneContainer.style.removeProperty('cursor')
       const elements = sceneContainer.querySelectorAll('*')

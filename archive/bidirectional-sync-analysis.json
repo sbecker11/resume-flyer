@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-08-06T02:12:01.764Z",
+  "systemCheck": {
+    "frontendRunning": true,
+    "backendRunning": false,
+    "keyFilesPresent": true,
+    "hasResumeElements": true,
+    "hasSceneElements": true
+  },
+  "functionalityTest": {
+    "hasSelectJobNumberMethod": true,
+    "hasSourceParameter": true,
+    "hasClickHandler": true,
+    "callsSelectionManager": true,
+    "hasScrollLogic": false,
+    "hasVisibilityLogic": true
+  },
+  "overallDetermination": "GOOD - Bidirectional sync likely works with minor issues",
+  "systemScore": 80,
+  "functionalityScore": 83,
+  "overallScore": 82
+}

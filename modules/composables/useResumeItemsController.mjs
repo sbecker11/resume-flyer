@@ -36,8 +36,6 @@ export function useResumeItemsController() {
       return resumeItemsController?.handleSelectionCleared?.(caller)
     },
     
-    handleBadgeModeChanged: (mode, previousMode, caller) => {
-      return resumeItemsController?.handleBadgeModeChanged?.(mode, previousMode, caller)
     },
     
     handleColorPaletteChanged: (filename, paletteName, previousFilename) => {

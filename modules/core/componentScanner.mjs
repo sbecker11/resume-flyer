@@ -229,7 +229,6 @@ export class ComponentScanner {
         const managerPatterns = [
             // Only detect actual usage, not side-effect imports
             { name: 'selectionManager', pattern: /selectionManager\./g },
-            { name: 'badgeManager', pattern: /badgeManager\./g },
             { name: 'initializationManager', pattern: /initializationManager\./g },
             { name: 'eventBus', pattern: /eventBus\./g }
         ];

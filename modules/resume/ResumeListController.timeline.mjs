@@ -5,7 +5,7 @@ import * as domUtils from '../utils/domUtils.mjs';
 // No longer directly interacting with these for selection
 // import { bizCardDivManager } from '../scene/bizCardDivManager.mjs';
 // import * as scenePlane from '../scene/scenePlane.mjs';
-import { resumeItemsController } from '../scene/ResumeItemsController.mjs';
+import { resumeItemsController } from '../resume/ResumeItemsController.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
 import { cardsController } from '../scene/CardsController.mjs';
 import { AppState, saveState } from '../core/stateManager.mjs';

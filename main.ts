@@ -221,17 +221,17 @@ window.LOGGING_CONTROL.init();
 // @ts-ignore
 window.LOG_JOB(2, 'test log on startup');
 
-// import './modules/timeline/timeline.css'; // Removed - now using Vue component
-import './modules/core/core.css'; // Import core styles for BullsEye and other components
+// import './styles/timeline.css'; // Removed - now using Vue component
+import './styles/core.css'; // Import core styles for BullsEye and other components
 // Debug scripts moved to /tmp during Vue 3 migration cleanup
 
-// @ts-nocheck
 import { createApp } from 'vue';
+// @ts-ignore
 import App from './App.vue';
 
-window.CONSOLE_LOG_IGNORE('main.ts: About to create Vue app');
-
-// All legacy module imports are now handled within the components that need them,
+if (typeof window.CONSOLE_LOG_IGNORE === 'function') {
+  window.CONSOLE_LOG_IGNORE('main.ts: About to create Vue app');
+}
 // or in the App.vue component's onMounted hook.
 
 // --- Vue App Initialization ---
@@ -239,4 +239,6 @@ const app = createApp(App);
 window.CONSOLE_LOG_IGNORE('main.ts: Vue app created, about to mount');
 app.mount('#app');
 window.CONSOLE_LOG_IGNORE('main.ts: Vue app mounted');
+
+
 window.CONSOLE_LOG_IGNORE('Vue root app mounted.');

@@ -12,7 +12,6 @@ import { ref, readonly, type Ref } from 'vue'
 // @ts-ignore - Legacy module imports with type declarations
 import { deepMerge } from '../utils/utils.mjs'
 // @ts-ignore - Legacy module imports with type declarations
-import { BadgeMode } from '../core/BadgeMode.mjs'
 import type { AppState, UseAppStateReturn } from '../types/index'
 
 // Singleton state - shared across all component instances
@@ -39,123 +38,35 @@ const DEBOUNCE_TIMEOUT = 1000   // 1 second for immediate debouncing
  */
 function getDefaultState(): AppState {
     return {
-        version: "1.2",
+        version: "1.3",
         lastUpdated: new Date().toISOString(),
         
-        // USER PREFERENCES - things users customize
-        layout: {
-            orientation: 'scene-left',
-            scenePercentage: 50,
-            resumePercentage: 50
-        },
-        resizeHandle: {
-            stepCount: 4
-        },
-        focalPoint: {
-            mode: 'locked'
-        },
-        badgeToggle: {
-            mode: BadgeMode.NONE
-        },
-        badges: {
-            height: '2.5em',
-            padding: '0.5em 0.75em',
-            verticalMargin: '0.1em',
-            borderRadius: '1.25em',
-            borderWidth: '1px',
-            fontSize: '12px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease',
-            spacing: {
-                vertical: 10,
-                horizontal: 10
+        "user-settings": {
+            layout: {
+                orientation: 'scene-left',
+                scenePercentage: 50,
+                resumePercentage: 50
             },
-            states: {
-                normal: {
-                    borderWidth: '1px',
-                    transform: 'scale(1.0)',
-                    boxShadow: 'none'
-                },
-                hovered: {
-                    borderWidth: '2px',
-                    transform: 'scale(1.05)',
-                    boxShadow: 'none'
-                },
-                selected: {
-                    borderWidth: '2px',
-                    transform: 'scale(1.1)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
-                }
-            }
-        },
-        selectedJobNumber: null,
-        lastVisitedJobNumber: null,
-        resume: {
-            sortRule: { field: 'startDate', direction: 'asc' }
-        },
-        theme: {
-            colorPalette: '50_Dark_Grey_Monotone.json',
-            brightnessFactorSelected: 2.0,
-            brightnessFactorHovered: 1.75,
-            borderSettings: {
-                normal: {
-                    padding: '8px',
-                    innerBorderWidth: '1px',
-                    innerBorderColor: 'white',
-                    outerBorderWidth: '0px',
-                    outerBorderColor: 'transparent',
-                    borderRadius: '25px'
-                },
-                hovered: {
-                    padding: '7px',
-                    innerBorderWidth: '2px',
-                    innerBorderColor: 'blue',
-                    outerBorderWidth: '0px',
-                    outerBorderColor: 'transparent',
-                    borderRadius: '25px'
-                },
-                selected: {
-                    padding: '6px',
-                    innerBorderWidth: '3px',
-                    innerBorderColor: 'purple',
-                    outerBorderWidth: '0px',
-                    outerBorderColor: 'transparent',
-                    borderRadius: '25px'
-                }
+            resizeHandle: {
+                stepCount: 4
             },
-            rDivBorderOverrideSettings: {
-                normal: {
-                    padding: '15px',
-                    innerBorderWidth: '1px',
-                    marginTop: '11px'
-                },
-                hovered: {
-                    padding: '14px',
-                    innerBorderWidth: '2px',
-                    marginTop: '11px'
-                },
-                selected: {
-                    padding: '13px',
-                    innerBorderWidth: '3px',
-                    marginTop: '11px'
-                }
+            focalPointMode: 'locked',
+            selectedJobNumber: null,
+            lastVisitedJobNumber: null,
+            resume: {
+                sortRule: { field: 'startDate', direction: 'asc' }
+            },
+            theme: {
+                colorPalette: 'sweeps.json'
             }
         },
         
-        // COLOR PALETTES - loaded dynamically
-        color: {
-            palettes: {}
-        },
-        
-        // SYSTEM CONSTANTS - rarely changed, technical settings
-        constants: {
+        "system-constants": {
             zIndex: {
                 root: 0,
                 scene: 1,
                 sceneGradients: 2,
                 timeline: 3,
-                connectionLines: 4,
-                badges: 5,
                 backgroundMax: 6,
                 cardsMin: 10,
                 cardsMax: 19,
@@ -231,9 +142,56 @@ function getDefaultState(): AppState {
                         saturate: { min: 0.75, factor: 0.010 }
                     }
                 }
+            },
+            theme: {
+                brightnessFactorSelected: 2.0,
+                brightnessFactorHovered: 1.75,
+                borderSettings: {
+                    normal: {
+                        padding: '8px',
+                        innerBorderWidth: '1px',
+                        innerBorderColor: 'white',
+                        outerBorderWidth: '0px',
+                        outerBorderColor: 'transparent',
+                        borderRadius: '25px'
+                    },
+                    hovered: {
+                        padding: '7px',
+                        innerBorderWidth: '2px',
+                        innerBorderColor: 'blue',
+                        outerBorderWidth: '0px',
+                        outerBorderColor: 'transparent',
+                        borderRadius: '25px'
+                    },
+                    selected: {
+                        padding: '6px',
+                        innerBorderWidth: '3px',
+                        innerBorderColor: 'purple',
+                        outerBorderWidth: '0px',
+                        outerBorderColor: 'transparent',
+                        borderRadius: '25px'
+                    }
+                },
+                rDivBorderOverrideSettings: {
+                    normal: {
+                        padding: '15px',
+                        innerBorderWidth: '1px',
+                        marginTop: '11px'
+                    },
+                    hovered: {
+                        padding: '14px',
+                        innerBorderWidth: '2px',
+                        marginTop: '11px'
+                    },
+                    selected: {
+                        padding: '13px',
+                        innerBorderWidth: '3px',
+                        marginTop: '11px'
+                    }
+                }
             }
         }
-    }
+    };
 }
 
 /**
@@ -298,6 +256,34 @@ function migrateState(state: any): AppState {
         
         state.version = "1.2"
         console.log('[AppState] Successfully migrated to v1.2 - preserved user preferences')
+    }
+
+    // Migration from 1.2 to 1.3: Restructure to user-settings/system-constants
+    if (state.version === "1.2") {
+        console.log('[AppState] Migrating state from v1.2 to v1.3: Restructuring to user-settings/system-constants')
+        
+        // Create new structure
+        const newState: any = {
+            version: "1.3",
+            lastUpdated: state.lastUpdated || new Date().toISOString(),
+            "user-settings": {
+                layout: state.layout || { orientation: 'scene-left', scenePercentage: 50, resumePercentage: 50 },
+                resizeHandle: state.resizeHandle || { stepCount: 4 },
+                focalPointMode: state.focalPoint?.mode || 'locked',
+                selectedJobNumber: state.selectedJobNumber || null,
+                lastVisitedJobNumber: state.lastVisitedJobNumber || null,
+                resume: state.resume || { sortRule: { field: 'startDate', direction: 'asc' } },
+                theme: {
+                    colorPalette: state.theme?.colorPalette || 'sweeps.json'
+                }
+            },
+            "system-constants": state.constants || getDefaultState()["system-constants"]
+        }
+        
+        // Copy the new structure over
+        Object.assign(state, newState)
+        state.version = "1.3"
+        console.log('[AppState] Successfully migrated to v1.3 - restructured to user-settings/system-constants')
     }
 
     return state

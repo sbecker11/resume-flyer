@@ -13,11 +13,11 @@ import { AppState, saveState } from '../core/stateManager.mjs';
 // import { initializationManager } from '../core/initializationManager.mjs'; // IM framework no longer used
 // Import jobs data directly since JobsDataManager no longer exists
 import { jobs } from '../../static_content/jobs/jobs.mjs';
-// Removed direct color palette import - now using ColorPaletteManager dependency
+// Import new Vue composable for color palette functionality
+import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // Import fundamental components to ensure they're registered with IM
 // import '../core/jobsDataManager.mjs'; // No longer exists - using Vue composables
 // import '../core/colorPaletteManager.mjs'; // No longer exists - using Vue composables
-// Badge manager removed - badges now handled per-cDiv in useCardsController
 // import * as BizDetailsDivModule from '../scene/bizDetailsDivModule.mjs'; // Module doesn't exist - needs to be recreated
 import * as utils from '../utils/utils.mjs';
 
@@ -55,8 +55,6 @@ class ResumeListController extends BaseComponent {
     this.sortedIndices = []; // Maps sorted position to original index
     // isInitialized is managed by BaseComponent automatically
     
-    // Set up event listeners for badge mode, color palette changes, and selection events
-    this._setupBadgeModeListener();
     this._setupColorPaletteListener();
     this._setupSelectionListeners();
     
@@ -172,7 +170,7 @@ class ResumeListController extends BaseComponent {
         
         // Create resume divs using CardsController's bizCardDivs (DOM operations moved from initialize)
         if (this.cardsController && this.cardsController.bizCardDivs) {
-            this.bizResumeDivs = this.createAllBizResumeDivs(this.cardsController.bizCardDivs);
+            this.bizResumeDivs = await this.createAllBizResumeDivs(this.cardsController.bizCardDivs);
             
             // Add resume divs to the DOM
             this.bizResumeDivs.forEach((div, index) => {
@@ -829,6 +827,9 @@ class ResumeListController extends BaseComponent {
     
     console.log(`[DEBUG] SORT: applySortRule called with ${sortRule.field} ${sortRule.direction}, isInitializing=${isInitializing}`);
     
+    // Store isInitializing flag for applyNewSort to use
+    this._isInitializing = isInitializing;
+    
     // Capture currently visible job before sorting
     const visibleJobBeforeSort = this.infiniteScroller ? this.infiniteScroller.getCurrentlyVisibleJob() : null;
     console.log(`[DEBUG] SORT: Job visible before sort: ${visibleJobBeforeSort}`);
@@ -1125,13 +1126,19 @@ class ResumeListController extends BaseComponent {
       // Scroll to the first item in the newly sorted list
       this.infiniteScroller.scrollToIndex(0); // Index 0 is the first item in the sorted list
       
-      // Also select the first item to make it visually obvious
-      if (typeof selectionManager !== 'undefined') {
+      // Only auto-select the first item during normal sorting, not during initialization
+      if (typeof selectionManager !== 'undefined' && !this._isInitializing) {
+        console.log(`[DEBUG] applyNewSort: Auto-selecting first item in new sort: job ${firstJobInNewSort}`);
         selectionManager.selectJobNumber(firstJobInNewSort, 'ResumeListController.applyNewSort');
+      } else if (this._isInitializing) {
+        console.log(`[DEBUG] applyNewSort: Skipping auto-selection during initialization`);
       }
     } else {
       console.warn('[DEBUG] applyNewSort: No items in sorted list to scroll to');
     }
+    
+    // Clear the initialization flag after use
+    this._isInitializing = false;
   }
 
   // Convenience methods for common sorts
@@ -1452,7 +1459,7 @@ class ResumeListController extends BaseComponent {
   /**
    * Create all resume divs from card divs
    */
-  createAllBizResumeDivs(bizCardDivs) {
+  async createAllBizResumeDivs(bizCardDivs) {
     console.log('[ResumeListController] createAllBizResumeDivs called with:', bizCardDivs?.length || 0, 'cards');
     
     if (!bizCardDivs || bizCardDivs.length === 0) {
@@ -1470,7 +1477,7 @@ class ResumeListController extends BaseComponent {
       }
       
       try {
-        const resumeDiv = this.createBizResumeDiv(cardDiv);
+        const resumeDiv = await this.createBizResumeDiv(cardDiv);
         bizResumeDivs.push(resumeDiv);
       } catch (error) {
         console.error(`[ResumeListController] Failed to create resume div for card ${i}:`, error);
@@ -1484,7 +1491,7 @@ class ResumeListController extends BaseComponent {
   /**
    * Create a single resume div from a card div
    */
-  createBizResumeDiv(bizCardDiv) {
+  async createBizResumeDiv(bizCardDiv) {
     if (!bizCardDiv) {
       throw new Error('createBizResumeDiv: bizCardDiv not found');
     }
@@ -1519,8 +1526,8 @@ class ResumeListController extends BaseComponent {
         console.error(`[ResumeListController] bizResumeDetailsDiv for job ${jobNumber} is not a Node:`, bizResumeDetailsDiv);
       }
       
-      // Apply the current color palette via ColorPaletteManager
-      this.colorPaletteManager.applyPaletteToElement(bizResumeDiv);
+      // Apply the current color palette via Vue composable
+      await applyPaletteToElement(bizResumeDiv);
       
       // Set up mouse listeners for the resume div
       this._setupMouseListeners(bizResumeDiv);
@@ -1532,30 +1539,62 @@ class ResumeListController extends BaseComponent {
       throw error;
     }
   }
+
+  // Add debug function for manual testing
+  testResumeClick(jobNumber) {
+    console.log(`[ResumeListController] 🧪 Testing manual click for job ${jobNumber}`)
+    const resumeDiv = document.querySelector(`[data-job-number="${jobNumber}"].biz-resume-div`)
+    if (resumeDiv) {
+      console.log(`[ResumeListController] Found resume div for job ${jobNumber}, simulating click...`)
+      this.handleBizResumeDivClickEvent(resumeDiv)
+    } else {
+      console.error(`[ResumeListController] ❌ Resume div not found for job ${jobNumber}`)
+      const allResumeDivs = document.querySelectorAll('.biz-resume-div')
+      console.log(`[ResumeListController] Available resume divs: ${allResumeDivs.length}`)
+      allResumeDivs.forEach((div, i) => {
+        if (i < 5) console.log(`  - Job ${div.getAttribute('data-job-number')}`)
+      })
+    }
+  }
   
   /**
    * Set up mouse listeners for resume div
    */
   _setupMouseListeners(bizResumeDiv) {
-    if (!bizResumeDiv) return;
+    if (!bizResumeDiv) {
+      console.error('[ResumeListController] ❌ Cannot setup mouse listeners - no bizResumeDiv')
+      return;
+    }
+    
+    const jobNumber = bizResumeDiv.getAttribute('data-job-number')
+    console.log(`[ResumeListController] 🖱️ Setting up mouse listeners for job ${jobNumber}`)
     
     bizResumeDiv.addEventListener('click', () => this.handleBizResumeDivClickEvent(bizResumeDiv));
     bizResumeDiv.addEventListener('mouseenter', () => this.handleMouseEnterEvent(bizResumeDiv));
     bizResumeDiv.addEventListener('mouseleave', () => this.handleMouseLeaveEvent(bizResumeDiv));
+    
+    console.log(`[ResumeListController] ✅ Mouse listeners set up for job ${jobNumber}`)
   }
   
   /**
    * Handle resume div click events
    */
   handleBizResumeDivClickEvent(bizResumeDiv) {
-    if (!bizResumeDiv) return;
+    console.log(`[ResumeListController] 🖱️ Resume div clicked!`, bizResumeDiv)
+    if (!bizResumeDiv) {
+      console.error('[ResumeListController] ❌ No bizResumeDiv provided to click handler')
+      return;
+    }
     
     const jobNumber = parseInt(bizResumeDiv.getAttribute('data-job-number'), 10);
     const isSelected = selectionManager.getSelectedJobNumber() === jobNumber;
+    console.log(`[ResumeListController] Job ${jobNumber} clicked, currently selected: ${isSelected}`)
     
     if (isSelected) {
+      console.log(`[ResumeListController] Clearing selection for job ${jobNumber}`)
       selectionManager.clearSelection('ResumeListController.handleBizResumeDivClickEvent');
     } else {
+      console.log(`[ResumeListController] Selecting job ${jobNumber}`)
       selectionManager.selectJobNumber(jobNumber, 'ResumeListController.handleBizResumeDivClickEvent');
     }
   }
@@ -1580,13 +1619,6 @@ class ResumeListController extends BaseComponent {
   }
   
   /**
-   * Set up badge mode listener
-   */
-  _setupBadgeModeListener() {
-    // Badge manager removed - badges now handled per-cDiv in useCardsController
-  }
-  
-  /**
    * Set up color palette listener
    */
   _setupColorPaletteListener() {
@@ -1605,41 +1637,25 @@ class ResumeListController extends BaseComponent {
   }
   
   /**
-   * Handle badge mode changes
-   */
-  handleBadgeModeChanged(event) {
-    const { mode, previousMode, caller } = event.detail;
-    
-    console.log(`[DEBUG] ResumeListController.handleBadgeModeChanged: Mode changed from ${previousMode} to ${mode} (caller: ${caller})`);
-    
-    // Force recalculation of heights when badge mode changes
-    if (this.infiniteScroller) {
-      requestAnimationFrame(() => {
-        dragStateManager.executeOrDefer(() => {
-          this.infiniteScroller.recalculateHeights();
-        }, 'badgeModeChanged-recalculateHeights');
-      });
-    }
-  }
-  
-  /**
    * Handle color palette changes
    */
-  handleColorPaletteChanged(event) {
+  async handleColorPaletteChanged(event) {
     const { filename, paletteName, previousFilename } = event.detail;
     
     console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
     
     // Apply new palette to all resume divs
     if (this.bizResumeDivs) {
-      this.bizResumeDivs.forEach(div => {
+      for (const div of this.bizResumeDivs) {
         if (div) {
           // Apply palette to the div itself and all elements with data-color-index within it
-          this.colorPaletteManager.applyPaletteToElement(div);
+          await applyPaletteToElement(div);
           const colorElements = div.querySelectorAll('[data-color-index]');
-          colorElements.forEach(element => this.colorPaletteManager.applyPaletteToElement(element));
+          for (const element of colorElements) {
+            await applyPaletteToElement(element);
+          }
         }
-      });
+      }
     }
     
     console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Applied new palette to ${this.bizResumeDivs?.length || 0} resume divs`);

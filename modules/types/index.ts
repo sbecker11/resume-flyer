@@ -38,80 +38,132 @@ export interface AppState {
   version: string;
   lastUpdated: string;
   
-  // User preferences
-  layout: {
-    orientation: 'scene-left' | 'scene-right';
-    scenePercentage: number;
-    resumePercentage: number;
-  };
-  
-  resizeHandle: {
-    stepCount: number;
-  };
-  
-  focalPoint: {
-    mode: string;
-  };
-  
-  badgeToggle: {
-    mode: string; // BadgeMode enum
-  };
-  
-  badges: {
-    height: string;
-    padding: string;
-    verticalMargin: string;
-    borderRadius: string;
-    borderWidth: string;
-    fontSize: string;
-    fontWeight: string;
-    transition: string;
-    spacing: {
-      vertical: number;
-      horizontal: number;
+  // User preferences grouped together
+  "user-settings": {
+    layout: {
+      orientation: 'scene-left' | 'scene-right';
+      scenePercentage: number;
+      resumePercentage: number;
     };
-    states: {
-      normal: BadgeStateStyle;
-      hovered: BadgeStateStyle;
-      selected: BadgeStateStyle;
+    
+    resizeHandle: {
+      stepCount: number;
+    };
+    
+    focalPointMode: 'locked' | 'following' | 'dragging';
+    
+    selectedJobNumber: number | null;
+    lastVisitedJobNumber: number | null;
+    
+    resume: {
+      sortRule: SortRule;
+    };
+    
+    theme: {
+      colorPalette: string; // filename only
     };
   };
   
-  selectedJobNumber: number | null;
-  lastVisitedJobNumber: number | null;
-  
-  resume: {
-    sortRule: SortRule;
-  };
-  
-  theme: {
-    colorPalette: string; // filename
-    brightnessFactorSelected: number;
-    brightnessFactorHovered: number;
-    borderSettings: {
-      normal: BorderStyle;
-      hovered: BorderStyle;
-      selected: BorderStyle;
+  // System constants grouped together  
+  "system-constants": {
+    zIndex: {
+      root: number;
+      scene: number;
+      sceneGradients: number;
+      timeline: number;
+      backgroundMax: number;
+      cardsMin: number;
+      cardsMax: number;
+      bullsEye: number;
+      selectedCard: number;
+      focalPoint: number;
+      aimPoint: number;
     };
-    rDivBorderOverrideSettings: {
-      normal: BorderOverrideStyle;
-      hovered: BorderOverrideStyle;
-      selected: BorderOverrideStyle;
+    cards: {
+      meanWidth: number;
+      minHeight: number;
+      maxXOffset: number;
+      maxWidthOffset: number;
+      minZDiff: number;
+    };
+    timeline: {
+      pixelsPerYear: number;
+      paddingTop: number;
+      gradientLength: string;
+    };
+    resizeHandle: {
+      width: number;
+      shadowWidth: number;
+      shadowBlur: number;
+      defaultWidthPercent: number;
+    };
+    animation: {
+      durations: {
+        fast: string;
+        medium: string;
+        slow: string;
+        spinner: string;
+      };
+      autoScroll: {
+        repeatMillis: number;
+        maxVelocity: number;
+        minVelocity: number;
+        changeThreshold: number;
+        scrollZonePercentage: number;
+      };
+    };
+    performance: {
+      thresholds: {
+        resizeTime: number;
+        scrollTime: number;
+        memoryUsage: number;
+      };
+      debounceTimeout: number;
+    };
+    typography: {
+      fontSizes: {
+        small: string;
+        medium: string;
+        large: string;
+        xlarge: string;
+        xxlarge: string;
+        timeline: string;
+      };
+      fontFamily: string;
+    };
+    visualEffects: {
+      parallax: {
+        xExaggerationFactor: number;
+        yExaggerationFactor: number;
+      };
+      depthEffects: {
+        minBrightnessPercent: number;
+        blurScaleFactor: number;
+        filterMultipliers: {
+          brightness: { min: number; factor: number };
+          blur: { min: number; factor: number };
+          contrast: { min: number; factor: number };
+          saturate: { min: number; factor: number };
+        };
+      };
+    };
+    theme: {
+      brightnessFactorSelected: number;
+      brightnessFactorHovered: number;
+      borderSettings: {
+        normal: BorderStyle;
+        hovered: BorderStyle;
+        selected: BorderStyle;
+      };
+      rDivBorderOverrideSettings: {
+        normal: BorderOverrideStyle;
+        hovered: BorderOverrideStyle;
+        selected: BorderOverrideStyle;
+      };
     };
   };
-  
-  color: {
-    palettes: Record<string, string[]>; // palette name -> colors
-  };
-  
-  constants: AppConstants;
 }
 
-export interface BadgeStateStyle {
-  borderWidth: string;
-  transform: string;
-  boxShadow: string;
-}
 
 export interface BorderStyle {
   padding: string;
@@ -128,91 +180,6 @@ export interface BorderOverrideStyle {
   marginTop: string;
 }
 
-export interface AppConstants {
-  zIndex: {
-    root: number;
-    scene: number;
-    sceneGradients: number;
-    timeline: number;
-    connectionLines: number;
-    badges: number;
-    backgroundMax: number;
-    cardsMin: number;
-    cardsMax: number;
-    bullsEye: number;
-    selectedCard: number;
-    focalPoint: number;
-    aimPoint: number;
-  };
-  cards: {
-    meanWidth: number;
-    minHeight: number;
-    maxXOffset: number;
-    maxWidthOffset: number;
-    minZDiff: number;
-  };
-  timeline: {
-    pixelsPerYear: number;
-    paddingTop: number;
-    gradientLength: string;
-  };
-  resizeHandle: {
-    width: number;
-    shadowWidth: number;
-    shadowBlur: number;
-    defaultWidthPercent: number;
-  };
-  animation: {
-    durations: {
-      fast: string;
-      medium: string;
-      slow: string;
-      spinner: string;
-    };
-    autoScroll: {
-      repeatMillis: number;
-      maxVelocity: number;
-      minVelocity: number;
-      changeThreshold: number;
-      scrollZonePercentage: number;
-    };
-  };
-  performance: {
-    thresholds: {
-      resizeTime: number;
-      scrollTime: number;
-      memoryUsage: number;
-    };
-    debounceTimeout: number;
-  };
-  typography: {
-    fontSizes: {
-      small: string;
-      medium: string;
-      large: string;
-      xlarge: string;
-      xxlarge: string;
-      timeline: string;
-    };
-    fontFamily: string;
-  };
-  visualEffects: {
-    parallax: {
-      xExaggerationFactor: number;
-      yExaggerationFactor: number;
-    };
-    depthEffects: {
-      minBrightnessPercent: number;
-      blurScaleFactor: number;
-      filterMultipliers: {
-        brightness: { min: number; factor: number };
-        blur: { min: number; factor: number };
-        contrast: { min: number; factor: number };
-        saturate: { min: number; factor: number };
-      };
-    };
-  };
-}
 
 // Event types for better type safety in event handling
 export interface JobSelectedEvent {

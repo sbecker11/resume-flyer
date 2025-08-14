@@ -66,6 +66,7 @@ import { useKeyboardNavigation } from '../composables/useKeyboardNavigation.mjs'
 
 // Vue 3 provide/inject system to replace global window objects
 import { provideGlobalServices } from '../core/globalServices'
+import { provide } from 'vue'
 
 // =============================================================================
 // VUE 3 ARCHITECTURE - Dependency injection and stores
@@ -122,6 +123,45 @@ const {
 // Vue 3 keyboard navigation (replaces legacy keyDownModule)
 const keyboardNavigation = useKeyboardNavigation()
 
+// Optimized card registry system (replaces DOM queries)
+import { useCardRegistry } from '../composables/useCardRegistry.mjs'
+const cardRegistry = useCardRegistry()
+
+// Global element registry for optimized DOM access
+import { provideGlobalElementRegistry } from '../composables/useGlobalElementRegistry.mjs'
+const globalElementRegistry = provideGlobalElementRegistry()
+
+// CRITICAL: Provide Vue 3 services required by useCardsController reactive dependencies
+console.log('[AppContent] 📦 Providing Vue 3 services for reactive dependencies...')
+
+// Use the existing bulls-eye service (already declared above)
+const bullsEyeService = {
+  isReady: computed(() => true), // Bulls-eye composable is ready when imported
+  setBullsEyeElement,
+  setSceneContainerElement
+}
+provide('bullsEyeService', bullsEyeService)
+
+// Timeline service from existing IM system
+// Mark ready immediately; CardsController will initialize timeline if needed
+const timelineService = {
+  isReady: ref(true),
+}
+provide('timelineService', timelineService)
+
+// Color palette service from Vue composable
+const colorPaletteService = {
+  isReady: computed(() => true), // Color palette composable is ready when loaded
+}
+provide('colorPaletteService', colorPaletteService)
+
+// Scene container service - track when DOM element is available
+// Mark ready immediately; CardsController retries if scene-plane isn't yet available
+const sceneContainerService = {
+  isReady: ref(true),
+}
+provide('sceneContainerService', sceneContainerService)
+
 // Early provide/inject setup (before child components mount)
 console.log('[AppContent] 🔗 Setting up provide/inject system early...')
 const debugFunctions = {
@@ -176,12 +216,14 @@ const focalPointRef = ref(null)
 watch(focalPointRef, (newRef) => {
   if (newRef) {
     setFocalPointElement(newRef)
+    globalElementRegistry.registerElement('focal-point', newRef)
   }
 }, { immediate: true })
 
 watch(bullsEyeRef, (newRef) => {
   if (newRef) {
     setBullsEyeElement(newRef)
+    globalElementRegistry.registerElement('bulls-eye', newRef)
   }
 }, { immediate: true })
 
@@ -202,28 +244,38 @@ const timelineAlignment = computed(() => {
   return orientation.value === 'scene-left' ? 'right' : 'left'
 })
 
-// Use the reactive store values and map them to display 0-100% range
+// Use the reactive store values directly - no complex mapping needed
 const roundedScenePercentage = computed(() => {
   const rawPercentage = scenePercentage.value;
+  const result = Math.round(Math.max(0, Math.min(100, rawPercentage)));
   
-  // Debug logging for percentage mapping
-  if (rawPercentage <= 10 || rawPercentage >= 90) {
-    console.log(`[Scene %] Raw: ${rawPercentage}% -> Mapped: ${rawPercentage <= 10 ? 0 : 100}%`);
-  }
-  
-  if (rawPercentage <= 10) return 0;
-  if (rawPercentage >= 90) return 100;
-  
-  const mapped = ((rawPercentage - 5) / 90) * 100;
-  const result = Math.round(Math.max(0, Math.min(100, mapped)));
-  
-  console.log(`[Scene %] Raw: ${rawPercentage}% -> Mapped: ${result}%`);
+  console.log(`[Scene %] Raw: ${rawPercentage}% -> Display: ${result}%`);
   return result;
 });
 
 const roundedResumePercentage = computed(() => {
   return 100 - roundedScenePercentage.value;
 });
+
+// Verification computed property to ensure percentages always add up to 100%
+const percentageVerification = computed(() => {
+  const scenePercent = roundedScenePercentage.value;
+  const resumePercent = roundedResumePercentage.value;
+  const total = scenePercent + resumePercent;
+  
+  if (total !== 100) {
+    console.warn(`⚠️ Percentage mismatch! Scene: ${scenePercent}% + Resume: ${resumePercent}% = ${total}% (should be 100%)`);
+  }
+  
+  return { scenePercent, resumePercent, total, isValid: total === 100 };
+});
+
+// Watch for percentage changes and log verification
+watch(percentageVerification, (newVerification) => {
+  if (!newVerification.isValid) {
+    console.error(`🚨 PERCENTAGE MISMATCH: Scene ${newVerification.scenePercent}% + Resume ${newVerification.resumePercent}% = ${newVerification.total}%`);
+  }
+}, { immediate: true });
 
 // =============================================================================
 // EVENT HANDLERS
@@ -242,6 +294,14 @@ onMounted(async () => {
   console.log('🚀 [AppContent] Vue 3 App Initialization Started')
   
   try {
+    // PHASE 0: Register app container in global element registry
+    await nextTick() // Wait for DOM to be ready
+    const appContainer = document.getElementById('app-container')
+    if (appContainer) {
+      globalElementRegistry.registerElement('app-container', appContainer)
+      console.log('[AppContent] 📋 Registered app-container in global element registry')
+    }
+    
     // PHASE 1: Load AppState from server FIRST
     console.log('[AppContent] 📊 Loading AppState from server...')
     const { loadAppState } = useAppState()
@@ -276,13 +336,14 @@ onMounted(async () => {
     console.log('[AppContent] 📋 Initializing resume system...')
     await initializeResumeSystem()
     
-    // PHASE 6: Update provide/inject system with initialized services
-    console.log('[AppContent] 🔧 Updating provide/inject system with initialized services...')
-    console.log('  - bullsEye:', !!window.bullsEye)
-    console.log('  - resumeListController:', !!window.resumeListController)
-    console.log('  - resumeItemsController:', !!window.resumeItemsController)
-    console.log('  - focalPoint:', !!window.focalPoint)
-    console.log('  - appState:', !!window.appState)
+    // PHASE 6: Service readiness logs (now ready from start)
+    console.log('[AppContent] 🔧 Service readiness (pre-marked ready) ...')
+    console.log('  - timelineService.isReady:', timelineService.isReady.value)
+    console.log('  - sceneContainerService.isReady:', sceneContainerService.isReady.value)
+    
+    // Bulls-eye and color palette are already ready (Vue composables)
+    console.log('  - bullsEyeService.isReady:', bullsEyeService.isReady.value)
+    console.log('  - colorPaletteService.isReady:', colorPaletteService.isReady.value)
     
     // Update debug functions with real implementations
     debugFunctions.testResumeSystem = testResumeSystem
@@ -304,6 +365,10 @@ onMounted(async () => {
     window.checkResumeDivs = checkResumeDivs
     window.testScrolling = testScrolling
     
+    // Make card registry globally available for legacy code migration
+    window.cardRegistry = cardRegistry
+    console.log('[AppContent] 📋 Card registry made globally available for DOM query optimization')
+    
     // PHASE 7: Global event handlers (now handled by Vue 3 composables)
     console.log('[AppContent] 🎹 Keyboard navigation handled by Vue 3 composable')
     
@@ -317,12 +382,8 @@ onMounted(async () => {
 onUnmounted(() => {
   console.log('[AppContent] 🧹 Cleaning up...')
   
-  // Remove event listeners
-  document.removeEventListener('keydown', handleKeyDown)
-  
-  // Cleanup systems - TODO: replace with Vue composable cleanup
-  // parallaxModule.destroy?.()
-  // sceneContainer.destroy?.()
+  // Vue 3 composables handle their own cleanup automatically
+  // No manual event listener removal needed for Vue composables
   
   console.log('[AppContent] ✅ Cleanup complete')
 })
@@ -359,6 +420,23 @@ watch(orientation, (newOrientation) => {
 #app-container {
   flex-direction: row !important;
   /* Both scene-left and scene-right use same flex direction */
+}
+
+/* =============================================================================
+   CLONE VISIBILITY MANAGEMENT - Force hiding for cards with clones
+   ============================================================================= */
+/* MAXIMUM specificity to override all other rules */
+:deep(html body #scene-container #scene-plane .biz-card-div.force-hidden-for-clone.hasClone),
+:deep(html body #scene-container .biz-card-div.force-hidden-for-clone.hasClone),
+:deep(html body .biz-card-div.force-hidden-for-clone.hasClone),
+:deep(.biz-card-div.force-hidden-for-clone.hasClone) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    z-index: -9999 !important;
+    pointer-events: none !important;
 }
 
 /* Orientation-specific container ordering is handled by individual components */

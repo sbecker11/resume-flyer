@@ -4,8 +4,51 @@
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
 
+/**
+ * Configuration constants for infinite scrolling behavior
+ */
+const INFINITE_SCROLL_CONFIG = {
+  CLONE_COUNT: 10,              // Number of clones to create above and below
+  SCROLL_BUFFER: 200,           // Pixels from edge to trigger repositioning
+  REPOSITION_DELAY: 100,        // Delay before allowing next repositioning
+  DEFAULT_ITEM_HEIGHT: 80       // Estimated item height for performance
+};
+
+/**
+ * Container styles configuration
+ */
+const CONTAINER_STYLES = {
+  scrollport: {
+    position: 'relative',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    backgroundColor: 'var(--grey-dark-6)'
+  },
+  contentHolder: {
+    backgroundColor: 'var(--grey-dark-6)',
+    position: 'relative',
+    width: '100%',
+    height: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'stretch'
+  }
+};
+
+/**
+ * InfiniteScrollingContainer - Provides true infinite scrolling with seamless wrapping
+ */
 class InfiniteScrollingContainer {
+  /**
+   * Create an infinite scrolling container
+   * @param {HTMLElement} scrollportElement - The scrollable container element
+   * @param {HTMLElement} contentElement - The content holder element
+   * @param {Object} options - Configuration options
+   * @param {Function} options.onItemChange - Callback when active item changes
+   */
   constructor(scrollportElement, contentElement, options = {}) {
+    this._validateConstructorParams(scrollportElement, contentElement);
+    
     this.scrollport = scrollportElement;
     this.contentHolder = contentElement;
     this.options = {
@@ -13,45 +56,47 @@ class InfiniteScrollingContainer {
       ...options
     };
 
+    // State management
     this.originalItems = [];
     this.headClones = [];
     this.tailClones = [];
     this.currentIndex = 0;
     this._isInitialized = false;
-
-    // Infinite scrolling configuration
-    this.CLONE_COUNT = 10; // Number of clones to create above and below
-    this.SCROLL_BUFFER = 200; // Pixels from edge to trigger repositioning
     this.isRepositioning = false;
 
     this.init();
   }
 
+  /**
+   * Initialize the infinite scrolling container
+   */
   init() {
-    this.setupContainer();
-    this.setupScrollListener();
-    console.log('[InfiniteScrollingContainer] Initialized with true infinite scrolling');
+    try {
+      this.setupContainer();
+      this.setupScrollListener();
+      console.log('[InfiniteScrollingContainer] Initialized with true infinite scrolling');
+    } catch (error) {
+      console.error('[InfiniteScrollingContainer] Initialization failed:', error);
+      throw error;
+    }
   }
 
+  /**
+   * Set up container styling and layout
+   */
   setupContainer() {
     console.log('[DEBUG] InfiniteScrollingContainer: Setting up infinite scrolling container');
     
-    // Set up scrollport for native scrolling
-    this.scrollport.style.position = 'relative';
-    this.scrollport.style.overflowY = 'auto';
-    this.scrollport.style.overflowX = 'hidden'; // Prevent horizontal scrolling
-    this.scrollport.style.backgroundColor = 'var(--grey-dark-6)';
+    // Apply scrollport styles
+    this._applyStyles(this.scrollport, CONTAINER_STYLES.scrollport);
     
-    // Set up content holder as flexbox container
-    this.contentHolder.style.backgroundColor = 'var(--grey-dark-6)';
-    this.contentHolder.style.position = 'relative';
-    this.contentHolder.style.width = '100%';
-    this.contentHolder.style.height = 'auto'; // Let content determine height
-    this.contentHolder.style.display = 'flex';
-    this.contentHolder.style.flexDirection = 'column';
-    this.contentHolder.style.alignItems = 'stretch';
+    // Apply content holder styles
+    this._applyStyles(this.contentHolder, CONTAINER_STYLES.contentHolder);
   }
 
+  /**
+   * Set up scroll event listener for boundary detection
+   */
   setupScrollListener() {
     this.scrollport.addEventListener('scroll', () => {
       if (!this.isRepositioning && this.originalItems.length > 0) {
@@ -60,224 +105,210 @@ class InfiniteScrollingContainer {
     });
   }
 
+  /**
+   * Set the items for infinite scrolling
+   * @param {Array} items - Array of DOM elements to display
+   * @param {number} startingIndex - Initial index to display (default: 0)
+   */
   setItems(items, startingIndex = 0) {
+    if (!Array.isArray(items)) {
+      throw new Error('Items must be an array');
+    }
+    
     console.log(`[DEBUG] InfiniteScrollingContainer.setItems: ${items.length} items with infinite scrolling`);
     
+    this._resetState();
     this.originalItems = [...items];
-    this.headClones = [];
-    this.tailClones = [];
     
-    // Clear existing content
-    this.contentHolder.innerHTML = '';
+    if (items.length === 0) {
+      console.warn('[InfiniteScrollingContainer] No items provided');
+      return;
+    }
     
-    // Create head clones (items that appear above the original list)
-    this.createHeadClones();
-    
-    // Add original items
-    this.originalItems.forEach((item, index) => {
-      if (item) {
-        this.prepareItemForInfiniteScroll(item, index, 'original');
-        this.contentHolder.appendChild(item);
-      }
-    });
-    
-    // Create tail clones (items that appear below the original list)
-    this.createTailClones();
-    
-    console.log(`[DEBUG] InfiniteScrollingContainer: Created infinite scroll structure - ${this.headClones.length} head clones + ${this.originalItems.length} originals + ${this.tailClones.length} tail clones`);
-    
+    this._buildInfiniteScrollStructure();
     this._isInitialized = true;
   }
 
+  /**
+   * Create head clones (items that appear above the original list)
+   */
   createHeadClones() {
-    // Create clones of the last N items to appear above the first item
-    const sourceItems = this.originalItems.slice(-this.CLONE_COUNT);
+    const cloneCount = Math.min(INFINITE_SCROLL_CONFIG.CLONE_COUNT, this.originalItems.length);
+    const sourceItems = this.originalItems.slice(-cloneCount);
     
     sourceItems.forEach((sourceItem, index) => {
       if (sourceItem) {
-        const clone = this.createInfiniteClone(sourceItem, 'head', this.originalItems.length - this.CLONE_COUNT + index);
+        const originalIndex = this.originalItems.length - cloneCount + index;
+        const clone = this._createClone(sourceItem, 'head', originalIndex);
         this.headClones.push(clone);
         this.contentHolder.appendChild(clone);
       }
     });
   }
 
+  /**
+   * Create tail clones (items that appear below the original list)
+   */
   createTailClones() {
-    // Create clones of the first N items to appear below the last item
-    const sourceItems = this.originalItems.slice(0, this.CLONE_COUNT);
+    const cloneCount = Math.min(INFINITE_SCROLL_CONFIG.CLONE_COUNT, this.originalItems.length);
+    const sourceItems = this.originalItems.slice(0, cloneCount);
     
     sourceItems.forEach((sourceItem, index) => {
       if (sourceItem) {
-        const clone = this.createInfiniteClone(sourceItem, 'tail', index);
+        const clone = this._createClone(sourceItem, 'tail', index);
         this.tailClones.push(clone);
         this.contentHolder.appendChild(clone);
       }
     });
   }
 
-  createInfiniteClone(sourceItem, cloneType, originalIndex) {
+  /**
+   * Create a clone of an item for infinite scrolling
+   * @param {HTMLElement} sourceItem - The original item to clone
+   * @param {string} cloneType - Type of clone ('head' or 'tail')
+   * @param {number} originalIndex - Index of the original item
+   * @returns {HTMLElement} The cloned element
+   */
+  _createClone(sourceItem, cloneType, originalIndex) {
     const clone = sourceItem.cloneNode(true);
     
-    // Mark as infinite scroll clone
-    clone.classList.add('infinite-scroll-clone');
-    clone.classList.add(`${cloneType}-clone`);
-    clone.dataset.originalIndex = originalIndex;
-    clone.dataset.cloneType = cloneType;
-    
-    // Remove/modify IDs to avoid duplicates
-    if (clone.id) {
-      clone.id = `${clone.id}-${cloneType}-clone`;
-    }
-    
-    // Update any child element IDs
-    const childrenWithIds = clone.querySelectorAll('[id]');
-    childrenWithIds.forEach(child => {
-      if (child.id) {
-        child.id = `${child.id}-${cloneType}-clone`;
-      }
-    });
-    
+    this._markAsClone(clone, cloneType, originalIndex);
+    this._updateCloneIds(clone, cloneType);
     this.prepareItemForInfiniteScroll(clone, originalIndex, cloneType);
-    
-    // Apply color palette to the clone
-    try {
-      applyPaletteToElement(clone);
-    } catch (error) {
-      console.warn('Failed to apply palette to infinite scroll clone:', error);
-    }
+    this._applyPaletteToClone(clone);
     
     return clone;
   }
 
+  /**
+   * Prepare an item for infinite scrolling layout
+   * @param {HTMLElement} item - The item to prepare
+   * @param {number} index - The item's index
+   * @param {string} type - The item type ('original', 'head', 'tail')
+   */
   prepareItemForInfiniteScroll(item, index, type) {
-    // Remove any existing positioning styles
-    this.clearPositioningStyles(item);
-    
-    // Set flexbox child properties
-    item.style.position = 'relative';
-    item.style.width = '100%';
-    item.style.height = 'auto';
-    item.style.flexShrink = '0';
-    
-    // Add data attributes for tracking
-    item.dataset.infiniteScrollType = type;
-    item.dataset.infiniteScrollIndex = index;
+    this._clearPositioningStyles(item);
+    this._applyFlexboxStyles(item);
+    this._addTrackingAttributes(item, index, type);
   }
 
-  clearPositioningStyles(element) {
-    // Remove all positioning styles to allow flexbox
-    element.style.removeProperty('position');
-    element.style.removeProperty('top'); 
-    element.style.removeProperty('left');
-    element.style.removeProperty('height');
-    element.style.removeProperty('width');
-    
-    // Remove any transform styles
-    element.style.removeProperty('transform');
+  /**
+   * Clear positioning styles from an element
+   * @param {HTMLElement} element - The element to clear styles from
+   */
+  _clearPositioningStyles(element) {
+    const propertiesToRemove = ['position', 'top', 'left', 'height', 'width', 'transform'];
+    propertiesToRemove.forEach(prop => element.style.removeProperty(prop));
   }
 
+  /**
+   * Check if scrolling has approached boundaries and trigger repositioning
+   */
   checkScrollBoundaries() {
-    const scrollTop = this.scrollport.scrollTop;
-    const scrollHeight = this.scrollport.scrollHeight;
-    const clientHeight = this.scrollport.clientHeight;
+    const { scrollTop, scrollHeight, clientHeight } = this.scrollport;
+    const buffer = INFINITE_SCROLL_CONFIG.SCROLL_BUFFER;
     
-    // Check if scrolled too close to top (into head clones)
-    if (scrollTop < this.SCROLL_BUFFER) {
+    if (scrollTop < buffer) {
       console.log('[InfiniteScrollingContainer] Near top boundary - repositioning');
-      this.repositionToBottom();
-    }
-    
-    // Check if scrolled too close to bottom (into tail clones)
-    if (scrollTop + clientHeight > scrollHeight - this.SCROLL_BUFFER) {
+      this._repositionToBottom();
+    } else if (scrollTop + clientHeight > scrollHeight - buffer) {
       console.log('[InfiniteScrollingContainer] Near bottom boundary - repositioning');
-      this.repositionToTop();
+      this._repositionToTop();
     }
   }
 
-  repositionToBottom() {
+  /**
+   * Reposition scroll from top boundary to bottom equivalent position
+   */
+  _repositionToBottom() {
     if (this.isRepositioning) return;
-    this.isRepositioning = true;
+    this._setRepositioning(true);
     
-    // Calculate scroll position in original content range
-    const headClonesHeight = this.calculateHeadClonesHeight();
-    const originalContentHeight = this.calculateOriginalContentHeight();
-    const currentScrollInOriginals = this.scrollport.scrollTop - headClonesHeight;
-    
-    // Jump to equivalent position at bottom (in tail clones area)
-    const newScrollTop = headClonesHeight + originalContentHeight + currentScrollInOriginals;
+    const metrics = this._calculateRepositionMetrics();
+    const currentScrollInOriginals = this.scrollport.scrollTop - metrics.headHeight;
+    const newScrollTop = metrics.headHeight + metrics.originalHeight + currentScrollInOriginals;
     
     this.scrollport.scrollTop = newScrollTop;
+    console.log(`[InfiniteScrollingContainer] Repositioned from top area to bottom: ${newScrollTop}px`);
     
-    console.log(`[InfiniteScrollingContainer] Repositioned from top area to bottom: ${this.scrollport.scrollTop}px`);
-    
-    // Allow repositioning again after a brief delay
-    setTimeout(() => {
-      this.isRepositioning = false;
-    }, 100);
+    this._scheduleRepositioningReset();
   }
 
-  repositionToTop() {
+  /**
+   * Reposition scroll from bottom boundary to top equivalent position
+   */
+  _repositionToTop() {
     if (this.isRepositioning) return;
-    this.isRepositioning = true;
+    this._setRepositioning(true);
     
-    // Calculate scroll position in original content range
-    const headClonesHeight = this.calculateHeadClonesHeight();
-    const originalContentHeight = this.calculateOriginalContentHeight();
-    const currentScrollInTailClones = this.scrollport.scrollTop - headClonesHeight - originalContentHeight;
-    
-    // Jump to equivalent position at top (in head clones area)
-    const newScrollTop = headClonesHeight + currentScrollInTailClones;
+    const metrics = this._calculateRepositionMetrics();
+    const currentScrollInTailClones = this.scrollport.scrollTop - metrics.headHeight - metrics.originalHeight;
+    const newScrollTop = metrics.headHeight + currentScrollInTailClones;
     
     this.scrollport.scrollTop = newScrollTop;
+    console.log(`[InfiniteScrollingContainer] Repositioned from bottom area to top: ${newScrollTop}px`);
     
-    console.log(`[InfiniteScrollingContainer] Repositioned from bottom area to top: ${this.scrollport.scrollTop}px`);
-    
-    // Allow repositioning again after a brief delay
-    setTimeout(() => {
-      this.isRepositioning = false;
-    }, 100);
+    this._scheduleRepositioningReset();
   }
 
+  /**
+   * Calculate height of head clones with performance optimization
+   * @returns {number} Total height of head clones
+   */
   calculateHeadClonesHeight() {
-    return this.headClones.reduce((total, clone) => {
-      return total + (clone.offsetHeight || 0);
-    }, 0);
+    return this._calculateCollectionHeight(this.headClones);
   }
 
+  /**
+   * Calculate height of original content with performance optimization
+   * @returns {number} Total height of original items
+   */
   calculateOriginalContentHeight() {
-    return this.originalItems.reduce((total, item) => {
-      return total + (item.offsetHeight || 0);
-    }, 0);
+    return this._calculateCollectionHeight(this.originalItems);
   }
 
+  /**
+   * Calculate height of tail clones with performance optimization
+   * @returns {number} Total height of tail clones
+   */
   calculateTailClonesHeight() {
-    return this.tailClones.reduce((total, clone) => {
-      return total + (clone.offsetHeight || 0);
-    }, 0);
+    return this._calculateCollectionHeight(this.tailClones);
   }
 
+  /**
+   * Scroll to a specific item by index
+   * @param {number} originalIndex - Index of the item to scroll to
+   * @param {boolean} animate - Whether to animate the scroll
+   */
   scrollToIndex(originalIndex, animate = true) {
     console.log(`[DEBUG] scrollToIndex: ${originalIndex} with animate=${animate}`);
     
-    if (originalIndex < 0 || originalIndex >= this.originalItems.length) {
-      console.warn(`[DEBUG] scrollToIndex: Invalid index ${originalIndex} - using modulo to wrap around`);
-      // Use modulo to wrap around the index for infinite scrolling
-      originalIndex = ((originalIndex % this.originalItems.length) + this.originalItems.length) % this.originalItems.length;
+    // Safety check: ensure originalItems array is populated
+    if (!this.originalItems || this.originalItems.length === 0) {
+      console.warn(`[InfiniteScrollingContainer] Cannot scroll - no items available (originalItems length: ${this.originalItems?.length || 0})`);
+      return;
     }
     
-    const targetItem = this.originalItems[originalIndex];
+    const wrappedIndex = this._wrapIndex(originalIndex);
+    
+    // Check if _wrapIndex returned invalid index (no items available)
+    if (wrappedIndex === -1) {
+      console.warn(`[InfiniteScrollingContainer] Cannot scroll - invalid wrapped index`);
+      return;
+    }
+    
+    const targetItem = this.originalItems[wrappedIndex];
+    
     if (targetItem) {
-      // Scroll to the original item (not clones)
       targetItem.scrollIntoView({ 
         behavior: animate ? 'smooth' : 'auto', 
         block: 'center' 
       });
       
-      this.currentIndex = originalIndex;
-      
-      if (this.options.onItemChange) {
-        this.options.onItemChange(originalIndex, targetItem);
-      }
+      this.currentIndex = wrappedIndex;
+      this._notifyItemChange(wrappedIndex, targetItem);
+    } else {
+      console.warn(`[InfiniteScrollingContainer] No item found at index ${wrappedIndex} (total items: ${this.originalItems.length})`);
     }
   }
 
@@ -377,6 +408,217 @@ class InfiniteScrollingContainer {
   }
 
   // Static methods for singleton compatibility
+  // ==================== PRIVATE HELPER METHODS ====================
+
+  /**
+   * Validate constructor parameters
+   * @param {HTMLElement} scrollportElement - Scrollport element to validate
+   * @param {HTMLElement} contentElement - Content element to validate
+   */
+  _validateConstructorParams(scrollportElement, contentElement) {
+    if (!scrollportElement || !(scrollportElement instanceof HTMLElement)) {
+      throw new Error('Scrollport element must be a valid HTMLElement');
+    }
+    if (!contentElement || !(contentElement instanceof HTMLElement)) {
+      throw new Error('Content element must be a valid HTMLElement');
+    }
+  }
+
+  /**
+   * Apply styles to an element
+   * @param {HTMLElement} element - Element to style
+   * @param {Object} styles - Style properties to apply
+   */
+  _applyStyles(element, styles) {
+    Object.entries(styles).forEach(([property, value]) => {
+      element.style[property] = value;
+    });
+  }
+
+  /**
+   * Reset container state
+   */
+  _resetState() {
+    this.contentHolder.innerHTML = '';
+    this.headClones = [];
+    this.tailClones = [];
+    this.currentIndex = 0;
+    this.isRepositioning = false;
+  }
+
+  /**
+   * Build the complete infinite scroll structure
+   */
+  _buildInfiniteScrollStructure() {
+    this.createHeadClones();
+    this._addOriginalItems();
+    this.createTailClones();
+    
+    console.log(`[DEBUG] InfiniteScrollingContainer: Created infinite scroll structure - ${this.headClones.length} head clones + ${this.originalItems.length} originals + ${this.tailClones.length} tail clones`);
+  }
+
+  /**
+   * Add original items to the container
+   */
+  _addOriginalItems() {
+    this.originalItems.forEach((item, index) => {
+      if (item) {
+        this.prepareItemForInfiniteScroll(item, index, 'original');
+        this.contentHolder.appendChild(item);
+      }
+    });
+  }
+
+  /**
+   * Mark an element as a clone with appropriate attributes
+   * @param {HTMLElement} clone - The cloned element
+   * @param {string} cloneType - Type of clone ('head' or 'tail')
+   * @param {number} originalIndex - Index of the original item
+   */
+  _markAsClone(clone, cloneType, originalIndex) {
+    clone.classList.add('infinite-scroll-clone', `${cloneType}-clone`);
+    clone.dataset.originalIndex = originalIndex.toString();
+    clone.dataset.cloneType = cloneType;
+  }
+
+  /**
+   * Update IDs in cloned elements to avoid duplicates
+   * @param {HTMLElement} clone - The cloned element
+   * @param {string} cloneType - Type of clone ('head' or 'tail')
+   */
+  _updateCloneIds(clone, cloneType) {
+    if (clone.id) {
+      clone.id = `${clone.id}-${cloneType}-clone`;
+    }
+    
+    const childrenWithIds = clone.querySelectorAll('[id]');
+    childrenWithIds.forEach(child => {
+      if (child.id) {
+        child.id = `${child.id}-${cloneType}-clone`;
+      }
+    });
+  }
+
+  /**
+   * Apply color palette to a cloned element with error handling
+   * @param {HTMLElement} clone - The cloned element
+   */
+  _applyPaletteToClone(clone) {
+    try {
+      applyPaletteToElement(clone);
+    } catch (error) {
+      console.warn('Failed to apply palette to infinite scroll clone:', error);
+    }
+  }
+
+  /**
+   * Apply flexbox styles to an item
+   * @param {HTMLElement} item - The item to style
+   */
+  _applyFlexboxStyles(item) {
+    const flexStyles = {
+      position: 'relative',
+      width: '100%',
+      height: 'auto',
+      flexShrink: '0'
+    };
+    this._applyStyles(item, flexStyles);
+  }
+
+  /**
+   * Add tracking attributes to an item
+   * @param {HTMLElement} item - The item to add attributes to
+   * @param {number} index - The item's index
+   * @param {string} type - The item type
+   */
+  _addTrackingAttributes(item, index, type) {
+    item.dataset.infiniteScrollType = type;
+    item.dataset.infiniteScrollIndex = index.toString();
+  }
+
+  /**
+   * Calculate total height of a collection of elements
+   * @param {Array} collection - Collection of DOM elements
+   * @returns {number} Total height
+   */
+  _calculateCollectionHeight(collection) {
+    if (collection.length === 0) return 0;
+    
+    // Use estimated height for performance if many items
+    if (collection.length > 10) {
+      return collection.length * INFINITE_SCROLL_CONFIG.DEFAULT_ITEM_HEIGHT;
+    }
+    
+    return collection.reduce((total, item) => {
+      return total + (item?.offsetHeight || INFINITE_SCROLL_CONFIG.DEFAULT_ITEM_HEIGHT);
+    }, 0);
+  }
+
+  /**
+   * Calculate metrics needed for repositioning
+   * @returns {Object} Repositioning metrics
+   */
+  _calculateRepositionMetrics() {
+    return {
+      headHeight: this.calculateHeadClonesHeight(),
+      originalHeight: this.calculateOriginalContentHeight(),
+      tailHeight: this.calculateTailClonesHeight()
+    };
+  }
+
+  /**
+   * Set repositioning state and prevent multiple simultaneous repositions
+   * @param {boolean} isRepositioning - Whether repositioning is active
+   */
+  _setRepositioning(isRepositioning) {
+    this.isRepositioning = isRepositioning;
+  }
+
+  /**
+   * Schedule reset of repositioning flag
+   */
+  _scheduleRepositioningReset() {
+    setTimeout(() => {
+      this.isRepositioning = false;
+    }, INFINITE_SCROLL_CONFIG.REPOSITION_DELAY);
+  }
+
+  /**
+   * Wrap index to valid range for infinite scrolling
+   * @param {number} index - Index to wrap
+   * @returns {number} Wrapped index
+   */
+  _wrapIndex(index) {
+    if (!this.originalItems || this.originalItems.length === 0) {
+      console.warn(`[InfiniteScrollingContainer] Cannot wrap index - no items available`);
+      return -1; // Return invalid index to signal no items
+    }
+    
+    if (index < 0 || index >= this.originalItems.length) {
+      console.warn(`[DEBUG] scrollToIndex: Invalid index ${index} - using modulo to wrap around`);
+      return ((index % this.originalItems.length) + this.originalItems.length) % this.originalItems.length;
+    }
+    
+    return index;
+  }
+
+  /**
+   * Notify listeners of item change
+   * @param {number} index - New active index
+   * @param {HTMLElement} item - New active item
+   */
+  _notifyItemChange(index, item) {
+    if (this.options.onItemChange) {
+      try {
+        this.options.onItemChange(index, item);
+      } catch (error) {
+        console.error('[InfiniteScrollingContainer] Error in onItemChange callback:', error);
+      }
+    }
+  }
+
+  // ==================== STATIC METHODS ====================
+
   static reset() {
     if (InfiniteScrollingContainer.instance) {
       InfiniteScrollingContainer.instance.destroy();

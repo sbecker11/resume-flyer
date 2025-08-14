@@ -134,6 +134,222 @@ const emit = defineEmits<ResizeHandleEmits>()
 
 This **Vue 3 modernization** represents a complete architectural transformation, moving from legacy dependency injection patterns to modern Vue 3 reactive composition, providing better performance, maintainability, and developer experience.
 
+## 🧬 Critical Inter-Relationships & System Dependencies
+
+Through extensive Vue 3 architecture modernization work, several **critical inter-relationships** have emerged that are essential for understanding how this complex application functions. These dependencies must be preserved during any future modifications.
+
+### **🎨 Color Palette System Dependencies**
+
+#### **Multi-Layer Element Classification**
+The color palette system must handle **four distinct element types** with different styling approaches:
+
+```javascript
+// Element types requiring different palette application strategies
+1. **Cards (cDivs/rDivs)**: Use CSS variables → `background-color: var(--data-background-color)`
+2. **Clones**: Use inline styles → `element.style.backgroundColor = selectedStateColor`  
+3. **Badges**: Use SELECTED state colors → `data-background-color-selected`
+4. **Timeline Elements**: Use normal state colors → `data-background-color`
+```
+
+#### **Critical Badge Color Dependency**
+**Badges MUST use SELECTED state colors** to visually match clones, not normal state colors:
+
+```javascript
+// CORRECT: Badges match clone appearance
+const selectedBgColor = badge.getAttribute('data-background-color-selected');
+badge.style.backgroundColor = selectedBgColor;
+
+// INCORRECT: Badges use unselected card colors  
+const normalBgColor = badge.getAttribute('data-background-color'); // Wrong!
+```
+
+#### **Element Registry Cache Invalidation Chain**
+Color palette changes require **strategic cache clearing** to find newly created elements:
+
+```
+Palette Change → clearAllCache() → Fresh Element Discovery → Apply Colors
+├── Clone Creation → clearAllCache() → Palette System Finds Clone
+├── Badge Creation → clearAllCache() → Palette System Finds Badges  
+└── Element Removal → clearAllCache() → Palette System Updates
+```
+
+### **🔄 Clone & Badge Lifecycle Dependencies**
+
+#### **Clone Visibility State Machine**
+```
+Original Card (visible) → Selection Event → Clone Creation → Original Hidden
+├── Clone: display=block, visibility=visible, opacity=1
+├── Original: display=none !important, visibility=hidden, opacity=0
+└── Badge Container: positioned relative to CLONE, not original
+```
+
+#### **Badge-Clone Color Synchronization**
+**Critical dependency**: Badges must update when either:
+1. **Color palette changes** (global event)
+2. **Clone is created/updated** (selection event)  
+3. **Badge visibility toggles** (toggle event)
+
+```javascript
+// Badge color update triggers
+watch(isBadgesVisible, (newValue) => {
+  if (selectedCard && newValue) {
+    applySelectedStateColorsToAllBadges();
+  }
+});
+
+selectionManager.addEventListener('job-selected', () => {
+  applySelectedStateColorsToAllBadges();
+});
+
+window.addEventListener('color-palette-changed', () => {
+  applySelectedStateColorsToAllBadges();
+});
+```
+
+### **📊 Percentage Label Synchronization**
+
+#### **Dual Calculation Requirement**
+**Scene** and **Resume** viewer percentages MUST use **identical mapping logic**:
+
+```javascript
+// BOTH SceneContainer.vue AND AppContent.vue must use same logic
+const calculateDisplayPercentage = (rawPercentage) => {
+  if (rawPercentage <= 10) return 0;
+  if (rawPercentage >= 90) return 100;
+  
+  const mapped = ((rawPercentage - 5) / 90) * 100;
+  return Math.round(Math.max(0, Math.min(100, mapped)));
+};
+
+// Scene + Resume MUST always equal 100%
+const scenePercent = calculateDisplayPercentage(rawPercentage);
+const resumePercent = 100 - scenePercent;
+```
+
+#### **State System Coordination**
+**Critical dependency**: Resize handle must update **both state systems**:
+
+```javascript
+// Update both persistence and reactive systems
+updateAppState({ scene: { percentage: newValue } }); // Persistence
+storeActions.setScenePercentage(newValue);           // Reactive UI
+```
+
+### **🎯 Template Ref Injection Dependencies**
+
+#### **DOM Element Availability Chain**
+Components depend on **parent-to-child template ref injection**:
+
+```
+AppContent.vue (parent)
+├── sceneContainerRef → SceneContainer.setupDom()
+├── bullsEyeRef → useBullsEye.setBullsEyeElement()  
+└── focalPointRef → useFocalPoint.setFocalPointElement()
+
+SceneContainer.vue (child)  
+├── scenePlaneRef → useCardsController.setScenePlaneElement()
+└── sceneContentRef → useTimeline.setContentElement()
+```
+
+#### **Initialization Order Dependency**
+**Critical timing**: DOM elements must be available before dependent systems initialize:
+
+```
+1. Vue Mount → Template Refs Available
+2. Template Ref Watchers → Inject Elements into Systems  
+3. System Initialization → Use Injected Elements
+4. Event Binding → Attach to Real DOM Elements
+```
+
+### **⚡ Event System Coordination**
+
+#### **Debounced Event Architecture**
+**Performance dependency**: Resize events use **smart debouncing** to prevent cascade:
+
+```javascript
+// During dragging: debounce events (150ms)
+// After drag ends: immediate flush
+// Step operations: no debouncing (instant)
+
+if (isDragging) {
+  debouncedEventDispatch(newValue, 150);
+} else {
+  immediateEventDispatch(newValue);
+}
+```
+
+#### **Cross-Component Event Chain**
+**Critical event coordination** for selection synchronization:
+
+```
+cDiv Click → selectionManager.selectJobNumber() → 'job-selected' Event
+├── Create Clone (hideOriginal + showClone)
+├── Show Badges (positionRelativeToClone)  
+├── Clear Cache (elementRegistry.clearAllCache)
+├── Apply Palette (selectedStateColors)
+└── Scroll Into View (rDiv + cDiv coordination)
+```
+
+### **🏗️ System Architecture Dependencies**
+
+#### **Global Element Registry Pattern** 
+**Performance optimization**: Cached DOM queries with **strategic invalidation**:
+
+```javascript
+// Pattern: Cache → Use → Invalidate → Refresh
+elementRegistry.getAllBizCardDivs() // Cached results
+↓
+newElement.appendChild() // DOM changes  
+↓
+elementRegistry.clearAllCache() // Invalidate cache
+↓  
+elementRegistry.getAllBizCardDivs() // Fresh results
+```
+
+#### **Composable Singleton Pattern**
+**State management**: Global state sharing without tight coupling:
+
+```javascript
+// Singleton composables for global state
+const isBadgesVisible = ref(true); // Shared across all components
+
+export function useBadgeToggle() {
+  return { isBadgesVisible, toggleBadges }; // Same instance everywhere
+}
+```
+
+### **🔧 Critical Maintenance Guidelines**
+
+#### **When Modifying Color System**
+1. ✅ **Update all four element types** (cards, clones, badges, timeline)
+2. ✅ **Clear registry cache** after DOM changes  
+3. ✅ **Use selected state colors** for badges/clones
+4. ✅ **Test palette changes** with clones visible
+
+#### **When Modifying Layout System** 
+1. ✅ **Keep percentage calculations synchronized** between components
+2. ✅ **Update both state systems** (persistence + reactive)
+3. ✅ **Verify totals equal 100%** 
+4. ✅ **Test debouncing behavior** during drag operations
+
+#### **When Adding New Components**
+1. ✅ **Follow template ref injection pattern**
+2. ✅ **Register in global element registry** if searchable
+3. ✅ **Clear cache** when adding/removing DOM elements
+4. ✅ **Use composable singletons** for shared state
+
+#### **When Debugging Issues**
+1. 🔍 **Check element registry cache** with `printRegistryStats()`
+2. 🔍 **Verify percentage totals** with `getCurrentViewerPercentages()`  
+3. 🔍 **Test clone visibility** with `testCloneVisibility(jobNumber)`
+4. 🔍 **Validate badge colors** with `testCloneAndBadgePaletteUpdate(jobNumber)`
+
+### **⚠️ Breaking Change Warning**
+
+**These inter-relationships are fragile and interdependent.** Changes to one system often affect multiple others. The debug tools created during modernization (`debug-*.mjs` files) should be used to verify system integrity after any modifications.
+
+**Key insight**: This application's complexity emerges from the **interaction between systems**, not individual components. Understanding these critical dependencies is essential for maintaining system stability and implementing new features successfully.
+
 ## Application Overview
 
 ![The flock](/static_content/graphics/version-0.6-50.gif)
@@ -757,6 +973,84 @@ When adding new functionality:
 5. **Use events** for cross-component communication
 
 This layered approach ensures that the application remains maintainable, testable, and scalable as it grows in complexity.
+
+## Layout Architecture: Container Width Management
+
+### **🏗️ Critical Layout Constraint: Available Width Calculation**
+
+**IMPORTANT**: The total available width for scene and resume containers is constrained by the resize handle:
+
+```javascript
+// Available width calculation - FUNDAMENTAL CONSTRAINT
+const windowWidth = window.innerWidth;
+const resizeHandleWidth = 20; // Fixed 20px width from app_state.json
+const availableWidth = windowWidth - resizeHandleWidth;
+
+// Percentage calculations MUST use availableWidth, not windowWidth
+const sceneWidthPixels = (scenePercentage / 100) * availableWidth;
+const resumeWidthPixels = (resumePercentage / 100) * availableWidth;
+```
+
+This constraint affects:
+- **Percentage calculations** in all components
+- **Container sizing** and positioning
+- **Drag operation** coordinate transformations
+- **Layout persistence** in app_state.json
+
+### **📐 Layout Math Verification**
+
+All layout calculations must respect this fundamental equation:
+```
+sceneWidthPixels + resumeWidthPixels + resizeHandleWidth = windowWidth
+```
+
+**Example** (1920px window):
+- Available width: `1920 - 20 = 1900px`
+- Scene 60%: `(60/100) * 1900 = 1140px`
+- Resume 40%: `(40/100) * 1900 = 760px`
+- Total: `1140 + 760 + 20 = 1920px` ✅
+
+### **⚠️ Common Implementation Errors**
+
+**❌ WRONG** - Using window width directly:
+```javascript
+// This breaks layout math!
+const sceneWidth = (scenePercentage / 100) * window.innerWidth;
+```
+
+**✅ CORRECT** - Using available width:
+```javascript
+// This respects the resize handle constraint
+const availableWidth = window.innerWidth - 20;
+const sceneWidth = (scenePercentage / 100) * availableWidth;
+```
+
+### **🔧 Implementation Locations**
+
+This constraint is implemented in:
+
+1. **`useResizeHandle.mjs`** - Core percentage calculations
+2. **`AppContent.vue`** - Layout percentage display
+3. **`SceneContainer.vue`** - Scene width calculations
+4. **`appStore.mjs`** - State management
+5. **`app_state.json`** - Persistent storage
+
+### **🧮 Percentage Calculation Pattern**
+
+All components should use this standardized pattern:
+```javascript
+// Standard available width calculation
+const HANDLE_WIDTH = 20; // From system constants
+const windowWidth = window.innerWidth;
+const availableWidth = windowWidth - HANDLE_WIDTH;
+
+// Percentage to pixels
+const sceneWidthPixels = Math.floor((scenePercentage / 100) * availableWidth);
+const resumeWidthPixels = availableWidth - sceneWidthPixels;
+
+// Pixels to percentage (for drag operations)
+const newPercentage = Math.max(0, Math.min(100, (pixelPosition / availableWidth) * 100));
+```
 
 ## ResizeHandle: The Layout Orchestrator
 

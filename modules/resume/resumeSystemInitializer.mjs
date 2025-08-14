@@ -1,9 +1,8 @@
 // modules/resume/resumeSystemInitializer.mjs
 
 import { resumeListController } from './ResumeListController.mjs';
-import { resumeItemsController } from '../scene/ResumeItemsController.mjs';
+import { resumeItemsController } from '../resume/ResumeItemsController.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
-// Badge manager removed - badges now handled per-cDiv in useCardsController
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 
 /**
@@ -81,7 +80,9 @@ export async function initializeResumeSystem() {
         window.resumeItemsController = resumeItemsController;
         window.selectionManager = selectionManager;
         
-        // Badge manager removed - badges now handled per-cDiv in useCardsController
+        // Add debug functions for manual testing
+        window.testResumeClick = (jobNumber) => resumeListController.testResumeClick(jobNumber);
+        
         
         // Initialize the controllers and managers
         resumeItemsController.registerForInitialization();

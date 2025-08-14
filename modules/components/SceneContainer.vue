@@ -9,11 +9,10 @@
     <div id="scene-container-top-gradient"></div>
     <div id="scene-container-btm-gradient"></div>
     <div id="scene-content" ref="sceneContentRef">
-      <div id="scene-plane" ref="scenePlaneRef">
+      <div id="scene-plane" ref="scenePlaneRef" @click="handleScenePlaneClick">
         <Timeline :alignment="timelineAlignment" />
         <!-- BizCardDivs will be dynamically appended here by CardsController -->
       </div>
-      <!-- Skill badges are now created per-cDiv in useCardsController -->
       <!-- ConnectionLines removed during Vue 3 migration cleanup -->
     </div>
     <div id="scene-view-label">
@@ -27,15 +26,18 @@ import { ref, computed, onMounted, nextTick, watch } from 'vue'
 
 // Vue components
 import Timeline from './Timeline.vue'
-// SkillBadges removed - badges now created per-cDiv in useCardsController
 // ConnectionLines removed during Vue 3 migration cleanup
 
 // Scene-specific composables
 import { useCardsController } from '../composables/useCardsController.mjs'
 import { useTimeline } from '../composables/useTimeline.mjs'
 import { useFocalPoint } from '../composables/useFocalPointVue3.mjs'
-// useAimPoint removed during Vue 3 migration cleanup
 import { useViewport } from '../composables/useViewport.mjs'
+import { useScenePlaneOptimized } from '../composables/useScenePlaneOptimized.mjs'
+import { injectGlobalElementRegistry } from '../composables/useGlobalElementRegistry.mjs'
+
+// Selection management
+import { selectionManager } from '../core/selectionManager.mjs'
 
 // Legacy imports removed - now using Vue 3 composables
 // import { bullsEye } from '../core/bullsEye.mjs' - replaced by useBullsEyeVue3
@@ -50,22 +52,42 @@ const props = defineProps({
   timelineAlignment: String
 })
 
-// Computed properties
+// Global element registry for optimized DOM access
+const globalElementRegistry = injectGlobalElementRegistry()
+
+// Computed properties - use direct percentage values like AppContent.vue
 const roundedScenePercentage = computed(() => {
-  const rounded = Math.round(props.scenePercentage)
-  return rounded
+  const rawPercentage = props.scenePercentage;
+  const result = Math.round(Math.max(0, Math.min(100, rawPercentage)));
+  
+  return result;
 })
 
-// Template refs with reactive watchers
-const sceneContainerRef = ref(null)
-const sceneContentRef = ref(null)
-const scenePlaneRef = ref(null)
+// Optimized scene plane system with Vue 3 reactivity APIs
+const {
+  scenePlaneRef,
+  sceneContainerRef, 
+  sceneContentRef,
+  setScenePlaneElement,
+  setSceneContainerElement,
+  setSceneContentElement,
+  dimensions,
+  elementCounts,
+  scenePlanePosition,
+  isInitialized: scenePlaneInitialized
+} = useScenePlaneOptimized()
 
-// Make template refs reactive - watch for changes and update dependents
+// Enhanced template ref watchers with optimized scene plane integration
 watch(sceneContainerRef, (newRef) => {
   if (newRef) {
-    console.log('[SceneContainer] sceneContainerRef became available')
+    console.log('[SceneContainer] sceneContainerRef became available - initializing viewport')
     initializeViewport(newRef)
+    
+    // Integration with optimized scene plane system
+    setSceneContainerElement(newRef)
+    
+    // Register in global element registry
+    globalElementRegistry.registerElement('scene-container', newRef)
   }
 }, { immediate: true })
 
@@ -74,16 +96,37 @@ watch(sceneContentRef, (newRef) => {
     console.log('[SceneContainer] sceneContentRef became available')
     // Notify other systems that scene-content is available
     window.dispatchEvent(new CustomEvent('scene-content-ready', { detail: { element: newRef } }))
+    
+    // Integration with optimized scene plane system
+    setSceneContentElement(newRef)
+    
+    // Register in global element registry
+    globalElementRegistry.registerElement('scene-content', newRef)
   }
 }, { immediate: true })
 
 watch(scenePlaneRef, (newRef) => {
   if (newRef) {
-    console.log('[SceneContainer] scenePlaneRef became available')
+    console.log('[SceneContainer] scenePlaneRef became available - optimized reactivity enabled')
     // Notify cards controller that scene-plane is available
     window.dispatchEvent(new CustomEvent('scene-plane-ready', { detail: { element: newRef } }))
+    
+    // Integration with optimized scene plane system (already handled by useScenePlaneOptimized)
+    setScenePlaneElement(newRef)
+    
+    // Register in global element registry
+    globalElementRegistry.registerElement('scene-plane', newRef)
   }
 }, { immediate: true })
+
+// Log optimized scene plane stats
+watch(dimensions, (newDimensions) => {
+  console.log('[SceneContainer] Scene plane dimensions updated (optimized):', newDimensions)
+}, { deep: true })
+
+watch(elementCounts, (newCounts) => {
+  console.log('[SceneContainer] Scene plane element counts updated (optimized):', newCounts)
+}, { deep: true })
 
 // Scene-specific composables
 const { timelineHeight } = useTimeline()
@@ -95,7 +138,17 @@ const { initializeViewport } = useViewport()
 
 // Event handlers
 const handleSceneContainerClick = (event) => {
-  console.log('Scene container clicked:', event)
+  console.log('[SceneContainer] Scene container clicked:', event)
+}
+
+const handleScenePlaneClick = (event) => {
+  // Check if the click was on the scene plane itself and not on a child element (like a card)
+  if (event.target.id === 'scene-plane') {
+    console.log('[SceneContainer] Scene plane clicked - clearing selection')
+    selectionManager.clearSelection("SceneContainer.handleScenePlaneClick")
+  } else {
+    console.log('[SceneContainer] Scene plane child element clicked:', event.target.id)
+  }
 }
 
 // Lifecycle
