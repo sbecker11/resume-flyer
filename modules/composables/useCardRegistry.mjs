@@ -81,7 +81,7 @@ export function useCardRegistry() {
   const getCardElement = (jobNumber) => {
     const element = cardElementsMap.value.get(jobNumber)
     if (!element) {
-      console.warn(`[CardRegistry] Card element not found for job ${jobNumber}`)
+      console.debug(`[CardRegistry] Card element not found for job ${jobNumber}`)
     }
     return element || null
   }
@@ -92,7 +92,7 @@ export function useCardRegistry() {
   const getResumeElement = (jobNumber) => {
     const element = resumeElementsMap.value.get(jobNumber)
     if (!element) {
-      console.warn(`[CardRegistry] Resume element not found for job ${jobNumber}`)  
+      console.debug(`[CardRegistry] Resume element not found for job ${jobNumber}`)
     }
     return element || null
   }

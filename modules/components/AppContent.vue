@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, provide, inject } from 'vue'
 
 // Vue components
 import SceneContainer from './SceneContainer.vue'
@@ -66,9 +66,7 @@ import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrollin
 // Vue 3 keyboard navigation (replaces legacy keyDownModule)
 import { useKeyboardNavigation } from '../composables/useKeyboardNavigation.mjs'
 
-// Vue 3 provide/inject system to replace global window objects
-import { provideGlobalServices } from '../core/globalServices'
-import { provide } from 'vue'
+// Vue 3 provide/inject: services provided at root in App.vue; we update refs here
 
 // =============================================================================
 // VUE 3 ARCHITECTURE - Dependency injection and stores
@@ -100,8 +98,42 @@ const { sceneContainerStyle } = useResizeHandle()
 // Color palette management
 const { loadPalettes } = useColorPalette()
 
-// Vue 3 critical systems - all preserved
-const { 
+// Vue 3 bulls-eye system (must run before useFocalPoint so global ref can be set first)
+const {
+  setBullsEyeElement,
+  setSceneContainerElement
+} = useBullsEye()
+
+// Update root-provided global service refs before useFocalPoint so inject() sees bullsEye
+const serviceUpdater = inject('globalServiceUpdater')
+const debugFunctions = {
+  testResumeSystem: () => console.log('testResumeSystem placeholder'),
+  checkResumeDivs: () => console.log('checkResumeDivs placeholder'),
+  testScrolling: () => console.log('testScrolling placeholder'),
+  getBullsEyePosition: () => window.getBullsEyePosition?.() || { x: 0, y: 0 },
+  getFocalPointPosition: () => window.getFocalPointPosition?.() || { x: 0, y: 0 },
+  getViewportOrigin: () => window.getViewportOrigin?.() || { x: 0, y: 0 },
+  renderAllCDivs: () => window.renderAllCDivs?.()
+}
+if (serviceUpdater) {
+  const bullsEyeForInject = {
+    isReady: () => true,
+    getPosition: () => ({ x: store.bullsEye.x, y: store.bullsEye.y }),
+    setBullsEyeElement,
+    setSceneContainerElement
+  }
+  serviceUpdater.updateServices({
+    bullsEye: bullsEyeForInject,
+    focalPoint: null,
+    resumeListController: window.resumeListController || null,
+    resumeItemsController: window.resumeItemsController || null,
+    appState: window.appState || null,
+    debugFunctions
+  })
+}
+
+// Vue 3 critical systems - useFocalPoint runs after refs are set so inject sees bullsEye
+const {
   position: focalPointPosition,
   mode: focalPointMode,
   isLocked: focalPointIsLocked,
@@ -109,11 +141,12 @@ const {
   setFocalPointElement
 } = useFocalPoint()
 
-// Vue 3 bulls-eye system
-const {
-  setBullsEyeElement,
-  setSceneContainerElement
-} = useBullsEye()
+// Set focal point in global ref now that we have setFocalPointElement
+if (serviceUpdater) {
+  serviceUpdater.updateServices({
+    focalPoint: { isReady: () => true, getPosition: () => ({ x: store.focalPoint.x, y: store.focalPoint.y }), setFocalPointElement }
+  })
+}
 
 // Vue 3 enhanced parallax system (using provide/inject)
 const {
@@ -134,9 +167,9 @@ const cardRegistry = useCardRegistry()
 // CRITICAL: Provide Vue 3 services required by useCardsController reactive dependencies
 console.log('[AppContent] 📦 Providing Vue 3 services for reactive dependencies...')
 
-// Use the existing bulls-eye service (already declared above)
+// Bulls-eye service for useCardsController (expects .isReady as ref)
 const bullsEyeService = {
-  isReady: computed(() => true), // Bulls-eye composable is ready when imported
+  isReady: computed(() => true),
   setBullsEyeElement,
   setSceneContainerElement
 }
@@ -161,28 +194,6 @@ const sceneContainerService = {
   isReady: ref(true),
 }
 provide('sceneContainerService', sceneContainerService)
-
-// Early provide/inject setup (before child components mount)
-console.log('[AppContent] 🔗 Setting up provide/inject system early...')
-const debugFunctions = {
-  testResumeSystem: () => console.log('testResumeSystem placeholder'),
-  checkResumeDivs: () => console.log('checkResumeDivs placeholder'), 
-  testScrolling: () => console.log('testScrolling placeholder'),
-  getBullsEyePosition: () => window.getBullsEyePosition?.() || { x: 0, y: 0 },
-  getFocalPointPosition: () => window.getFocalPointPosition?.() || { x: 0, y: 0 },
-  getViewportOrigin: () => window.getViewportOrigin?.() || { x: 0, y: 0 },
-  renderAllCDivs: () => window.renderAllCDivs?.()
-}
-
-// Provide services immediately (will be updated after resume system initialization)
-const serviceUpdater = provideGlobalServices({
-  bullsEye: window.bullsEye || null,
-  resumeListController: window.resumeListController || null,
-  resumeItemsController: window.resumeItemsController || null,
-  focalPoint: window.focalPoint || null,
-  appState: window.appState || null,
-  debugFunctions
-})
 
 // Computed properties from store
 const focalPointX = computed(() => store.focalPoint.x)
@@ -350,15 +361,17 @@ onMounted(async () => {
     debugFunctions.checkResumeDivs = checkResumeDivs
     debugFunctions.testScrolling = testScrolling
     
-    // Update services with initialized values
-    serviceUpdater.updateServices({
-      bullsEye: window.bullsEye,
-      resumeListController: window.resumeListController,
-      resumeItemsController: window.resumeItemsController,
-      focalPoint: window.focalPoint,
-      appState: window.appState,
-      debugFunctions
-    })
+    // Update services with initialized values (window.* may be set by resume system)
+    if (serviceUpdater) {
+      serviceUpdater.updateServices({
+        bullsEye: window.bullsEye || bullsEyeService,
+        resumeListController: window.resumeListController,
+        resumeItemsController: window.resumeItemsController,
+        focalPoint: window.focalPoint || { isReady: () => true, getPosition: () => ({ x: store.focalPoint.x, y: store.focalPoint.y }), setFocalPointElement },
+        appState: window.appState,
+        debugFunctions
+      })
+    }
     
     // Keep window globals temporarily for backwards compatibility during migration
     window.testResumeSystem = testResumeSystem

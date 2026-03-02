@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted, watch, inject, computed, watchEffect } from 'vue'
-import { jobs } from '@/static_content/jobs/jobs.mjs'
+import { jobs } from '@/modules/data/enrichedJobs.mjs'
 import { selectionManager } from '@/modules/core/selectionManager.mjs'
 import { useTimeline, initialize } from '@/modules/composables/useTimeline.mjs'
 import { useColorPalette, applyPaletteToElement, readyPromise } from '@/modules/composables/useColorPalette.mjs'
@@ -9,11 +9,29 @@ import { linearInterp } from '@/modules/utils/mathUtils.mjs'
 import * as mathUtils from '@/modules/utils/mathUtils.mjs'
 import * as zUtils from '@/modules/utils/zUtils.mjs'
 import * as filters from '@/modules/core/filters.mjs'
+import {
+  BIZCARD_WIDTH,
+  MIN_BIZCARD_HEIGHT,
+  BIZCARD_HZ_CENTER_OFFSET_MAX,
+  MEAN_CARD_WIDTH,
+  MEAN_CARD_HEIGHT,
+  MAX_CARD_POSITION_OFFSET,
+  CARD_BORDER_WIDTH,
+  SKILL_REPOSITION_EDGE_VARIANCE,
+  SKILL_REPOSITION_MIN_DISTANCE,
+  SKILL_REPOSITION_STRENGTH,
+  SKILL_REPOSITION_MAX_ITERATIONS,
+  SKILL_UNIQUE_X_MIN_SEPARATION,
+  SKILL_UNIQUE_X_JITTER
+} from '@/modules/core/cardConstants.mjs'
 import { useCardRegistry } from '@/modules/composables/useCardRegistry.mjs'
 import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElementRegistry.mjs'
 
 // Timeline constants (matching Timeline.vue)
 const TIMELINE_PADDING_TOP = 0;
+
+// Skill card ID counter (for unique IDs)
+let skillCardIdCounter = 0;
 
 // Vue 3 Reactive Dependencies pattern for CardsController
 export function useCardsController() {
@@ -21,7 +39,7 @@ export function useCardsController() {
     const bizCardDivs = ref([])
     // Declare early to avoid TDZ when effects call functions that reference this variable
     let scenePlaneElement = null
-    
+
     // CRITICAL: Inject services - throw error if not provided (no fallbacks)
     const bullsEyeService = inject('bullsEyeService')
     const timelineService = inject('timelineService')  
@@ -109,9 +127,11 @@ export function useCardsController() {
                 return
             }
 
-            // Clear any existing cards
+            // Clear any existing cards (bizcards and skill cards)
             const existingCards = scenePlaneEl.querySelectorAll('.biz-card-div')
             existingCards.forEach(card => card.remove())
+            const existingSkillCards = scenePlaneEl.querySelectorAll('.skill-card-div')
+            existingSkillCards.forEach(card => card.remove())
 
             // Wait for palettes to be ready before applying colors
             console.log('[CardsController] Waiting for palettes to be ready...')
@@ -154,7 +174,60 @@ export function useCardsController() {
             console.log(`[CardsController] Total cards created: ${cards.length}`)
 
             bizCardDivs.value = cards
-            
+
+            // Build unique skills and which jobs reference each (one skill card per skill, shared by multiple biz cards)
+            const allSkillNames = new Set()
+            const skillToJobIndices = Object.create(null)
+            for (let i = 0; i < jobs.length; i++) {
+                const job = jobs[i]
+                if (!job || !job['job-skills']) continue
+                for (const skillName of Object.keys(job['job-skills'])) {
+                    allSkillNames.add(skillName)
+                    if (!skillToJobIndices[skillName]) skillToJobIndices[skillName] = []
+                    skillToJobIndices[skillName].push(i)
+                }
+            }
+            const skillCardIdsBySkillName = Object.create(null)
+            for (const skillName of allSkillNames) {
+                const referencingBizCardIds = (skillToJobIndices[skillName] || []).map(i => createBizCardDivId(i))
+                if (referencingBizCardIds.length === 0) continue
+                const skillCard = createSkillCardDiv(skillName, scenePlaneEl, referencingBizCardIds)
+                if (skillCard) {
+                    scenePlaneEl.appendChild(skillCard)
+                    try {
+                        await applyPaletteToElement(skillCard)
+                    } catch (e) {
+                        console.warn(`[CardsController] Palette for skill card:`, e)
+                    }
+                    skillCardIdsBySkillName[skillName] = skillCard.id
+                }
+            }
+            // Each biz card: only list of skill card element ids; titles come from those elements
+            for (let index = 0; index < cards.length; index++) {
+                const card = cards[index]
+                const job = jobs[index]
+                if (!card || !job || !job['job-skills']) continue
+                const skillIds = Object.keys(job['job-skills'])
+                    .map(name => skillCardIdsBySkillName[name])
+                    .filter(Boolean)
+                if (skillIds.length) {
+                    card.dataset.skillCardIds = skillIds.join(',')
+                    card.setAttribute('data-skill-card-ids', skillIds.join(','))
+                    const container = card.querySelector('.biz-card-skill-titles')
+                    if (container) {
+                        container.innerHTML = skillIds.map(skillCardId => {
+                            const el = document.getElementById(skillCardId)
+                            const title = el ? (el.getAttribute('data-skill-name') || skillCardId) : skillCardId
+                            return `<span class="biz-card-skill-title" data-skill-card-id="${escapeHtml(skillCardId)}" style="cursor: pointer; text-decoration: underline;">${escapeHtml(title)}</span>`
+                        }).join(', ')
+                    }
+                }
+            }
+            console.log(`[CardsController] ✅ Created ${Object.keys(skillCardIdsBySkillName).length} shared skill cards (referenced by biz cards)`)
+
+            // One-time flock-of-postcards–style reposition: spread skill cards over timeline, cluster X at left/right edges, repulsion
+            repositionSkillCardsToWeightedAverages(scenePlaneEl)
+
             // Yearly grid lines removed per user request
             
             isInitialized.value = true
@@ -188,16 +261,20 @@ export function useCardsController() {
         card.className = 'biz-card-div'
         card.id = cardId
         card.setAttribute('data-job-number', jobNumber)
+        card.setAttribute('data-biz-card-title', (job.employer || job.role || `Job ${jobNumber}`).trim())
         
-        // Calculate position relative to scene-plane (absolute positioning)
-        // Use fixed coordinates that can extend beyond scene container width
-        const baseOffsetFromSceneLeft = 50  
-        const cardSpacing = 120  
-        let x = baseOffsetFromSceneLeft + (jobNumber % 3) * cardSpacing
-        
-        // Cards positioned at: 50px, 170px, 290px...
-        // When scene container is narrow, cards at higher x values should overflow
-        let y = 100 // Default fallback
+        // Z from job "z-index" (1–3) for depth only; horizontal = random offset from canvas center
+        const jobZIndex = (job['z-index'] != null && job['z-index'] !== '') ? parseInt(String(job['z-index']), 10) : (jobNumber % 3) + 1
+        const zIndex = Math.min(3, Math.max(1, jobZIndex))
+        const cardWidth = BIZCARD_WIDTH
+        const sceneWidth = scenePlane.offsetWidth || (scenePlane.parentElement && scenePlane.parentElement.offsetWidth) || 600
+        const centerX = sceneWidth / 2
+        // Limit offset so card never overlaps canvas left/right: max offset = distance from center to edge of card
+        const maxOffsetFromEdge = Math.max(0, sceneWidth / 2 - cardWidth / 2)
+        const maxOffset = Math.min(BIZCARD_HZ_CENTER_OFFSET_MAX, maxOffsetFromEdge)
+        const hzOffset = maxOffset > 0 ? mathUtils.getRandomInt(-maxOffset, maxOffset) : 0
+        const x = Math.max(0, Math.min(sceneWidth - cardWidth, centerX - cardWidth / 2 + hzOffset))
+        let y = 100 // Default fallback (set from timeline below)
         
         try {
             // Parse job END date and get timeline position using corrected Timeline formula
@@ -249,17 +326,17 @@ export function useCardsController() {
             }
         })
         
-        // Add Z-depth for parallax effects (using original random approach)
-        const sceneZ = mathUtils.getRandomInt(zUtils.ALL_CARDS_Z_MIN, zUtils.ALL_CARDS_Z_MAX);
+        // Z-depth from flock-of-postcards: z = ALL_CARDS_MAX_Z - job z-index (bizcards Z 12–14)
+        const sceneZ = zUtils.FLOCK_ALL_CARDS_MAX_Z - zIndex
         card.setAttribute('data-sceneZ', sceneZ)
-        
-        // Apply sceneZ-based depth filters (brightness, blur, contrast, saturation)
+        card.style.zIndex = String(zIndex) // CSS stacking: 1–3 so bizcards sit behind skill cards
+        // Apply Z-based depth filters (brightness, blur, etc.)
         card.style.filter = filters.get_filterStr_from_z(sceneZ)
-        
-        // Position only - styling is handled by CSS
+        // Fixed 3D scene position (constant after init; parallax only applies transform at render time)
         card.style.left = `${x}px`
         card.style.top = `${y}px`
-        console.log(`[CardsController] Card ${jobNumber} positioned at x:${x}, y:${y}. Timeline initialized: ${timelineInitialized.value}`)
+        card.style.width = `${cardWidth}px`
+        console.log(`[CardsController] Card ${jobNumber} positioned at x:${x}, y:${y}, width:${cardWidth}. Timeline initialized: ${timelineInitialized.value}`)
         
         // Calculate duration-based height (equivalent to setGeometry)
         try {
@@ -289,10 +366,9 @@ export function useCardsController() {
                 
                 let sceneHeight = sceneBottom - sceneTop
                 
-                // Enforce minimum height (from archived CardsController)
-                const MIN_HEIGHT = 180
-                if (sceneHeight < MIN_HEIGHT) {
-                    sceneHeight = MIN_HEIGHT
+                // Enforce minimum height (from flock-of-postcards MIN_BIZCARD_HEIGHT)
+                if (sceneHeight < MIN_BIZCARD_HEIGHT) {
+                    sceneHeight = MIN_BIZCARD_HEIGHT
                 }
                 
                 // Apply calculated height
@@ -337,6 +413,7 @@ export function useCardsController() {
         // Add comprehensive content including job number and description
         const description = job.Description ? job.Description.substring(0, 200) + '...' : '';
         const skillCount = job['job-skills'] ? Object.keys(job['job-skills']).length : 0;
+        const hasSkills = job['job-skills'] && Object.keys(job['job-skills']).length > 0;
         
         // Parse dates once at the top level for use throughout the function
         const originalJobStartDate = dateUtils.parseFlexibleDateString(job.start || job.startDate)
@@ -455,15 +532,27 @@ export function useCardsController() {
             <div class="job-stats" style="font-size: 10px; color: #666; margin-top: 4px;">
                 Skills: ${skillCount} | References: ${job.references ? job.references.length : 0}
             </div>
+            ${hasSkills ? '<div class="biz-card-skill-titles" style="font-size: 9px; color: #555; margin-top: 2px; line-height: 1.2;"></div>' : ''}
         `
 
-        // Add click handler
+        // Add click handler: select this card or deselect if it is the selected card (one at a time). Clicking a skill title (by element id) selects that skill card.
         card.addEventListener('click', (event) => {
-            event.stopPropagation() // Prevent bubbling to scene-plane
-            console.log(`[CardsController] 🎯 cDiv clicked: Job ${jobNumber} - will trigger rDiv header scroll`)
-            if (selectionManager) {
-                selectionManager.selectJobNumber(jobNumber, 'CardsController.cardClick')
+            event.stopPropagation()
+            const skillTitleEl = event.target.closest('.biz-card-skill-title')
+            if (skillTitleEl && selectionManager) {
+                const skillCardId = skillTitleEl.getAttribute('data-skill-card-id')
+                if (skillCardId) {
+                    selectionManager.selectCard({ type: 'skill', skillCardId }, 'CardsController.bizCardSkillTitleClick')
+                }
+                return
             }
+            if (!selectionManager) return
+            const sel = selectionManager.selectedCard
+            if (sel?.type === 'biz' && sel.jobNumber === jobNumber) {
+                selectionManager.clearSelection('CardsController.cardClick')
+                return
+            }
+            selectionManager.selectCard({ type: 'biz', jobNumber }, 'CardsController.cardClick')
         })
         
         // Add hover handlers for synchronization with rDivs
@@ -484,6 +573,216 @@ export function useCardsController() {
         // No additional elements created for cards
         
         return card
+    }
+
+    /**
+     * Create a single skill card div for a skill name (one card per skill, referenced by multiple biz cards).
+     * Position is set later by repositionSkillCardsToWeightedAverages (uniform over full timeline span).
+     * Only stores list of biz card element ids; titles are read from those elements via data-biz-card-title.
+     * @param {string} skillName
+     * @param {HTMLElement} scenePlane
+     * @param {string[]} referencingBizCardIds - element ids of biz cards that reference this skill
+     */
+    function createSkillCardDiv(skillName, scenePlane, referencingBizCardIds) {
+        if (!skillName || !referencingBizCardIds?.length) return null
+        const id = `skill-card-div-${skillCardIdCounter++}`
+        const skillCard = document.createElement('div')
+        skillCard.className = 'skill-card-div'
+        skillCard.id = id
+        skillCard.setAttribute('data-skill-name', skillName)
+        skillCard.setAttribute('data-referencing-biz-card-ids', referencingBizCardIds.join(','))
+        const firstBiz = document.getElementById(referencingBizCardIds[0])
+        const firstJobIndex = firstBiz != null ? parseInt(firstBiz.getAttribute('data-job-number'), 10) : 0
+        if (!Number.isNaN(firstJobIndex)) {
+            skillCard.setAttribute('data-job-number', firstJobIndex)
+            skillCard.setAttribute('data-color-index', firstJobIndex)
+        }
+        // Z-depth from flock-of-postcards: skill cards Z in [1, 8], z-index = ALL_CARDS_MAX_Z - z (7–14) so they stack above bizcards
+        let sceneZ = mathUtils.getRandomInt(zUtils.FLOCK_CARD_MIN_Z, zUtils.FLOCK_CARD_MAX_Z)
+        skillCard.setAttribute('data-sceneZ', sceneZ)
+        const skillZIndex = zUtils.FLOCK_ALL_CARDS_MAX_Z - sceneZ
+        skillCard.style.zIndex = String(skillZIndex)
+
+        const width = MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH
+        const height = MEAN_CARD_HEIGHT + 2 * CARD_BORDER_WIDTH
+        // Placeholder position; repositionSkillCardsToWeightedAverages sets Y uniformly over timeline span and X by cluster
+        skillCard.style.position = 'absolute'
+        skillCard.style.top = '0px'
+        skillCard.style.left = '0px'
+        skillCard.style.width = `${width}px`
+        skillCard.style.height = `${height}px`
+        skillCard.style.borderWidth = `${CARD_BORDER_WIDTH}px`
+        skillCard.style.borderStyle = 'solid'
+        skillCard.style.boxSizing = 'border-box'
+        skillCard.style.pointerEvents = 'auto'
+        skillCard.style.cursor = 'pointer'
+        skillCard.style.display = 'flex'
+        skillCard.style.alignItems = 'center'
+        skillCard.style.justifyContent = 'center'
+        skillCard.style.padding = '4px'
+        skillCard.style.fontSize = '11px'
+        skillCard.style.textAlign = 'center'
+        skillCard.style.wordBreak = 'break-word'
+        skillCard.style.filter = filters.get_filterStr_from_z(sceneZ)
+        const bizTitlesHtml = referencingBizCardIds.map(bizCardId => {
+            const el = document.getElementById(bizCardId)
+            const title = el ? (el.getAttribute('data-biz-card-title') || el.querySelector('.biz-details-employer')?.textContent?.trim() || bizCardId) : bizCardId
+            return `<span class="skill-card-biz-title" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; text-decoration: underline;">${escapeHtml(title)}</span>`
+        }).join(', ')
+        skillCard.innerHTML = `
+            <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%;">
+                <span class="skill-card-label">${escapeHtml(skillName)}</span>
+                ${bizTitlesHtml ? `<div class="skill-card-biz-titles" style="font-size: 8px; opacity: 0.9; line-height: 1.1; max-height: 2.2em; overflow: hidden; text-overflow: ellipsis;">${bizTitlesHtml}</div>` : ''}
+            </div>`
+
+        skillCard.addEventListener('click', (e) => {
+            e.stopPropagation()
+            const bizTitleEl = e.target.closest('.skill-card-biz-title')
+            if (bizTitleEl && selectionManager) {
+                const bizCardId = bizTitleEl.getAttribute('data-biz-card-id')
+                if (bizCardId) {
+                    const bizEl = document.getElementById(bizCardId)
+                    const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN
+                    if (!Number.isNaN(jobNum)) {
+                        selectionManager.selectCard({ type: 'biz', jobNumber: jobNum }, 'CardsController.skillCardBizTitleClick')
+                    }
+                }
+                return
+            }
+            if (!selectionManager) return
+            const card = selectionManager.selectedCard
+            if (card?.type === 'skill' && card.skillCardId === skillCard.id) {
+                selectionManager.clearSelection('CardsController.skillCardClick')
+                return
+            }
+            selectionManager.selectCard({ type: 'skill', skillCardId: skillCard.id }, 'CardsController.skillCardClick')
+        })
+        skillCard.addEventListener('mouseenter', () => {
+            if (selectionManager) selectionManager.hoverJobNumber(firstJobIndex, 'CardsController.skillCardMouseenter')
+        })
+        skillCard.addEventListener('mouseleave', () => {
+            if (selectionManager) selectionManager.clearHover('CardsController.skillCardMouseleave')
+        })
+
+        return skillCard
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div')
+        div.textContent = text
+        return div.innerHTML
+    }
+
+    const skillCardWidth = MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH
+    const skillCardHeight = MEAN_CARD_HEIGHT + 2 * CARD_BORDER_WIDTH
+
+    /** Repulsion: push apart skill cards that are too close (flock-of-postcards applyRepulsionForces) */
+    function applyRepulsionForces(cardPositions, minTop, maxBottom, minLeft, maxRight) {
+        for (let iteration = 0; iteration < SKILL_REPOSITION_MAX_ITERATIONS; iteration++) {
+            let moved = false
+            for (let i = 0; i < cardPositions.length; i++) {
+                let forceX = 0, forceY = 0
+                for (let j = 0; j < cardPositions.length; j++) {
+                    if (i === j) continue
+                    const dx = cardPositions[i].x - cardPositions[j].x
+                    const dy = cardPositions[i].y - cardPositions[j].y
+                    const distance = Math.sqrt(dx * dx + dy * dy)
+                    if (distance < SKILL_REPOSITION_MIN_DISTANCE && distance > 0) {
+                        const force = ((SKILL_REPOSITION_MIN_DISTANCE - distance) / SKILL_REPOSITION_MIN_DISTANCE) * SKILL_REPOSITION_STRENGTH
+                        forceX += (dx / distance) * force * SKILL_REPOSITION_MIN_DISTANCE
+                        forceY += (dy / distance) * force * SKILL_REPOSITION_MIN_DISTANCE
+                        moved = true
+                    }
+                }
+                cardPositions[i].x += forceX
+                cardPositions[i].y += forceY
+                cardPositions[i].y = Math.max(minTop, Math.min(maxBottom - skillCardHeight, cardPositions[i].y))
+                cardPositions[i].x = Math.max(minLeft, Math.min(maxRight - skillCardWidth, cardPositions[i].x))
+            }
+            if (!moved) break
+        }
+    }
+
+    /** Add jitter so cards don't align in a column (flock-of-postcards ensureUniqueXPositions) */
+    function ensureUniqueXPositions(cardPositions, maxRight) {
+        for (let iter = 0; iter < 5; iter++) {
+            let adjusted = 0
+            for (let i = 0; i < cardPositions.length; i++) {
+                for (let j = i + 1; j < cardPositions.length; j++) {
+                    const centerA = cardPositions[i].x + skillCardWidth / 2
+                    const centerB = cardPositions[j].x + skillCardWidth / 2
+                    const separation = Math.abs(centerB - centerA)
+                    if (separation < SKILL_UNIQUE_X_MIN_SEPARATION) {
+                        const jitterA = (Math.random() - 0.5) * SKILL_UNIQUE_X_JITTER
+                        const jitterB = (Math.random() - 0.5) * SKILL_UNIQUE_X_JITTER
+                        const baseAdj = (SKILL_UNIQUE_X_MIN_SEPARATION - separation) / 2
+                        if (centerA < centerB) {
+                            cardPositions[i].x -= baseAdj + jitterA
+                            cardPositions[j].x += baseAdj + jitterB
+                        } else {
+                            cardPositions[i].x += baseAdj + jitterA
+                            cardPositions[j].x -= baseAdj + jitterB
+                        }
+                        adjusted++
+                    }
+                }
+            }
+            for (const p of cardPositions) {
+                p.x = Math.max(0, Math.min(maxRight - skillCardWidth, p.x))
+            }
+            if (adjusted === 0) break
+        }
+    }
+
+    /**
+     * One-time reposition of skill cards (flock-of-postcards repositionAllCardsToWeightedAverages).
+     * Fixed 3D scene positions: spread Y over timeline, cluster X around left/right bizcard edges, repulsion, then clamp.
+     */
+    function repositionSkillCardsToWeightedAverages(scenePlaneEl) {
+        const bizcards = scenePlaneEl.querySelectorAll('.biz-card-div')
+        const skillCards = scenePlaneEl.querySelectorAll('.skill-card-div')
+        if (bizcards.length === 0 || skillCards.length === 0) return
+
+        let minTop = Infinity, maxBottom = -Infinity, sumLeft = 0, sumRight = 0
+        bizcards.forEach((el) => {
+            const top = parseFloat(el.style.top) || 0
+            const height = parseFloat(el.style.height) || 0
+            const left = parseFloat(el.style.left) || 0
+            minTop = Math.min(minTop, top)
+            maxBottom = Math.max(maxBottom, top + height)
+            sumLeft += left
+            sumRight += left + BIZCARD_WIDTH
+        })
+        const avgLeftEdge = sumLeft / bizcards.length
+        const avgRightEdge = sumRight / bizcards.length
+        const sceneWidth = scenePlaneEl.offsetWidth || (scenePlaneEl.parentElement && scenePlaneEl.parentElement.offsetWidth) || 600
+        const halfCardWidth = skillCardWidth / 2
+        const maxRight = sceneWidth
+
+        const cardPositions = []
+        for (let i = 0; i < skillCards.length; i++) {
+            const card = skillCards[i]
+            const randomTop = mathUtils.getRandomInt(minTop, Math.max(minTop, maxBottom - skillCardHeight))
+            const clusterLeft = Math.random() < 0.5
+            const edgeVariance = SKILL_REPOSITION_EDGE_VARIANCE
+            let visualCenterX = clusterLeft
+                ? avgLeftEdge + (Math.random() - 0.5) * edgeVariance
+                : avgRightEdge + (Math.random() - 0.5) * edgeVariance
+            let left = visualCenterX - halfCardWidth
+            left = Math.max(0, Math.min(maxRight - skillCardWidth, left))
+            cardPositions.push({ card, x: left, y: randomTop })
+        }
+
+        applyRepulsionForces(cardPositions, minTop, maxBottom - skillCardHeight, 0, maxRight - skillCardWidth)
+        ensureUniqueXPositions(cardPositions, maxRight)
+
+        for (const p of cardPositions) {
+            p.x = Math.max(0, Math.min(maxRight - skillCardWidth, p.x))
+            p.y = Math.max(minTop, Math.min(maxBottom - skillCardHeight, p.y))
+            p.card.style.left = `${p.x}px`
+            p.card.style.top = `${p.y}px`
+        }
+        console.log(`[CardsController] Repositioned ${skillCards.length} skill cards (timeline Y ${minTop}-${maxBottom}, X around left/right edges)`)
     }
 
     // Viewport change handler for repositioning selected clones
@@ -541,8 +840,10 @@ export function useCardsController() {
         // Listen for selection events to handle clone creation (legacy)
         try {
             selectionManager.addEventListener('job-selected', handleJobSelected)
+            selectionManager.addEventListener('card-selected', handleCardSelected)
             selectionManager.addEventListener('selection-cleared', handleSelectionCleared)
-            console.log('[useCardsController] ✅ Added job-selected and selection-cleared listeners')
+            selectionManager.addEventListener('cards-unselect-skill', handleCardsUnselectSkill)
+            console.log('[useCardsController] ✅ Added job-selected, card-selected, selection-cleared, cards-unselect-skill listeners')
             
             // Listen for new command-based events
             selectionManager.addEventListener('cards-select', handleCardsSelect)
@@ -602,8 +903,10 @@ export function useCardsController() {
         // Listen for selection events to handle clone creation
         try {
             globalSelectionManager.addEventListener('job-selected', handleJobSelected)
+            globalSelectionManager.addEventListener('card-selected', handleCardSelected)
             globalSelectionManager.addEventListener('selection-cleared', handleSelectionCleared)
-            console.log('[useCardsController] ✅ Added job-selected and selection-cleared listeners (FIXED)')
+            globalSelectionManager.addEventListener('cards-unselect-skill', handleCardsUnselectSkill)
+            console.log('[useCardsController] ✅ Added job-selected, card-selected, selection-cleared, cards-unselect-skill listeners (FIXED)')
             console.log('[useCardsController] handleJobSelected type:', typeof handleJobSelected)
             
             // Listen for hover events to handle cDiv visual feedback
@@ -691,6 +994,7 @@ export function useCardsController() {
             clone.classList.add('selected') // Clones are always in selected state
             clone.classList.remove('hovered')
             clone.classList.remove('hasClone')
+            clone.setAttribute('data-sceneZ', String(zUtils.FLOCK_SELECTED_CLONE_Z)) // Selected clone Z (flock: -10), not subject to motion parallax
             
             // CRITICAL: Copy original card's computed width to clone's style
             const originalRect = originalCard.getBoundingClientRect()
@@ -750,7 +1054,7 @@ export function useCardsController() {
             
             clone.title = `CLONE of Job ${jobNumber}`
             
-            // Add to DOM
+            // Append as last child of container so clone displays over everything else
             scenePlaneEl.appendChild(clone)
             
             // CRITICAL: Apply color palette to clone for proper selected styling
@@ -760,14 +1064,18 @@ export function useCardsController() {
                 console.warn(`[preCreateAllClones] ❌ Failed to apply palette to clone ${jobNumber}:`, error)
             }
             
-            // Add click handler to select this job (triggers rDiv scroll)
+            // Add click handler: deselect if this clone is selected, else select (unified selectedCard)
             clone.addEventListener('click', (event) => {
                 event.stopPropagation()
-                if (selectionManager) {
-                    selectionManager.selectJobNumber(jobNumber, 'Clone.click')
+                if (!selectionManager) return
+                const sel = selectionManager.selectedCard
+                if (sel?.type === 'biz' && sel.jobNumber === jobNumber) {
+                    selectionManager.clearSelection('CardsController.cloneClick')
+                    return
                 }
+                selectionManager.selectCard({ type: 'biz', jobNumber }, 'CardsController.cloneClick')
             })
-            
+
             // Removed debug output
         }
         
@@ -777,84 +1085,68 @@ export function useCardsController() {
         elementRegistry.clearAllCache()
     }
 
-    // Clone management functions
+    // Clone management: one selected card at a time
+    /** job-selected: resume list sync; scroll cDiv into view. Clone display is in handleCardSelected. */
     function handleJobSelected(event) {
-        console.log(`[CardsController] 🎯 handleJobSelected RECEIVED EVENT!`, event.detail)
-        const { jobNumber, previousSelection, source } = event.detail
-        console.log(`[CardsController] Processing selection for job ${jobNumber} from source: ${source}`)
-        console.log(`[CardsController] Event received at:`, new Date().toISOString())
-        
-        // Hide previous selection if exists
-        if (previousSelection !== null && previousSelection !== jobNumber) {
-            hideJobClone(previousSelection)
-            showJobOriginal(previousSelection)
-        }
-        
-        // Show current selection (cDiv clone) - create if doesn't exist
-        hideJobOriginal(jobNumber)
-        
-        // Check if clone exists, create if needed
-        const cloneId = `biz-card-div-${jobNumber}-clone`
-        if (!document.getElementById(cloneId)) {
-            console.log(`[CardsController] Creating clone for job ${jobNumber}`)
-            // Create clone and scroll after it's created
-            createSelectedClone(jobNumber).then(() => {
-                console.log(`[CardsController] 📜 Scrolling cDiv header for newly created clone ${jobNumber}`)
-                setTimeout(() => {
-                    scrollCDivHeaderIntoView(jobNumber)
-                }, 100)
-            })
-        } else {
-            console.log(`[CardsController] Showing existing clone for job ${jobNumber}`)
-            showJobClone(jobNumber)
-            
-            // Scroll existing clone into view
-            console.log(`[CardsController] 📜 Scrolling existing cDiv header for job ${jobNumber}`)
-            setTimeout(() => {
-                scrollCDivHeaderIntoView(jobNumber)
-            }, 100)
-        }
-        
-        // OLD CODE (commented out to prevent conflicts):
-        // const { jobNumber, previousSelection, source } = event.detail
-        // console.log(`[CardsController] Processing selection for job ${jobNumber} from source: ${source}`)
-        // 
-        // // Hide previous selection if exists
-        // if (previousSelection !== null && previousSelection !== jobNumber) {
-        //     hideJobClone(previousSelection)
-        //     showJobOriginal(previousSelection)
-        // }
-        // 
-        // // Show current selection (cDiv clone)
-        // hideJobOriginal(jobNumber)
-        // showJobClone(jobNumber)
-        // 
-        // // Implement bidirectional scrolling with header targeting
-        // if (source && source.includes('ResumeListController')) {
-        //     // rDiv was selected → scroll cDiv header into view
-        //     console.log(`[CardsController] 📜 rDiv selected → scrolling cDiv header for job ${jobNumber}`)
-        //     setTimeout(() => {
-        //         scrollCDivHeaderIntoView(jobNumber)
-        //     }, 100)
-        // } else if (source && source.includes('CardsController')) {
-        //     // cDiv was selected → scroll rDiv header into view
-        //     console.log(`[CardsController] 📜 cDiv selected → scrolling rDiv header for job ${jobNumber}`)
-        //     setTimeout(() => {
-        //         scrollRDivHeaderIntoView(jobNumber)
-        //     }, 100)
-        // } else if (source && source !== 'CardsController') {
-        //     // Other source → scroll cDiv (backward compatibility)
-        //     console.log(`[CardsController] 📜 Other source → scrolling cDiv header for job ${jobNumber}`)
-        //     setTimeout(() => {
-        //         scrollCDivHeaderIntoView(jobNumber)
-        //     }, 100)
-        // } else {
-        //     console.log(`[CardsController] 📜 No scroll needed - source: ${source}`)
-        // }
+        const { jobNumber } = event.detail || {}
+        if (jobNumber == null) return
+        setTimeout(() => scrollCDivHeaderIntoView(jobNumber), 100)
     }
-    
+
+    /** One selected card at a time; show its clone (biz or skill) */
+    function handleCardSelected(event) {
+        const { card, previousCard } = event.detail || {}
+        if (!card) return
+
+        if (previousCard) {
+            if (previousCard.type === 'biz') {
+                hideJobClone(previousCard.jobNumber)
+                showJobOriginal(previousCard.jobNumber)
+            } else {
+                removeSkillCardClone(previousCard.skillCardId)
+                showSkillCardOriginal(previousCard.skillCardId)
+            }
+        }
+
+        if (card.type === 'biz') {
+            hideJobOriginal(card.jobNumber)
+            const cloneId = `biz-card-div-${card.jobNumber}-clone`
+            if (!document.getElementById(cloneId)) {
+                createSelectedClone(card.jobNumber).then(() => {
+                    setTimeout(() => scrollCDivHeaderIntoView(card.jobNumber), 100)
+                })
+            } else {
+                showJobClone(card.jobNumber)
+                setTimeout(() => scrollCDivHeaderIntoView(card.jobNumber), 100)
+            }
+        } else {
+            createSkillCardClone(card.skillCardId)
+            hideSkillCardOriginal(card.skillCardId)
+        }
+    }
+
+    function handleCardsSelect() {}
+
+    /** When the selected card is unselected (e.g. before selecting another), remove its clone and show original */
+    function handleCardsUnselect(event) {
+        const { jobNumber } = event.detail || {}
+        if (jobNumber != null) {
+            removeSpecificClone(jobNumber)
+        }
+    }
+
+    function handleCardsUnselectSkill(event) {
+        const { skillCardId } = event.detail || {}
+        if (skillCardId) removeSkillCardClone(skillCardId)
+    }
+
     function handleSelectionCleared(event) {
         console.log('[useCardsController] Selection cleared, hiding all clones and showing originals...')
+        const previousCard = event.detail?.previousCard
+        if (previousCard?.type === 'skill') {
+            removeSkillCardClone(previousCard.skillCardId)
+            showSkillCardOriginal(previousCard.skillCardId)
+        }
         hideAllClones()
         showAllOriginals()
         clearAllSelected()
@@ -874,7 +1166,7 @@ export function useCardsController() {
             const cardId = createBizCardDivId(jobNumber)
             card = document.getElementById(cardId)
         }
-        if (card && !card.classList.contains('selected')) {
+        if (card && !card.classList.contains('clone')) {
             applyHoverStylesToCard(card)
             console.log(`🖱️ [useCardsController] Applied hover styles to card: ${card.id}`)
         }
@@ -988,7 +1280,7 @@ export function useCardsController() {
         
         console.log(`[useCardsController] ✅ Cleared selected class from all cards`)
     }
-    
+
     // Simple display toggle functions for pre-creation architecture
     function hideJobOriginal(jobNumber) {
         const originalCard = cardRegistry.getCardElement(jobNumber)
@@ -1050,13 +1342,17 @@ export function useCardsController() {
     
     function showJobClone(jobNumber) {
         const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`)
-        
-        if (clone) {
-            clone.style.removeProperty('display')
-            clone.style.setProperty('display', 'block', 'important')
+        if (!clone) {
+            console.log(`❌ Clone not found for job ${jobNumber}`)
+            return
         }
-        
-        if (!clone) console.log(`❌ Clone not found for job ${jobNumber}`)
+        clone.style.removeProperty('display')
+        clone.style.setProperty('display', 'block', 'important')
+        // Re-append so clone is last child and displays over everything else
+        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (scenePlaneEl && clone.parentNode === scenePlaneEl) {
+            scenePlaneEl.appendChild(clone)
+        }
     }
     
     function hideAllClones() {
@@ -1436,6 +1732,7 @@ export function useCardsController() {
         clone.classList.add('clone') // CRITICAL: Add .clone class for validation selectors
         clone.classList.remove('hovered')
         clone.classList.remove('hasClone') // Remove hasClone class from clone
+        clone.setAttribute('data-sceneZ', String(zUtils.FLOCK_SELECTED_CLONE_Z)) // Selected clone Z (flock: -10), not subject to motion parallax
         
         // CRITICAL: Copy original card's computed width to clone's style
         const originalRect = originalCard.getBoundingClientRect()
@@ -1451,6 +1748,7 @@ export function useCardsController() {
         clone.style.setProperty('opacity', '1', 'important')
         clone.style.setProperty('z-index', '99', 'important')
         clone.style.setProperty('position', 'absolute', 'important')
+        clone.style.setProperty('filter', 'none', 'important') // No depth filter; clone not subject to parallax
         
         // Position clone at scene left edge (x = 0) with same vertical position as original
         const leftPos = '0px' // Position at left edge of scene
@@ -1477,7 +1775,7 @@ export function useCardsController() {
         clone.style.border = '3px solid #ff6b6b' // Red border for debugging
         clone.title = `CLONE of Job ${jobNumber} (sceneZ: ${cloneSceneZ})` // Tooltip to identify clone with sceneZ
         
-        // Add clone to DOM
+        // Append as last child of container so clone displays over everything else
         scenePlaneEl.appendChild(clone)
         
         // CRITICAL: Clear element registry cache so color palette system can find the new clone
@@ -1563,14 +1861,18 @@ export function useCardsController() {
             }
         }, 10) // Small delay to ensure DOM updates are complete
         
-        // Add click handler to clone to select this job (triggers rDiv scroll)
+        // Add click handler: deselect if this clone is selected, else select (unified selectedCard)
         clone.addEventListener('click', (event) => {
-            event.stopPropagation() // Prevent bubbling to scene-plane
-            if (selectionManager) {
-                selectionManager.selectJobNumber(jobNumber, 'Clone.click')
+            event.stopPropagation()
+            if (!selectionManager) return
+            const sel = selectionManager.selectedCard
+            if (sel?.type === 'biz' && sel.jobNumber === jobNumber) {
+                selectionManager.clearSelection('CardsController.cloneClick')
+                return
             }
+            selectionManager.selectCard({ type: 'biz', jobNumber }, 'CardsController.cloneClick')
         })
-        
+
         // Apply color palette to clone
         try {
             applyPaletteToElement(clone)
@@ -1649,6 +1951,71 @@ export function useCardsController() {
         }
         
         // CRITICAL: Clear element registry cache after removing clone
+        elementRegistry.clearAllCache()
+    }
+
+    /** Skill card clone: same behavior as biz card (hide original, show clone at front, no parallax) */
+    function hideSkillCardOriginal(skillCardId) {
+        const el = document.getElementById(skillCardId)
+        if (!el || !el.classList.contains('skill-card-div')) return
+        el.classList.add('hasClone')
+        el.style.setProperty('display', 'none', 'important')
+    }
+
+    function showSkillCardOriginal(skillCardId) {
+        const el = document.getElementById(skillCardId)
+        if (!el) return
+        el.classList.remove('hasClone')
+        el.style.removeProperty('display')
+    }
+
+    function createSkillCardClone(skillCardId) {
+        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
+        const original = document.getElementById(skillCardId)
+        if (!original || !original.classList.contains('skill-card-div')) return
+        const cloneId = `${skillCardId}-clone`
+        if (document.getElementById(cloneId)) return
+
+        original.classList.add('hasClone')
+        original.style.setProperty('display', 'none', 'important')
+
+        const clone = original.cloneNode(true)
+        clone.id = cloneId
+        clone.classList.add('selected', 'clone')
+        clone.classList.remove('hovered', 'hasClone')
+        clone.setAttribute('data-sceneZ', String(zUtils.FLOCK_SELECTED_CLONE_Z))
+        clone.style.removeProperty('display')
+        clone.style.setProperty('display', 'block', 'important')
+        clone.style.setProperty('visibility', 'visible', 'important')
+        clone.style.setProperty('opacity', '1', 'important')
+        clone.style.setProperty('z-index', '99', 'important')
+        clone.style.setProperty('position', 'absolute', 'important')
+        clone.style.setProperty('filter', 'none', 'important')
+        clone.style.setProperty('left', original.style.left || '0px', 'important')
+        clone.style.setProperty('top', original.style.top || '0px', 'important')
+
+        clone.addEventListener('click', (e) => {
+            e.stopPropagation()
+            if (!selectionManager) return
+            if (selectionManager.selectedCard?.type === 'skill' && selectionManager.selectedCard.skillCardId === skillCardId) {
+                selectionManager.clearSelection('CardsController.skillCardCloneClick')
+                return
+            }
+            selectionManager.selectCard({ type: 'skill', skillCardId }, 'CardsController.skillCardCloneClick')
+        })
+
+        // Append as last child of container so clone displays over everything else
+        scenePlaneEl.appendChild(clone)
+        elementRegistry.clearAllCache()
+    }
+
+    function removeSkillCardClone(skillCardId) {
+        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        if (!scenePlaneEl) return
+        const clone = document.getElementById(`${skillCardId}-clone`)
+        if (clone) clone.remove()
+        showSkillCardOriginal(skillCardId)
         elementRegistry.clearAllCache()
     }
     

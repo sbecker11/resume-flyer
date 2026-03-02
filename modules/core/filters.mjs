@@ -2,11 +2,11 @@
 
 import { linearInterp } from '../utils/mathUtils.mjs';
 
-// Filter constants
-export const MIN_BRIGHTNESS_PERCENT = 15; // Very dark for dramatic effect
-export const BLUR_Z_SCALE_FACTOR = 2.0; // More dramatic blur
-export const CARD_MIN_Z = 10;
-export const CARD_MAX_Z = 20-1;
+// Filter constants (flock-of-postcards–aligned: Z 1 = far, Z 14 = close)
+export const MIN_BRIGHTNESS_PERCENT = 75; // Match flock-of-postcards
+export const BLUR_Z_SCALE_FACTOR = 4;     // Match flock-of-postcards
+export const CARD_MIN_Z = 1;
+export const CARD_MAX_Z = 14;
 
 /**
  * Gets the brightness value from a z value

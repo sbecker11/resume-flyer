@@ -75,11 +75,10 @@ export function useGlobalElementRegistry() {
         return cachedElement
       }
       
-      // Perform DOM query as last resort
-      console.warn(`[GlobalElementRegistry] 🔍 Falling back to DOM query for: ${key} (${fallbackQuery})`)
+      // Perform DOM query as last resort (debug only - expected before mount)
+      console.debug(`[GlobalElementRegistry] 🔍 Falling back to DOM query for: ${key} (${fallbackQuery})`)
       const queriedElement = document.getElementById(fallbackQuery) || document.querySelector(fallbackQuery)
       if (queriedElement) {
-        // Cache the result
         queryCache.value.set(cacheKey, queriedElement)
         stats.value.cacheMisses++
         return queriedElement
@@ -87,7 +86,7 @@ export function useGlobalElementRegistry() {
     }
     
     stats.value.cacheMisses++
-    console.warn(`[GlobalElementRegistry] ❌ Element not found: ${key}`)
+    console.debug(`[GlobalElementRegistry] Element not in DOM yet: ${key}`)
     return null
   }
   

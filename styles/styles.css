@@ -174,23 +174,22 @@ overflow and ensures consistent sizing.
     transition: all 0.2s ease;
 }
 
-/* Card divs: hover effects with consistent dimensions */
-.biz-card-div:not(.selected).hovered {
+/* Card divs: hover effects with consistent dimensions (no z-index; selection only moves to front) */
+.biz-card-div:not(.clone).hovered {
     /* Keep 2px border, use box-shadow for hover effect */
     box-shadow: 
         0 0 0 2px rgba(255, 255, 255, 0.3),  /* Subtle white ring */
         0 4px 12px rgba(0, 0, 0, 0.3);       /* Drop shadow */
-    z-index: 999;
     transition: all 0.2s ease;
 }
 
 /* Hover effects for specific elements within cards */
-.biz-card-div:not(.selected).hovered .biz-details-role {
+.biz-card-div:not(.clone).hovered .biz-details-role {
     color: #0066cc;
     font-weight: bold;
 }
 
-.biz-card-div:not(.selected).hovered .biz-details-employer {
+.biz-card-div:not(.clone).hovered .biz-details-employer {
     text-decoration: underline;
 }
 

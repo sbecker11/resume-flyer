@@ -52,13 +52,16 @@ const props = defineProps({
   timelineAlignment: String
 })
 
-// Global element registry for optimized DOM access (deferred)
+// Resolve registry once during setup (inject() only valid here); use in watchers/callbacks
 let globalElementRegistry = null;
-
-function getElementRegistry() {
-  if (!globalElementRegistry) {
-    globalElementRegistry = injectGlobalElementRegistry();
+try {
+  globalElementRegistry = injectGlobalElementRegistry();
+} catch (e) {
+  if (typeof window !== 'undefined' && window.globalElementRegistry) {
+    globalElementRegistry = window.globalElementRegistry;
   }
+}
+function getElementRegistry() {
   return globalElementRegistry;
 }
 
@@ -162,18 +165,10 @@ const handleSceneContainerClick = (event) => {
 }
 
 const handleScenePlaneClick = (event) => {
-  // Check if the click was on the scene plane itself and not on a child element (like a card)
-  if (event.target.id === 'scene-plane') {
-    console.log('[SceneContainer] Scene plane clicked - clearing selection')
-    selectionManager.clearSelection("SceneContainer.handleScenePlaneClick")
-  } else {
-    console.log('[SceneContainer] Scene plane child element clicked:', event.target.id)
-    // If it's a clone, don't interfere - let the clone handle its own click
-    if (event.target.id.includes('-clone')) {
-      console.log('[SceneContainer] Clone detected - NOT interfering with click')
-      return // Let the clone handle the click
-    }
-  }
+  // Deselect when clicking background: not on a biz card or skill card (card handlers do select/deselect)
+  const onCard = event.target.closest('.biz-card-div') || event.target.closest('.skill-card-div')
+  if (onCard) return
+  selectionManager.clearSelection("SceneContainer.handleScenePlaneClick")
 }
 
 // Lifecycle

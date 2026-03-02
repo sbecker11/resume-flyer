@@ -49,7 +49,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useTimeline, initialize } from '@/modules/composables/useTimeline.mjs';
-import { jobs } from '@/static_content/jobs/jobs.mjs';
+import { jobs } from '@/modules/data/enrichedJobs.mjs';
 
 // Props
 const props = defineProps({

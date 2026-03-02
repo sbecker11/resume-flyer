@@ -94,7 +94,7 @@ html[native-dark-active] #scene-container,
     transition: background-color 0.2s, color 0.2s, border 0.2s, outline 0.2s, filter 0.3s ease-out;
 }
 
-/* Hovered state */
+/* Hovered state - visual only; no z-index change (cards move to front only when selected) */
 .biz-card-div.hovered {
     background-color: var(--data-background-color-hovered);
     color: var(--data-foreground-color-hovered);
@@ -103,11 +103,10 @@ html[native-dark-active] #scene-container,
     outline: var(--data-hovered-outer-border-width) solid var(--data-hovered-outer-border-color);
     border-radius: var(--data-hovered-border-radius);
     filter: none !important; /* Override parallax filter */
-    z-index: 98; /* Bring just below selected card */
 }
 
-/* Selected state with layered purple-white-purple borders using box-shadow */
-.biz-card-div.selected {
+/* Clone = selected card (same thing); clone gets lightened background and enhanced border */
+.biz-card-div.clone {
     background-color: var(--data-background-color-selected);
     color: var(--data-foreground-color-selected);
     padding: var(--data-selected-padding);
@@ -123,6 +122,38 @@ html[native-dark-active] #scene-container,
     border-radius: var(--data-selected-border-radius);
     filter: none !important; /* Override parallax filter */
     z-index: 99; /* Bring to the very front */
+}
+
+/* Skill cards (ported from flock-of-postcards card-div) - small chips around bizcards */
+.skill-card-div {
+    position: absolute;
+    box-sizing: border-box;
+    cursor: pointer;
+    pointer-events: auto;
+    font-family: Arial, sans-serif !important;
+    background-color: var(--data-background-color);
+    color: var(--data-foreground-color);
+    border-color: var(--data-normal-inner-border-color);
+    border-radius: var(--data-normal-border-radius);
+    transition: background-color 0.2s, color 0.2s;
+}
+.skill-card-div:hover {
+    background-color: var(--data-background-color-hovered);
+    color: var(--data-foreground-color-hovered);
+}
+.skill-card-div .skill-card-label {
+    display: block;
+    line-height: 1.2;
+}
+
+/* Clone = selected card (same thing) */
+.skill-card-div.clone {
+    background-color: var(--data-background-color-selected, color-mix(in srgb, var(--data-background-color) 65%, white));
+    color: var(--data-foreground-color-selected, inherit);
+    filter: none !important;
+    z-index: 99;
+    border: 2px solid purple !important;
+    box-shadow: 0 0 0 3px white, 0 0 0 6px purple, 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 /* Base styling for resume divs - using CSS custom properties from color palette */
@@ -342,17 +373,17 @@ body.focal-point-locked .biz-card-div .scroll-caret,
     pointer-events: auto !important;
 }
 
-.biz-card-div.selected {
+.biz-card-div.clone {
     z-index: 10;
 }
 
-.biz-card-div.selected .biz-card-details-div {
+.biz-card-div.clone .biz-card-details-div {
     overflow-y: auto; /* Enable scrolling on selected cards */
     scrollbar-width: none; /* For Firefox */
 }
 
 /* Custom, narrow scrollbar for selected cards - HIDDEN */
-.biz-card-div.selected .biz-card-details-div::-webkit-scrollbar {
+.biz-card-div.clone .biz-card-details-div::-webkit-scrollbar {
     display: none;
 }
 

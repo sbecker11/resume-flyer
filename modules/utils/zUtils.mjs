@@ -33,6 +33,21 @@ export const BIZCARD_Z_MIN = 10; // 30; == Z_MAX .. Z_MAX-numLevels = 25
 
 export const ALL_CARDS_Z_MIN = 10;
 
+// Flock-of-postcards–aligned Z (depth) and z-index semantics:
+// - Higher Z = closer to viewer. CSS z-index for stacking = ALL_CARDS_MAX_Z - z (so skill cards stack above bizcards).
+// - Bizcards: Z from job "z-index" (1–3) → z = ALL_CARDS_MAX_Z - job_z_index (Z 12–14).
+// - Skill cards: Z random in [CARD_MIN_Z, CARD_MAX_Z] = [1, 8], z-index = 7–14.
+export const FLOCK_ALL_CARDS_MAX_Z = 15;
+export const FLOCK_BIZCARD_Z_MIN = 12;  // job z-index 3 → z 12
+export const FLOCK_BIZCARD_Z_MAX = 14;   // job z-index 1 → z 14
+export const FLOCK_CARD_MIN_Z = 1;       // skill card Z range
+export const FLOCK_CARD_MAX_Z = 8;
+export const FLOCK_PARALLAX_Z_MIN = 1;
+export const FLOCK_PARALLAX_Z_MAX = 14;
+export const FLOCK_PARALLAX_Z_RANGE = FLOCK_PARALLAX_Z_MAX - FLOCK_PARALLAX_Z_MIN;
+// Selected clone Z (flock-of-postcards SELECTED_CARD_DIV_Z = -10); clone is not subject to motion parallax
+export const FLOCK_SELECTED_CLONE_Z = -10;
+
 export const SUM_Z = ALL_CARDS_Z_INDEX_MAX + ALL_CARDS_Z_MIN;
 export const Z_SUM = ALL_CARDS_Z_MAX + ALL_CARDS_Z_INDEX_MIN;
 utils.validateNumber(SUM_Z);

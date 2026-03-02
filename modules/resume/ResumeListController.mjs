@@ -11,8 +11,8 @@ import { selectionManager } from '../core/selectionManager.mjs';
 // import { cardsController } from '../scene/CardsController.mjs'; // Now using Vue composable approach
 import { AppState, saveState } from '../core/stateManager.mjs';
 // import { initializationManager } from '../core/initializationManager.mjs'; // IM framework no longer used
-// Import jobs data directly since JobsDataManager no longer exists
-import { jobs } from '../../static_content/jobs/jobs.mjs';
+// Import enriched jobs (jobs + skills) for bizCards and skillCards
+import { jobs } from '../data/enrichedJobs.mjs';
 // Import new Vue composable for color palette functionality
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // Import fundamental components to ensure they're registered with IM
@@ -299,8 +299,8 @@ class ResumeListController extends BaseComponent {
 
     console.log(`[DEBUG] ResumeListController.setupInfiniteScrolling: Infinite scroller ready, setting items`);
     
-    // Apply sort rule first to ensure sortedIndices is correct
-    this.applySortRule(this.currentSortRule, true);
+    // Update sort order and build sorted divs *before* any scroll (so originalItems is set before scrollToIndex)
+    this.updateSortedIndices();
     
     // Debug the mapping before creating sortedDivs
     console.log(`[DEBUG] setupInfiniteScrolling: sortedIndices=`, this.sortedIndices);

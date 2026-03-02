@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
-import { jobs } from '@/static_content/jobs/jobs.mjs';
+import { jobs } from '@/modules/data/enrichedJobs.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';

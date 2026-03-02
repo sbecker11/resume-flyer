@@ -6,7 +6,7 @@ import { selectionManager } from '../core/selectionManager.mjs';
 // import { cardsController } from './CardsController.mjs'; // Now using Vue composable approach
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // import { initializationManager } from '../core/initializationManager.mjs'; // IM framework no longer used
-import { jobs } from '../../static_content/jobs/jobs.mjs';
+import { jobs } from '../data/enrichedJobs.mjs';
 // No longer directly manipulating other managers
 // import { bizCardDivManager } from './bizCardDivManager.mjs';
 // import * as scenePlane from './scenePlane.mjs';
@@ -646,11 +646,11 @@ class ResumeItemsController {
                     
                     console.log(`[DEBUG] ResumeItemsController: Scrolled scene container to position ${Math.round(scrollTop)} for job ${selectedJobNumber}`);
                 } else {
-                    console.warn(`[DEBUG] ResumeItemsController: Scene container not found, using fallback scrollIntoView`);
+                    console.debug(`[ResumeItemsController] Scene container not found, using fallback scrollIntoView`);
                     cDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             } else {
-                console.warn(`[DEBUG] ResumeItemsController: No cDiv found for job ${selectedJobNumber}, cannot scroll into view`);
+                console.debug(`[ResumeItemsController] No cDiv for job ${selectedJobNumber} yet (scene cards may still be initializing)`);
             }
             
             console.log(`[DEBUG] ResumeItemsController.handleSelectionChanged: Applied 'selected' class to resume div`);

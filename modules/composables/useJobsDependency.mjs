@@ -35,7 +35,7 @@ export function useJobsDependency() {
     
     try {
       // Import jobs data
-      const jobsModule = await import('../../static_content/jobs/jobs.mjs')
+      const jobsModule = await import('../data/enrichedJobs.mjs')
       const jobs = jobsModule.default || jobsModule.jobs || jobsModule
       
       if (!Array.isArray(jobs)) {

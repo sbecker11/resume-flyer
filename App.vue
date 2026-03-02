@@ -13,13 +13,19 @@
 </template>
 
 <script setup>
+import { provide } from 'vue'
 import AppContent from '@/modules/components/AppContent.vue'
 import { provideAppContext } from '@/modules/composables/useAppContext.mjs'
+import { provideGlobalServices } from '@/modules/core/globalServices'
+
+// Provide global services at root so inject() in AppContent and descendants finds them
+const serviceUpdater = provideGlobalServices({})
+provide('globalServiceUpdater', serviceUpdater)
 
 // Provide app-wide context at the root level
 const { appContext } = provideAppContext()
 
-console.log('[App] Vue 3 app context provided')
+console.log('[App] Vue 3 app context and global services provided')
 </script>
 
 <style>

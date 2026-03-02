@@ -1,13 +1,18 @@
 import { AppState, saveState } from './stateManager.mjs';
-import { jobs } from '../../static_content/jobs/jobs.mjs';
+import { jobs } from '../data/enrichedJobs.mjs';
 
 // Selection Manager now handles high-level orchestration
 // It should directly manage the rDiv → cDiv synchronization flow
 
 // Simple selection manager without IM framework
+/** @typedef {{ type: 'biz', jobNumber: number } | { type: 'skill', skillCardId: string }} SelectedCard */
+
 class SelectionManager {
     constructor() {
         this.eventTarget = new EventTarget();
+        /** Unified selection: one card (biz or skill) at a time. null when none selected. */
+        this.selectedCard = null;
+        /** @deprecated Use selectedCard; kept for backward compat. Equals jobNumber when selectedCard?.type === 'biz', else null. */
         this.selectedJobNumber = null;
         this.hoveredJobNumber = null;
         this.instanceId = Math.random().toString(36).substr(2, 9); // Unique instance ID
@@ -41,30 +46,49 @@ class SelectionManager {
         setTimeout(() => this.validatePageLoadState('page-load-validation'), 1500);
     }
 
-    selectJobNumber(jobNumber, caller = 'unknown') {
-        const previousSelection = this.selectedJobNumber;
-        this.selectedJobNumber = jobNumber;
-        
-        // Fetch dataJobObject using jobNumber
-        const dataJobObject = this.getJobDataByNumber(jobNumber);
-        
-        console.log(`[SelectionManager] 🎯 COMMANDING SELECTION for job ${jobNumber} from ${caller}`);
-        
-        // Update AppState (but don't save during initialization to prevent redundant saves)
-        if (AppState && caller !== 'SelectionManager.loadInitialSelection') {
-            AppState.selectedJobNumber = jobNumber;
-            AppState.lastVisitedJobNumber = jobNumber;
-            saveState(AppState);
-        } else if (AppState && caller === 'SelectionManager.loadInitialSelection') {
-            // Still update the state, just don't save it since it's already saved
-            AppState.selectedJobNumber = jobNumber;
-            AppState.lastVisitedJobNumber = jobNumber;
+    /**
+     * Select a card (only one at a time). card is { type: 'biz', jobNumber } or { type: 'skill', skillCardId }.
+     */
+    selectCard(card, caller = 'unknown') {
+        if (!card || !card.type) return;
+        const previousCard = this.selectedCard;
+        this._unselectAllSelectedCards(previousCard);
+
+        this.selectedCard = card;
+        this.selectedJobNumber = card.type === 'biz' ? card.jobNumber : null;
+
+        console.log(`[SelectionManager] 🎯 COMMANDING SELECTION for card from ${caller}:`, card);
+
+        if (AppState) {
+            AppState.selectedJobNumber = this.selectedJobNumber;
+            if (caller !== 'SelectionManager.loadInitialSelection') {
+                if (card.type === 'biz') AppState.lastVisitedJobNumber = card.jobNumber;
+                saveState(AppState);
+            }
         }
 
-        // COMMAND-BASED COORDINATION: Issue commands to domain controllers
-        this.commandControllers(jobNumber, previousSelection, caller);
-        
-        console.log(`[SelectionManager] ✅ Job ${jobNumber} selection commands issued (${caller}):`, dataJobObject?.employer || 'Unknown');
+        if (card.type === 'biz') {
+            const previousJobNumber = previousCard?.type === 'biz' ? previousCard.jobNumber : null;
+            this.commandControllers(card.jobNumber, previousJobNumber, caller);
+            this.dispatchCardSelected(this.selectedCard, previousCard, caller);
+            this.dispatchSelectionEvents(card.jobNumber, previousJobNumber, caller);
+            const dataJobObject = this.getJobDataByNumber(card.jobNumber);
+            console.log(`[SelectionManager] ✅ Card selection issued (${caller}):`, dataJobObject?.employer || 'Unknown');
+        } else {
+            this.dispatchCardSelected(this.selectedCard, previousCard, caller);
+            this.commandCardsController('select-skill', card.skillCardId);
+            console.log(`[SelectionManager] ✅ Card selection issued (${caller})`);
+        }
+    }
+
+    /** @deprecated Use selectCard({ type: 'biz', jobNumber }, caller) */
+    selectJobNumber(jobNumber, caller = 'unknown') {
+        this.selectCard({ type: 'biz', jobNumber }, caller);
+    }
+
+    /** @deprecated Use selectCard({ type: 'skill', skillCardId }, caller) */
+    selectSkillCard(skillCardId, caller = 'unknown') {
+        this.selectCard({ type: 'skill', skillCardId }, caller);
     }
 
     /**
@@ -80,13 +104,8 @@ class SelectionManager {
      */
     commandControllers(jobNumber, previousSelection, caller) {
         console.log(`[SelectionManager] 📋 Issuing selection commands for job ${jobNumber}`);
-        
-        // Clear previous selection if exists
-        if (previousSelection !== null && previousSelection !== jobNumber) {
-            this.commandResumeController('unselect', previousSelection);
-            this.commandCardsController('unselect', previousSelection);
-        }
-        
+        // Previous selection already cleared by _unselectAllSelectedCards before selectJobNumber/selectSkillCard
+
         // Command new selection
         this.commandResumeController('select', jobNumber);
         this.commandCardsController('select', jobNumber);
@@ -114,52 +133,61 @@ class SelectionManager {
     }
 
     /**
-     * Command Cards Controller  
+     * Command Cards Controller. Payload: number = jobNumber, string = skillCardId (select-skill/unselect-skill). One selected card at a time.
      */
-    commandCardsController(action, jobNumber) {
-        console.log(`[SelectionManager] 📋 → CardsController: ${action}(${jobNumber || 'all'})`);
-        
-        // Dispatch command events that CardsController can listen to
-        const eventName = `cards-${action}`;
+    commandCardsController(action, payload) {
+        const jobNumber = typeof payload === 'number' ? payload : undefined;
+        const skillCardId = typeof payload === 'string' ? payload : undefined;
+        console.log(`[SelectionManager] 📋 → CardsController: ${action}(${payload ?? 'all'})`);
+        const eventName = action === 'select-skill' ? 'cards-select-skill' : action === 'unselect-skill' ? 'cards-unselect-skill' : `cards-${action}`;
         this.eventTarget.dispatchEvent(new CustomEvent(eventName, {
-            detail: { jobNumber, action }
+            detail: { jobNumber, skillCardId, action }
         }));
     }
 
+    /**
+     * Unselect all currently selected cards (remove clone, show original). Call before setting a new selection.
+     * @param {SelectedCard|null} previousCard - The card to unselect (biz or skill)
+     */
+    _unselectAllSelectedCards(previousCard) {
+        if (!previousCard) return;
+        if (previousCard.type === 'biz') {
+            this.commandResumeController('unselect', previousCard.jobNumber);
+            this.commandCardsController('unselect', previousCard.jobNumber);
+            setTimeout(() => this.validateCloneCleanup(previousCard.jobNumber), 100);
+        } else {
+            this.commandCardsController('unselect-skill', previousCard.skillCardId);
+        }
+    }
+
     clearSelection(caller = 'unknown') {
-        const previousSelection = this.selectedJobNumber;
+        const previousCard = this.selectedCard;
+        this.selectedCard = null;
         this.selectedJobNumber = null;
-        
+
         console.log(`[SelectionManager] 🚀 COMMANDING CLEAR SELECTION (${caller})`);
-        
-        // Update AppState
+
         if (AppState) {
             AppState.selectedJobNumber = null;
             saveState(AppState);
         }
 
-        // Command controllers to clear selections
-        if (previousSelection !== null) {
-            this.commandResumeController('unselect', previousSelection);
-            this.commandCardsController('unselect', previousSelection);
-        }
+        this._unselectAllSelectedCards(previousCard);
 
-        // Dispatch both new and legacy events for compatibility
         this.eventTarget.dispatchEvent(new CustomEvent('selection-cleared', {
-            detail: { previousSelection }
+            detail: { previousCard, previousSelection: previousCard?.type === 'biz' ? previousCard.jobNumber : null }
         }));
-
-        // Legacy event for recovered controllers
         this.eventTarget.dispatchEvent(new CustomEvent('selectionCleared', {
             detail: { caller }
         }));
-
         console.log(`[SelectionManager] ✅ Selection clear commands issued by ${caller}`);
-        
-        // CRITICAL: Validate that clones are properly cleaned up after deselection
-        if (previousSelection) {
-            setTimeout(() => this.validateCloneCleanup(previousSelection), 100);
-        }
+    }
+
+    /** Dispatch card-selected so CardsController can show the selected card's clone (only one card selected at a time) */
+    dispatchCardSelected(card, previousCard, caller) {
+        this.eventTarget.dispatchEvent(new CustomEvent('card-selected', {
+            detail: { card, previousCard, source: caller }
+        }));
     }
 
     getSelectedJobNumber() {
@@ -409,12 +437,7 @@ class SelectionManager {
             div.classList.remove('selected');
         });
         
-        // Clear all cDiv selections (both originals and clones)
-        document.querySelectorAll('.biz-card-div.selected').forEach(div => {
-            div.classList.remove('selected');
-        });
-        
-        // Hide all clones and show all originals
+        // Hide all clones and show all originals (one selected card at a time; clones are .clone)
         document.querySelectorAll('.biz-card-div.clone').forEach(clone => {
             clone.style.setProperty('display', 'none', 'important');
         });
@@ -574,17 +597,9 @@ class SelectionManager {
     styleCDivAsSelected(jobNumber) {
         const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         if (clone) {
-            // Clear other selected clones
-            document.querySelectorAll('.biz-card-div.clone.selected').forEach(div => {
-                if (div.id !== clone.id) {
-                    div.classList.remove('selected');
-                }
-            });
-            
-            clone.classList.add('selected');
-            console.log(`[SelectionManager] ✅ Styled clone as selected for job ${jobNumber}`);
+            console.log(`[SelectionManager] ✅ Clone for job ${jobNumber} (selected card = clone)`);
         } else {
-            console.error(`[SelectionManager] ❌ Clone not found for styling job ${jobNumber}`);
+            console.error(`[SelectionManager] ❌ Clone not found for job ${jobNumber}`);
         }
     }
 

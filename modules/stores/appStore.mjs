@@ -33,11 +33,11 @@ export const appStore = reactive({
   selectedJobNumber: null,
   hoveredJobNumber: null,
   
-  // Focal point state
+  // Focal point state (FOLLOWING = mouse drives parallax by default)
   focalPoint: {
     x: 0,
     y: 0,
-    mode: 'LOCKED', // LOCKED, FOLLOWING, DRAGGING
+    mode: 'FOLLOWING', // LOCKED, FOLLOWING, DRAGGING
     isVisible: true
   },
   

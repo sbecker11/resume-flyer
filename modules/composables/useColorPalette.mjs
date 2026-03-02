@@ -21,14 +21,17 @@ const currentPaletteFilename = ref(null);
 export function useColorPalette() {
     // Access centralized app state
     const { appState, updateAppState } = useAppState();
-    
-    // DEFERRED: Inject when actually needed, not during setup
+
+    // Resolve registry once during setup (inject() only valid here); use in async/watchers
     let elementRegistry = null;
-    
-    function getElementRegistry() {
-        if (!elementRegistry) {
-            elementRegistry = injectGlobalElementRegistry();
+    try {
+        elementRegistry = injectGlobalElementRegistry();
+    } catch (e) {
+        if (typeof window !== 'undefined' && window.globalElementRegistry) {
+            elementRegistry = window.globalElementRegistry;
         }
+    }
+    function getElementRegistry() {
         return elementRegistry;
     }
 

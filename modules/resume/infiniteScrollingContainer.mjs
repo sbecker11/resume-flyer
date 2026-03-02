@@ -285,7 +285,7 @@ class InfiniteScrollingContainer {
     
     // Safety check: ensure originalItems array is populated
     if (!this.originalItems || this.originalItems.length === 0) {
-      console.warn(`[InfiniteScrollingContainer] Cannot scroll - no items available (originalItems length: ${this.originalItems?.length || 0})`);
+      console.debug(`[InfiniteScrollingContainer] Cannot scroll - no items available (originalItems length: ${this.originalItems?.length || 0})`);
       return;
     }
     

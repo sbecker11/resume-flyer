@@ -1,11 +1,11 @@
 {
   "version": "1.3",
-  "lastUpdated": "2025-09-27T01:13:17.917Z",
+  "lastUpdated": "2026-03-02T12:08:31.539Z",
   "user-settings": {
     "layout": {
-      "orientation": "scene-right",
-      "scenePercentage": 60.91586794462194,
-      "resumePercentage": 39.08413205537806
+      "orientation": "scene-left",
+      "scenePercentage": 40.34907597535934,
+      "resumePercentage": 59.65092402464066
     },
     "resizeHandle": {
       "stepCount": 1
@@ -20,7 +20,7 @@
       }
     },
     "theme": {
-      "colorPalette": "sweeps.json"
+      "colorPalette": "purpley.json"
     }
   },
   "system-constants": {
@@ -166,9 +166,9 @@
     }
   },
   "layout": {
-    "orientation": "scene-right"
+    "orientation": "scene-left"
   },
   "resizeHandle": {
-    "stepCount": 6
+    "stepCount": 10
   }
 }
