@@ -1,6 +1,14 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import path from 'path';
+import path from 'path'
+import dotenv from 'dotenv'
+
+// Load .env so EXPRESS_PORT / VITE_DEV_PORT / VITE_API_PORT are set (see docs/REPLICATE-PORTS-CONFIG.md)
+dotenv.config({ path: path.join(process.cwd(), '.env') })
+
+const viteDevPort = parseInt(process.env.VITE_DEV_PORT, 10) || parseInt(process.env.VITE_PORT, 10) || 5174
+const apiPort = parseInt(process.env.VITE_API_PORT, 10) || parseInt(process.env.EXPRESS_PORT, 10) || 3001
+const proxyTarget = process.env.VITE_PROXY_TARGET || `http://localhost:${apiPort}`
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,12 +19,13 @@ export default defineConfig({
     }
   },
   server: {
+    port: viteDevPort,
+    strictPort: false, // If port in use, try next (5174, 5175, ...)
     proxy: {
-      // Proxy all requests starting with /api to the backend server
       '/api': {
-        target: 'http://localhost:3009', // The address of our Node.js server
-        changeOrigin: true, // Recommended for virtual hosts
-        secure: false,      // Optional: if your backend server is not using HTTPS
+        target: proxyTarget,
+        changeOrigin: true,
+        secure: false,
       },
     }
   }
