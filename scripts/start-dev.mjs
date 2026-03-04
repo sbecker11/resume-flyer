@@ -116,6 +116,7 @@ async function main() {
     console.log(`Frontend will run at: ${openUrl} (backend API: http://localhost:${backendPort})`);
 
     // Wait until OUR Vite responds at openUrl, then open browser (so we never open another app's port)
+    const useChrome = process.env.OPEN_BROWSER === 'chrome';
     (async function openBrowserWhenReady() {
         const maxWait = 30;
         for (let i = 0; i < maxWait; i++) {
@@ -126,8 +127,17 @@ async function main() {
                     const text = await res.text();
                     // Only open if this looks like our app (Vite dev server or our index)
                     if (text.includes('vite') || text.includes('resume-flock') || text.includes('id="app"')) {
-                        console.log(`Opening browser at ${openUrl}`);
-                        const child = spawn('npx', ['open-cli', openUrl], { cwd: root, stdio: 'ignore', shell: true });
+                        console.log(`Opening ${useChrome ? 'Chrome' : 'browser'} at ${openUrl}`);
+                        let child;
+                        if (useChrome && process.platform === 'darwin') {
+                            child = spawn('open', ['-a', 'Google Chrome', openUrl], { cwd: root, stdio: 'ignore' });
+                        } else if (useChrome && process.platform === 'win32') {
+                            child = spawn('cmd', ['/c', 'start', 'chrome', openUrl], { cwd: root, stdio: 'ignore', shell: true });
+                        } else if (useChrome && process.platform === 'linux') {
+                            child = spawn('google-chrome', [openUrl], { cwd: root, stdio: 'ignore' });
+                        } else {
+                            child = spawn('npx', ['open-cli', openUrl], { cwd: root, stdio: 'ignore', shell: true });
+                        }
                         child.on('error', (err) => console.warn('Could not open browser:', err.message));
                         return;
                     }

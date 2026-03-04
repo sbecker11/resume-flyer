@@ -33,18 +33,35 @@ export const BIZCARD_Z_MIN = 10; // 30; == Z_MAX .. Z_MAX-numLevels = 25
 
 export const ALL_CARDS_Z_MIN = 10;
 
-// Flock-of-postcards–aligned Z (depth) and z-index semantics:
-// - Higher Z = closer to viewer. CSS z-index for stacking = ALL_CARDS_MAX_Z - z (so skill cards stack above bizcards).
-// - Bizcards: Z from job "z-index" (1–3) → z = ALL_CARDS_MAX_Z - job_z_index (Z 12–14).
-// - Skill cards: Z random in [CARD_MIN_Z, CARD_MAX_Z] = [1, 8], z-index = 7–14.
-export const FLOCK_ALL_CARDS_MAX_Z = 15;
-export const FLOCK_BIZCARD_Z_MIN = 12;  // job z-index 3 → z 12
-export const FLOCK_BIZCARD_Z_MAX = 14;   // job z-index 1 → z 14
-export const FLOCK_CARD_MIN_Z = 1;       // skill card Z range
-export const FLOCK_CARD_MAX_Z = 8;
+// Flock-of-postcards (see sibling repo flock-of-postcards/main.mjs):
+//   "z is distance to viewer" → z = MAX_Z - zindex, zindex = MAX_Z - z.
+//   get_zIndexStr_from_z(z) = `${ALL_CARDS_MAX_Z - z}`; get_z_from_zIndexStr(zindex) = ALL_CARDS_MAX_Z - parseInt(zindex).
+// Here: Z = distance from viewer; Z = FLOCK_Z_MAX - z_index (higher z_index = closer = lower Z).
+// - z_index: CSS stacking order (1–3 biz, 4–13 skill); higher = in front.
+// - scene Z (stored on cards): Z = FLOCK_Z_MAX - z_index; higher Z = farther, lower Z = closer.
+export const FLOCK_Z_MAX = 14;                    // far plane; Z = FLOCK_Z_MAX - z_index (original used 15)
+export const FLOCK_BIZCARD_Z_INDEX_MIN = 1;       // biz cards z_index 1–3 (back)
+export const FLOCK_BIZCARD_Z_INDEX_MAX = 3;
+export const FLOCK_SKILL_Z_INDEX_MIN = 4;         // skill cards z_index 4–13 (front)
+export const FLOCK_SKILL_Z_INDEX_MAX = 13;
 export const FLOCK_PARALLAX_Z_MIN = 1;
 export const FLOCK_PARALLAX_Z_MAX = 14;
 export const FLOCK_PARALLAX_Z_RANGE = FLOCK_PARALLAX_Z_MAX - FLOCK_PARALLAX_Z_MIN;
+
+/** Z (distance from viewer) from CSS z_index. Higher z_index = closer = lower Z. */
+export function Z_from_z_index(z_index) {
+  return FLOCK_Z_MAX - z_index;
+}
+
+/** z_index from Z (distance). Used when we have Z and need stacking. */
+export function z_index_from_Z(Z) {
+  return FLOCK_Z_MAX - Z;
+}
+
+// Invariant: biz z_index (1–3) < skill z_index (4–13) so skill cards render above biz cards
+if (FLOCK_BIZCARD_Z_INDEX_MAX >= FLOCK_SKILL_Z_INDEX_MIN) {
+  throw new Error(`zUtils: biz z_index must be < skill z_index`);
+}
 // Selected clone Z (flock-of-postcards SELECTED_CARD_DIV_Z = -10); clone is not subject to motion parallax
 export const FLOCK_SELECTED_CLONE_Z = -10;
 

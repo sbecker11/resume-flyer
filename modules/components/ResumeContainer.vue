@@ -166,17 +166,22 @@ function selectPrevious() {
 #resume-content-div-wrapper {
     flex-grow: 1;
     /* overflow-y is now controlled by the InfiniteScrollingContainer */
-    overflow-x: hidden; /* Remove horizontal scrollbar */
+    overflow-x: visible; /* bizCardLineItems (rDivs) must never be clipped by their container */
     background-color: var(--grey-medium);
     color: black;
     position: relative; /* Needed for the absolute positioning of items by the scroller */
-    padding-left: 6px; /* Balance the scrollbar on the right */
+    /* 8px horizontal padding so selected rDiv box-shadow (8px ring) has room; matches cDiv selected border */
+    padding-left: 8px;
+    padding-right: 8px;
     /* overflow is set by InfiniteScrollingContainer.setupContainer() to 'auto' */
 }
 
 #resume-content-div {
     background-color: var(--grey-dark-6);
-    overflow-x: hidden; /* Remove horizontal scrollbar from content div */
+    overflow-x: visible; /* bizCardLineItems (rDivs) must never be clipped by their container */
+    /* Horizontal padding so selected rDiv 8px box-shadow ring has room; matches cDiv selected border */
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 /* Custom scrollbar to match the cDiv scrollbar */
@@ -373,7 +378,7 @@ function selectPrevious() {
     filter: none !important;
 }
 
-/* Selected state with layered purple-white-purple borders using box-shadow */
+/* Selected state - border must match .biz-card-div.clone. All colors except white layer from palette-utils. */
 .biz-resume-div.selected {
     background-color: var(--data-background-color-selected) !important;
     color: var(--data-foreground-color-selected) !important;
@@ -384,13 +389,13 @@ function selectPrevious() {
     margin-left: 8px; /* Center the narrower selected rDiv */
     margin-right: 8px;
     
-    /* Layered border effect using box-shadow: 2px purple + 1px white + 5px purple */
-    border: 2px solid purple !important;
+    /* Purple from palette-utils; white ring (#ffffff) is fixed */
+    border: 2px solid #801a81 !important;
     outline: none !important;
-    box-shadow: 
-        0 0 0 3px white,                           /* 1px white ring (2px border + 1px white = 3px total) */
-        0 0 0 8px purple,                          /* 5px purple outer (3px + 5px = 8px total) */
-        0 3px 12px rgba(128, 0, 128, 0.4) !important; /* Drop shadow for depth */
+    box-shadow:
+        0 0 0 3px #ffffff,
+        0 0 0 8px #801a81,
+        0 3px 12px rgba(128, 0, 128, 0.4) !important;
     
     border-radius: var(--data-selected-border-radius) !important;
     margin-top: var(--data-selected-margin-top);

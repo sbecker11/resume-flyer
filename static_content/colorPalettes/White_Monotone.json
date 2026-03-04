@@ -1,6 +1,12 @@
 {
   "name": "White Monotone",
   "colors": [
-    "#DDDDDD"
-  ]
+    "#AAAAAA",
+    "#BBBBBB",
+    "#CCCCCC",
+    "#DDDDDD",
+    "#EEEEEE",
+    "#FFFFFF"
+  ],
+  "backgroundSwatchIndex": 0
 } 

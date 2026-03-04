@@ -1,7 +1,15 @@
 // modules/utils/domUtils.mjs
 
 import * as utils from './utils.mjs';
-import { get_RGB_from_Hex, getContrastingColor, isHexColor as isHexColorString } from '../utils/colorUtils.mjs';
+import { getHighContrastMono } from 'color-palette-utils-ts';
+import { get_RGB_from_Hex, isHexColor, isHexColorString } from './paletteHelpers.mjs';
+
+export { get_RGB_from_Hex, isHexColorString };
+
+/** Contrasting color (black or white) for a given background hex. */
+export function getContrastingColor(hex) {
+    return getHighContrastMono(hex);
+}
 
 export function hasClass(element, className) {
     return element && className && element.classList.contains(className);

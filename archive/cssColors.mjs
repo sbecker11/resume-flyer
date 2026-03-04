@@ -1,6 +1,6 @@
 // modules/cssColors.mjs
 
-import * as colorUtils from '../utils/colorUtils.mjs';
+import { isHexColorString } from '../modules/utils/paletteHelpers.mjs';
 import * as utils from '../utils/utils.mjs';
 
 const CSS_COLORS = {
@@ -163,7 +163,7 @@ export function get_HEX_from_CssColor(cssColor, verbose=false) {
         let colors = LOWERCASE_CSS_COLORS;
         if ( color in colors ) {
             let HEX = colors[color];
-            if ( colorUtils.isHexColorString(HEX)) {
+            if ( isHexColorString(HEX)) {
                 return HEX;
             }
             if ( verbose )
@@ -180,7 +180,7 @@ export function get_HEX_from_CssColor(cssColor, verbose=false) {
 }
 
 export function get_CssColor_from_HEX(HEX, verbose=false) {
-    if ( colorUtils.isHexColorString(HEX) ) {
+    if ( isHexColorString(HEX) ) {
         for (let color in LOWERCASE_CSS_COLORS) {
             if (LOWERCASE_CSS_COLORS[color] === HEX) {
                 return color;

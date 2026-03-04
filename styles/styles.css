@@ -183,12 +183,7 @@ overflow and ensures consistent sizing.
     transition: all 0.2s ease;
 }
 
-/* Hover effects for specific elements within cards */
-.biz-card-div:not(.clone).hovered .biz-details-role {
-    color: #0066cc;
-    font-weight: bold;
-}
-
+/* Hover effects for specific elements within cards (no text color change) */
 .biz-card-div:not(.clone).hovered .biz-details-employer {
     text-decoration: underline;
 }

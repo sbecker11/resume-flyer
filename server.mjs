@@ -55,7 +55,8 @@ app.post('/api/state', async (req, res) => {
     try {
         const stateData = JSON.stringify(req.body, null, 2);
         await fs.writeFile(STATE_FILE_PATH, stateData, 'utf-8');
-        console.log('💾 Saving app state to disk - colorPalette:', req.body.theme?.colorPalette);
+        const colorPalette = req.body['user-settings']?.theme?.colorPalette ?? req.body.theme?.colorPalette;
+        if (colorPalette) console.log('💾 Saving app state to disk - colorPalette:', colorPalette);
         res.json({ success: true });
     } catch (error) {
         console.error('Error writing state file:', error);

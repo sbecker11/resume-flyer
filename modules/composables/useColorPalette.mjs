@@ -1,14 +1,19 @@
-import { ref, onMounted, watch, computed, getCurrentInstance } from 'vue';
+import { ref, watch, computed, getCurrentInstance } from 'vue';
 import { useAppState } from './useAppState.ts';
-import * as colorUtils from '@/modules/utils/colorUtils.mjs';
+import { parsePaletteJson, normalizePaletteColors, getHighContrastMono, getHighlightColor, getContrastIconSet, hexToRgb } from 'color-palette-utils-ts';
+import { getPerceivedBrightness } from '@/modules/utils/paletteHelpers.mjs';
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
 
 const PALETTE_DIR = './static_content/colorPalettes/';
 const MANIFEST_ENDPOINT = '/api/palette-manifest';
+/** Base path for contrast icons (url/back/img); must contain icons8-{url,back,img}-16-black.png. */
+const ICON_BASE = '/static_content/icons';
 
 // --- Reactive State ---
 // This state is shared across all components that use this composable
 const colorPalettes = ref({});
+/** Per-palette background swatch: map palette name -> index. Each palette may define its own default background color via backgroundSwatchIndex in its JSON. */
+const backgroundSwatchIndexByPalette = ref({});
 const orderedPaletteNames = ref([]);
 const filenameToNameMap = ref({});
 const isLoading = ref(false);
@@ -61,6 +66,7 @@ export function useColorPalette() {
             // console.log(`[ColorPalette] Loaded manifest with ${manifestData.length} palette files`);
 
             const tempLoadedColorPalettes = {};
+            const tempBackgroundSwatchIndexByPalette = {};
             const tempFilenameToNameMap = {};
             const tempOrderedNames = [];
 
@@ -68,24 +74,25 @@ export function useColorPalette() {
                 try {
                     const filePath = PALETTE_DIR + filename;
                     const paletteResponse = await fetch(filePath);
-                    if (!paletteResponse.ok) {
-                        // console.warn(`[ColorPalette] Failed to load palette file: ${filename}`);
-                        continue;
-                    }
-                    const paletteData = await paletteResponse.json();
-
-                    if (paletteData && paletteData.name && Array.isArray(paletteData.colors)) {
+                    if (!paletteResponse.ok) continue;
+                    const raw = await paletteResponse.text();
+                    const paletteData = parsePaletteJson(raw);
+                    if (paletteData) {
+                        normalizePaletteColors(paletteData.colors);
                         tempLoadedColorPalettes[paletteData.name] = paletteData.colors;
+                        if (paletteData.backgroundSwatchIndex != null) {
+                            tempBackgroundSwatchIndexByPalette[paletteData.name] = Math.max(0, Math.floor(paletteData.backgroundSwatchIndex)) % paletteData.colors.length;
+                        }
                         tempFilenameToNameMap[filename] = paletteData.name;
                         tempOrderedNames.push(paletteData.name);
-                        // console.log(`[ColorPalette] Loaded palette: ${paletteData.name} (${filename})`);
                     }
                 } catch (err) {
-                    // console.warn(`[ColorPalette] Error loading palette ${filename}:`, err);
+                    // skip invalid or failed palette files
                 }
             }
             
             colorPalettes.value = tempLoadedColorPalettes;
+            backgroundSwatchIndexByPalette.value = tempBackgroundSwatchIndexByPalette;
             filenameToNameMap.value = tempFilenameToNameMap;
             orderedPaletteNames.value = tempOrderedNames;
             
@@ -310,31 +317,23 @@ export function useColorPalette() {
         // Wait for both filename mapping and palette data to be loaded
         if (!paletteName || !colorPalette || colorPalette.length === 0) return;
 
-        // Apply document-level styles
+        // Apply document-level styles using palette-utils-ts (LCH-based darkening). Each palette may use a different swatch as its background.
         const root = document.documentElement;
-        let darkestColor = colorPalette.reduce((darkest, current) => {
-            return colorUtils.getPerceivedBrightness(current) < colorUtils.getPerceivedBrightness(darkest) ? current : darkest;
-        }, colorPalette[0]);
+        const bgIndex = backgroundSwatchIndexByPalette.value[paletteName];
+        const baseBackgroundHex = (bgIndex != null && colorPalette[bgIndex] != null)
+            ? colorPalette[bgIndex]
+            : colorPalette.reduce((darkest, current) => {
+                return getPerceivedBrightness(current) < getPerceivedBrightness(darkest) ? current : darkest;
+            }, colorPalette[0]);
 
-        const darkHex = darkestColor || "#333333";
-        let rgb = colorUtils.get_RGB_from_Hex(darkHex);
-        let hsv = colorUtils.get_HSV_from_RGB(rgb);
+        const darkHex = baseBackgroundHex || '#333333';
+        const darkerHex = getHighlightColor(darkHex, { highlightPercent: 45 });
+        const darkestHex = getHighlightColor(darkHex, { highlightPercent: 15 });
+        const darkerRgb = hexToRgb(darkerHex) || { r: 51, g: 51, b: 51 };
+        const darkestRgb = hexToRgb(darkestHex) || { r: 26, g: 26, b: 26 };
 
-        let darkerHsv = {...hsv};
-        darkerHsv.v *= 0.45; // Much darker for more dramatic contrast
-        darkerHsv.s *= 0.3; // Much less saturated for less vibrant look
-        const darkerRgb = colorUtils.get_RGB_from_HSV(darkerHsv);
-
-        let darkestHsv = {...hsv};
-        darkestHsv.v *= 0.15; // Much darker for more dramatic atmospheric perspective
-        darkestHsv.s *= 0.2; // Much less saturated for less vibrant look
-        const darkestRgb = colorUtils.get_RGB_from_HSV(darkestHsv);
-
-        const darkerRgba = `rgba(${darkerRgb.r}, ${darkerRgb.g}, ${darkerRgb.b}, 1.0)`;
-        const darkestRgba = `rgba(${darkestRgb.r}, ${darkestRgb.g}, ${darkestRgb.b}, 1.0)`;
-
-        root.style.setProperty('--background-light', darkerRgba);
-        root.style.setProperty('--background-dark', darkestRgba);
+        root.style.setProperty('--background-light', `rgba(${darkerRgb.r}, ${darkerRgb.g}, ${darkerRgb.b}, 1.0)`);
+        root.style.setProperty('--background-dark', `rgba(${darkestRgb.r}, ${darkestRgb.g}, ${darkestRgb.b}, 1.0)`);
 
         const registry = getElementRegistry();
         registry?.clearAllCache?.();
@@ -471,23 +470,26 @@ export async function applyPaletteToElement(element) {
         throw new Error(`Color palette not found for name: ${paletteName}`);
     }
 
-    // Calculate base colors
+    // Calculate base colors (palette-utils-ts: LCH-based highlight, high-contrast mono text)
     const backgroundColor = colorPalette[paletteColorIndex % colorPalette.length];
-    const foregroundColor = colorUtils.getContrastingColor(backgroundColor);
-    
+    const foregroundColor = getHighContrastMono(backgroundColor);
 
-    // Get brightness factors from global state
     const systemConstants = appState.value["system-constants"];
-    const brightnessFactorSelected = systemConstants?.theme?.brightnessFactorSelected || 2.0;
-    const brightnessFactorHovered = systemConstants?.theme?.brightnessFactorHovered || 1.5;
+    const brightnessFactorSelected = systemConstants?.theme?.brightnessFactorSelected ?? 2.0;
+    const brightnessFactorHovered = systemConstants?.theme?.brightnessFactorHovered ?? 1.5;
+    const highlightPercentSelected = Math.round(brightnessFactorSelected * 100);
+    const highlightPercentHovered = Math.round(brightnessFactorHovered * 100);
 
-    // Calculate selected state colors (with brightness filter applied)
-    const selectedBackgroundColor = colorUtils.adjustBrightness(backgroundColor, brightnessFactorSelected);
-    const selectedForegroundColor = colorUtils.getContrastingColor(selectedBackgroundColor);
+    const selectedBackgroundColor = getHighlightColor(backgroundColor, { highlightPercent: highlightPercentSelected });
+    // Secondary colors for highlighted (selected): white on dark background, black on light (palette-utils)
+    const highlightedTextColor = getHighContrastMono(selectedBackgroundColor);
+    const highlightedIconSet = getContrastIconSet(selectedBackgroundColor, { iconBase: ICON_BASE }); /* usage: see docs/CONTRAST-ICONS-FLOCK-OF-POSTCARDS.md */
 
-    // Calculate hovered state colors (with brightness filter applied)
-    const hoveredBackgroundColor = colorUtils.adjustBrightness(backgroundColor, brightnessFactorHovered);
-    const hoveredForegroundColor = colorUtils.getContrastingColor(hoveredBackgroundColor);
+    const hoveredBackgroundColor = getHighlightColor(backgroundColor, { highlightPercent: highlightPercentHovered });
+    const hoveredForegroundColor = getHighContrastMono(hoveredBackgroundColor);
+    const hoveredIconSet = getContrastIconSet(hoveredBackgroundColor, { iconBase: ICON_BASE });
+
+    const normalIconSet = getContrastIconSet(backgroundColor, { iconBase: ICON_BASE });
 
     const borderRadius = appState.value.theme?.borderRadius || '25px';
 
@@ -530,7 +532,7 @@ export async function applyPaletteToElement(element) {
         selected: { ...systemConstants.theme.borderSettings.selected }
     } : defaultBorderSettings;
 
-    // apply resume div border override settings if the element is a resume div
+    // BizCard (cDiv) and bizCardLineItem (rDiv) border styling must always be identical. rDiv uses override when set.
     if ( element.classList.contains('biz-resume-div') ) {
         const rDivBorderOverrideSettings = systemConstants?.theme?.rDivBorderOverrideSettings;
         if (rDivBorderOverrideSettings) {
@@ -550,7 +552,19 @@ export async function applyPaletteToElement(element) {
     element.setAttribute('data-background-color', backgroundColor);
     element.setAttribute('data-foreground-color', foregroundColor);
     element.setAttribute('data-background-color-selected', selectedBackgroundColor);
-    element.setAttribute('data-foreground-color-selected', selectedForegroundColor);
+    element.setAttribute('data-foreground-color-selected', highlightedTextColor);
+    element.setAttribute('data-icon-set-selected-url', highlightedIconSet.url);
+    element.setAttribute('data-icon-set-selected-back', highlightedIconSet.back);
+    element.setAttribute('data-icon-set-selected-img', highlightedIconSet.img);
+    element.setAttribute('data-icon-set-selected-variant', highlightedIconSet.variant);
+    element.setAttribute('data-icon-set-url', normalIconSet.url);
+    element.setAttribute('data-icon-set-back', normalIconSet.back);
+    element.setAttribute('data-icon-set-img', normalIconSet.img);
+    element.setAttribute('data-icon-set-variant', normalIconSet.variant);
+    element.setAttribute('data-icon-set-hovered-url', hoveredIconSet.url);
+    element.setAttribute('data-icon-set-hovered-back', hoveredIconSet.back);
+    element.setAttribute('data-icon-set-hovered-img', hoveredIconSet.img);
+    element.setAttribute('data-icon-set-hovered-variant', hoveredIconSet.variant);
     element.setAttribute('data-background-color-hovered', hoveredBackgroundColor);
     element.setAttribute('data-foreground-color-hovered', hoveredForegroundColor);
     element.setAttribute('data-background-border-radius', borderRadius);
@@ -580,7 +594,19 @@ export async function applyPaletteToElement(element) {
     element.style.setProperty('--data-background-color', backgroundColor);
     element.style.setProperty('--data-foreground-color', foregroundColor);
     element.style.setProperty('--data-background-color-selected', selectedBackgroundColor);
-    element.style.setProperty('--data-foreground-color-selected', selectedForegroundColor);
+    element.style.setProperty('--data-foreground-color-selected', highlightedTextColor);
+    element.style.setProperty('--data-icon-set-selected-url', `url(${highlightedIconSet.url})`);
+    element.style.setProperty('--data-icon-set-selected-back', `url(${highlightedIconSet.back})`);
+    element.style.setProperty('--data-icon-set-selected-img', `url(${highlightedIconSet.img})`);
+    element.style.setProperty('--data-icon-set-selected-variant', highlightedIconSet.variant);
+    element.style.setProperty('--data-icon-set-url', `url(${normalIconSet.url})`);
+    element.style.setProperty('--data-icon-set-back', `url(${normalIconSet.back})`);
+    element.style.setProperty('--data-icon-set-img', `url(${normalIconSet.img})`);
+    element.style.setProperty('--data-icon-set-variant', normalIconSet.variant);
+    element.style.setProperty('--data-icon-set-hovered-url', `url(${hoveredIconSet.url})`);
+    element.style.setProperty('--data-icon-set-hovered-back', `url(${hoveredIconSet.back})`);
+    element.style.setProperty('--data-icon-set-hovered-img', `url(${hoveredIconSet.img})`);
+    element.style.setProperty('--data-icon-set-hovered-variant', hoveredIconSet.variant);
     element.style.setProperty('--data-background-color-hovered', hoveredBackgroundColor);
     element.style.setProperty('--data-foreground-color-hovered', hoveredForegroundColor);
     element.style.setProperty('--data-background-border-radius', borderRadius);

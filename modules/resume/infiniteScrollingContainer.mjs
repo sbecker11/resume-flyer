@@ -21,7 +21,7 @@ const CONTAINER_STYLES = {
   scrollport: {
     position: 'relative',
     overflowY: 'auto',
-    overflowX: 'hidden',
+    overflowX: 'visible', // bizCardLineItems (rDivs) must never be clipped by their container
     backgroundColor: 'var(--grey-dark-6)'
   },
   contentHolder: {

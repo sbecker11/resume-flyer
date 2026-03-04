@@ -326,10 +326,10 @@ export function useCardsController() {
             }
         })
         
-        // Z-depth from flock-of-postcards: z = ALL_CARDS_MAX_Z - job z-index (bizcards Z 12–14)
-        const sceneZ = zUtils.FLOCK_ALL_CARDS_MAX_Z - zIndex
+        // Z = distance from viewer = maxZ - z_index (biz z_index 1–3 → Z 13, 12, 11)
+        const sceneZ = zUtils.Z_from_z_index(zIndex)
         card.setAttribute('data-sceneZ', sceneZ)
-        card.style.zIndex = String(zIndex) // CSS stacking: 1–3 so bizcards sit behind skill cards
+        card.style.zIndex = String(zIndex) // CSS stacking: 1–3 so biz cards sit behind skill cards
         // Apply Z-based depth filters (brightness, blur, etc.)
         card.style.filter = filters.get_filterStr_from_z(sceneZ)
         // Fixed 3D scene position (constant after init; parallax only applies transform at render time)
@@ -597,10 +597,10 @@ export function useCardsController() {
             skillCard.setAttribute('data-job-number', firstJobIndex)
             skillCard.setAttribute('data-color-index', firstJobIndex)
         }
-        // Z-depth from flock-of-postcards: skill cards Z in [1, 8], z-index = ALL_CARDS_MAX_Z - z (7–14) so they stack above bizcards
-        let sceneZ = mathUtils.getRandomInt(zUtils.FLOCK_CARD_MIN_Z, zUtils.FLOCK_CARD_MAX_Z)
+        // Z = distance from viewer = maxZ - z_index; skill z_index 4–13 so they stack above biz (1–3)
+        const skillZIndex = mathUtils.getRandomInt(zUtils.FLOCK_SKILL_Z_INDEX_MIN, zUtils.FLOCK_SKILL_Z_INDEX_MAX)
+        const sceneZ = zUtils.Z_from_z_index(skillZIndex)
         skillCard.setAttribute('data-sceneZ', sceneZ)
-        const skillZIndex = zUtils.FLOCK_ALL_CARDS_MAX_Z - sceneZ
         skillCard.style.zIndex = String(skillZIndex)
 
         const width = MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH
@@ -633,6 +633,7 @@ export function useCardsController() {
             <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%;">
                 <span class="skill-card-label">${escapeHtml(skillName)}</span>
                 ${bizTitlesHtml ? `<div class="skill-card-biz-titles" style="font-size: 8px; opacity: 0.9; line-height: 1.1; max-height: 2.2em; overflow: hidden; text-overflow: ellipsis;">${bizTitlesHtml}</div>` : ''}
+                <span class="skill-card-z" style="font-size: 8px; opacity: 0.8;">z:${sceneZ}</span>
             </div>`
 
         skillCard.addEventListener('click', (e) => {

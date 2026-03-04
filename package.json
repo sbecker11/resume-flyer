@@ -30,6 +30,7 @@
   "main": "main.mjs",
   "scripts": {
     "dev": "npm run kill-listeners && node scripts/start-dev.mjs",
+    "dev:open": "npm run kill-listeners && OPEN_BROWSER=chrome node scripts/start-dev.mjs",
     "dev:concurrent": "npm run kill-listeners && concurrently \"npm:node-server\" \"vite\" \"npm:open-chrome\"",
     "preview": "vite preview",
     "build": "vite build",
@@ -40,9 +41,17 @@
     "clean": "npm run kill-listeners && rm -rf node_modules dist .vite npm-debug.log* && npm cache clean --force",
     "extract-tokens": "node scripts/extract-design-tokens.mjs",
     "figma-sync": "node scripts/figma-sync.mjs",
-    "watch-figma": "node scripts/watch-and-sync.mjs"
+    "watch-figma": "node scripts/watch-and-sync.mjs",
+    "test": "npm run test:app && npm run test:palette-utils",
+    "test:app": "vitest run --config vitest.config.js",
+    "test:app:watch": "vitest --config vitest.config.js",
+    "test:palette-utils": "cd palette-utils-ts && npm test",
+    "test:coverage": "npm run test:coverage:app && npm run test:coverage:palette-utils",
+    "test:coverage:app": "vitest run --config vitest.config.js --coverage",
+    "test:coverage:palette-utils": "cd palette-utils-ts && npm run test:coverage"
   },
   "dependencies": {
+    "color-palette-utils-ts": "file:./palette-utils-ts",
     "@google/generative-ai": "^0.24.1",
     "@notionhq/client": "^2.2.15",
     "@vueuse/core": "^13.4.0",
@@ -67,12 +76,15 @@
   },
   "devDependencies": {
     "@types/multer": "^1.4.11",
+    "@vitest/coverage-v8": "^2.1.9",
     "@vitejs/plugin-vue": "^5.0.5",
     "concurrently": "^9.1.2",
     "nodemon": "^3.1.10",
     "open-cli": "^8.0.0",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
+    "happy-dom": "^15.11.7",
+    "vitest": "^2.1.9",
     "vue": "^3.4.29"
   }
 }

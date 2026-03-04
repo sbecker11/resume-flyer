@@ -14,7 +14,7 @@ import * as zUtils from '../utils/zUtils.mjs'
 const PARALLAX_X_EXAGGERATION_FACTOR = 0.9
 const PARALLAX_Y_EXAGGERATION_FACTOR = 1.0
 const CLONE_Z_SCALE = 0
-const MAX_Z_SCALE = 0.9
+const MAX_Z_SCALE = parseFloat(import.meta.env.VITE_PARALLAX_SCALE_AT_MAX_Z, 10) || 0.9
 const PARALLAX_Z_MIN = zUtils.FLOCK_PARALLAX_Z_MIN
 const PARALLAX_Z_MAX = zUtils.FLOCK_PARALLAX_Z_MAX
 const PARALLAX_Z_RANGE = zUtils.FLOCK_PARALLAX_Z_RANGE
@@ -79,8 +79,9 @@ export function useParallaxEnhanced() {
     const sceneZ = parseFloat(cardDiv.getAttribute('data-sceneZ'))
     if (isNaN(sceneZ) || sceneZ < PARALLAX_Z_MIN || sceneZ > PARALLAX_Z_MAX) return false
 
-    // Flock-aligned: higher Z = closer = more parallax movement
-    const zScale = ((sceneZ - PARALLAX_Z_MIN) / PARALLAX_Z_RANGE) * MAX_Z_SCALE
+    // Z = distance from viewer (high Z = far). Closeness = PARALLAX_Z_MAX - Z; more closeness = more parallax.
+    const closeness = PARALLAX_Z_MAX - sceneZ
+    const zScale = (closeness / PARALLAX_Z_RANGE) * MAX_Z_SCALE
 
     const translateX = dh * zScale
     const translateY = dv * zScale
