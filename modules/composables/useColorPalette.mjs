@@ -513,46 +513,64 @@ export async function applyPaletteToElement(element) {
 
     const borderRadius = appState.value.theme?.borderRadius || '25px';
 
-    // Get global border and padding settings from appState (with defaults) - create deep copy to avoid readonly proxy issues
+    // Same padding and border width in all states so text does not shift on hover/select
     const defaultBorderSettings = {
         normal: {
-            padding: '8px', // 8px padding + 2px border = 10px total, matching CSS expectations
-            innerBorderWidth: '2px',
+            padding: '8px',
+            innerBorderWidth: '1px',
             innerBorderColor: 'white',
             outerBorderWidth: '0px',
             outerBorderColor: 'transparent',
-            marginTop: '0px', // Top margin for vertical separation
+            marginTop: '0px',
             borderRadius: '25px'
         },
         hovered: {
-            padding: '7px', // 7px padding + 3px border = 10px total, matching CSS expectations
-            innerBorderWidth: '3px',
+            padding: '8px',
+            innerBorderWidth: '1px',
             innerBorderColor: 'rgba(255, 255, 255, 0.8)',
             outerBorderWidth: '0px',
             outerBorderColor: 'transparent',
-            marginTop: '0px', // Top margin for vertical separation
+            marginTop: '0px',
             borderRadius: '25px'
         },
         selected: {
-            padding: '6px', // 6px padding + 3px inner + 1px outer = 10px total
-            innerBorderWidth: '3px',
+            padding: '8px',
+            innerBorderWidth: '1px',
             innerBorderColor: 'purple',
-            outerBorderWidth: '1px',
-            outerBorderColor: 'purple',
-            marginTop: '0px', // Top margin for vertical separation
+            outerBorderWidth: '0px',
+            outerBorderColor: 'transparent',
+            marginTop: '0px',
             borderRadius: '25px'
         }
     };
 
     // Create a deep copy to avoid readonly proxy issues
-    // systemConstants already declared above - reuse it
     const borderSettings = systemConstants?.theme?.borderSettings ? {
         normal: { ...systemConstants.theme.borderSettings.normal },
         hovered: { ...systemConstants.theme.borderSettings.hovered },
         selected: { ...systemConstants.theme.borderSettings.selected }
     } : defaultBorderSettings;
 
-    // BizCard (cDiv) and bizCardLineItem (rDiv) border styling must always be identical — same theme borderSettings for both.
+    // rDiv: use rDivBorderOverrideSettings for margin + border + padding, normalized so all states use same dimensions (no text shift)
+    const defaultRDivOverride = {
+        normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+        hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+        selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
+    };
+    const rDivOverride = systemConstants?.theme?.rDivBorderOverrideSettings ? {
+        normal: { ...defaultRDivOverride.normal, ...systemConstants.theme.rDivBorderOverrideSettings.normal },
+        hovered: { ...defaultRDivOverride.hovered, ...systemConstants.theme.rDivBorderOverrideSettings.hovered },
+        selected: { ...defaultRDivOverride.selected, ...systemConstants.theme.rDivBorderOverrideSettings.selected }
+    } : defaultRDivOverride;
+
+    const isRDiv = element.classList.contains('biz-resume-div');
+    const n = isRDiv ? rDivOverride.normal : null;
+    // For rDiv: same padding, border width, margin-top in all states (normalized from .normal)
+    const effectiveBorderSettings = isRDiv && n ? {
+        normal: { ...borderSettings.normal, padding: n.padding, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop },
+        hovered: { ...borderSettings.hovered, padding: n.padding, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop },
+        selected: { ...borderSettings.selected, padding: n.padding, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop }
+    } : borderSettings;
 
     // Set data attributes for all modes of the element
     element.setAttribute('data-background-color', backgroundColor);
@@ -575,26 +593,26 @@ export async function applyPaletteToElement(element) {
     element.setAttribute('data-foreground-color-hovered', hoveredForegroundColor);
     element.setAttribute('data-background-border-radius', borderRadius);
 
-    // Set border and padding attributes for normal, hovered, and selected modes
-    element.setAttribute('data-normal-padding', borderSettings.normal.padding);
-    element.setAttribute('data-normal-inner-border-width', borderSettings.normal.innerBorderWidth);
-    element.setAttribute('data-normal-inner-border-color', borderSettings.normal.innerBorderColor);
-    element.setAttribute('data-normal-outer-border-width', borderSettings.normal.outerBorderWidth);
-    element.setAttribute('data-normal-outer-border-color', borderSettings.normal.outerBorderColor);
-    element.setAttribute('data-normal-border-radius', borderSettings.normal.borderRadius);
+    // Set border and padding attributes from effective settings (rDiv uses normalized rDivOverride)
+    element.setAttribute('data-normal-padding', effectiveBorderSettings.normal.padding);
+    element.setAttribute('data-normal-inner-border-width', effectiveBorderSettings.normal.innerBorderWidth);
+    element.setAttribute('data-normal-inner-border-color', effectiveBorderSettings.normal.innerBorderColor);
+    element.setAttribute('data-normal-outer-border-width', effectiveBorderSettings.normal.outerBorderWidth);
+    element.setAttribute('data-normal-outer-border-color', effectiveBorderSettings.normal.outerBorderColor);
+    element.setAttribute('data-normal-border-radius', effectiveBorderSettings.normal.borderRadius);
 
-    element.setAttribute('data-hovered-padding', borderSettings.hovered.padding);
-    element.setAttribute('data-hovered-inner-border-width', borderSettings.hovered.innerBorderWidth);
-    element.setAttribute('data-hovered-inner-border-color', borderSettings.hovered.innerBorderColor);
-    element.setAttribute('data-hovered-outer-border-width', borderSettings.hovered.outerBorderWidth);
-    element.setAttribute('data-hovered-outer-border-color', borderSettings.hovered.outerBorderColor);
-    element.setAttribute('data-hovered-border-radius', borderSettings.hovered.borderRadius);
+    element.setAttribute('data-hovered-padding', effectiveBorderSettings.hovered.padding);
+    element.setAttribute('data-hovered-inner-border-width', effectiveBorderSettings.hovered.innerBorderWidth);
+    element.setAttribute('data-hovered-inner-border-color', effectiveBorderSettings.hovered.innerBorderColor);
+    element.setAttribute('data-hovered-outer-border-width', effectiveBorderSettings.hovered.outerBorderWidth);
+    element.setAttribute('data-hovered-outer-border-color', effectiveBorderSettings.hovered.outerBorderColor);
+    element.setAttribute('data-hovered-border-radius', effectiveBorderSettings.hovered.borderRadius);
 
-    element.setAttribute('data-selected-padding', borderSettings.selected.padding);
-    element.setAttribute('data-selected-inner-border-width', borderSettings.selected.innerBorderWidth);
-    element.setAttribute('data-selected-inner-border-color', borderSettings.selected.innerBorderColor);
-    element.setAttribute('data-selected-outer-border-width', borderSettings.selected.outerBorderWidth);
-    element.setAttribute('data-selected-outer-border-color', borderSettings.selected.outerBorderColor);
+    element.setAttribute('data-selected-padding', effectiveBorderSettings.selected.padding);
+    element.setAttribute('data-selected-inner-border-width', effectiveBorderSettings.selected.innerBorderWidth);
+    element.setAttribute('data-selected-inner-border-color', effectiveBorderSettings.selected.innerBorderColor);
+    element.setAttribute('data-selected-outer-border-width', effectiveBorderSettings.selected.outerBorderWidth);
+    element.setAttribute('data-selected-outer-border-color', effectiveBorderSettings.selected.outerBorderColor);
 
     // Set CSS custom properties for use in CSS
     element.style.setProperty('--data-background-color', backgroundColor);
@@ -617,30 +635,30 @@ export async function applyPaletteToElement(element) {
     element.style.setProperty('--data-foreground-color-hovered', hoveredForegroundColor);
     element.style.setProperty('--data-background-border-radius', borderRadius);
 
-    // Set CSS custom properties for border and padding
-    element.style.setProperty('--data-normal-padding', borderSettings.normal.padding);
-    element.style.setProperty('--data-normal-inner-border-width', borderSettings.normal.innerBorderWidth);
-    element.style.setProperty('--data-normal-inner-border-color', borderSettings.normal.innerBorderColor);
-    element.style.setProperty('--data-normal-outer-border-width', borderSettings.normal.outerBorderWidth);
-    element.style.setProperty('--data-normal-outer-border-color', borderSettings.normal.outerBorderColor);
-    element.style.setProperty('--data-normal-margin-top', borderSettings.normal.marginTop);
-    element.style.setProperty('--data-normal-border-radius', borderSettings.normal.borderRadius);
+    // Set CSS custom properties for border and padding. rDiv margin is container-controlled, not theme.
+    element.style.setProperty('--data-normal-padding', effectiveBorderSettings.normal.padding);
+    element.style.setProperty('--data-normal-inner-border-width', effectiveBorderSettings.normal.innerBorderWidth);
+    element.style.setProperty('--data-normal-inner-border-color', effectiveBorderSettings.normal.innerBorderColor);
+    element.style.setProperty('--data-normal-outer-border-width', effectiveBorderSettings.normal.outerBorderWidth);
+    element.style.setProperty('--data-normal-outer-border-color', effectiveBorderSettings.normal.outerBorderColor);
+    element.style.setProperty('--data-normal-border-radius', effectiveBorderSettings.normal.borderRadius);
+    if (!isRDiv) element.style.setProperty('--data-normal-margin-top', effectiveBorderSettings.normal.marginTop ?? '0px');
 
-    element.style.setProperty('--data-hovered-padding', borderSettings.hovered.padding);
-    element.style.setProperty('--data-hovered-inner-border-width', borderSettings.hovered.innerBorderWidth);
-    element.style.setProperty('--data-hovered-inner-border-color', borderSettings.hovered.innerBorderColor);
-    element.style.setProperty('--data-hovered-outer-border-width', borderSettings.hovered.outerBorderWidth);
-    element.style.setProperty('--data-hovered-outer-border-color', borderSettings.hovered.outerBorderColor);
-    element.style.setProperty('--data-hovered-margin-top', borderSettings.hovered.marginTop);
-    element.style.setProperty('--data-hovered-border-radius', borderSettings.hovered.borderRadius);
+    element.style.setProperty('--data-hovered-padding', effectiveBorderSettings.hovered.padding);
+    element.style.setProperty('--data-hovered-inner-border-width', effectiveBorderSettings.hovered.innerBorderWidth);
+    element.style.setProperty('--data-hovered-inner-border-color', effectiveBorderSettings.hovered.innerBorderColor);
+    element.style.setProperty('--data-hovered-outer-border-width', effectiveBorderSettings.hovered.outerBorderWidth);
+    element.style.setProperty('--data-hovered-outer-border-color', effectiveBorderSettings.hovered.outerBorderColor);
+    element.style.setProperty('--data-hovered-border-radius', effectiveBorderSettings.hovered.borderRadius);
+    if (!isRDiv) element.style.setProperty('--data-hovered-margin-top', effectiveBorderSettings.hovered.marginTop ?? '0px');
 
-    element.style.setProperty('--data-selected-padding', borderSettings.selected.padding);
-    element.style.setProperty('--data-selected-inner-border-width', borderSettings.selected.innerBorderWidth);
-    element.style.setProperty('--data-selected-inner-border-color', borderSettings.selected.innerBorderColor);
-    element.style.setProperty('--data-selected-outer-border-width', borderSettings.selected.outerBorderWidth);
-    element.style.setProperty('--data-selected-outer-border-color', borderSettings.selected.outerBorderColor);
-    element.style.setProperty('--data-selected-margin-top', borderSettings.selected.marginTop);
-    element.style.setProperty('--data-selected-border-radius', borderSettings.selected.borderRadius);
+    element.style.setProperty('--data-selected-padding', effectiveBorderSettings.selected.padding);
+    element.style.setProperty('--data-selected-inner-border-width', effectiveBorderSettings.selected.innerBorderWidth);
+    element.style.setProperty('--data-selected-inner-border-color', effectiveBorderSettings.selected.innerBorderColor);
+    element.style.setProperty('--data-selected-outer-border-width', effectiveBorderSettings.selected.outerBorderWidth);
+    element.style.setProperty('--data-selected-outer-border-color', effectiveBorderSettings.selected.outerBorderColor);
+    element.style.setProperty('--data-selected-border-radius', effectiveBorderSettings.selected.borderRadius);
+    if (!isRDiv) element.style.setProperty('--data-selected-margin-top', effectiveBorderSettings.selected.marginTop ?? '0px');
 
     // Fill hex debug spans if present (biz-card-div / biz-resume-div): unhighlighted and highlighted; CSS bolds the visible one
     const hexNormalEl = element.querySelector('.hex-normal');

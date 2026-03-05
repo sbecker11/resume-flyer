@@ -31,7 +31,8 @@ const CONTAINER_STYLES = {
     height: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'stretch'
+    alignItems: 'stretch',
+    gap: '10px' /* Flex container controls spacing between rDivs */
   }
 };
 

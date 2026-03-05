@@ -148,6 +148,7 @@ function getDefaultState(): AppState {
             theme: {
                 brightnessFactorSelected: 2.0,
                 brightnessFactorHovered: 1.75,
+                /* Padding and border width identical across states so text does not shift */
                 borderSettings: {
                     normal: {
                         padding: '8px',
@@ -158,16 +159,16 @@ function getDefaultState(): AppState {
                         borderRadius: '25px'
                     },
                     hovered: {
-                        padding: '7px',
-                        innerBorderWidth: '2px',
+                        padding: '8px',
+                        innerBorderWidth: '1px',
                         innerBorderColor: 'blue',
                         outerBorderWidth: '0px',
                         outerBorderColor: 'transparent',
                         borderRadius: '25px'
                     },
                     selected: {
-                        padding: '6px',
-                        innerBorderWidth: '3px',
+                        padding: '8px',
+                        innerBorderWidth: '1px',
                         innerBorderColor: 'purple',
                         outerBorderWidth: '0px',
                         outerBorderColor: 'transparent',
@@ -175,21 +176,9 @@ function getDefaultState(): AppState {
                     }
                 },
                 rDivBorderOverrideSettings: {
-                    normal: {
-                        padding: '15px',
-                        innerBorderWidth: '1px',
-                        marginTop: '11px'
-                    },
-                    hovered: {
-                        padding: '14px',
-                        innerBorderWidth: '2px',
-                        marginTop: '11px'
-                    },
-                    selected: {
-                        padding: '13px',
-                        innerBorderWidth: '3px',
-                        marginTop: '11px'
-                    }
+                    normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+                    hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+                    selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
                 }
             }
         }
@@ -212,8 +201,8 @@ function migrateState(state: any): AppState {
         if (!state.theme.rDivBorderOverrideSettings) {
             state.theme.rDivBorderOverrideSettings = {
                 normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                hovered: { padding: '14px', innerBorderWidth: '2px', marginTop: '11px' },
-                selected: { padding: '13px', innerBorderWidth: '3px', marginTop: '11px' }
+                hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+                selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
             }
         } else {
             // Create new objects to avoid readonly proxy issues

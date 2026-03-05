@@ -31,6 +31,7 @@ export function getDefaultState() {
             colorPalette: '50_Dark_Grey_Monotone.json', // Default palette
             brightnessFactorSelected: 2.0,  // Brightness factor for selected elements (scene cards)
             brightnessFactorHovered: 1.75,   // Brightness factor for hovered elements (scene cards)
+            /* Padding and border width are identical across states so text does not shift on hover/select */
             borderSettings: {
                 normal: {
                     padding: '8px',
@@ -41,16 +42,16 @@ export function getDefaultState() {
                     borderRadius: '25px'
                 },
                 hovered: {
-                    padding: '7px',
-                    innerBorderWidth: '2px',
+                    padding: '8px',
+                    innerBorderWidth: '1px',
                     innerBorderColor: 'blue',
                     outerBorderWidth: '0px',
                     outerBorderColor: 'transparent',
                     borderRadius: '25px'
                 },
                 selected: {
-                    padding: '6px',
-                    innerBorderWidth: '3px',
+                    padding: '8px',
+                    innerBorderWidth: '1px',
                     innerBorderColor: 'purple',
                     outerBorderWidth: '0px',
                     outerBorderColor: 'transparent',
@@ -58,21 +59,9 @@ export function getDefaultState() {
                 }
             },
             rDivBorderOverrideSettings: {
-                normal: {
-                    padding: '15px',
-                    innerBorderWidth: '1px',
-                    marginTop: '11px'
-                },
-                hovered: {
-                    padding: '14px',
-                    innerBorderWidth: '2px',
-                    marginTop: '11px'
-                },
-                selected: {
-                    padding: '13px',
-                    innerBorderWidth: '3px',
-                    marginTop: '11px'
-                }
+                normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+                hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+                selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
             }
         },
         color: {
@@ -192,8 +181,8 @@ function migrateState(state) {
         if (!state.theme.rDivBorderOverrideSettings) {
             state.theme.rDivBorderOverrideSettings = {
                 normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                hovered: { padding: '14px', innerBorderWidth: '2px', marginTop: '11px' },
-                selected: { padding: '13px', innerBorderWidth: '3px', marginTop: '11px' }
+                hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
+                selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
             };
         } else {
             // Create new objects to avoid readonly proxy issues
@@ -245,6 +234,27 @@ function migrateState(state) {
         
         state.version = "1.2";
         window.CONSOLE_LOG_IGNORE('[MIGRATION] Successfully migrated to v1.2 - preserved user preferences');
+    }
+
+    // Migration from 1.2 to 1.3: Normalize border/padding so hovered and selected match normal (no text shift)
+    if (state.version === "1.2") {
+        window.CONSOLE_LOG_IGNORE('[MIGRATION] Migrating state from v1.2 to v1.3: consistent border/padding');
+        if (state.theme?.borderSettings) {
+            const n = state.theme.borderSettings.normal;
+            if (n) {
+                state.theme.borderSettings.hovered = { ...state.theme.borderSettings.hovered, padding: n.padding, innerBorderWidth: n.innerBorderWidth, outerBorderWidth: n.outerBorderWidth ?? '0px', borderRadius: n.borderRadius };
+                state.theme.borderSettings.selected = { ...state.theme.borderSettings.selected, padding: n.padding, innerBorderWidth: n.innerBorderWidth, outerBorderWidth: n.outerBorderWidth ?? '0px', borderRadius: n.borderRadius };
+            }
+        }
+        if (state.theme?.rDivBorderOverrideSettings) {
+            const n = state.theme.rDivBorderOverrideSettings.normal;
+            if (n) {
+                state.theme.rDivBorderOverrideSettings.hovered = { ...state.theme.rDivBorderOverrideSettings.hovered, padding: n.padding, innerBorderWidth: n.innerBorderWidth };
+                state.theme.rDivBorderOverrideSettings.selected = { ...state.theme.rDivBorderOverrideSettings.selected, padding: n.padding, innerBorderWidth: n.innerBorderWidth };
+            }
+        }
+        state.version = "1.3";
+        window.CONSOLE_LOG_IGNORE('[MIGRATION] Successfully migrated to v1.3');
     }
 
     return state;

@@ -176,10 +176,10 @@ function selectPrevious() {
     /* overflow is set by InfiniteScrollingContainer.setupContainer() to 'auto' */
 }
 
+/* Container controls spacing between rDivs (margin), not theme/palette */
 #resume-content-div {
     background-color: var(--grey-dark-6);
     overflow-x: visible; /* bizCardLineItems (rDivs) must never be clipped by their container */
-    /* Horizontal padding so selected rDiv 8px box-shadow ring has room; matches cDiv selected border */
     padding-left: 8px;
     padding-right: 8px;
 }
@@ -282,7 +282,7 @@ function selectPrevious() {
 /* Global styles for rDivs - not scoped to ensure they apply to dynamically created elements */
 /* Normal border/padding/outline/radius come from scene.css (shared .biz-card-div, .biz-resume-div rule). */
 
-/* Base rDiv layout and sizing only - do not duplicate border styling */
+/* Base rDiv layout and sizing only. Spacing between items from flex container gap (infiniteScrollingContainer contentHolder). */
 .biz-resume-div {
     display: flex !important;
     flex-direction: column;
@@ -297,7 +297,6 @@ function selectPrevious() {
     flex-basis: auto;
     position: relative !important;
     overflow-x: hidden;
-    margin-top: var(--data-normal-margin-top);
     background-color: var(--data-background-color) !important;
     color: var(--data-foreground-color) !important;
     filter: none !important;
@@ -348,39 +347,29 @@ function selectPrevious() {
     overflow: visible; /* Show all content */
 }
 
-/* Hovered state - identical to .biz-card-div.hovered (same vars) */
+/* Hovered state - same padding/border as normal (margin from container) */
 .biz-resume-div.hovered {
     background-color: var(--data-background-color-hovered) !important;
     color: var(--data-foreground-color-hovered) !important;
-    padding: var(--data-hovered-padding);
-    border: var(--data-hovered-inner-border-width) solid var(--data-hovered-inner-border-color);
-    outline: var(--data-hovered-outer-border-width) solid var(--data-hovered-outer-border-color);
-    border-radius: var(--data-hovered-border-radius) !important;
-    margin-top: var(--data-hovered-margin-top);
+    padding: var(--data-normal-padding);
+    border: var(--data-normal-inner-border-width) solid var(--data-hovered-inner-border-color);
+    outline: var(--data-normal-outer-border-width) solid var(--data-hovered-outer-border-color);
+    border-radius: var(--data-normal-border-radius) !important;
     filter: none !important;
 }
 
-/* Selected state - border must match .biz-card-div.clone. All colors except white layer from palette-utils. */
+/* Selected state - same padding/border/width as normal (margin from container) */
 .biz-resume-div.selected {
     background-color: var(--data-background-color-selected) !important;
     color: var(--data-foreground-color-selected) !important;
-    padding: var(--data-selected-padding);
-    
-    /* Reduce width by 16px to prevent border clipping (8px each side for 8px box-shadow + margins) */
-    width: calc(100% - 16px) !important;
-    margin-left: 8px; /* Center the narrower selected rDiv */
-    margin-right: 8px;
-    
-    /* Purple from palette-utils; white ring (#ffffff) is fixed */
-    border: 2px solid #801a81 !important;
+    padding: var(--data-normal-padding);
+    border: var(--data-normal-inner-border-width) solid #801a81 !important;
     outline: none !important;
     box-shadow:
         0 0 0 3px #ffffff,
         0 0 0 8px #801a81,
         0 3px 12px rgba(128, 0, 128, 0.4) !important;
-    
-    border-radius: var(--data-selected-border-radius) !important;
-    margin-top: var(--data-selected-margin-top);
+    border-radius: var(--data-normal-border-radius) !important;
     filter: none !important;
 }
 

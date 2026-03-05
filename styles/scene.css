@@ -106,14 +106,14 @@ body .biz-resume-div,
     filter: invert(1);
 }
 
-/* Hovered state - identical to .biz-resume-div.hovered (same vars). No blur on hover. */
+/* Hovered state - same padding/border as normal so text does not shift */
 .biz-card-div.hovered {
     background-color: var(--data-background-color-hovered) !important;
     color: var(--data-foreground-color-hovered) !important;
-    padding: var(--data-hovered-padding);
-    border: var(--data-hovered-inner-border-width) solid var(--data-hovered-inner-border-color);
-    outline: var(--data-hovered-outer-border-width) solid var(--data-hovered-outer-border-color);
-    border-radius: var(--data-hovered-border-radius);
+    padding: var(--data-normal-padding);
+    border: var(--data-normal-inner-border-width) solid var(--data-hovered-inner-border-color);
+    outline: var(--data-normal-outer-border-width) solid var(--data-hovered-outer-border-color);
+    border-radius: var(--data-normal-border-radius);
     box-shadow: none !important;
     filter: none !important; /* Override Z-based filter so text has no blur on hover */
 }
@@ -123,23 +123,20 @@ body .biz-resume-div,
     filter: invert(1);
 }
 
-/* Clone = selected card. Border must match .biz-resume-div.selected. All colors except the white layer come from palette-utils (selected border purple). */
+/* Clone = selected card. Same padding/border width as normal so text does not shift. */
 .biz-card-div.clone {
     background-color: var(--data-background-color-selected) !important;
     color: var(--data-foreground-color-selected) !important;
-    padding: var(--data-selected-padding);
-    
-    /* Purple (#801a81) from palette-utils; white ring (#ffffff) is fixed */
-    border: 2px solid #801a81 !important;
+    padding: var(--data-normal-padding);
+    border: var(--data-normal-inner-border-width) solid #801a81 !important;
     outline: none !important;
     box-shadow:
-        0 0 0 3px #ffffff,                         /* 3px white ring (fixed; not from palette) */
-        0 0 0 8px #801a81,                         /* 5px outer purple from palette-utils */
-        0 3px 12px rgba(128, 0, 128, 0.4) !important; /* Drop shadow for depth */
-    
-    border-radius: var(--data-selected-border-radius);
-    filter: none !important; /* Override parallax filter */
-    z-index: 99; /* Bring to the very front */
+        0 0 0 3px #ffffff,
+        0 0 0 8px #801a81,
+        0 3px 12px rgba(128, 0, 128, 0.4) !important;
+    border-radius: var(--data-normal-border-radius);
+    filter: none !important;
+    z-index: 99;
 }
 /* Contrast icons (url/back/img): palette-utils uses black PNGs only; when variant is white, invert so icon is white on dark. See docs/CONTRAST-ICONS-FLOCK-OF-POSTCARDS.md. */
 .biz-card-div.clone[data-icon-set-selected-variant="white"] .url-icon,
@@ -194,29 +191,32 @@ body .biz-resume-div[data-icon-set-variant="white"] .img-icon,
 #resume-container .biz-resume-div[data-icon-set-variant="white"] .img-icon {
     filter: invert(1);
 }
-/* rDiv layout (position, display, etc.) - border already set in shared normal block above */
+/* rDiv layout: same width/margin in all states so text does not shift selected ↔ unselected */
 .biz-resume-div,
 body .biz-resume-div,
 #resume-container .biz-resume-div,
 #resume-content-div-wrapper .biz-resume-div {
     background-color: var(--data-background-color) !important;
     color: var(--data-foreground-color) !important;
+    width: calc(100% - 16px);
+    margin-left: 8px;
+    margin-right: 8px;
 }
 
-/* Hovered state for resume divs - identical to .biz-card-div.hovered (same vars) */
+/* Hovered state - same padding/border as normal so text does not shift */
 .biz-resume-div.hovered,
 body .biz-resume-div.hovered,
 #resume-container .biz-resume-div.hovered,
 #resume-content-div-wrapper .biz-resume-div.hovered {
     background-color: var(--data-background-color-hovered) !important;
     color: var(--data-foreground-color-hovered) !important;
-    padding: var(--data-hovered-padding);
-    border: var(--data-hovered-inner-border-width) solid var(--data-hovered-inner-border-color);
-    outline: var(--data-hovered-outer-border-width) solid var(--data-hovered-outer-border-color);
-    border-radius: var(--data-hovered-border-radius);
+    padding: var(--data-normal-padding);
+    border: var(--data-normal-inner-border-width) solid var(--data-hovered-inner-border-color);
+    outline: var(--data-normal-outer-border-width) solid var(--data-hovered-outer-border-color);
+    border-radius: var(--data-normal-border-radius);
     box-shadow: none !important;
     filter: none !important;
-    z-index: 98; /* Bring just below selected card */
+    z-index: 98;
     text-shadow: none !important;
 }
 .biz-resume-div.hovered[data-icon-set-hovered-variant="white"] .url-icon,
@@ -231,25 +231,22 @@ body .biz-resume-div.hovered[data-icon-set-hovered-variant="white"] .img-icon,
     filter: invert(1);
 }
 
-/* Selected state for resume divs - identical to .biz-card-div.clone. All colors except white layer from palette-utils. */
+/* Selected state - same padding/border width as normal so text does not shift */
 .biz-resume-div.selected,
 body .biz-resume-div.selected,
 #resume-container .biz-resume-div.selected,
 #resume-content-div-wrapper .biz-resume-div.selected {
     background-color: var(--data-background-color-selected) !important;
     color: var(--data-foreground-color-selected) !important;
-    padding: var(--data-selected-padding);
-    
-    /* Purple (#801a81) from palette-utils; white ring (#ffffff) is fixed */
-    border: 2px solid #801a81 !important;
+    padding: var(--data-normal-padding);
+    border: var(--data-normal-inner-border-width) solid #801a81 !important;
     outline: none !important;
     box-shadow:
-        0 0 0 3px #ffffff,                         /* 3px white ring (fixed; not from palette) */
-        0 0 0 8px #801a81,                         /* 5px outer purple from palette-utils */
-        0 3px 12px rgba(128, 0, 128, 0.4) !important; /* Drop shadow for depth */
-    
-    border-radius: var(--data-selected-border-radius);
-    z-index: 99; /* Bring to the very front */
+        0 0 0 3px #ffffff,
+        0 0 0 8px #801a81,
+        0 3px 12px rgba(128, 0, 128, 0.4) !important;
+    border-radius: var(--data-normal-border-radius);
+    z-index: 99;
 }
 /* Contrast icons in selected resume div: invert when variant is white (same as clone). */
 .biz-resume-div.selected[data-icon-set-selected-variant="white"] .url-icon,
