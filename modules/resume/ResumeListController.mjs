@@ -40,12 +40,12 @@ class ResumeListController extends BaseComponent {
     super('ResumeListController');
     // Singleton pattern: return existing instance if one exists
     if (ResumeListController.instance) {
-      console.log('[DEBUG] ResumeListController: Returning existing singleton instance');
+      console.debug('[ResumeListController] existing instance');
       return ResumeListController.instance;
     }
 
     // Create new instance
-    console.log('[DEBUG] ResumeListController: Creating new singleton instance');
+    console.debug('[ResumeListController] new instance');
     
     this.resumeContentDiv = null; // Defer initialization
     this.infiniteScroller = null;
@@ -53,8 +53,9 @@ class ResumeListController extends BaseComponent {
     this.originalJobsData = null;
     this.currentSortRule = { field: 'startDate', direction: 'desc' }; // Default sort rule
     this.sortedIndices = []; // Maps sorted position to original index
+    this.removedJobNumbers = new Set(); // Jobs removed from listing via rDiv close
     // isInitialized is managed by BaseComponent automatically
-    
+
     this._setupColorPaletteListener();
     this._setupSelectionListeners();
     
@@ -64,7 +65,7 @@ class ResumeListController extends BaseComponent {
     // Add to window for global access and debugging
     window.resumeListController = this;
     
-    console.log('[DEBUG] ResumeListController: Singleton instance created and stored');
+    console.debug('[ResumeListController] singleton stored');
   }
 
   getComponentName() {
@@ -84,7 +85,7 @@ class ResumeListController extends BaseComponent {
   // registerForInitialization() method removed - BaseComponent handles registration automatically
 
   initialize({ CardsController, JobsDataManager, ColorPaletteManager }) {
-    console.log('[ResumeListController] Initializing with dependencies:', {
+    console.debug('[ResumeListController] initializing', {
       CardsController: !!CardsController,
       JobsDataManager: !!JobsDataManager,
       ColorPaletteManager: !!ColorPaletteManager
@@ -101,7 +102,7 @@ class ResumeListController extends BaseComponent {
     // Get jobs data directly (no longer using JobsDataManager)
     this.originalJobsData = jobs;
     
-    console.log('[ResumeListController] Initialization complete - DOM operations moved to setupDom()');
+    console.debug('[ResumeListController] init complete');
   }
 
     /**
@@ -111,7 +112,7 @@ class ResumeListController extends BaseComponent {
      */
     setResumeContentDivElement(element) {
         this.resumecontentdivElement = element;
-        console.log('[ResumeListController] resume-content-div element set via template ref');
+        console.debug('[ResumeListController] resume-content-div ref set');
         
         // Apply any setup that was waiting for this element
         if (this.resumecontentdivElement) {
@@ -126,7 +127,7 @@ class ResumeListController extends BaseComponent {
      */
     setResumeContentDivWrapperElement(element) {
         this.resumecontentdivwrapperElement = element;
-        console.log('[ResumeListController] resume-content-div-wrapper element set via template ref');
+        console.debug('[ResumeListController] resume-content-div-wrapper ref set');
         
         // Apply any setup that was waiting for this element
         if (this.resumecontentdivwrapperElement) {
@@ -141,7 +142,7 @@ class ResumeListController extends BaseComponent {
     _setupResumeContentDivWrapper() {
         // DOM setup is handled by the main setupDom() method for IM compliance
         // This method exists for template ref injection pattern
-        console.log('[ResumeListController] resume-content-div-wrapper element available via template ref');
+        console.debug('[ResumeListController] wrapper ref available');
     }
 
     /**
@@ -151,7 +152,7 @@ class ResumeListController extends BaseComponent {
     _setupResumeContentDiv() {
         // DOM setup is handled by the main setupDom() method for IM compliance
         // This method exists for template ref injection pattern
-        console.log('[ResumeListController] resume-content-div element available via template ref');
+        console.debug('[ResumeListController] content div ref available');
     }
 
     /**
@@ -159,7 +160,7 @@ class ResumeListController extends BaseComponent {
      * DOM operations moved from initialize() for proper separation
      */
     async setupDom() {
-        console.log('[ResumeListController] DOM setup phase - setting up resume elements...');
+        console.debug('[ResumeListController] DOM setup');
         
         // Use template refs instead of document.resumecontentdivElement
         this.resumeContentDiv = this.resumecontentdivElement;
@@ -181,16 +182,16 @@ class ResumeListController extends BaseComponent {
                 }
             });
             
-            console.log('[ResumeListController] Created and added', this.bizResumeDivs.length, 'resume divs to DOM');
+            console.debug('[ResumeListController] resume divs added', this.bizResumeDivs.length);
         } else {
             console.warn('[ResumeListController] setupDom: CardsController or bizCardDivs not available');
         }
         
-        console.log('[ResumeListController] DOM setup complete');
+        console.debug('[ResumeListController] DOM setup complete');
     }
 
   reinitialize(bizResumeDivs) {
-    console.log('[DEBUG] ResumeListController: Reinitializing with singleton pattern');
+    console.debug('[ResumeListController] reinitializing');
     
     this.bizResumeDivs = bizResumeDivs;
     
@@ -237,8 +238,7 @@ class ResumeListController extends BaseComponent {
      */
     handleJobSelected(event) {
         const { jobNumber, source } = event.detail;
-        console.log(`[DEBUG] ResumeListController.handleJobSelected: jobNumber=${jobNumber}, source=${source}`);
-        console.log(`[DEBUG] About to call enhanced scrolling for job ${jobNumber}`);
+        console.debug('[ResumeListController] handleJobSelected', jobNumber);
         
         // rDiv scrolling is now handled by ResumeItemsController when rDivs are clicked
         // No centralized scrolling needed here
@@ -250,7 +250,7 @@ class ResumeListController extends BaseComponent {
      * Handle new selection-cleared events for bidirectional scrolling  
      */
     handleJobSelectionCleared(event) {
-        console.log(`[DEBUG] ResumeListController.handleJobSelectionCleared`);
+        console.debug('[ResumeListController] handleJobSelectionCleared');
         // Visual clearing handled by SelectionManager and ResumeItemsController
         // No rDiv scrolling needed when selection is cleared
     }
@@ -272,18 +272,51 @@ class ResumeListController extends BaseComponent {
         console.warn('[DEPRECATED] ResumeListController.clearVisualSelection is deprecated. Use selectionManager.clearSelection() instead.');
         // Visual selection is now handled by SelectionManager
     }
+
+  /**
+   * Remove a job's rDiv from the resume listing (persists until reload).
+   */
+  removeJobFromListing(jobNumber) {
+    if (!this.bizResumeDivs || !this.infiniteScroller) return;
+    this.removedJobNumbers.add(jobNumber);
+    this._setItemsFromSorted();
+  }
+
+  /**
+   * Ensure a job's rDiv is in the listing (if it was removed, add it back). Call before scrolling to that job.
+   */
+  ensureJobInListing(jobNumber) {
+    if (!this.bizResumeDivs || !this.infiniteScroller) return;
+    if (!this.removedJobNumbers.has(jobNumber)) return;
+    this.removedJobNumbers.delete(jobNumber);
+    this._setItemsFromSorted();
+  }
+
+  _setItemsFromSorted() {
+    const sortedDivs = this.sortedIndices
+      .filter((j) => !this.removedJobNumbers.has(j))
+      .map((j) => this.bizResumeDivs[j]);
+    const selectedJobNumber = selectionManager.getSelectedJobNumber();
+    const visibleJobNumbers = this.sortedIndices.filter((j) => !this.removedJobNumbers.has(j));
+    let start = 0;
+    if (selectedJobNumber !== null) {
+      const idx = visibleJobNumbers.indexOf(selectedJobNumber);
+      if (idx !== -1) start = idx;
+    }
+    this.infiniteScroller.setItems(sortedDivs, start);
+  }
   // endregion
 
   setupInfiniteScrolling() {
-    console.log(`[DEBUG] ResumeListController.setupInfiniteScrolling: Setting up infinite scroller (singleton)`);
+    console.debug('[ResumeListController] setupInfiniteScrolling');
     
     if (!this.bizResumeDivs || this.bizResumeDivs.length === 0) {
-      console.log(`[DEBUG] setupInfiniteScrolling: No bizResumeDivs available`);
+      console.debug('[ResumeListController] no bizResumeDivs');
       return;
     }
 
     // Create the infinite scroller - the constructor handles the singleton pattern
-    console.log(`[DEBUG] ResumeListController.setupInfiniteScrolling: Creating infinite scroller instance`);
+    console.debug('[ResumeListController] creating infinite scroller');
     this.infiniteScroller = new InfiniteScrollingContainer(
       this.resumeContentWrapper, // scrollport element
       this.resumeContentDiv,     // content element
@@ -297,23 +330,24 @@ class ResumeListController extends BaseComponent {
       return;
     }
 
-    console.log(`[DEBUG] ResumeListController.setupInfiniteScrolling: Infinite scroller ready, setting items`);
+    console.debug('[ResumeListController] infinite scroller ready');
     
     // Update sort order and build sorted divs *before* any scroll (so originalItems is set before scrollToIndex)
     this.updateSortedIndices();
     
     // Debug the mapping before creating sortedDivs
-    console.log(`[DEBUG] setupInfiniteScrolling: sortedIndices=`, this.sortedIndices);
-    console.log(`[DEBUG] setupInfiniteScrolling: sortedDivs job numbers:`);
+    console.debug('[ResumeListController] sortedIndices set');
     // this.sortedIndices.forEach((jobNumber, sortedIndex) => {
     //   console.log(`  Index ${sortedIndex} -> Job ${jobNumber}`);
     // });
     
-    // Create sortedDivs array in the correct order
-    const sortedDivs = this.sortedIndices.map(originalIndex => this.bizResumeDivs[originalIndex]);
+    // Create sortedDivs array in the correct order (excluding removed)
+    const sortedDivs = this.sortedIndices
+      .filter((jobNum) => !this.removedJobNumbers.has(jobNum))
+      .map((originalIndex) => this.bizResumeDivs[originalIndex]);
     
     // Verify the mapping is correct
-    console.log(`[DEBUG] setupInfiniteScrolling: Verifying sortedDivs mapping:`);
+    console.debug('[ResumeListController] verifying sortedDivs');
     // sortedDivs.forEach((div, sortedIndex) => {
     //   if (div) {
     //     const jobNumber = div.getAttribute('data-job-number');
@@ -326,20 +360,13 @@ class ResumeListController extends BaseComponent {
     //   }
     // });
     
-    // Get the currently selected job number
+    // Get the currently selected job number (startingIndex in visible/filtered list)
     const selectedJobNumber = selectionManager.getSelectedJobNumber();
+    const visibleJobNumbers = this.sortedIndices.filter((j) => !this.removedJobNumbers.has(j));
     let startingIndex = 0;
-    
     if (selectedJobNumber !== null) {
-      const selectedSortedIndex = this.sortedIndices.indexOf(selectedJobNumber);
-      if (selectedSortedIndex !== -1) {
-        startingIndex = selectedSortedIndex;
-        console.log(`[DEBUG] setupInfiniteScrolling: selectedJobNumber= ${selectedJobNumber} startingIndex= ${startingIndex}`);
-      } else {
-        console.log(`[DEBUG] setupInfiniteScrolling: selectedJobNumber ${selectedJobNumber} not found in sortedIndices`);
-      }
-    } else {
-      console.log(`[DEBUG] setupInfiniteScrolling: selectedJobNumber= null startingIndex= ${startingIndex}`);
+      const idx = visibleJobNumbers.indexOf(selectedJobNumber);
+      if (idx !== -1) startingIndex = idx;
     }
     
     // Debug: Show expected job numbers at each position
@@ -956,27 +983,20 @@ class ResumeListController extends BaseComponent {
     }
   }
 
-  scrollToJobNumber(jobNumber, caller = '') {
-    // console.log(`[DEBUG] ResumeListController: scrollToJobNumber=${jobNumber}, caller=${caller}`);
-    
-    if (!this.infiniteScroller) {
-      console.log(`[DEBUG] ResumeListController: infiniteScroller is null!`);
-      return;
-    }
+  /**
+   * Scroll the resume list so the element with this id is in view.
+   * For rDiv ids (resume-N), ensures the job is in the list first.
+   */
+  scrollToElementId(id) {
+    if (!id) return;
+    const m = String(id).match(/^resume-(\d+)$/);
+    if (m) this.ensureJobInListing(parseInt(m[1], 10));
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }
 
-    // Find the sortedIndex for this jobNumber
-    const sortedIndex = this.sortedIndices.indexOf(jobNumber);
-    
-    if (sortedIndex === -1) {
-      console.log(`[DEBUG] scrollToJobNumber: jobNumber ${jobNumber} not found in sortedIndices!`);
-      return;
-    }
-    
-    // console.log(`[DEBUG] scrollToJobNumber: Scrolling to job ${jobNumber} at sorted index ${sortedIndex}`);
-    
-    // Direct scroll to the index - this is the single scroll operation
-    this.infiniteScroller.scrollToIndex(sortedIndex, true);
-    this.infiniteScroller.currentIndex = sortedIndex;
+  scrollToJobNumber(jobNumber, caller = '') {
+    this.scrollToElementId('resume-' + jobNumber);
   }
 
   updateSortedIndices() {

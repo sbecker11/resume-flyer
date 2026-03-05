@@ -59,14 +59,7 @@ export function useCardsController() {
                      colorPaletteService.isReady?.value &&
                      sceneContainerService.isReady?.value
         
-        console.log('[useCardsController] Dependencies ready:', {
-            bullsEye: bullsEyeService.isReady?.value,
-            timeline: timelineService.isReady?.value,
-            colorPalette: colorPaletteService.isReady?.value,
-            sceneContainer: sceneContainerService.isReady?.value,
-            allReady: ready
-        })
-        
+        console.debug('[CardsController] dependencies ready:', ready)
         return ready
     })
     
@@ -79,7 +72,7 @@ export function useCardsController() {
         // Listen for scene-plane-ready event to initialize when ScenePlane dependency is satisfied
         const handleScenePlaneReady = () => {
             if (!isInitialized.value && allDependenciesReady.value) {
-                console.log('[useCardsController] Scene-plane ready and all dependencies ready, initializing cards...')
+                console.debug('[CardsController] initializing cards')
                 initializeCardsController()
             }
         }
@@ -107,16 +100,15 @@ export function useCardsController() {
 
     async function initializeCardsController() {
         if (isInitialized.value) {
-            console.log('[CardsController] Already initialized, skipping')
+            console.debug('[CardsController] already initialized')
             return
         }
 
         try {
-            console.log('[CardsController] Initializing with Vue composable pattern...')
-            
+            console.debug('[CardsController] initializing')
             // Initialize timeline first
             if (!timelineInitialized.value) {
-                console.log('[CardsController] Initializing timeline...')
+                console.debug('[CardsController] initializing timeline')
                 initialize(jobs)
             }
             
@@ -133,41 +125,26 @@ export function useCardsController() {
             const existingSkillCards = scenePlaneEl.querySelectorAll('.skill-card-div')
             existingSkillCards.forEach(card => card.remove())
 
-            // Wait for palettes to be ready before applying colors
-            console.log('[CardsController] Waiting for palettes to be ready...')
             await readyPromise
-            console.log('[CardsController] Palettes are ready, creating cards...')
-            
-            // Create business cards for each job
             const cards = []
-            console.log(`[CardsController] Creating ${jobs.length} business cards...`)
             for (let index = 0; index < jobs.length; index++) {
                 const job = jobs[index]
-                console.log(`[CardsController] Creating card ${index} for ${job.employer}`)
                 const card = await createBizCardDiv(job, index, scenePlaneEl)
                 if (card) {
                     scenePlaneEl.appendChild(card)
                     cards.push(card)
-                    
-                    // Register card in optimized registry (replaces future document.getElementById calls)
                     cardRegistry.registerCardElement(index, card)
-                    console.log(`[CardsController] Card ${index} created and appended - position: ${card.style.left}, ${card.style.top}`)
-                    console.log(`[CardsController] Registered card ${index} in optimized registry`)
-                    
-                    // Apply color palette to the card
                     try {
-                        console.log(`[CardsController] About to apply palette to card ${index} with data-color-index: ${card.getAttribute('data-color-index')}`)
                         await applyPaletteToElement(card)
-                        console.log(`[CardsController] ✅ Successfully applied palette to job ${index}`)
                     } catch (error) {
                         console.error(`[CardsController] ❌ Could not apply palette to job ${index}:`, error)
                         throw error
                     }
                 } else {
-                    console.warn(`[CardsController] Card creation failed for job ${index}`)
+                    console.warn('[CardsController] Card creation failed for job', index)
                 }
             }
-            console.log(`[CardsController] Total cards created: ${cards.length}`)
+            console.debug('[CardsController] business cards created:', cards.length)
 
             bizCardDivs.value = cards
 
@@ -220,7 +197,7 @@ export function useCardsController() {
                     }
                 }
             }
-            console.log(`[CardsController] ✅ Created ${Object.keys(skillCardIdsBySkillName).length} shared skill cards (referenced by biz cards)`)
+            console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
 
             // One-time flock-of-postcards–style reposition: spread skill cards over timeline, cluster X at left/right edges, repulsion
             repositionSkillCardsToWeightedAverages(scenePlaneEl)
@@ -229,12 +206,10 @@ export function useCardsController() {
             
             isInitialized.value = true
             
-            console.log(`[CardsController] ✅ Created ${cards.length} business cards`)
-            
-            // CRITICAL: Pre-create all clones after cards are ready
+            console.debug('[CardsController] init complete, cards:', cards.length)
             setTimeout(async () => {
                 await preCreateAllClones()
-                console.log(`[CardsController] ✅ Pre-created clones`)
+                console.debug('[CardsController] pre-created clones')
             }, 100)
             
         } catch (error) {
@@ -250,7 +225,7 @@ export function useCardsController() {
         // Check if card already exists in registry (no fallback to DOM needed)
         let existingCard = cardRegistry.getCardElement(jobNumber)
         if (existingCard) {
-            console.log(`[DEBUG] Card ${cardId} already exists, skipping creation`)
+            console.debug('[CardsController] card exists', cardId)
             return null
         }
         
@@ -308,7 +283,7 @@ export function useCardsController() {
         card.setAttribute('data-color-index', jobNumber) // Use jobNumber as color index
         
         // Debug card creation attributes for all jobs (to identify patterns)
-        console.log(`[DEBUG] Job#${jobNumber} - Card creation attributes:`, {
+        console.debug('[CardsController] card attributes Job#' + jobNumber, {
             id: card.id,
             dataJobNumber: card.getAttribute('data-job-number'),
             dataColorIndex: card.getAttribute('data-color-index'),
@@ -334,7 +309,7 @@ export function useCardsController() {
         card.style.left = `${x}px`
         card.style.top = `${y}px`
         card.style.width = `${cardWidth}px`
-        console.log(`[CardsController] Card ${jobNumber} positioned at x:${x}, y:${y}, width:${cardWidth}. Timeline initialized: ${timelineInitialized.value}`)
+        console.debug('[CardsController] card positioned', jobNumber, { x, y })
         
         // Calculate duration-based height (equivalent to setGeometry)
         try {
@@ -375,8 +350,8 @@ export function useCardsController() {
                 card.setAttribute('data-sceneTop', sceneTop)
                 card.setAttribute('data-sceneBottom', sceneBottom)
                 
-                console.log(`[CardsController] Job ${jobNumber} (${job.employer}): ${job.start} to ${job.end || 'Present'} = ${sceneHeight}px height`)
-                console.log(`[CardsController] DEBUG - Parsed dates:`, {
+                console.debug('[CardsController] job height', jobNumber, sceneHeight)
+                console.debug('[CardsController] parsed dates', {
                     jobStart: job.start,
                     jobEnd: job.end,
                     jobStartDate: jobStartDate.toISOString().slice(0, 10),
@@ -386,14 +361,14 @@ export function useCardsController() {
                 const reversedStartDate = getDateForPosition(sceneBottom)
                 const reversedEndDate = getDateForPosition(sceneTop)
                 
-                console.log(`[CardsController] DEBUG - Timeline positions:`, {
+                console.debug('[CardsController] timeline positions', {
                     sceneTop: sceneTop,
                     sceneBottom: sceneBottom,
                     sceneHeight: sceneHeight,
                     startDateAsYear: jobStartDate.getFullYear() + jobStartDate.getMonth()/12 + jobStartDate.getDate()/365.25/12,
                     endDateAsYear: jobEndDate.getFullYear() + jobEndDate.getMonth()/12 + jobEndDate.getDate()/365.25/12
                 })
-                console.log(`[CardsController] DEBUG - Reverse calculation verification:`, {
+                console.debug('[CardsController] reverse calc', {
                     originalStart: jobStartDate.toISOString().slice(0, 10),
                     reversedStart: reversedStartDate.toISOString().slice(0, 10),
                     originalEnd: jobEndDate.toISOString().slice(0, 10),
@@ -555,14 +530,14 @@ export function useCardsController() {
         
         // Add hover handlers for synchronization with rDivs
         card.addEventListener('mouseenter', () => {
-            console.log(`[CardsController] Card hover: Job ${jobNumber}`)
+            console.debug('[CardsController] card hover', jobNumber)
             if (selectionManager) {
                 selectionManager.hoverJobNumber(jobNumber, 'CardsController.mouseenter')
             }
         })
         
         card.addEventListener('mouseleave', () => {
-            console.log(`[CardsController] Card hover end: Job ${jobNumber}`)
+            console.debug('[CardsController] card hover end', jobNumber)
             if (selectionManager) {
                 selectionManager.clearHover('CardsController.mouseleave')
             }
@@ -589,6 +564,7 @@ export function useCardsController() {
         skillCard.id = id
         skillCard.setAttribute('data-skill-name', skillName)
         skillCard.setAttribute('data-referencing-biz-card-ids', referencingBizCardIds.join(','))
+        // Use the first referencing job’s job ID for palette: same job ID → same swatch index as biz cards.
         const firstBiz = document.getElementById(referencingBizCardIds[0])
         const firstJobIndex = firstBiz != null ? parseInt(firstBiz.getAttribute('data-job-number'), 10) : 0
         if (!Number.isNaN(firstJobIndex)) {
@@ -617,21 +593,18 @@ export function useCardsController() {
         skillCard.style.display = 'flex'
         skillCard.style.alignItems = 'center'
         skillCard.style.justifyContent = 'center'
-        skillCard.style.padding = '4px'
-        skillCard.style.fontSize = '11px'
-        skillCard.style.textAlign = 'center'
+        skillCard.style.textAlign = 'left'
         skillCard.style.wordBreak = 'break-word'
         skillCard.style.filter = filters.get_filterStr_from_z(sceneZ)
-        const bizTitlesHtml = referencingBizCardIds.map(bizCardId => {
-            const el = document.getElementById(bizCardId)
-            const title = el ? (el.getAttribute('data-biz-card-title') || el.querySelector('.biz-details-employer')?.textContent?.trim() || bizCardId) : bizCardId
-            return `<span class="skill-card-biz-title" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; text-decoration: underline;">${escapeHtml(title)}</span>`
-        }).join(', ')
+        const backIconUrl = '/static_content/icons/anchors/icons8-back-16-black.png'
+        const backIconsHtml = referencingBizCardIds.map(bizCardId => {
+            return `<span class="skill-card-biz-title skill-card-back-icon" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; display: inline-flex;"><img class="back-icon" src="${backIconUrl}" alt="" width="16" height="16" aria-hidden="true"></span>`
+        }).join('')
         skillCard.innerHTML = `
-            <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%;">
+            <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%;">
                 <span class="skill-card-label">${escapeHtml(skillName)}</span>
-                ${bizTitlesHtml ? `<div class="skill-card-biz-titles" style="font-size: 8px; opacity: 0.9; line-height: 1.1; max-height: 2.2em; overflow: hidden; text-overflow: ellipsis;">${bizTitlesHtml}</div>` : ''}
-                <span class="skill-card-z" style="font-size: 8px; opacity: 0.8;">z:${sceneZ}</span>
+                ${backIconsHtml ? `<div class="skill-card-back-icons" style="display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start; align-items: center;">${backIconsHtml}</div>` : ''}
+                <span class="skill-card-z" style="opacity: 0.8;">z:${sceneZ}</span>
             </div>`
 
         skillCard.addEventListener('click', (e) => {
@@ -781,7 +754,7 @@ export function useCardsController() {
             p.card.style.left = `${p.x}px`
             p.card.style.top = `${p.y}px`
         }
-        console.log(`[CardsController] Repositioned ${skillCards.length} skill cards (timeline Y ${minTop}-${maxBottom}, X around left/right edges)`)
+        console.debug('[CardsController] skill cards repositioned', skillCards.length)
     }
 
     // Viewport change handler for repositioning selected clones
@@ -808,60 +781,38 @@ export function useCardsController() {
         })
         
         if (clones.length > 0) {
-            console.log(`[useCardsController] Repositioned ${clones.length} clones to scene center after viewport change`)
+            console.debug('[CardsController] clones repositioned', clones.length)
         }
     }
 
     // Set up event listeners with retry mechanism
     const setupEventListeners = () => {
-        console.log('[useCardsController] 🎧 Setting up event listeners...')
-        console.log('[useCardsController] selectionManager availability:', !!selectionManager)
-        console.log('[useCardsController] selectionManager instanceId:', selectionManager?.instanceId)
-        
+        console.debug('[CardsController] setting up event listeners')
         if (!selectionManager) {
             throw new Error('[useCardsController] selectionManager not available')
         }
-        
-        // Test a simple event to verify event system works
         try {
-            console.log('[useCardsController] 🧪 Testing event system...')
-            selectionManager.addEventListener('test-event', () => {
-                console.log('[useCardsController] ✅ Test event received - event system working!')
-            })
+            selectionManager.addEventListener('test-event', () => {})
             selectionManager.eventTarget.dispatchEvent(new CustomEvent('test-event'))
         } catch (error) {
-            console.error('[useCardsController] ❌ Event system test failed:', error)
+            console.error('[CardsController] event system test failed:', error)
             throw error
         }
-        
-        // Listen for selection events to handle clone creation (legacy)
         try {
             selectionManager.addEventListener('job-selected', handleJobSelected)
             selectionManager.addEventListener('card-selected', handleCardSelected)
             selectionManager.addEventListener('selection-cleared', handleSelectionCleared)
             selectionManager.addEventListener('cards-unselect-skill', handleCardsUnselectSkill)
-            console.log('[useCardsController] ✅ Added job-selected, card-selected, selection-cleared, cards-unselect-skill listeners')
-            
-            // Listen for new command-based events
             selectionManager.addEventListener('cards-select', handleCardsSelect)
             selectionManager.addEventListener('cards-unselect', handleCardsUnselect)
             selectionManager.addEventListener('cards-scrollIntoView', handleCardsScrollIntoView)
-            console.log('[useCardsController] ✅ Added command-based event listeners')
-            console.log('[useCardsController] handleJobSelected type:', typeof handleJobSelected)
-            
-            // Listen for hover events to handle cDiv visual feedback
             selectionManager.addEventListener('job-hovered', handleJobHovered)
             selectionManager.addEventListener('hoverCleared', handleHoverCleared)
-            console.log('[useCardsController] ✅ Added hover event listeners')
-            
-            // Listen for viewport changes to reposition selected clones
             window.addEventListener('viewport-changed', handleViewportChangedForClones)
             window.addEventListener('resize', handleViewportChangedForClones)
-            
-            // Set a flag to indicate listeners are set up
             window._cardsControllerListenersReady = true
             window._cardsControllerSelectionManagerId = selectionManager.instanceId
-            console.log('[useCardsController] 🚀 All event listeners set up and ready!')
+            console.debug('[CardsController] event listeners ready')
             
             return true
         } catch (error) {
@@ -873,43 +824,26 @@ export function useCardsController() {
     // CRITICAL FIX: Use window.selectionManager instead of imported selectionManager
     // This ensures we use the same singleton instance that's available globally
     const setupEventListenersFixed = () => {
-        console.log('[useCardsController] 🎧 Setting up event listeners (FIXED VERSION)...')
-        
-        // Use window.selectionManager to ensure we get the same singleton instance
+        console.debug('[CardsController] setting up event listeners (fixed)')
         const globalSelectionManager = window.selectionManager
-        console.log('[useCardsController] globalSelectionManager availability:', !!globalSelectionManager)
-        console.log('[useCardsController] globalSelectionManager instanceId:', globalSelectionManager?.instanceId)
-        
         if (!globalSelectionManager) {
-            console.error('[useCardsController] ❌ CRITICAL: window.selectionManager not available!')
+            console.error('[CardsController] window.selectionManager not available')
             return false
         }
-        
-        // Test a simple event to verify event system works
         try {
-            console.log('[useCardsController] 🧪 Testing event system with global selectionManager...')
-            globalSelectionManager.addEventListener('test-event-fixed', () => {
-                console.log('[useCardsController] ✅ Test event received - global event system working!')
-            })
+            globalSelectionManager.addEventListener('test-event-fixed', () => {})
             globalSelectionManager.eventTarget.dispatchEvent(new CustomEvent('test-event-fixed'))
         } catch (error) {
-            console.error('[useCardsController] ❌ Global event system test failed:', error)
+            console.error('[CardsController] global event test failed:', error)
             throw error
         }
-        
-        // Listen for selection events to handle clone creation
         try {
             globalSelectionManager.addEventListener('job-selected', handleJobSelected)
             globalSelectionManager.addEventListener('card-selected', handleCardSelected)
             globalSelectionManager.addEventListener('selection-cleared', handleSelectionCleared)
             globalSelectionManager.addEventListener('cards-unselect-skill', handleCardsUnselectSkill)
-            console.log('[useCardsController] ✅ Added job-selected, card-selected, selection-cleared, cards-unselect-skill listeners (FIXED)')
-            console.log('[useCardsController] handleJobSelected type:', typeof handleJobSelected)
-            
-            // Listen for hover events to handle cDiv visual feedback
             globalSelectionManager.addEventListener('job-hovered', handleJobHovered)
             globalSelectionManager.addEventListener('hoverCleared', handleHoverCleared)
-            console.log('[useCardsController] ✅ Added hover event listeners (FIXED)')
             
             // Listen for viewport changes to reposition selected clones
             window.addEventListener('viewport-changed', handleViewportChangedForClones)
@@ -1118,8 +1052,12 @@ export function useCardsController() {
                 setTimeout(() => scrollCDivHeaderIntoView(card.jobNumber), 100)
             }
         } else {
-            createSkillCardClone(card.skillCardId)
-            hideSkillCardOriginal(card.skillCardId)
+            // Skill selected: show only in resume listing; do not show selected clone in scene (dual in scene stays unselected)
+            if (previousCard?.type === 'skill' && previousCard.skillCardId !== card.skillCardId) {
+                removeSkillCardClone(previousCard.skillCardId)
+                showSkillCardOriginal(previousCard.skillCardId)
+            }
+            // Do not create skill card clone or hide original — scene keeps skill cards in place
         }
     }
 

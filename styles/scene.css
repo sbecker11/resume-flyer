@@ -145,37 +145,56 @@ body .biz-resume-div,
     filter: invert(1);
 }
 
-/* Skill cards (ported from flock-of-postcards card-div) - small chips around bizcards; always above biz cards */
+/* Skill cards – parity with flock-of-postcards .card-div.
+ * Class mapping: flock-of-postcards uses .bizcard-div for biz cards and .card-div for skill cards;
+ * resume-flock uses .biz-card-div and .skill-card-div respectively. */
 .skill-card-div {
     position: absolute;
     box-sizing: border-box;
     cursor: pointer;
     pointer-events: auto;
     z-index: 10; /* Base above biz cards (JS sets 4–9); ensures skill cards only render above biz cards */
-    font-family: Arial, sans-serif !important;
+    font-family: "Roboto", sans-serif;
+    font-weight: normal;
+    font-size: 14px;
+    padding: 6px;
+    border-width: 3px;
+    border-style: solid;
+    border-color: var(--data-normal-inner-border-color);
+    border-radius: calc(var(--data-normal-border-radius, 25px) / 2);
     background-color: var(--data-background-color);
     color: var(--data-foreground-color);
-    border-color: var(--data-normal-inner-border-color);
-    border-radius: var(--data-normal-border-radius);
     transition: background-color 0.2s, color 0.2s;
 }
 .skill-card-div:hover {
     background-color: var(--data-background-color-hovered);
     color: var(--data-foreground-color-hovered);
 }
+/* Match flock-of-postcards .tag-link (skill title): bold, underlined; and div.card-div span.tag-link layout */
 .skill-card-div .skill-card-label {
-    display: block;
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 900;
+    text-decoration: underline;
     line-height: 1.2;
+    text-align: left;
+}
+/* Match flock-of-postcards .card-div-header for secondary text */
+.skill-card-div .skill-card-z {
+    font-size: 12px;
 }
 
-/* Clone = selected card (same thing) */
+/* Clone = selected skill card in scene (flock-of-postcards: white dotted border only) */
 .skill-card-div.clone {
     background-color: var(--data-background-color-selected, color-mix(in srgb, var(--data-background-color) 65%, white));
     color: var(--data-foreground-color-selected, inherit);
     filter: none !important;
     z-index: 99;
-    border: 2px solid purple !important;
-    box-shadow: 0 0 0 3px white, 0 0 0 6px purple, 0 4px 12px rgba(0, 0, 0, 0.35);
+    border: 2px dotted rgba(255, 255, 255, 0.9) !important;
+    box-shadow: none;
 }
 
 /* bizCardLineItem (rDiv): border styling must match .biz-card-div above (normal, hovered, selected). */

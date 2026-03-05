@@ -424,6 +424,8 @@ export function useColorPalette() {
 /**
  * Applies the current color palette to a specific HTML element.
  * Calculates and sets data attributes for all color states (normal, selected, hovered).
+ * Palette swatch index comes from element’s data-color-index: biz cards use their job ID;
+ * skill cards use the job ID of the first job that referenced that skill (same index → same colors).
  * @param {HTMLElement} element The element to apply the palette colors to.
  */
 export async function applyPaletteToElement(element) {

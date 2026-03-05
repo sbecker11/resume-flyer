@@ -86,6 +86,10 @@ describe('getHighContrastMono', () => {
     expect(getHighContrastMono('#0000ff')).toBe('#ffffff');
     expect(getHighContrastMono('#333333')).toBe('#ffffff');
   });
+
+  it('returns #000000 for mid-light backgrounds (LAB L* > 50)', () => {
+    expect(getHighContrastMono('#cb937f')).toBe('#000000'); // tan/salmon
+  });
 });
 
 describe('getContrastIconSet', () => {

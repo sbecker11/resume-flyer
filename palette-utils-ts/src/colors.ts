@@ -11,7 +11,7 @@ import type {
 } from './types.js';
 
 const DEFAULT_HIGHLIGHT_PERCENT = 135;
-const NEARLY_WHITE_L_THRESHOLD = 85;
+const NEARLY_WHITE_L_THRESHOLD = 75;
 
 /** Format hex for display: always 7 chars (#rrggbb), lowercase. Expands #rgb to #rrggbb. */
 export function formatHexDisplay(hex: string | null | undefined): string {
@@ -49,9 +49,16 @@ function getLuminance(hex: string): number {
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 }
 
-/** Returns black or white hex for best contrast on the given background: white on dark, black on light. */
+/**
+ * Threshold for "use black text": when relative luminance > this, use black.
+ * Standard 0.5 corresponds to a light grey (~#bc); #888888 has L ≈ 0.21.
+ * Using 0.35 so colours brighter than mid-sRGB (e.g. #cb937f, L ≈ 0.37) get black text.
+ */
+const HIGH_CONTRAST_LUMINANCE_THRESHOLD = 0.35;
+
+/** Returns black or white hex for best contrast on the given background: white on dark, black on light. Uses relative luminance (WCAG); threshold 0.35 so mid-light colours like #cb937f get black. */
 export function getHighContrastMono(hex: string): '#000000' | '#ffffff' {
-  return getLuminance(hex) > 0.5 ? '#000000' : '#ffffff';
+  return getLuminance(hex) > HIGH_CONTRAST_LUMINANCE_THRESHOLD ? '#000000' : '#ffffff';
 }
 
 /**

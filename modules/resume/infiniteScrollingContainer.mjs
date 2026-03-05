@@ -1,5 +1,9 @@
 // modules/resume/infiniteScrollingContainer.mjs
 // TRUE INFINITE SCROLLING - Creates illusion of infinite content with head/tail clones
+//
+// Single ordered list (contentHolder): [ head clones | original items | tail clones | footer items (e.g. skill cards) ].
+// Pre/post caching: head = copies of last N originals at top; tail = copies of first N originals at bottom.
+// Footer items are appended to the same list and preserved across setItems() rebuilds; they are not cloned.
 
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
@@ -61,6 +65,7 @@ class InfiniteScrollingContainer {
     this.originalItems = [];
     this.headClones = [];
     this.tailClones = [];
+    this._footerItems = []; // Appended skill cards etc. – preserved across rebuilds, always after tail clones
     this.currentIndex = 0;
     this._isInitialized = false;
     this.isRepositioning = false;
@@ -75,7 +80,7 @@ class InfiniteScrollingContainer {
     try {
       this.setupContainer();
       this.setupScrollListener();
-      console.log('[InfiniteScrollingContainer] Initialized with true infinite scrolling');
+      console.debug('[InfiniteScrollingContainer] initialized');
     } catch (error) {
       console.error('[InfiniteScrollingContainer] Initialization failed:', error);
       throw error;
@@ -86,13 +91,17 @@ class InfiniteScrollingContainer {
    * Set up container styling and layout
    */
   setupContainer() {
-    console.log('[DEBUG] InfiniteScrollingContainer: Setting up infinite scrolling container');
+    console.debug('[InfiniteScrollingContainer] setupContainer');
     
     // Apply scrollport styles
     this._applyStyles(this.scrollport, CONTAINER_STYLES.scrollport);
     
     // Apply content holder styles
     this._applyStyles(this.contentHolder, CONTAINER_STYLES.contentHolder);
+
+    // Keep resume list indices in sync when children are added or removed
+    this._listIndicesObserver = new MutationObserver(() => this._updateResumeListIndices());
+    this._listIndicesObserver.observe(this.contentHolder, { childList: true });
   }
 
   /**
@@ -116,7 +125,7 @@ class InfiniteScrollingContainer {
       throw new Error('Items must be an array');
     }
     
-    console.log(`[DEBUG] InfiniteScrollingContainer.setItems: ${items.length} items with infinite scrolling`);
+    console.debug('[InfiniteScrollingContainer] setItems', items.length);
     
     this._resetState();
     this.originalItems = [...items];
@@ -203,17 +212,20 @@ class InfiniteScrollingContainer {
   }
 
   /**
-   * Check if scrolling has approached boundaries and trigger repositioning
+   * Check if scrolling has approached boundaries and trigger repositioning.
+   * Only reposition when in head/tail clone regions; do not reposition when in footer (e.g. skill cards).
    */
   checkScrollBoundaries() {
     const { scrollTop, scrollHeight, clientHeight } = this.scrollport;
     const buffer = INFINITE_SCROLL_CONFIG.SCROLL_BUFFER;
-    
+    const metrics = this._calculateRepositionMetrics();
+    const endOfTail = metrics.headHeight + metrics.originalHeight + metrics.tailHeight;
+
     if (scrollTop < buffer) {
-      console.log('[InfiniteScrollingContainer] Near top boundary - repositioning');
+      console.debug('[InfiniteScrollingContainer] near top boundary');
       this._repositionToBottom();
-    } else if (scrollTop + clientHeight > scrollHeight - buffer) {
-      console.log('[InfiniteScrollingContainer] Near bottom boundary - repositioning');
+    } else if (scrollTop + clientHeight > scrollHeight - buffer && scrollTop < endOfTail) {
+      console.debug('[InfiniteScrollingContainer] near bottom boundary');
       this._repositionToTop();
     }
   }
@@ -247,7 +259,7 @@ class InfiniteScrollingContainer {
     const newScrollTop = metrics.headHeight + currentScrollInTailClones;
     
     this.scrollport.scrollTop = newScrollTop;
-    console.log(`[InfiniteScrollingContainer] Repositioned from bottom area to top: ${newScrollTop}px`);
+    console.debug('[InfiniteScrollingContainer] repositioned bottom→top');
     
     this._scheduleRepositioningReset();
   }
@@ -282,7 +294,7 @@ class InfiniteScrollingContainer {
    * @param {boolean} animate - Whether to animate the scroll
    */
   scrollToIndex(originalIndex, animate = true) {
-    console.log(`[DEBUG] scrollToIndex: ${originalIndex} with animate=${animate}`);
+    console.debug('[InfiniteScrollingContainer] scrollToIndex', originalIndex);
     
     // Safety check: ensure originalItems array is populated
     if (!this.originalItems || this.originalItems.length === 0) {
@@ -341,12 +353,12 @@ class InfiniteScrollingContainer {
 
   recalculateHeights() {
     // No-op for flexbox - heights are automatic
-    console.log('[DEBUG] recalculateHeights: No-op with flexbox flow');
+    console.debug('[InfiniteScrollingContainer] recalculateHeights no-op');
   }
 
   recalculateHeightsAfterPalette() {
     // No-op for flexbox - palette changes don't affect layout
-    console.log('[DEBUG] recalculateHeightsAfterPalette: No-op with flexbox flow');
+    console.debug('[InfiniteScrollingContainer] recalculateHeightsAfterPalette no-op');
   }
 
   getCurrentIndex() {
@@ -437,9 +449,11 @@ class InfiniteScrollingContainer {
   }
 
   /**
-   * Reset container state
+   * Reset container state. Preserves footer items (e.g. appended skill cards) so they are re-appended after rebuild.
    */
   _resetState() {
+    this._footerItems = Array.from(this.contentHolder.querySelectorAll('.appended-skill-card-copy'));
+    this._footerItems.forEach(el => el.remove());
     this.contentHolder.innerHTML = '';
     this.headClones = [];
     this.tailClones = [];
@@ -448,14 +462,53 @@ class InfiniteScrollingContainer {
   }
 
   /**
-   * Build the complete infinite scroll structure
+   * Build the complete infinite scroll structure: head clones, originals, tail clones, then footer items (skill cards).
    */
   _buildInfiniteScrollStructure() {
     this.createHeadClones();
     this._addOriginalItems();
     this.createTailClones();
-    
-    console.log(`[DEBUG] InfiniteScrollingContainer: Created infinite scroll structure - ${this.headClones.length} head clones + ${this.originalItems.length} originals + ${this.tailClones.length} tail clones`);
+    this._appendFooterItems();
+    this._updateResumeListIndices();
+    console.debug('[InfiniteScrollingContainer] structure created', this.originalItems.length, 'footer items:', this._footerItems.length);
+  }
+
+  /**
+   * Update each resume item's list index from its current position in the container.
+   * Indices change when items are inserted or removed, so this is not a fixed property.
+   */
+  _updateResumeListIndices() {
+    if (!this.contentHolder) return;
+    const total = this.contentHolder.children.length;
+    Array.from(this.contentHolder.children).forEach((el, i) => {
+      const span = el.querySelector('.biz-details-list-index');
+      if (span) span.textContent = `${i} / ${total}`;
+    });
+  }
+
+  /**
+   * Re-append preserved footer items (e.g. appended skill cards) after tail clones so pre/post clone caching is unchanged.
+   */
+  _appendFooterItems() {
+    this._footerItems.forEach(node => {
+      if (node && node.parentNode !== this.contentHolder) {
+        this.contentHolder.appendChild(node);
+      }
+    });
+  }
+
+  /**
+   * Append a footer item (e.g. skill card copy). It will be preserved across setItems() rebuilds and kept after tail clones.
+   * @param {HTMLElement} node
+   */
+  appendFooterItem(node) {
+    if (!node || this.contentHolder !== node.parentNode) {
+      this.contentHolder.appendChild(node);
+    }
+    if (!this._footerItems.includes(node)) {
+      this._footerItems.push(node);
+    }
+    this._updateResumeListIndices();
   }
 
   /**

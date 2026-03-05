@@ -590,7 +590,6 @@ A `skill card` is created for each \[square\] bracketed phrase in the job descri
 one or more return icons <img src="static_content/icons/icons8-back-16-black.png"> that serve as clickable links back to jobs that used that skill. The number 
 of return icons indicates the number of jobs and the amount of time used to hone that skill.
 
-
 # Run the `resume-flock` career resume web app using VSCode
 
 ## Clone this repo to your local development folder  

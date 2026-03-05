@@ -16,7 +16,7 @@ class SelectionManager {
         this.selectedJobNumber = null;
         this.hoveredJobNumber = null;
         this.instanceId = Math.random().toString(36).substr(2, 9); // Unique instance ID
-        console.log(`[SelectionManager] 🆔 Instance created with ID: ${this.instanceId}`);
+        console.debug('[SelectionManager] Instance created');
         
         // Load initial selection from AppState
         this.loadInitialSelection();
@@ -36,7 +36,7 @@ class SelectionManager {
         if (AppState && AppState.selectedJobNumber !== null) {
             // Use setTimeout to ensure all components are initialized before triggering selection
             setTimeout(() => {
-                console.log(`[SelectionManager] Loading initial selection from AppState: Job ${AppState.selectedJobNumber}`);
+                console.debug('[SelectionManager] Loading initial selection from AppState');
                 this.selectJobNumber(AppState.selectedJobNumber, 'SelectionManager.loadInitialSelection');
             }, 200);
         }
@@ -57,7 +57,7 @@ class SelectionManager {
         this.selectedCard = card;
         this.selectedJobNumber = card.type === 'biz' ? card.jobNumber : null;
 
-        console.log(`[SelectionManager] 🎯 COMMANDING SELECTION for card from ${caller}:`, card);
+        console.debug('[SelectionManager] selectCard', caller, card?.type, card?.type === 'biz' ? card?.jobNumber : card?.skillCardId);
 
         if (AppState) {
             AppState.selectedJobNumber = this.selectedJobNumber;
@@ -73,11 +73,22 @@ class SelectionManager {
             this.dispatchCardSelected(this.selectedCard, previousCard, caller);
             this.dispatchSelectionEvents(card.jobNumber, previousJobNumber, caller);
             const dataJobObject = this.getJobDataByNumber(card.jobNumber);
-            console.log(`[SelectionManager] ✅ Card selection issued (${caller}):`, dataJobObject?.employer || 'Unknown');
+            console.debug('[SelectionManager] Biz card selected', dataJobObject?.employer);
         } else {
             this.dispatchCardSelected(this.selectedCard, previousCard, caller);
             this.commandCardsController('select-skill', card.skillCardId);
-            console.log(`[SelectionManager] ✅ Card selection issued (${caller})`);
+            const skillCardId = card.skillCardId;
+            const detail = { skillCardId };
+            const ev = new CustomEvent('resume-skill-card-scrollIntoView', { detail });
+            this.eventTarget.dispatchEvent(ev);
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(ev);
+                if (typeof window.__resumeAppendSkillCardCopy === 'function') {
+                    window.__resumeAppendSkillCardCopy(skillCardId);
+                }
+            }
+            if (typeof document !== 'undefined') document.dispatchEvent(ev);
+            console.log('[SkillCard] Selected → resume listing updated', skillCardId);
         }
     }
 
@@ -103,7 +114,7 @@ class SelectionManager {
      * 7. Scroll cDiv clone into view
      */
     commandControllers(jobNumber, previousSelection, caller) {
-        console.log(`[SelectionManager] 📋 Issuing selection commands for job ${jobNumber}`);
+        console.debug('[SelectionManager] commandControllers', jobNumber);
         // Previous selection already cleared by _unselectAllSelectedCards before selectJobNumber/selectSkillCard
 
         // Command new selection
@@ -115,7 +126,7 @@ class SelectionManager {
         this.commandCardsController('scrollIntoView', jobNumber);
         
         // CRITICAL: Dispatch the legacy job-selected event that CardsController expects
-        console.log(`[SelectionManager] 🚀 DISPATCHING job-selected event for job ${jobNumber}`);
+        console.debug('[SelectionManager] job-selected', jobNumber);
         this.dispatchSelectionEvents(jobNumber, previousSelection, caller);
     }
 
@@ -123,7 +134,7 @@ class SelectionManager {
      * Command Resume Controller
      */
     commandResumeController(action, jobNumber) {
-        console.log(`[SelectionManager] 📋 → ResumeController: ${action}(${jobNumber || 'all'})`);
+        console.debug('[SelectionManager] → ResumeController', action, jobNumber ?? 'all');
         
         // Dispatch command events that ResumeController can listen to
         const eventName = `resume-${action}`;
@@ -138,7 +149,7 @@ class SelectionManager {
     commandCardsController(action, payload) {
         const jobNumber = typeof payload === 'number' ? payload : undefined;
         const skillCardId = typeof payload === 'string' ? payload : undefined;
-        console.log(`[SelectionManager] 📋 → CardsController: ${action}(${payload ?? 'all'})`);
+        console.debug('[SelectionManager] → CardsController', action, payload ?? 'all');
         const eventName = action === 'select-skill' ? 'cards-select-skill' : action === 'unselect-skill' ? 'cards-unselect-skill' : `cards-${action}`;
         this.eventTarget.dispatchEvent(new CustomEvent(eventName, {
             detail: { jobNumber, skillCardId, action }
@@ -165,7 +176,7 @@ class SelectionManager {
         this.selectedCard = null;
         this.selectedJobNumber = null;
 
-        console.log(`[SelectionManager] 🚀 COMMANDING CLEAR SELECTION (${caller})`);
+        console.debug('[SelectionManager] clearSelection', caller);
 
         if (AppState) {
             AppState.selectedJobNumber = null;
@@ -180,7 +191,7 @@ class SelectionManager {
         this.eventTarget.dispatchEvent(new CustomEvent('selectionCleared', {
             detail: { caller }
         }));
-        console.log(`[SelectionManager] ✅ Selection clear commands issued by ${caller}`);
+        console.debug('[SelectionManager] selection cleared');
     }
 
     /** Dispatch card-selected so CardsController can show the selected card's clone (only one card selected at a time) */
@@ -225,7 +236,7 @@ class SelectionManager {
     hoverJobNumber(jobNumber, caller = 'unknown') {
         // Cancel any pending hover clear
         if (this._hoverClearTimeout) {
-            console.log(`🖱️ [SelectionManager] Canceling clearHover timeout due to new hover from ${caller}`);
+            console.debug('[SelectionManager] clearHover timeout canceled');
             clearTimeout(this._hoverClearTimeout);
             this._hoverClearTimeout = null;
         }
@@ -255,7 +266,7 @@ class SelectionManager {
     }
 
     clearHover(caller = 'unknown') {
-        console.log(`🖱️ [SelectionManager] clearHover called by: ${caller}, current hover: ${this.hoveredJobNumber}`);
+        console.debug('[SelectionManager] clearHover', caller);
         
         // Track which element triggered the clear
         if (!this._hoverClearCallers) {
@@ -268,22 +279,21 @@ class SelectionManager {
                               this._hoverClearCallers.has('ResumeListController.handleMouseLeaveEvent');
         const hasCardsClear = this._hoverClearCallers.has('CardsController.mouseleave');
         
-        console.log(`🖱️ [SelectionManager] Clear callers:`, Array.from(this._hoverClearCallers));
-        console.log(`🖱️ [SelectionManager] Has resume clear: ${hasResumeClear}, Has cards clear: ${hasCardsClear}`);
+        console.debug('[SelectionManager] clearHover callers', { hasResumeClear, hasCardsClear });
         
         // Only clear if we have both resume and cards clear requests, or if it's been long enough
         if (hasResumeClear && hasCardsClear) {
-            console.log(`🖱️ [SelectionManager] Both resume and cards cleared - clearing hover immediately`);
+            console.debug('[SelectionManager] hover cleared (both resume and cards)');
             this._executeHoverClear(caller);
         } else {
             // Debounce hover clearing to prevent rapid enter/leave conflicts
             if (this._hoverClearTimeout) {
-                console.log(`🖱️ [SelectionManager] Canceling previous clearHover timeout`);
+                console.debug('[SelectionManager] previous clearHover timeout canceled');
                 clearTimeout(this._hoverClearTimeout);
             }
             
             this._hoverClearTimeout = setTimeout(() => {
-                console.log(`🖱️ [SelectionManager] Executing delayed clearHover for job ${this.hoveredJobNumber}`);
+                console.debug('[SelectionManager] delayed clearHover executed');
                 this._executeHoverClear(caller);
             }, 150); // 150ms debounce to prevent rapid enter/leave conflicts
         }
@@ -370,7 +380,7 @@ class SelectionManager {
      * This checks for architectural violations that occur during initial page load
      */
     validatePageLoadState(timing) {
-        console.log(`🔍 [${timing}] Validating page load state for hard-refresh violations...`);
+        console.debug(`[SelectionManager] validatePageLoadState ${timing}`);
         
         // Check all jobs for violations during page load
         for (let jobNumber = 0; jobNumber < 25; jobNumber++) {
@@ -382,7 +392,7 @@ class SelectionManager {
             }
         }
         
-        console.log(`✅ [${timing}] Page load state validation passed`);
+        console.debug(`[SelectionManager] page load validation passed ${timing}`);
     }
 
     /**
@@ -419,7 +429,7 @@ class SelectionManager {
             console.error('Original display:', originalStyle.display, 'Clone display:', cloneStyle.display);
         }
         
-        console.log(`✅ [CleanupValidation] Job ${jobNumber} clones properly cleaned up`);
+        console.debug('[SelectionManager] cleanup validation ok', jobNumber);
     }
 
     // =============================================================================
@@ -430,7 +440,7 @@ class SelectionManager {
      * STEP 0: Clear all existing selections across the entire application
      */
     clearAllSelections() {
-        console.log(`[SelectionManager] 🧹 Clearing all existing selections`);
+        console.debug('[SelectionManager] clearAllSelections');
         
         // Clear all rDiv selections
         document.querySelectorAll('.biz-resume-div.selected').forEach(div => {
@@ -452,7 +462,7 @@ class SelectionManager {
             div.classList.remove('hovered');
         });
         
-        console.log(`[SelectionManager] ✅ Cleared all selections across rDivs and cDivs`);
+        console.debug('[SelectionManager] all selections cleared');
     }
 
     /**
@@ -467,7 +477,7 @@ class SelectionManager {
             });
             
             rDiv.classList.add('selected');
-            console.log(`[SelectionManager] ✅ Styled rDiv as selected for job ${jobNumber}`);
+            console.debug('[SelectionManager] rDiv styled selected', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ rDiv not found for job ${jobNumber}`);
         }
@@ -480,7 +490,7 @@ class SelectionManager {
         const rDiv = document.querySelector(`[data-job-number="${jobNumber}"].biz-resume-div`);
         if (rDiv) {
             rDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            console.log(`[SelectionManager] ✅ Scrolled rDiv into view for job ${jobNumber}`);
+            console.debug('[SelectionManager] rDiv scrolled into view', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ rDiv not found for scrolling job ${jobNumber}`);
         }
@@ -493,7 +503,7 @@ class SelectionManager {
         const rDiv = document.querySelector(`[data-job-number="${jobNumber}"].biz-resume-div`);
         if (rDiv) {
             rDiv.classList.remove('selected');
-            console.log(`[SelectionManager] ✅ Cleared rDiv selection for job ${jobNumber}`);
+            console.debug('[SelectionManager] rDiv selection cleared', jobNumber);
         }
     }
 
@@ -511,7 +521,7 @@ class SelectionManager {
         if (originalCard) {
             originalCard.style.setProperty('display', 'none', 'important');
             originalCard.classList.add('hasClone');
-            console.log(`[SelectionManager] ✅ Hidden original cDiv for job ${jobNumber}`);
+            console.debug('[SelectionManager] original cDiv hidden', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ Original cDiv not found for job ${jobNumber}`);
         }
@@ -525,7 +535,7 @@ class SelectionManager {
         if (originalCard) {
             originalCard.style.removeProperty('display');
             originalCard.classList.remove('hasClone');
-            console.log(`[SelectionManager] ✅ Restored original cDiv for job ${jobNumber}`);
+            console.debug('[SelectionManager] original cDiv restored', jobNumber);
         }
     }
 
@@ -536,7 +546,7 @@ class SelectionManager {
         const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         if (clone) {
             clone.style.setProperty('display', 'none', 'important');
-            console.log(`[SelectionManager] ✅ Hidden clone for job ${jobNumber}`);
+            console.debug('[SelectionManager] clone hidden', jobNumber);
         }
     }
 
@@ -548,7 +558,7 @@ class SelectionManager {
         
         if (!clone) {
             // Create the clone
-            console.log(`[SelectionManager] 🔨 Creating clone for job ${jobNumber}`);
+            console.debug('[SelectionManager] creating clone', jobNumber);
             this.createJobClone(jobNumber);
             clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         }
@@ -556,7 +566,7 @@ class SelectionManager {
         if (clone) {
             clone.style.removeProperty('display');
             clone.style.setProperty('display', 'block', 'important');
-            console.log(`[SelectionManager] ✅ Showed clone for job ${jobNumber}`);
+            console.debug('[SelectionManager] clone shown', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ Failed to create/show clone for job ${jobNumber}`);
         }
@@ -588,7 +598,7 @@ class SelectionManager {
         clone.style.zIndex = '1000';
         
         scenePlane.appendChild(clone);
-        console.log(`[SelectionManager] ✅ Created clone for job ${jobNumber} (will be positioned at bulls-eye in Step 6)`);
+        console.debug('[SelectionManager] clone created', jobNumber);
     }
 
     /**
@@ -597,7 +607,7 @@ class SelectionManager {
     styleCDivAsSelected(jobNumber) {
         const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         if (clone) {
-            console.log(`[SelectionManager] ✅ Clone for job ${jobNumber} (selected card = clone)`);
+            console.debug('[SelectionManager] clone styled selected', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ Clone not found for job ${jobNumber}`);
         }
@@ -622,7 +632,7 @@ class SelectionManager {
             const bullsEyePos = window.bullsEye.getBullsEyePosition();
             if (bullsEyePos && typeof bullsEyePos.x === 'number') {
                 bullsEyeCenterX = bullsEyePos.x;
-                console.log(`[SelectionManager] 🎯 Got bulls-eye X from window.bullsEye: ${bullsEyeCenterX}`);
+                console.debug('[SelectionManager] bulls-eye X from window.bullsEye', bullsEyeCenterX);
             }
         }
 
@@ -635,7 +645,7 @@ class SelectionManager {
                 if (sceneContainer) {
                     const sceneRect = sceneContainer.getBoundingClientRect();
                     bullsEyeCenterX = bullsEyeRect.left + (bullsEyeRect.width / 2) - sceneRect.left;
-                    console.log(`[SelectionManager] 🎯 Calculated bulls-eye X from element: ${bullsEyeCenterX}`);
+                    console.debug('[SelectionManager] bulls-eye X from element', bullsEyeCenterX);
                 }
             }
         }
@@ -646,7 +656,7 @@ class SelectionManager {
             if (sceneContainer) {
                 const sceneRect = sceneContainer.getBoundingClientRect();
                 bullsEyeCenterX = sceneRect.width / 2;
-                console.log(`[SelectionManager] 🎯 Using scene container center X: ${bullsEyeCenterX}`);
+                console.debug('[SelectionManager] bulls-eye X from scene center', bullsEyeCenterX);
             }
         }
 
@@ -657,7 +667,7 @@ class SelectionManager {
         clone.style.transform = 'translate(-50%, -50%)'; // Center the clone on the bulls-eye
         clone.style.zIndex = '1000';
 
-        console.log(`[SelectionManager] ✅ Positioned clone at bulls-eye center (${bullsEyeCenterX}, ${bullsEyeCenterY}) for job ${jobNumber}`);
+        console.debug('[SelectionManager] clone positioned at bulls-eye', jobNumber);
 
         // Store the bulls-eye position on the clone for reference
         clone._bullsEyeCenterX = bullsEyeCenterX;
@@ -701,7 +711,7 @@ class SelectionManager {
         if (headerElements.length === 0) {
             // Fallback: use the clone itself
             headerElements = [clone];
-            console.log(`[SelectionManager] 📍 No specific header elements found, using clone itself`);
+            console.debug('[SelectionManager] using clone as header for scroll');
         }
 
         // Find the topmost header element
@@ -722,13 +732,13 @@ class SelectionManager {
         const additionalDownOffset = 100; // Test with 100px additional gap
         const healthyGap = baseHealthyGap + additionalDownOffset;
         
-        console.log(`[SelectionManager] 📏 Container height: ${containerRect.height}px, base gap: ${baseHealthyGap}px, additional down offset: ${additionalDownOffset}px, total gap: ${healthyGap}px`);
+        console.debug('[SelectionManager] scroll gap', { height: containerRect.height, healthyGap });
 
         // Scroll the topmost header into view with the healthy gap
         const headerRect = topMostHeader.getBoundingClientRect();
         const targetScrollTop = sceneContainer.scrollTop + headerRect.top - containerRect.top - healthyGap;
         
-        console.log(`[SelectionManager] 📍 Scrolling to position: ${targetScrollTop} (header at ${headerRect.top}, gap: ${healthyGap})`);
+        console.debug('[SelectionManager] scrollTo', targetScrollTop);
         
         // Smooth scroll to the calculated position
         sceneContainer.scrollTo({
@@ -738,7 +748,7 @@ class SelectionManager {
 
         // TEMPORARY: Add fallback scroll for debugging
         setTimeout(() => {
-            console.log(`[SelectionManager] 🔧 DEBUGGING: Applying fallback scroll after 200ms`);
+            console.debug('[SelectionManager] fallback scrollIntoView');
             topMostHeader.scrollIntoView({ 
                 behavior: 'smooth', 
                 block: 'start',
@@ -766,7 +776,7 @@ class SelectionManager {
         //     }, 100);
         // }, 50);
 
-        console.log(`[SelectionManager] ✅ Scrolled clone header fields into view with healthy gap for job ${jobNumber}`);
+        console.debug('[SelectionManager] clone header scrolled into view', jobNumber);
     }
 
     /**
@@ -793,7 +803,7 @@ class SelectionManager {
             }
         }));
         
-        console.log(`[SelectionManager] ✅ Dispatched selection events for job ${jobNumber}`);
+        console.debug('[SelectionManager] selection events dispatched', jobNumber);
     }
 
 }

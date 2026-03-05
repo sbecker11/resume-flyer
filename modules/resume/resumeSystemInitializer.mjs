@@ -10,7 +10,7 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
  * Uses Vue 3 dependency pattern instead of direct jobs import
  */
 async function createBasicResumeDivs(resumeListController, resumeItemsController, jobsData) {
-    console.log('[ResumeSystemInitializer] Creating basic resume divs from jobs data...');
+    console.debug('[ResumeSystemInitializer] creating resume divs');
     
     try {
         // Create mock bizCardDivs from jobs data
@@ -21,11 +21,11 @@ async function createBasicResumeDivs(resumeListController, resumeItemsController
             return mockDiv;
         });
         
-        console.log(`[ResumeSystemInitializer] Created ${mockBizCardDivs.length} mock card divs`);
+        console.debug('[ResumeSystemInitializer] mock cards', mockBizCardDivs.length);
         
         // Use ResumeItemsController to create resume divs
         const resumeDivs = await resumeItemsController.createAllBizResumeDivs(mockBizCardDivs);
-        console.log(`[ResumeSystemInitializer] Created ${resumeDivs.length} resume divs`);
+        console.debug('[ResumeSystemInitializer] resume divs', resumeDivs.length);
         
         // Add the resume divs to the DOM
         const resumeContentDiv = resumeListController.resumeContentDiv;
@@ -38,7 +38,7 @@ async function createBasicResumeDivs(resumeListController, resumeItemsController
                 }
             });
             
-            console.log(`[ResumeSystemInitializer] Added ${resumeDivs.length} resume divs to DOM`);
+            console.debug('[ResumeSystemInitializer] divs added to DOM');
             
             // Store the divs in the controllers
             resumeListController.bizResumeDivs = resumeDivs;
@@ -48,9 +48,7 @@ async function createBasicResumeDivs(resumeListController, resumeItemsController
             resumeListController.sortedIndices = Array.from({length: jobsData.length}, (_, i) => i);
             
             // Setup infinite scrolling - this is crucial for scrollability!
-            console.log('[ResumeSystemInitializer] Setting up infinite scrolling...');
-            console.log(`[ResumeSystemInitializer] About to setup infinite scrolling with ${resumeDivs.length} resume divs`);
-            console.log(`[ResumeSystemInitializer] Jobs array length: ${jobsData.length}`);
+            console.debug('[ResumeSystemInitializer] setting up infinite scrolling');
             resumeListController.setupInfiniteScrolling();
             
             return true;
@@ -68,7 +66,7 @@ async function createBasicResumeDivs(resumeListController, resumeItemsController
  * This replaces the direct jobs import with reactive dependency pattern
  */
 export async function initializeResumeSystem() {
-    console.log('[ResumeSystemInitializer] Initializing resume system with Vue 3 dependency pattern...');
+    console.debug('[ResumeSystemInitializer] initializing');
     
     try {
         // Get the global jobs dependency manager
@@ -88,16 +86,16 @@ export async function initializeResumeSystem() {
         
         // Register resumeListController as dependent on jobs data
         jobsDependency.registerController('ResumeListController', async (jobsData) => {
-            console.log('[ResumeSystemInitializer] Initializing ResumeListController with jobs data...');
+            console.debug('[ResumeSystemInitializer] init ResumeListController');
             
             // Initialize the controller with jobs data (THIS WAS MISSING!)
             await resumeListController.initialize(jobsData);
             
-            console.log('[ResumeSystemInitializer] ✅ ResumeListController initialized with jobs data');
+            console.debug('[ResumeSystemInitializer] ResumeListController ready');
         });
         
         // Start jobs loading (this will trigger controller initialization when complete)
-        console.log('[ResumeSystemInitializer] Starting jobs data loading...');
+        console.debug('[ResumeSystemInitializer] loading jobs');
         const jobsData = await jobsDependency.loadJobs();
         
         // Wait for DOM elements to be available (retry with delays)
@@ -106,16 +104,16 @@ export async function initializeResumeSystem() {
         
         const waitForDOMElements = async () => {
             while (attempts < maxAttempts) {
-                const resumeContentDiv = document.getElementById('resume-content-div');
                 const resumeContentWrapper = document.getElementById('resume-content-div-wrapper');
+                const resumeContentDivList = document.getElementById('resume-content-div-list');
                 
-                if (resumeContentDiv && resumeContentWrapper) {
-                    console.log('[ResumeSystemInitializer] Found DOM elements, setting up ResumeListController...');
+                if (resumeContentDivList && resumeContentWrapper) {
+                    console.debug('[ResumeSystemInitializer] DOM elements found');
                     
-                    // Set the DOM elements directly (bypassing template ref system for now)
-                    resumeListController.resumeContentDiv = resumeContentDiv;
+                    // Skill cards and rDivs are children of the same container; rDivs go into resume-content-div-list
+                    resumeListController.resumeContentDiv = resumeContentDivList;
                     resumeListController.resumeContentWrapper = resumeContentWrapper;
-                    resumeListController.resumecontentdivElement = resumeContentDiv;
+                    resumeListController.resumecontentdivElement = resumeContentDivList;
                     resumeListController.resumecontentdivwrapperElement = resumeContentWrapper;
                     
                     // Create basic resume divs from loaded jobs data
@@ -126,7 +124,7 @@ export async function initializeResumeSystem() {
                 
                 attempts++;
                 if (attempts < maxAttempts) {
-                    console.log(`[ResumeSystemInitializer] DOM elements not yet available, retrying... (${attempts}/${maxAttempts})`);
+                    console.debug('[ResumeSystemInitializer] waiting for DOM', attempts, maxAttempts);
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
             }
@@ -136,10 +134,7 @@ export async function initializeResumeSystem() {
         
         await waitForDOMElements();
         
-        console.log('[ResumeSystemInitializer] ✅ Resume system initialized successfully with Vue 3 dependency pattern');
-        console.log('[ResumeSystemInitializer] - resumeListController available at window.resumeListController');
-        console.log('[ResumeSystemInitializer] - resumeItemsController available at window.resumeItemsController');
-        console.log('[ResumeSystemInitializer] - Jobs loaded via reactive dependency management');
+        console.log('[ResumeContainer] Resume system ready');
         
         // Create a visual indicator that shows the resume system status
         const indicator = document.createElement('div');

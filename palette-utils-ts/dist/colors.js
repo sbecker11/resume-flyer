@@ -3,7 +3,7 @@
  * Use in Node, browser, or any TS/JS project that consumes exported palette JSON.
  */
 const DEFAULT_HIGHLIGHT_PERCENT = 135;
-const NEARLY_WHITE_L_THRESHOLD = 85;
+const NEARLY_WHITE_L_THRESHOLD = 75;
 /** Format hex for display: always 7 chars (#rrggbb), lowercase. Expands #rgb to #rrggbb. */
 export function formatHexDisplay(hex) {
     if (!hex || typeof hex !== 'string')
@@ -41,13 +41,23 @@ function getLuminance(hex) {
     });
     return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 }
-/** Returns black or white hex for best contrast on the given background. */
+/** Perceptual lightness (LAB L*) 0–100. Use for “is this background light?” */
+function getLightnessLab(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb)
+        return 50;
+    const lab = rgbToLab(rgb.r, rgb.g, rgb.b);
+    return lab.L;
+}
+/** Returns black or white hex for best contrast on the given background: white on dark, black on light. Uses LAB L* (perceptual lightness) so mid tones like #cb937f get black text. */
 export function getHighContrastMono(hex) {
-    return getLuminance(hex) > 0.5 ? '#000000' : '#ffffff';
+    const L = getLightnessLab(hex);
+    return L > 50 ? '#000000' : '#ffffff';
 }
 /**
- * Returns paths for url, back, and img icons. Uses black PNGs only; when variant
- * is 'white', apply CSS filter: invert(1) to render white on dark backgrounds.
+ * Returns paths for url, back, and img icons. Uses black PNGs only.
+ * variant is 'black' on light backgrounds, 'white' on dark; when variant is 'white',
+ * apply CSS filter: invert(1) so icons render white on dark background.
  */
 export function getContrastIconSet(hex, options = {}) {
     const iconBase = options.iconBase ?? '/palette-utils/icons/anchors';
@@ -132,8 +142,10 @@ function lchToLab(L, C, H) {
     return { L, a: C * Math.cos(rad), b: C * Math.sin(rad) };
 }
 /**
- * Perceptually distinct highlight: brighter for most colors; for nearly white,
- * darker. Use with getHighContrastMono(highlightColor) for text on the highlight.
+ * Perceptually distinct highlight. When L >= nearlyWhiteL (e.g. 85): darken (L2 = L / multiplier).
+ * When L < nearlyWhiteL: brighten (L2 = L * multiplier, capped at 100).
+ * E.g. highlightPercent 135 (1.35): L>=85 → L/1.35; L<85 → L*1.35.
+ * Use with getHighContrastMono(highlightColor) for text on the highlight.
  */
 export function getHighlightColor(hex, options = {}) {
     const highlightPercent = options.highlightPercent ?? DEFAULT_HIGHLIGHT_PERCENT;

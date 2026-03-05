@@ -24,6 +24,8 @@ class ResumeItemsController {
         window.CONSOLE_LOG_IGNORE('[DEBUG] ResumeItemsController: Creating new singleton instance');
         
         this.bizResumeDivs = [];
+        /** Job numbers whose rDiv has been removed from the resume listing (red X). */
+        this.dismissedJobNumbers = new Set();
         this.isInitialized = false;
         this._setupSelectionListeners();
         this._setupColorPaletteListener();
@@ -127,15 +129,48 @@ class ResumeItemsController {
         const bizResumeDetailsDiv = this.createEnhancedResumeDetailsDiv(jobNumber);
         bizResumeDiv.appendChild(bizResumeDetailsDiv);
 
+        // Red X: remove this rDiv from the resume listing (same behavior as skill card red X)
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'r-div-close';
+        closeBtn.setAttribute('aria-label', 'Remove from resume listing');
+        closeBtn.setAttribute('data-job-number', String(jobNumber));
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.removeRDivFromListing(jobNumber);
+        });
+        bizResumeDiv.insertBefore(closeBtn, bizResumeDiv.firstChild);
+
         // Apply the current color palette
         await applyPaletteToElement(bizResumeDiv);
 
         // Apply normal state styling after palette application
         bizResumeDiv.classList.remove('hovered', 'selected');
 
+        if (this.dismissedJobNumbers.has(jobNumber)) {
+            bizResumeDiv.classList.add('r-div-removed-from-listing');
+        }
+
         this._setupMouseListeners(bizResumeDiv);
 
         return bizResumeDiv;
+    }
+
+    /**
+     * Remove the rDiv for the given job from the resume listing (persists until reload).
+     */
+    removeRDivFromListing(jobNumber) {
+        this.dismissedJobNumbers.add(jobNumber);
+        const listController = window.resumeListController;
+        if (listController && typeof listController.removeJobFromListing === 'function') {
+            listController.removeJobFromListing(jobNumber);
+        } else {
+            document.querySelectorAll(`[data-job-number="${jobNumber}"].biz-resume-div`).forEach((rDiv) => {
+                rDiv.classList.add('r-div-removed-from-listing');
+            });
+        }
     }
 
     createBizResumeDivId(jobNumber) {
@@ -188,6 +223,16 @@ class ResumeItemsController {
         jobNumPart.style.fontWeight = 'bold';
         jobNumPart.style.opacity = '0.8';
         idAndHexSpan.appendChild(jobNumPart);
+        idAndHexSpan.appendChild(document.createTextNode(' label: '));
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'biz-details-debug-label';
+        labelSpan.textContent = [jobData.employer, jobData.role].filter(Boolean).join(' · ') || '—';
+        idAndHexSpan.appendChild(labelSpan);
+        idAndHexSpan.appendChild(document.createTextNode(' list: '));
+        const listIndexSpan = document.createElement('span');
+        listIndexSpan.className = 'biz-details-list-index';
+        listIndexSpan.textContent = '—/—';
+        idAndHexSpan.appendChild(listIndexSpan);
         idAndHexSpan.appendChild(document.createTextNode(' '));
         const hexNormalSpan = document.createElement('span');
         hexNormalSpan.className = 'hex-normal';
@@ -695,19 +740,17 @@ class ResumeItemsController {
      */
     handleResumeScrollIntoView(event) {
         const { jobNumber } = event.detail;
-        console.log(`🖱️ [ResumeItemsController] RECEIVED resume-scrollIntoView command for job ${jobNumber}`);
-        
-        // Find the rDiv for this job
-        const rDiv = this.bizResumeDivs.find(div => {
-            const divJobNumber = parseInt(div.getAttribute('data-job-number'));
-            return divJobNumber === jobNumber;
-        });
-        
-        if (rDiv) {
-            console.log(`🖱️ [ResumeItemsController] Found rDiv for job ${jobNumber}, calling scroll`);
-            this._scrollRDivIntoView(rDiv, jobNumber);
+        const listController = window.resumeListController;
+        if (listController && typeof listController.ensureJobInListing === 'function') {
+            listController.ensureJobInListing(jobNumber);
+        }
+        this.dismissedJobNumbers.delete(jobNumber);
+        const id = this.createBizResumeDivId(jobNumber);
+        if (listController && typeof listController.scrollToElementId === 'function') {
+            listController.scrollToElementId(id);
         } else {
-            console.error(`❌ [ResumeItemsController] Could not find rDiv for job ${jobNumber}`);
+            const rDiv = this.bizResumeDivs.find(div => parseInt(div.getAttribute('data-job-number')) === jobNumber);
+            if (rDiv) this._scrollRDivIntoView(rDiv, jobNumber);
         }
     }
 
