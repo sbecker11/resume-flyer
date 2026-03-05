@@ -417,20 +417,19 @@ function selectPrevious() {
     color: inherit;
     opacity: 0.8;
     flex-shrink: 0;
-    
-    /* Flex container for dates and job number */
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
 }
 
-.resume-header .biz-details-dates .job-number {
+.resume-header .biz-details-debug-row {
+    font-size: 10px;
+    opacity: 0.85;
+    flex-shrink: 0;
+}
+
+.resume-header .biz-details-debug-row .job-number {
     font-size: 11px;
     font-weight: bold;
     color: inherit;
-    opacity: 0.7;
-    text-align: right;
-    flex-shrink: 0;
+    opacity: 0.8;
 }
 
 /* Description section - flexbox container */

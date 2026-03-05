@@ -306,8 +306,28 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
 .biz-details-dates {
     font-size: 12px;
     display: block;
+    margin: 0 0 4px 0;
+    line-height: 1.2;
+}
+
+/* Debug row: job number, z, hex, three contrast icons (separate row under dates) */
+.biz-details-debug-row {
+    display: block;
+    font-size: 10px;
     margin: 0 0 6px 0;
     line-height: 1.2;
+    opacity: 0.85;
+}
+
+/* Contrast icons in debug row: <img> with black PNGs; invert filter applied by card state (variant) rules below */
+.biz-details-debug-row .url-icon,
+.biz-details-debug-row .back-icon,
+.biz-details-debug-row .img-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin: 0 2px;
+    vertical-align: middle;
 }
 
 /* Hex debug: unhighlighted and highlighted; underline = currently visible background */
@@ -330,11 +350,11 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     pointer-events: none;
 }
 
-/* Hide non-header elements in card view */
+/* Hide non-header elements in card view (dates and debug row are shown) */
 .biz-card-details-div > h2:not(.header-text),
 .biz-card-details-div > h3:not(.header-text),
 .biz-card-details-div > p:not(.header-text),
-.biz-card-details-div > div:not(.header-text),
+.biz-card-details-div > div:not(.header-text):not(.biz-details-employer):not(.biz-details-role):not(.biz-details-dates):not(.biz-details-debug-row),
 .biz-card-details-div > ul:not(.header-text),
 .biz-card-details-div > li:not(.header-text) {
     display: none;

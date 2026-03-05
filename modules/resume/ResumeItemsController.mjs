@@ -170,22 +170,16 @@ class ResumeItemsController {
         roleDiv.textContent = jobData.role || 'Unknown Role';
         headerDiv.appendChild(roleDiv);
 
-        const datesDiv = document.createElement('div');
-        datesDiv.className = 'biz-details-dates';
         const startDate = this.formatDate(jobData.start);
         const endDate = this.formatDate(jobData.end);
-        
-        // Create a flex container for dates and job number
-        datesDiv.style.display = 'flex';
-        datesDiv.style.justifyContent = 'space-between';
-        datesDiv.style.alignItems = 'center';
-        
-        // Left side: date range
-        const dateRange = document.createElement('span');
-        dateRange.textContent = `${startDate} - ${endDate}`;
-        datesDiv.appendChild(dateRange);
-        
-        // Right side: job number and hex colors (unhighlighted, highlighted; bold = currently visible)
+
+        const datesDiv = document.createElement('div');
+        datesDiv.className = 'biz-details-dates';
+        datesDiv.textContent = `${startDate} - ${endDate}`;
+        headerDiv.appendChild(datesDiv);
+
+        const debugRow = document.createElement('div');
+        debugRow.className = 'biz-details-debug-row';
         const idAndHexSpan = document.createElement('span');
         idAndHexSpan.className = 'biz-details-id-and-hex';
         const jobNumPart = document.createElement('span');
@@ -202,9 +196,19 @@ class ResumeItemsController {
         const hexHighlightedSpan = document.createElement('span');
         hexHighlightedSpan.className = 'hex-highlighted';
         idAndHexSpan.appendChild(hexHighlightedSpan);
-        datesDiv.appendChild(idAndHexSpan);
-        
-        headerDiv.appendChild(datesDiv);
+        debugRow.appendChild(idAndHexSpan);
+        const iconBase = '/static_content/icons/anchors';
+        ['url', 'back', 'img'].forEach((name) => {
+            const img = document.createElement('img');
+            img.className = `${name}-icon`;
+            img.src = `${iconBase}/icons8-${name}-16-black.png`;
+            img.alt = '';
+            img.width = 16;
+            img.height = 16;
+            img.setAttribute('aria-hidden', 'true');
+            debugRow.appendChild(img);
+        });
+        headerDiv.appendChild(debugRow);
 
         detailsDiv.appendChild(headerDiv);
 

@@ -525,10 +525,8 @@ export function useCardsController() {
             <div class="biz-details-role" style="font-weight: bold; padding: 2px;">
                 ${job.role || 'Unknown Role'}
             </div>
-            <div class="biz-details-dates" style="font-weight: bold; padding: 2px; display: flex; justify-content: space-between;">
-                <span>${originalJobStartDate ? originalJobStartDate.toISOString().slice(0, 10) : 'N/A'} - ${originalJobEndDate ? originalJobEndDate.toISOString().slice(0, 10) : 'N/A'}</span>
-                <span class="biz-details-id-and-hex"> #${jobNumber} z:${sceneZ} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span>
-            </div>
+            <div class="biz-details-dates" style="font-weight: bold; padding: 2px;">${originalJobStartDate ? originalJobStartDate.toISOString().slice(0, 10) : 'N/A'} - ${originalJobEndDate ? originalJobEndDate.toISOString().slice(0, 10) : 'N/A'}</div>
+            <div class="biz-details-debug-row"><span class="biz-details-id-and-hex"> #${jobNumber} z:${sceneZ} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span> <img class="url-icon" src="/static_content/icons/anchors/icons8-url-16-black.png" alt="" width="16" height="16" aria-hidden="true"><img class="back-icon" src="/static_content/icons/anchors/icons8-back-16-black.png" alt="" width="16" height="16" aria-hidden="true"><img class="img-icon" src="/static_content/icons/anchors/icons8-img-16-black.png" alt="" width="16" height="16" aria-hidden="true"></div>
             <div class="job-stats" style="font-size: 10px; color: #666; margin-top: 4px;">
                 Skills: ${skillCount} | References: ${job.references ? job.references.length : 0}
             </div>
