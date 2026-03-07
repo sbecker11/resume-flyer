@@ -168,22 +168,27 @@ export function useFocalPoint() {
     }
   }
 
-  // Follow mode: focal point always tracks mouse; position is clamped to scene padded bounds so it never leaves the scene.
+  // Follow mode: focal point tracks mouse at most once per frame (rAF-throttled) to avoid jerkiness from
+  // excessive store updates and parallax re-renders. Store watcher dispatches focal-point-changed.
+  let followRafScheduled = false
+  let lastFollowMouse = { x: 0, y: 0 }
   function createVanillaFollowHandler() {
     return (event) => {
       if (!focalPointElement.value) return
-
-      const { x, y } = clampToLeftColumn(event.clientX, event.clientY)
-
-      const element = focalPointElement.value
-      element.style.left = `${x}px`
-      element.style.top = `${y}px`
-
-      actions.setFocalPoint(x, y)
-
-      window.dispatchEvent(new CustomEvent('focal-point-changed', {
-        detail: { x, y }
-      }))
+      lastFollowMouse.x = event.clientX
+      lastFollowMouse.y = event.clientY
+      if (followRafScheduled) return
+      followRafScheduled = true
+      requestAnimationFrame(() => {
+        followRafScheduled = false
+        if (!focalPointElement.value || !isFollowing.value) return
+        const { x, y } = clampToLeftColumn(lastFollowMouse.x, lastFollowMouse.y)
+        const element = focalPointElement.value
+        element.style.left = `${x}px`
+        element.style.top = `${y}px`
+        // Store update triggers appStore deep watcher → single focal-point-changed per frame
+        actions.setFocalPoint(x, y)
+      })
     }
   }
   

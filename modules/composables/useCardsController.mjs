@@ -232,17 +232,12 @@ export function useCardsController() {
         card.setAttribute('data-job-number', jobNumber)
         card.setAttribute('data-biz-card-title', (job.employer || job.role || `Job ${jobNumber}`).trim())
         
-        // Z from job "z-index" (1–3) for depth only; horizontal = random offset from canvas center
+        // Z from job "z-index" (1–3) for depth only; all biz cards have scene center X = 0
         const jobZIndex = (job['z-index'] != null && job['z-index'] !== '') ? parseInt(String(job['z-index']), 10) : (jobNumber % 3) + 1
         const zIndex = Math.min(3, Math.max(1, jobZIndex))
         const cardWidth = BIZCARD_WIDTH
-        const sceneWidth = scenePlane.offsetWidth || (scenePlane.parentElement && scenePlane.parentElement.offsetWidth) || 600
-        const centerX = sceneWidth / 2
-        // Limit offset so card never overlaps canvas left/right: max offset = distance from center to edge of card
-        const maxOffsetFromEdge = Math.max(0, sceneWidth / 2 - cardWidth / 2)
-        const maxOffset = Math.min(BIZCARD_HZ_CENTER_OFFSET_MAX, maxOffsetFromEdge)
-        const hzOffset = maxOffset > 0 ? mathUtils.getRandomInt(-maxOffset, maxOffset) : 0
-        const x = Math.max(0, Math.min(sceneWidth - cardWidth, centerX - cardWidth / 2 + hzOffset))
+        // All biz cards: scene center X = 0 (card left = -cardWidth/2)
+        const x = -cardWidth / 2
         let y = 100 // Default fallback (set from timeline below)
         
         try {
@@ -302,7 +297,7 @@ export function useCardsController() {
         card.style.zIndex = String(zIndex) // CSS stacking: 1–3 so biz cards sit behind skill cards
         // Apply Z-based depth filters (brightness, blur, etc.)
         card.style.filter = filters.get_filterStr_from_z(sceneZ)
-        // Fixed 3D scene position (constant after init; parallax only applies transform at render time)
+        // Scene is STATIC: position is set once and never changed; parallax handles projection only.
         card.style.left = `${x}px`
         card.style.top = `${y}px`
         card.style.width = `${cardWidth}px`
@@ -346,7 +341,9 @@ export function useCardsController() {
                 card.setAttribute('data-sceneHeight', sceneHeight)
                 card.setAttribute('data-sceneTop', sceneTop)
                 card.setAttribute('data-sceneBottom', sceneBottom)
-                
+                if (jobNumber === 0) {
+                    console.log('[CardsController] first bizCard scene-relative centerX:', 0)
+                }
                 console.debug('[CardsController] job height', jobNumber, sceneHeight)
                 console.debug('[CardsController] parsed dates', {
                     jobStart: job.start,
@@ -913,7 +910,7 @@ export function useCardsController() {
             // Listen for viewport changes to reposition selected clones
             window.addEventListener('viewport-changed', handleViewportChangedForClones)
             window.addEventListener('resize', handleViewportChangedForClones)
-            
+
             // Set a flag to indicate listeners are set up
             window._cardsControllerListenersReady = true
             window._cardsControllerSelectionManagerId = globalSelectionManager.instanceId

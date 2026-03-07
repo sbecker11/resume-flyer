@@ -22,6 +22,7 @@ function createResizeHandleState() {
   let _resizeTimeoutId = null;
   let _eventDebounceTimeoutId = null;
   let _pendingSceneWidth = null;
+  let _resizeRafId = null; // rAF throttle: dispatch scene resize events once per frame during drag
   let _lastMouseMoveTime = 0;
   let _timingData = [];
 
@@ -138,10 +139,14 @@ function createResizeHandleState() {
         isDragging.value = false;
         // console.log('[ResizeHandle] Drag ended');
         
-        // Flush any pending debounced events immediately
+        // Flush any pending debounced events immediately and cancel pending rAF
+        if (_resizeRafId != null) {
+          cancelAnimationFrame(_resizeRafId);
+          _resizeRafId = null;
+        }
         if (_eventDebounceTimeoutId && _pendingSceneWidth !== null) {
           clearTimeout(_eventDebounceTimeoutId);
-          // console.log('[ResizeHandle] Flushing pending events on drag end');
+          _eventDebounceTimeoutId = null;
           dispatchResizeEvents(_pendingSceneWidth, true); // immediate = true
         }
         
@@ -214,15 +219,23 @@ function createResizeHandleState() {
         detail: { width: sceneWidth }
       }));
     } else {
-      // Debounce events during dragging
+      // During drag: keep debounce for final save, but dispatch at rAF rate so scene re-renders every frame
       _pendingSceneWidth = sceneWidth;
-      
+
+      if (_resizeRafId == null) {
+        _resizeRafId = requestAnimationFrame(() => {
+          _resizeRafId = null;
+          const w = _pendingSceneWidth;
+          if (w == null) return;
+          window.dispatchEvent(new CustomEvent('resize-handle-changed', { detail: { sceneWidth: w } }));
+          window.dispatchEvent(new CustomEvent('scene-width-changed', { detail: { width: w } }));
+        });
+      }
+
       if (_eventDebounceTimeoutId) {
         clearTimeout(_eventDebounceTimeoutId);
       }
-      
       _eventDebounceTimeoutId = setTimeout(() => {
-        // console.log('[ResizeHandle] Dispatching debounced resize events for scene width:', _pendingSceneWidth);
         window.dispatchEvent(new CustomEvent('resize-handle-changed', {
           detail: { sceneWidth: _pendingSceneWidth }
         }));
@@ -231,7 +244,7 @@ function createResizeHandleState() {
         }));
         _pendingSceneWidth = null;
         _eventDebounceTimeoutId = null;
-      }, 150); // 150ms debounce during dragging
+      }, 150); // 150ms debounce for final event after drag
     }
   }
 

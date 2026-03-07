@@ -71,7 +71,7 @@ export function useBullsEye() {
     // Update store
     actions.setBullsEye(centerX, centerY)
     
-    console.log(`[BullsEye] Centered at (${centerX}, ${centerY})`)
+    console.log('[BullsEye] sceneView:', { width: rect.width, height: rect.height, left: rect.left, top: rect.top }, 'bullsEyeCenter:', { x: centerX, y: centerY })
     
     // Emit custom event for other systems that might need it
     window.dispatchEvent(new CustomEvent('bulls-eye-moved', {

@@ -37,7 +37,8 @@ app.get('/api/state', async (req, res) => {
         await fs.access(STATE_FILE_PATH);
         const stateData = await fs.readFile(STATE_FILE_PATH, 'utf-8');
         const parsedState = JSON.parse(stateData);
-        console.log('📖 Loading app state from disk - colorPalette:', parsedState.theme?.colorPalette);
+        const sizeKB = (Buffer.byteLength(stateData, 'utf8') / 1024).toFixed(1);
+        console.log('📖 Loaded app state from disk - size:', sizeKB, 'KB, at:', new Date().toISOString());
         res.json(parsedState);
     } catch (error) {
         if (error.code === 'ENOENT') {
@@ -55,8 +56,8 @@ app.post('/api/state', async (req, res) => {
     try {
         const stateData = JSON.stringify(req.body, null, 2);
         await fs.writeFile(STATE_FILE_PATH, stateData, 'utf-8');
-        const colorPalette = req.body['user-settings']?.theme?.colorPalette ?? req.body.theme?.colorPalette;
-        if (colorPalette) console.log('💾 Saving app state to disk - colorPalette:', colorPalette);
+        const sizeKB = (Buffer.byteLength(stateData, 'utf8') / 1024).toFixed(1);
+        console.log('💾 Saved app state to disk - size:', sizeKB, 'KB, at:', new Date().toISOString());
         res.json({ success: true });
     } catch (error) {
         console.error('Error writing state file:', error);

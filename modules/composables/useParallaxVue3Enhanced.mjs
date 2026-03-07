@@ -30,14 +30,18 @@ export function useParallaxEnhanced() {
   const isInitialized = ref(false)
   const lastRenderTime = ref(0)
   const renderCount = ref(0)
-  const previousDisplacements = ref({ dh: null, dv: null })
+  const previousDisplacements = ref({ dh: null, dv: null, alignX: null })
+  const previousCenterLog = ref({ bullsEyeCenterX2D: null, firstBizCardCenterX2D: null, diff: null })
   let rafScheduled = false
 
-  // Get positions using injected services instead of window globals
+  /** Bulls-eye center: read from #bulls-eye DOM (single source of truth) so projection always uses actual position. */
   const getBullsEyePosition = () => {
-    if (bullsEye?.getPosition) {
-      return bullsEye.getPosition()
+    const el = typeof document !== 'undefined' && document.getElementById('bulls-eye')
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
     }
+    if (bullsEye?.getPosition) return bullsEye.getPosition()
     return debugFunctions?.getBullsEyePosition?.() || { x: 0, y: 0 }
   }
 
@@ -70,8 +74,8 @@ export function useParallaxEnhanced() {
   }
   // Clones (selected card copy) use FLOCK_SELECTED_CLONE_Z (-10), are skipped here, and are not subject to motion parallax; they follow scene vertical scroll only.
 
-  /** Apply parallax transform only (render-time). Scene position left/top is never changed. */
-  function applyParallaxToCardDiv(cardDiv, dh, dv) {
+  /** Apply projection: X = alignX + parallax; Y = parallax only. */
+  function applyParallaxToCardDiv(cardDiv, alignX, dh, dv) {
     if (!cardDiv) return false
     if (hasClone(cardDiv)) return false
 
@@ -82,7 +86,7 @@ export function useParallaxEnhanced() {
     const closeness = PARALLAX_Z_MAX - sceneZ
     const zScale = (closeness / PARALLAX_Z_RANGE) * MAX_Z_SCALE
 
-    const translateX = dh * zScale
+    const translateX = alignX + dh * zScale
     const translateY = dv * zScale
     cardDiv.style.transform = `translateX(${translateX}px) translateY(${translateY}px)`
     return true
@@ -96,18 +100,29 @@ export function useParallaxEnhanced() {
     return !!(plane && (scene.querySelector('.biz-card-div') || scene.querySelector('.skill-card-div')))
   }
 
-  /** Refresh all parallax transforms using current bulls-eye and effective focal (from #focal-point element). Only runs when scene is ready. */
+  /** Refresh all projection transforms: projected X = (bullsEye.center.x - windowCenterX) + parallax; Y = parallax only. */
   function refreshAllParallaxTransforms() {
     if (!isSceneReady()) return
 
-    const bulls = getBullsEyePosition()
+    const scene = document.getElementById('scene-container')
+    const plane = scene && scene.querySelector('#scene-plane')
+    if (!plane) return
+
+    const bullsEyeCenter = getBullsEyePosition()
     const focal = getEffectiveFocalPosition()
-    const dh = (bulls.x - focal.x) * PARALLAX_X_EXAGGERATION_FACTOR
-    const dv = (bulls.y - focal.y) * PARALLAX_Y_EXAGGERATION_FACTOR
+    const sceneViewRect = scene.getBoundingClientRect()
+    const windowCenterX = typeof window !== 'undefined' ? window.innerWidth / 2 : 0
+    const alignX = (bullsEyeCenter.x - windowCenterX) + bullsEyeCenter.x
+    const dh = (bullsEyeCenter.x - focal.x) * PARALLAX_X_EXAGGERATION_FACTOR
+    const dv = (bullsEyeCenter.y - focal.y) * PARALLAX_Y_EXAGGERATION_FACTOR
 
     const prev = previousDisplacements.value
-    if (dh === 0 && dv === 0) return
-    if (prev.dh === dh && prev.dv === dv) return
+    if (prev.dh === dh && prev.dv === dv && prev.alignX === alignX) return
+
+    const bullsEyeSceneView = { x: bullsEyeCenter.x - sceneViewRect.left, y: bullsEyeCenter.y - sceneViewRect.top }
+    const focalSceneView = { x: focal.x - sceneViewRect.left, y: focal.y - sceneViewRect.top }
+    const FOCAL_MATCH_TOLERANCE_PX = 1.0
+    const bullsEyeMatchesFocal = Math.abs(focalSceneView.x - bullsEyeSceneView.x) <= FOCAL_MATCH_TOLERANCE_PX
 
     let bizCardDivs = []
     if (typeof window !== 'undefined' && window.globalElementRegistry?.getAllBizCardDivs) {
@@ -116,15 +131,34 @@ export function useParallaxEnhanced() {
     if (bizCardDivs.length === 0) {
       bizCardDivs = Array.from(document.querySelectorAll('.biz-card-div'))
     }
+    const firstBiz = bizCardDivs.find(div => div.getAttribute('data-job-number') === '0') || bizCardDivs[0]
     const skillCardDivs = Array.from(document.querySelectorAll('.skill-card-div'))
 
     for (const div of bizCardDivs) {
-      applyParallaxToCardDiv(div, dh, dv)
+      applyParallaxToCardDiv(div, alignX, dh, dv)
     }
     for (const div of skillCardDivs) {
-      applyParallaxToCardDiv(div, dh, dv)
+      applyParallaxToCardDiv(div, alignX, dh, dv)
     }
-    previousDisplacements.value = { dh, dv }
+    if (firstBiz && bullsEyeMatchesFocal) {
+      const rect = firstBiz.getBoundingClientRect()
+      const firstBizCardCenterX2D = rect.left + rect.width / 2 - sceneViewRect.left
+      const bullsEyeCenterX2D = bullsEyeSceneView.x
+      const diff = firstBizCardCenterX2D - bullsEyeCenterX2D
+      const prev = previousCenterLog.value
+      const b1 = bullsEyeCenterX2D.toFixed(1)
+      const c1 = firstBizCardCenterX2D.toFixed(1)
+      const d1 = diff.toFixed(1)
+      const changed = prev.bullsEyeCenterX2D !== b1 || prev.firstBizCardCenterX2D !== c1 || prev.diff !== d1
+      if (changed) {
+        console.log('* CENTER * [Parallax] ------------------------------')
+        console.log('* CENTER * [Parallax] bullsEyeCenterX 2D :', bullsEyeCenterX2D.toFixed(1))
+        console.log('* CENTER * [Parallax] first bizCardCenterX 2D :', firstBizCardCenterX2D.toFixed(1))
+        console.log('* CENTER * [Parallax] error 2D: (' + firstBizCardCenterX2D.toFixed(1) + '-' + bullsEyeCenterX2D.toFixed(1) + ') =', diff.toFixed(1))
+        previousCenterLog.value = { bullsEyeCenterX2D: b1, firstBizCardCenterX2D: c1, diff: d1 }
+      }
+    }
+    previousDisplacements.value = { dh, dv, alignX }
   }
 
   // Enhanced render function: apply parallax transforms directly
