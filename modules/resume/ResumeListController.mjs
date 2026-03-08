@@ -1741,6 +1741,15 @@ class ResumeListController extends BaseComponent {
       const bizResumeDetailsDiv = document.createElement('div');
       bizResumeDetailsDiv.className = 'biz-resume-details-div';
       bizResumeDetailsDiv.textContent = `Resume item ${jobNumber} - Details to be implemented`;
+      const sceneZSpan = document.createElement('span');
+      sceneZSpan.className = 'r-div-scene-z';
+      const cDiv = typeof document !== 'undefined' ? document.getElementById(`biz-card-div-${jobNumber}`) : null;
+      sceneZSpan.textContent = cDiv ? ` cZ:${cDiv.getAttribute('data-sceneZ') ?? '?'}` : '';
+      const debugRow = document.createElement('div');
+      debugRow.className = 'biz-details-debug-row';
+      debugRow.appendChild(document.createTextNode(`#${jobNumber}`));
+      debugRow.appendChild(sceneZSpan);
+      bizResumeDetailsDiv.appendChild(debugRow);
       if (bizResumeDetailsDiv instanceof Node) {
         bizResumeDiv.appendChild(bizResumeDetailsDiv);
       } else {

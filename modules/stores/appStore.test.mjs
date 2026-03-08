@@ -46,14 +46,14 @@ describe('appStore', () => {
     });
   });
 
-  it('appStoreActions.setOrientation calls updateAppState', async () => {
+  it('appStoreActions.setOrientation calls updateAppState with immediate save', async () => {
     const { appStoreActions } = await import('./appStore.mjs');
     await appStoreActions.setOrientation('scene-right');
     expect(mockUpdateAppState).toHaveBeenCalledWith({
       'user-settings': {
         layout: { orientation: 'scene-right' },
       },
-    });
+    }, true);
   });
 
   it('appStoreActions.toggleOrientation flips orientation', async () => {
@@ -64,7 +64,7 @@ describe('appStore', () => {
       'user-settings': {
         layout: { orientation: 'scene-right' },
       },
-    });
+    }, true);
   });
 
   it('appStoreActions.setSelectedJob and clearSelection update store', async () => {

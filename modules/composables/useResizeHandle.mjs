@@ -14,7 +14,7 @@ function createResizeHandleState() {
   const { appState, updateAppState, setDragMode, startAutoSave } = useAppState();
   const { store: appStore, actions: storeActions } = useAppStore();
   
-  // Reactive state
+  // Reactive state; sceneWidth can be 0 (resize handle must remain visible via layout/CSS)
   const uiPercentage = ref(DEFAULT_WIDTH_PERCENT);
   const sceneWidthInPixels = ref(0);
   const isDragging = ref(false);
@@ -62,11 +62,12 @@ function createResizeHandleState() {
     startAutoSave();
     // console.log('[ResizeHandle] Auto-save system started');
     
-    // Listen for app state loaded event to update from saved state
+    // Listen for app state loaded event to update from saved state; apply in nextTick so app-container children have stable geometry after first paint
     window.addEventListener('app-state-loaded', () => {
-      // console.log('[ResizeHandle] App state loaded, re-initializing from saved state');
       initializeState();
-      updateLayout(uiPercentage.value, false);
+      nextTick(() => {
+        updateLayout(uiPercentage.value, false);
+      });
     });
     
     // Watch AppState for stepCount changes

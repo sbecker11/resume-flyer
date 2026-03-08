@@ -386,6 +386,12 @@ onMounted(async () => {
     // PHASE 7: Global event handlers (now handled by Vue 3 composables)
     console.log('[AppContent] 🎹 Keyboard navigation handled by Vue 3 composable')
     
+    // PHASE 8: Render scene view on initial load / hard refresh (parallax and layout)
+    requestAnimationFrame(() => {
+      renderAllCDivs()
+      console.log('[AppContent] 🖼️ Scene view render triggered (initial load / refresh)')
+    })
+    
     console.log('[AppContent] ✅ Vue 3 app initialization complete!')
     
   } catch (error) {
@@ -448,9 +454,6 @@ watch(orientation, (newOrientation) => {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
-    position: absolute !important;
-    left: -9999px !important;
-    z-index: -9999 !important;
     pointer-events: none !important;
 }
 
@@ -469,7 +472,7 @@ watch(orientation, (newOrientation) => {
 #resume-container {
   display: flex;
   flex: 1;
-  background: #f8f9fa;
+  background: var(--background-dark, #1a1a1a);
   position: relative;
 }
 
@@ -485,9 +488,14 @@ watch(orientation, (newOrientation) => {
   order: 3 !important;
 }
 
-/* ResizeHandle always stays in the middle */
+/* ResizeHandle always stays between scene and resume; always visible even when scene width is 0 */
 .resize-handle {
   order: 2 !important;
+  flex-shrink: 0 !important;
+  min-width: 20px !important;
+  visibility: visible !important;
+  z-index: 10000;
+  pointer-events: auto;
 }
 
 .resume-content {
@@ -528,7 +536,7 @@ watch(orientation, (newOrientation) => {
 }
 
 #focal-point.locked {
-  color: #00ff00;
+  color: #666666;
 }
 
 #focal-point.dragging {

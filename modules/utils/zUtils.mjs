@@ -35,10 +35,9 @@ export const ALL_CARDS_Z_MIN = 10;
 
 // Flock-of-postcards (see sibling repo flock-of-postcards/main.mjs):
 //   "z is distance to viewer" → z = MAX_Z - zindex, zindex = MAX_Z - z.
-//   get_zIndexStr_from_z(z) = `${ALL_CARDS_MAX_Z - z}`; get_z_from_zIndexStr(zindex) = ALL_CARDS_MAX_Z - parseInt(zindex).
 // Here: Z = distance from viewer; Z = FLOCK_Z_MAX - z_index (higher z_index = closer = lower Z).
 // - z_index: CSS stacking order (1–3 biz, 4–13 skill); higher = in front.
-// - scene Z (stored on cards): Z = FLOCK_Z_MAX - z_index; higher Z = farther, lower Z = closer.
+// - scene Z (stored on cards): Z = FLOCK_Z_MAX - z_index; range 1–14. No scene div should ever have negative scene Z.
 export const FLOCK_Z_MAX = 14;                    // far plane; Z = FLOCK_Z_MAX - z_index (original used 15)
 export const FLOCK_BIZCARD_Z_INDEX_MIN = 1;       // biz cards z_index 1–3 (back)
 export const FLOCK_BIZCARD_Z_INDEX_MAX = 3;
@@ -62,8 +61,10 @@ export function z_index_from_Z(Z) {
 if (FLOCK_BIZCARD_Z_INDEX_MAX >= FLOCK_SKILL_Z_INDEX_MIN) {
   throw new Error(`zUtils: biz z_index must be < skill z_index`);
 }
-// Selected clone Z (flock-of-postcards SELECTED_CARD_DIV_Z = -10); clone is not subject to motion parallax
-export const FLOCK_SELECTED_CLONE_Z = -10;
+// Selected clone scene Z: large positive = “closest to viewer” (same range as cards, 1–14). Clones are not subject to motion parallax; they keep the same transform as at creation.
+// Invariant: all scene clones (biz-card and skill-card) use this as their data-sceneZ.
+export const FLOCK_SELECTED_CLONE_Z = FLOCK_PARALLAX_Z_MAX; // 14
+export const SELECTED_CLONE_SCENE_Z = FLOCK_SELECTED_CLONE_Z;
 
 export const SUM_Z = ALL_CARDS_Z_INDEX_MAX + ALL_CARDS_Z_MIN;
 export const Z_SUM = ALL_CARDS_Z_MAX + ALL_CARDS_Z_INDEX_MIN;

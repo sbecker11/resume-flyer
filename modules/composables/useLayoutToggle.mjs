@@ -149,10 +149,9 @@ export function useLayoutToggle() {
     }, 1000); // Back to 1000ms - happens after scene-force-update at 800ms
   };
 
-  // Listen for state initialization and update orientation if needed
+  // Listen for state initialization and apply stored orientation (path: user-settings.layout.orientation)
   window.addEventListener('app-state-loaded', () => {
-    const storedOrientation = appState.value?.layout?.orientation;
-    
+    const storedOrientation = appState.value?.["user-settings"]?.layout?.orientation;
     if (storedOrientation && storedOrientation !== orientation.value) {
       orientation.value = storedOrientation;
     }

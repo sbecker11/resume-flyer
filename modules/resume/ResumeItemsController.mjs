@@ -243,16 +243,11 @@ class ResumeItemsController {
         jobNumPart.className = 'job-number';
         jobNumPart.textContent = `#${jobNumber}`;
         idAndHexSpan.appendChild(jobNumPart);
-        idAndHexSpan.appendChild(document.createTextNode(' label: '));
-        const labelSpan = document.createElement('span');
-        labelSpan.className = 'biz-details-debug-label';
-        labelSpan.textContent = [jobData.employer, jobData.role].filter(Boolean).join(' · ') || '—';
-        idAndHexSpan.appendChild(labelSpan);
-        idAndHexSpan.appendChild(document.createTextNode(' list: '));
-        const listIndexSpan = document.createElement('span');
-        listIndexSpan.className = 'biz-details-list-index';
-        listIndexSpan.textContent = '—/—';
-        idAndHexSpan.appendChild(listIndexSpan);
+        const sceneZSpan = document.createElement('span');
+        sceneZSpan.className = 'r-div-scene-z';
+        const cDiv = typeof document !== 'undefined' ? document.getElementById(`biz-card-div-${jobNumber}`) : null;
+        sceneZSpan.textContent = cDiv ? ` cZ:${cDiv.getAttribute('data-sceneZ') ?? '?'}` : '';
+        idAndHexSpan.appendChild(sceneZSpan);
         idAndHexSpan.appendChild(document.createTextNode(' '));
         const hexNormalSpan = document.createElement('span');
         hexNormalSpan.className = 'hex-normal';
@@ -262,17 +257,6 @@ class ResumeItemsController {
         hexHighlightedSpan.className = 'hex-highlighted';
         idAndHexSpan.appendChild(hexHighlightedSpan);
         debugRow.appendChild(idAndHexSpan);
-        const iconBase = '/static_content/icons/anchors';
-        ['url', 'back', 'img'].forEach((name) => {
-            const img = document.createElement('img');
-            img.className = `${name}-icon`;
-            img.src = `${iconBase}/icons8-${name}-16-black.png`;
-            img.alt = '';
-            img.width = 16;
-            img.height = 16;
-            img.setAttribute('aria-hidden', 'true');
-            debugRow.appendChild(img);
-        });
         headerDiv.appendChild(debugRow);
 
         detailsDiv.appendChild(headerDiv);

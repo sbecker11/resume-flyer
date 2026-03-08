@@ -1,3 +1,4 @@
+/* Fixed overlay stacking (top to bottom): focal-point 9999, aim-point 9998, bulls-eye 9997. Scene/cards sit below. */
 #aim-point {
     position: fixed;
     width: 4px;
@@ -5,7 +6,7 @@
     border-radius: 50%;
     background-color: red;
     border: none;
-    z-index: 9998; /* Second highest - below focalPoint, above bullsEye */
+    z-index: 9998;
     pointer-events: none; /* Let all events pass through */
     top: 0;
     left: 0;
@@ -21,7 +22,7 @@
     height: 50px;
     border-radius: 50%;
     border: 2px solid gray;
-    z-index: 9997; /* Third highest - below focalPoint and aimPoint */
+    z-index: 9997;
     pointer-events: none;
     display: flex;
     align-items: center;
@@ -47,24 +48,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;  /* Highest z-index - above aimPoint and bullsEye */
+    z-index: 9999;
     cursor: default;
     pointer-events: none;  /* Let scroll/wheel events pass through */
   }
 
   #focal-point.focal-point-is-draggable {
-    cursor: grab !important; /* Open hand cursor indicating it can be grabbed */
-    color: green;
-    border-color: green;
-    z-index: 9999;
+    cursor: grab !important;
+    color: #666666;
+    border-color: #666666;
   }
 
   #focal-point.focal-point-is-being-dragged {
-    cursor: grabbing !important; /* Closed hand cursor indicating it's being dragged */
+    cursor: grabbing !important;
     color: blue;
     border-color: blue;
-    pointer-events: all; /* Keep pointer events enabled while dragging */
-    z-index: 9999;
+    pointer-events: all;
   }
 
   /* Ensure these classes are mutually exclusive in appearance */
@@ -81,7 +80,7 @@
   
   .focal-point-is-draggable {
     cursor: grab;
-    color: green;
+    color: #666666;
   }
   
   .focal-point-is-being-dragged {
@@ -97,20 +96,18 @@
     cursor: default;
   }
 
-  /* Ensure the focal point cursor styles take precedence */
+  /* Ensure the focal point cursor styles take precedence (z-index inherited from #focal-point) */
   #focal-point.focal-point-is-draggable {
-    cursor: grab !important; /* Open hand cursor indicating it can be grabbed */
-    color: green;
-    border-color: green;
-    z-index: 9999;
+    cursor: grab !important;
+    color: #666666;
+    border-color: #666666;
   }
 
   #focal-point.focal-point-is-being-dragged {
-    cursor: grabbing !important; /* Closed hand cursor indicating it's being dragged */
+    cursor: grabbing !important;
     color: blue;
     border-color: blue;
-    pointer-events: none;  /* Disable pointer events while dragging to allow clicks to pass through */
-    z-index: 9999;
+    pointer-events: none;
   }
 
   /* Cursor styles for dragging over different elements */
@@ -128,17 +125,17 @@
     cursor: inherit !important;
   }
 
-  /* Style for when focal point is locked to bulls eye - changed from red to light green */
+  /* Style for when focal point is locked to bulls eye */
   #focal-point.locked-to-bulls-eye {
-    color: lightgreen !important;
-    border-color: lightgreen !important;
+    color: #666666 !important;
+    border-color: #666666 !important;
     font-weight: bold;
     pointer-events: none;
   }
 
-  /* Add a visual indicator to the bulls eye when focal point is locked to it - changed from red to light green */
+  /* Visual indicator on bulls eye when focal point is locked to it */
   #bulls-eye.focal-point-locked {
-    color: lightgreen !important;
+    color: #666666 !important;
     font-weight: bold;
   }
   

@@ -98,8 +98,8 @@ export const appStoreActions = {
           orientation: orientation
         }
       }
-    })
-    console.log(`[AppStore] Orientation changed to: ${orientation}`)
+    }, true)
+    console.log(`[AppStore] Orientation changed to: ${orientation} (saved)`)
   },
   
   async setScenePercentage(percentage) {

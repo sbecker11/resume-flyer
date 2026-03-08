@@ -7,8 +7,10 @@
 export const BIZCARD_WIDTH = 200;
 export const BIZCARD_INDENT = 29;
 export const MIN_BIZCARD_HEIGHT = 200;
-// Horizontal: max random offset from canvas center (px each side); actual range limited by canvas edges
+/** Max random offset of biz card center X from scene center (px each side). Uniform in [-this, +this] so average centerX = 0. */
 export const BIZCARD_HZ_CENTER_OFFSET_MAX = 60;
+/** Random variation in biz card width (px). Width = BIZCARD_WIDTH + uniform(-this, +this), clamped to [BIZCARD_WIDTH - this, BIZCARD_WIDTH + this]. */
+export const BIZCARD_WIDTH_VARIANCE = 24;
 
 // Skill card dimensions and positioning - from flock-of-postcards card.ts
 export const MEAN_CARD_WIDTH = 100;
