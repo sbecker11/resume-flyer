@@ -3,5 +3,8 @@ node_modules/
 coverage/
 palette-utils-ts/coverage/
 
+# macOS folder metadata (any directory)
+.DS_Store
+
 # Local-only Cursor command (do not push)
 .cursor/commands/env.md
