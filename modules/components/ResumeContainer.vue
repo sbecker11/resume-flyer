@@ -6,10 +6,15 @@ import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
 import { applyPaletteToElement } from '@/modules/composables/useColorPalette.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useResumeListController } from '@/modules/core/globalServices';
+import { useAppState } from '@/modules/composables/useAppState.ts';
 import { parseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
 
 // Get the same percentage as the resize handle
 const { scenePercentage } = useResizeHandle();
+const { appState, updateAppState } = useAppState();
+const resumeContentWrapperRef = ref(null);
+let resumeContentScrollTimeoutId = null;
+const SCROLL_PERSIST_DEBOUNCE_MS = 300;
 
 // Use Vue 3 provide/inject instead of window.resumeListController
 const resumeListController = useResumeListController();
@@ -382,6 +387,37 @@ function onResumeSkillCardScrollIntoView(event) {
   appendSkillCardCopyToResumeListing(skillCardId);
 }
 
+function onResumeContentWrapperScroll() {
+  const el = resumeContentWrapperRef.value;
+  if (!el || !appState.value) return;
+  if (resumeContentScrollTimeoutId) clearTimeout(resumeContentScrollTimeoutId);
+  resumeContentScrollTimeoutId = setTimeout(() => {
+    resumeContentScrollTimeoutId = null;
+    const scrollTop = Math.max(0, el.scrollTop);
+    const current = appState.value['user-settings']?.scrollPositions ?? {};
+    updateAppState({
+      'user-settings': {
+        scrollPositions: {
+          ...current,
+          resumeContentScrollTop: scrollTop
+        }
+      }
+    }).catch((e) => {
+      console.error('[ResumeContainer] Failed to persist resume scroll position', e);
+    });
+  }, SCROLL_PERSIST_DEBOUNCE_MS);
+}
+
+watch(resumeContentWrapperRef, (newRef) => {
+  if (!newRef) return;
+  const saved = appState.value?.['user-settings']?.scrollPositions?.resumeContentScrollTop;
+  if (typeof saved === 'number' && saved > 0) {
+    nextTick(() => {
+      newRef.scrollTop = saved;
+    });
+  }
+}, { immediate: true });
+
 // When selection becomes a skill card, append copy and scroll (primary path; event is fallback)
 watch(
   selectedCardSnapshot,
@@ -406,6 +442,7 @@ onMounted(() => {
   window.__resumeAppendSkillCardCopy = appendSkillCardCopyToResumeListing;
 });
 onUnmounted(() => {
+  if (resumeContentScrollTimeoutId) clearTimeout(resumeContentScrollTimeoutId);
   selectionManager?.eventTarget?.removeEventListener('card-selected', updateSelectedCardSnapshot);
   selectionManager?.eventTarget?.removeEventListener('selection-cleared', updateSelectedCardSnapshot);
   selectionManager?.eventTarget?.removeEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
@@ -457,7 +494,7 @@ function onResumeSkillCardClick(event) {
                 <button @click="clearAllResumeDivs" class="resume-divs-control-button">Clear</button>
             </div>
         </div>
-        <div id="resume-content-div-wrapper" class="scrollable-container">
+        <div id="resume-content-div-wrapper" ref="resumeContentWrapperRef" class="scrollable-container" @scroll="onResumeContentWrapperScroll">
             <div id="resume-content-div" class="resume-content-div-container">
                 <!-- Skill cards only appear as appended copies in the list below; top panel hidden to avoid duplicate. -->
                 <div v-if="false" id="skill-resume-divs-panel" class="skill-resume-divs-panel">

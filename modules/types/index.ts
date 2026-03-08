@@ -54,7 +54,11 @@ export interface AppState {
     
     selectedJobNumber: number | null;
     lastVisitedJobNumber: number | null;
-    
+    /** Last selected DOM element ID (e.g. "resume-5", "skill-card-div-3-clone") or null if none selected */
+    selectedElementId: string | null;
+    /** Dual element in the other view (scene ↔ resume). e.g. resume-5 ↔ biz-card-div-5-clone; skill-card-div-3 ↔ resume element with data-skill-card-id="skill-card-div-3". */
+    selectedDualElementId: string | null;
+
     resume: {
       sortRule: SortRule;
     };
@@ -62,8 +66,14 @@ export interface AppState {
     theme: {
       colorPalette: string; // filename only
     };
+
+    /** Persisted vertical scroll positions (scrollTop) for scene and resume panels */
+    scrollPositions: {
+      sceneContentScrollTop: number;
+      resumeContentScrollTop: number;
+    };
   };
-  
+
   // System constants grouped together  
   "system-constants": {
     zIndex: {

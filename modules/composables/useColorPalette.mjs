@@ -22,6 +22,32 @@ export const readyPromise = new Promise((resolve) => { resolveReady = resolve; }
 // Initialize from the global state, but allow it to be updated locally
 const currentPaletteFilename = ref(null);
 
+/**
+ * Apply document-level background CSS vars (--background-light, --background-dark) from the current palette.
+ * Used on initial load and hard refresh so the scene view background is correct when restoring from state.
+ */
+function applySceneBackgroundFromCurrentPalette() {
+    const filename = currentPaletteFilename.value;
+    if (!filename || typeof document === 'undefined') return;
+    const paletteName = filenameToNameMap.value[filename];
+    const colorPalette = colorPalettes.value[paletteName];
+    if (!paletteName || !colorPalette || colorPalette.length === 0) return;
+    const root = document.documentElement;
+    const bgIndex = backgroundSwatchIndexByPalette.value[paletteName];
+    const baseBackgroundHex = (bgIndex != null && colorPalette[bgIndex] != null)
+        ? colorPalette[bgIndex]
+        : colorPalette.reduce((darkest, current) => {
+            return getPerceivedBrightness(current) < getPerceivedBrightness(darkest) ? current : darkest;
+        }, colorPalette[0]);
+    const darkHex = baseBackgroundHex || '#333333';
+    const darkerHex = getHighlightColor(darkHex, { highlightPercent: 45 });
+    const darkestHex = getHighlightColor(darkHex, { highlightPercent: 15 });
+    const darkerRgb = hexToRgb(darkerHex) || { r: 51, g: 51, b: 51 };
+    const darkestRgb = hexToRgb(darkestHex) || { r: 26, g: 26, b: 26 };
+    root.style.setProperty('--background-light', `rgba(${darkerRgb.r}, ${darkerRgb.g}, ${darkerRgb.b}, 1.0)`);
+    root.style.setProperty('--background-dark', `rgba(${darkestRgb.r}, ${darkestRgb.g}, ${darkestRgb.b}, 1.0)`);
+}
+
 // --- The Composable Function ---
 export function useColorPalette() {
     // Access centralized app state
@@ -128,6 +154,9 @@ export function useColorPalette() {
                 currentPaletteFilename.value = Object.keys(tempFilenameToNameMap)[0];
                 // console.log(`[ColorPalette] Set default palette to: ${currentPaletteFilename.value}`);
             }
+
+            // Ensure scene view background is updated when restoring selected palette from state (initial load / hard refresh)
+            applySceneBackgroundFromCurrentPalette();
 
         } catch (error) {
             console.error("[ColorPalette] Failed to load color palettes:", error);
@@ -326,23 +355,8 @@ export function useColorPalette() {
         // Wait for both filename mapping and palette data to be loaded
         if (!paletteName || !colorPalette || colorPalette.length === 0) return;
 
-        // Apply document-level styles using palette-utils-ts (LCH-based darkening). Each palette may use a different swatch as its background.
-        const root = document.documentElement;
-        const bgIndex = backgroundSwatchIndexByPalette.value[paletteName];
-        const baseBackgroundHex = (bgIndex != null && colorPalette[bgIndex] != null)
-            ? colorPalette[bgIndex]
-            : colorPalette.reduce((darkest, current) => {
-                return getPerceivedBrightness(current) < getPerceivedBrightness(darkest) ? current : darkest;
-            }, colorPalette[0]);
-
-        const darkHex = baseBackgroundHex || '#333333';
-        const darkerHex = getHighlightColor(darkHex, { highlightPercent: 45 });
-        const darkestHex = getHighlightColor(darkHex, { highlightPercent: 15 });
-        const darkerRgb = hexToRgb(darkerHex) || { r: 51, g: 51, b: 51 };
-        const darkestRgb = hexToRgb(darkestHex) || { r: 26, g: 26, b: 26 };
-
-        root.style.setProperty('--background-light', `rgba(${darkerRgb.r}, ${darkerRgb.g}, ${darkerRgb.b}, 1.0)`);
-        root.style.setProperty('--background-dark', `rgba(${darkestRgb.r}, ${darkestRgb.g}, ${darkestRgb.b}, 1.0)`);
+        // Apply scene view background (--background-light, --background-dark) from current palette
+        applySceneBackgroundFromCurrentPalette();
 
         const registry = getElementRegistry();
         registry?.clearAllCache?.();

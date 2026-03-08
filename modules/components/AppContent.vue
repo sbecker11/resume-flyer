@@ -59,6 +59,7 @@ import { useColorPalette } from '../composables/useColorPalette.mjs'
 import { useLayoutToggle } from '../composables/useLayoutToggle.mjs'
 import { useResizeHandle } from '../composables/useResizeHandle.mjs'
 import { useAppState } from '../composables/useAppState.ts'
+import { useSelectedElementIdPersistence } from '../composables/useSelectedElementIdPersistence.mjs'
 
 // Resume system initialization (to be migrated)
 import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrolling } from '../resume/resumeSystemInitializer.mjs'
@@ -94,6 +95,9 @@ const secondContainer = computed(() => store.orientation === 'scene-left' ? 'res
 
 // Resize handle functionality
 const { sceneContainerStyle } = useResizeHandle()
+
+// Persist and restore last selected DOM element ID
+const { restoreSelectionFromState } = useSelectedElementIdPersistence()
 
 // Color palette management
 const { loadPalettes } = useColorPalette()
@@ -347,7 +351,12 @@ onMounted(async () => {
     // PHASE 5: Resume system (legacy during migration)
     console.log('[AppContent] 📋 Initializing resume system...')
     await initializeResumeSystem()
-    
+
+    // Restore last selected DOM element from persisted state (after rDivs exist)
+    setTimeout(() => {
+      restoreSelectionFromState()
+    }, 400)
+
     // PHASE 6: Service readiness logs (now ready from start)
     console.log('[AppContent] 🔧 Service readiness (pre-marked ready) ...')
     console.log('  - timelineService.isReady:', timelineService.isReady.value)

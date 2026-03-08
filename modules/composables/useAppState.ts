@@ -55,14 +55,20 @@ function getDefaultState(): AppState {
             focalPointMode: 'locked',
             selectedJobNumber: null,
             lastVisitedJobNumber: null,
+            selectedElementId: null,
+            selectedDualElementId: null,
             resume: {
                 sortRule: { field: 'startDate', direction: 'asc' }
             },
             theme: {
                 colorPalette: 'sweeps.json'
+            },
+            scrollPositions: {
+                sceneContentScrollTop: 0,
+                resumeContentScrollTop: 0
             }
         },
-        
+
         "system-constants": {
             zIndex: {
                 root: 0,

@@ -8,7 +8,7 @@
   >
     <div id="scene-container-top-gradient"></div>
     <div id="scene-container-btm-gradient"></div>
-    <div id="scene-content" ref="sceneContentRef">
+    <div id="scene-content" ref="sceneContentRef" @scroll="onSceneContentScroll">
       <div id="scene-plane" ref="scenePlaneRef" @click="handleScenePlaneClick">
         <Timeline :alignment="timelineAlignment" />
         <!-- BizCardDivs will be dynamically appended here by CardsController -->
@@ -22,7 +22,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 
 // Vue components
 import Timeline from './Timeline.vue'
@@ -35,9 +35,14 @@ import { useFocalPoint } from '../composables/useFocalPointVue3.mjs'
 import { useViewport } from '../composables/useViewport.mjs'
 import { useScenePlaneOptimized } from '../composables/useScenePlaneOptimized.mjs'
 import { injectGlobalElementRegistry } from '../composables/useGlobalElementRegistry.mjs'
+import { useAppState } from '../composables/useAppState.ts'
 
 // Selection management
 import { selectionManager } from '../core/selectionManager.mjs'
+
+const { appState, updateAppState } = useAppState()
+let sceneContentScrollTimeoutId = null
+const SCROLL_PERSIST_DEBOUNCE_MS = 300
 
 // Legacy imports removed - now using Vue 3 composables
 // import { bullsEye } from '../core/bullsEye.mjs' - replaced by useBullsEyeVue3
@@ -107,6 +112,27 @@ watch(sceneContainerRef, (newRef) => {
   }
 }, { immediate: true })
 
+function onSceneContentScroll() {
+  const el = sceneContentRef.value
+  if (!el || !appState.value) return
+  if (sceneContentScrollTimeoutId) clearTimeout(sceneContentScrollTimeoutId)
+  sceneContentScrollTimeoutId = setTimeout(() => {
+    sceneContentScrollTimeoutId = null
+    const scrollTop = Math.max(0, el.scrollTop)
+    const current = appState.value['user-settings']?.scrollPositions ?? {}
+    updateAppState({
+      'user-settings': {
+        scrollPositions: {
+          ...current,
+          sceneContentScrollTop: scrollTop
+        }
+      }
+    }).catch((e) => {
+      console.error('[SceneContainer] Failed to persist scene scroll position', e)
+    })
+  }, SCROLL_PERSIST_DEBOUNCE_MS)
+}
+
 watch(sceneContentRef, (newRef) => {
   if (newRef) {
     console.log('[SceneContainer] sceneContentRef became available')
@@ -121,6 +147,13 @@ watch(sceneContentRef, (newRef) => {
       getElementRegistry().registerElement('scene-content', newRef)
     } catch (error) {
       console.log('[SceneContainer] Registry not ready yet for scene-content, will register later')
+    }
+    // Restore persisted vertical scroll position (initial load / hard refresh)
+    const saved = appState.value?.['user-settings']?.scrollPositions?.sceneContentScrollTop
+    if (typeof saved === 'number' && saved > 0) {
+      nextTick(() => {
+        newRef.scrollTop = saved
+      })
     }
   }
 }, { immediate: true })
@@ -202,6 +235,10 @@ onMounted(async () => {
     console.error('[SceneContainer] ❌ Scene initialization failed:', error)
     throw error
   }
+})
+
+onUnmounted(() => {
+  if (sceneContentScrollTimeoutId) clearTimeout(sceneContentScrollTimeoutId)
 })
 
 // Expose refs to parent if needed
