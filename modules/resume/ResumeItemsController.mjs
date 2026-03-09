@@ -660,12 +660,13 @@ class ResumeItemsController {
             listController.ensureJobInListing(jobNumber);
         }
         this.dismissedJobNumbers.delete(jobNumber);
-        const id = this.createBizResumeDivId(jobNumber);
-        if (listController && typeof listController.scrollToElementId === 'function') {
-            listController.scrollToElementId(id);
-        } else {
-            const rDiv = this.bizResumeDivs.find(div => parseInt(div.getAttribute('data-job-number')) === jobNumber);
-            if (rDiv) this._scrollRDivIntoView(rDiv, jobNumber);
+
+        // CRITICAL: Use _scrollRDivIntoView instead of scrollToElementId
+        // _scrollRDivIntoView uses scrollTo on the container with calculated position (smooth)
+        // scrollToElementId uses scrollIntoView which can be interrupted by scroll event handlers
+        const rDiv = this.bizResumeDivs.find(div => parseInt(div.getAttribute('data-job-number')) === jobNumber);
+        if (rDiv) {
+            this._scrollRDivIntoView(rDiv, jobNumber);
         }
     }
 

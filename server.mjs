@@ -3,6 +3,9 @@ import fs from 'fs/promises'; // Use promises for async/await
 import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import multer from 'multer';
+import { spawn } from 'child_process';
+import sanitizeFilename from 'sanitize-filename';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
 
@@ -177,6 +180,224 @@ app.get('/api/resumes/:id/data', async (req, res) => {
             console.error('Error reading resume data:', error);
             res.status(500).json({ error: 'Failed to read resume data.' });
         }
+    }
+});
+
+// GET /api/resumes: List all parsed resumes with metadata
+app.get('/api/resumes', async (req, res) => {
+    try {
+        const entries = await fs.readdir(PARSED_RESUMES_DIR, { withFileTypes: true });
+        const resumeFolders = entries.filter(entry => entry.isDirectory());
+
+        const resumes = [];
+
+        for (const folder of resumeFolders) {
+            const resumeId = folder.name;
+            const dir = path.join(PARSED_RESUMES_DIR, resumeId);
+
+            try {
+                // Read meta.json if it exists
+                let metadata = {};
+                const metaPath = path.join(dir, 'meta.json');
+                try {
+                    const metaContent = await fs.readFile(metaPath, 'utf-8');
+                    metadata = JSON.parse(metaContent);
+                } catch (e) {
+                    // meta.json doesn't exist - will generate from data
+                }
+
+                // Get jobs and skills data to count items
+                let jobsPath = path.join(dir, 'jobs', 'jobs.mjs');
+                try {
+                    await fs.access(jobsPath);
+                } catch (e) {
+                    if (e.code === 'ENOENT') {
+                        jobsPath = path.join(dir, 'jobs.mjs');
+                    }
+                }
+
+                let skillsPath = path.join(dir, 'skills', 'skills.mjs');
+                try {
+                    await fs.access(skillsPath);
+                } catch (e) {
+                    if (e.code === 'ENOENT') {
+                        skillsPath = path.join(dir, 'skills.mjs');
+                    }
+                }
+
+                const categoriesPath = path.join(dir, 'categories.mjs');
+                const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
+                // Get folder creation time
+                const stats = await fs.stat(dir);
+
+                resumes.push({
+                    id: resumeId,
+                    displayName: metadata.displayName || resumeId,
+                    createdAt: metadata.createdAt || stats.birthtime.toISOString(),
+                    jobCount: jobs.length,
+                    skillCount: Object.keys(skills).length,
+                    metadata
+                });
+            } catch (error) {
+                console.warn(`Failed to read resume ${resumeId}:`, error.message);
+            }
+        }
+
+        // Sort by creation date (newest first)
+        resumes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        res.json(resumes);
+    } catch (error) {
+        console.error('Error listing resumes:', error);
+        res.status(500).json({ error: 'Failed to list resumes.' });
+    }
+});
+
+// Configure multer for file uploads
+const upload = multer({
+    dest: path.join(PROJECT_ROOT, 'uploads'),
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+            file.originalname.endsWith('.docx')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only .docx files are allowed'));
+        }
+    },
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    }
+});
+
+// POST /api/resumes/upload: Upload and parse a .docx resume
+app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const uploadedFile = req.file;
+        const displayName = req.body.displayName || path.basename(uploadedFile.originalname, '.docx');
+        const timestamp = Date.now();
+        const resumeId = `resume-${timestamp}`;
+        const outputDir = path.join(PARSED_RESUMES_DIR, resumeId);
+
+        console.log(`📤 Processing uploaded resume: ${uploadedFile.originalname}`);
+        console.log(`   Output directory: ${outputDir}`);
+
+        // Create output directory
+        await fs.mkdir(outputDir, { recursive: true });
+
+        // Move uploaded file to output directory
+        const targetDocxPath = path.join(outputDir, sanitizeFilename(uploadedFile.originalname));
+        await fs.rename(uploadedFile.path, targetDocxPath);
+
+        // Look for Python parser in the project or sibling directory
+        const possibleParserPaths = [
+            path.join(PROJECT_ROOT, 'resume_to_flock.py'),
+            path.join(PROJECT_ROOT, '..', 'resume-parser', 'resume_to_flock.py'),
+            path.join(PROJECT_ROOT, 'scripts', 'resume_to_flock.py')
+        ];
+
+        let parserPath = null;
+        for (const p of possibleParserPaths) {
+            try {
+                await fs.access(p);
+                parserPath = p;
+                break;
+            } catch (e) {
+                // File doesn't exist, try next
+            }
+        }
+
+        if (!parserPath) {
+            throw new Error('Python parser (resume_to_flock.py) not found. Please ensure it is in the project root or ../resume-parser/ directory.');
+        }
+
+        console.log(`   Using parser: ${parserPath}`);
+
+        // Run Python parser
+        const pythonProcess = spawn('python3', [
+            parserPath,
+            targetDocxPath,
+            outputDir
+        ]);
+
+        let stdout = '';
+        let stderr = '';
+
+        pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+            console.log(`[Parser stdout]: ${data.toString().trim()}`);
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+            console.error(`[Parser stderr]: ${data.toString().trim()}`);
+        });
+
+        await new Promise((resolve, reject) => {
+            pythonProcess.on('close', (code) => {
+                if (code === 0) {
+                    resolve();
+                } else {
+                    reject(new Error(`Parser exited with code ${code}. Error: ${stderr}`));
+                }
+            });
+
+            pythonProcess.on('error', (error) => {
+                reject(new Error(`Failed to run parser: ${error.message}`));
+            });
+        });
+
+        // Generate meta.json
+        const metadata = {
+            id: resumeId,
+            displayName: displayName,
+            originalFilename: uploadedFile.originalname,
+            createdAt: new Date().toISOString(),
+            uploadedBy: req.body.uploadedBy || 'user',
+            fileSize: uploadedFile.size
+        };
+
+        const metaPath = path.join(outputDir, 'meta.json');
+        await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
+
+        console.log(`✅ Resume parsed successfully: ${resumeId}`);
+
+        // Read the parsed data to return in response
+        const jobsPath = path.join(outputDir, 'jobs.mjs');
+        const skillsPath = path.join(outputDir, 'skills.mjs');
+        const categoriesPath = path.join(outputDir, 'categories.mjs');
+
+        const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
+        res.json({
+            success: true,
+            resumeId: resumeId,
+            displayName: displayName,
+            jobCount: jobs.length,
+            skillCount: Object.keys(skills).length,
+            metadata: metadata
+        });
+
+    } catch (error) {
+        console.error('❌ Resume upload failed:', error);
+
+        // Clean up uploaded file if it exists
+        if (req.file && req.file.path) {
+            try {
+                await fs.unlink(req.file.path);
+            } catch (e) {
+                // Ignore cleanup errors
+            }
+        }
+
+        res.status(500).json({
+            error: 'Failed to process resume upload',
+            details: error.message
+        });
     }
 });
 

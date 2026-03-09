@@ -45,6 +45,13 @@ import {
   registerGetBizCardDivs
 } from '../resume/resumeReinitializer.mjs'
 
+// Track SceneContainer instances (moved here so it persists across hot reloads)
+if (!window.__sceneContainerInstanceCounter) {
+  window.__sceneContainerInstanceCounter = 0
+}
+const sceneContainerInstanceId = ++window.__sceneContainerInstanceCounter
+console.log(`🎬 [SceneContainer] Creating instance #${sceneContainerInstanceId}`)
+
 const { appState, updateAppState } = useAppState()
 let sceneContentScrollTimeoutId = null
 const SCROLL_PERSIST_DEBOUNCE_MS = 300
@@ -195,8 +202,10 @@ watch(elementCounts, (newCounts) => {
 const timelineComposable = useTimeline()
 const { timelineHeight, reinitialize: timelineReinitialize } = timelineComposable
 // Cards controller will auto-initialize when scene-plane-ready event fires
+console.log(`🎬 [SceneContainer #${sceneContainerInstanceId}] Creating CardsController...`)
 const cardsController = useCardsController()
 const { initializeCardsController, reinitializeResumeData, bizCardDivs } = cardsController
+console.log(`🎬 [SceneContainer #${sceneContainerInstanceId}] CardsController created`)
 
 // Register reinit callbacks for resume system (parsed resume switch)
 registerTimelineReinit((jobsData) => timelineReinitialize(jobsData))
@@ -309,6 +318,15 @@ defineExpose({
 /* Additional WebKit scrollbar properties to ensure complete hiding */
 #scene-container #scene-content::-webkit-scrollbar-track {
   display: none !important;
+}
+
+/* CRITICAL: Force hide cards with hasClone class (when their clone is displayed) */
+:deep(.biz-card-div.hasClone),
+:deep(.biz-card-div.force-hidden-for-clone) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 #scene-container #scene-content::-webkit-scrollbar-thumb {

@@ -974,28 +974,23 @@ class ResumeListController extends BaseComponent {
     const entries = this.getActiveOrderedEntries();
     if (position < 0 || position >= entries.length) return;
     const entry = entries[position];
+
+    // CRITICAL: Temporarily disable checkScrollBoundaries to prevent it from interrupting smooth scroll
+    // The scroll event listener in resumeListScrollContainer calls checkScrollBoundaries, which does
+    // instant scrollTop manipulation that interrupts smooth scrollIntoView animations
+    const originalIsRepositioning = this.scrollContainer?.isRepositioning;
+    if (this.scrollContainer) {
+      this.scrollContainer.isRepositioning = true;
+    }
+
     selectionManager.selectCard(entry, 'ResumeListController.resume-divs-controls');
-    requestAnimationFrame(() => {
-      const el = this._getListElementForEntry(entry);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-        setTimeout(() => {
-          const scrollport = this.resumeContentWrapper || this.scrollContainer?.scrollport;
-          if (scrollport && el.isConnected) {
-            const elTop = el.getBoundingClientRect().top;
-            const portTop = scrollport.getBoundingClientRect().top;
-            const delta = elTop - portTop;
-            if (Math.abs(delta) > 2) {
-              scrollport.scrollTop += delta;
-              const maxScroll = scrollport.scrollHeight - scrollport.clientHeight;
-              scrollport.scrollTop = Math.max(0, Math.min(maxScroll, scrollport.scrollTop));
-            }
-          }
-        }, 350);
-      } else if (this.scrollContainer && typeof this.scrollContainer.scrollToIndex === 'function') {
-        this.scrollContainer.scrollToIndex(position, true);
+
+    // Re-enable checkScrollBoundaries after smooth scroll completes (smooth scrolls take ~300-500ms)
+    setTimeout(() => {
+      if (this.scrollContainer) {
+        this.scrollContainer.isRepositioning = originalIsRepositioning ?? false;
       }
-    });
+    }, 600);
   }
 
   goToFirstResumeItem() {

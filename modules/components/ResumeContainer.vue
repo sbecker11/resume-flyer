@@ -9,9 +9,23 @@ import { useResumeListController } from '@/modules/core/globalServices';
 import { useAppState } from '@/modules/composables/useAppState.ts';
 import { parseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
 
+// Define emits for parent communication
+const emit = defineEmits(['open-resume-manager']);
+
 // Get the same percentage as the resize handle
 const { scenePercentage } = useResizeHandle();
 const { appState, updateAppState } = useAppState();
+
+// Current resume display name
+const currentResumeDisplay = computed(() => {
+  const resumeId = appState.value?.['user-settings']?.currentResumeId;
+  if (!resumeId || resumeId === 'default') {
+    return 'Default Resume';
+  }
+  // Extract number from "resume-3" → "Resume 3"
+  const match = resumeId.match(/resume-(\d+)/);
+  return match ? `Resume ${match[1]}` : resumeId;
+});
 const resumeContentWrapperRef = ref(null);
 let resumeContentScrollTimeoutId = null;
 const SCROLL_PERSIST_DEBOUNCE_MS = 300;
@@ -500,16 +514,38 @@ function onResumeSkillCardClick(event) {
     <div id="resume-content">
         <div id="resume-content-header">
             <p class="intro">Welcome to your resume-flock!</p>
-            <div id="color-palette-container" tabindex="-1">
-                <select 
-                    id="color-palette-selector" 
-                    v-model="currentPaletteFilename"
-                    tabindex="0"
+            <!-- Resume Manager Row -->
+            <div class="resume-controls-row">
+                <div class="current-resume-indicator">
+                    <span>{{ currentResumeDisplay }}</span>
+                </div>
+                <button
+                    @click="$emit('open-resume-manager')"
+                    class="resume-manager-button"
+                    title="Resume Manager - Upload and switch resumes"
                 >
-                    <option v-for="name in orderedPaletteNames" :key="name" :value="Object.keys(filenameToNameMap).find(key => filenameToNameMap[key] === name)">
-                        {{ name }}
-                    </option>
-                </select>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="12" y1="11" x2="12" y2="17" />
+                        <polyline points="9 14 12 11 15 14" />
+                    </svg>
+                    <span class="button-label">Resume Manager</span>
+                </button>
+            </div>
+            <!-- Color Palette Row -->
+            <div class="header-controls-row">
+                <div id="color-palette-container" tabindex="-1">
+                    <select
+                        id="color-palette-selector"
+                        v-model="currentPaletteFilename"
+                        tabindex="0"
+                    >
+                        <option v-for="name in orderedPaletteNames" :key="name" :value="Object.keys(filenameToNameMap).find(key => filenameToNameMap[key] === name)">
+                            {{ name }}
+                        </option>
+                    </select>
+                </div>
             </div>
             <div id="resume-divs-sorting-container" tabindex="-1">
                 <select id="resume-divs-sorting-selector" v-model="sortRuleKey" tabindex="0">
@@ -593,6 +629,7 @@ function onResumeSkillCardClick(event) {
     padding-left: 8px;
     padding-right: 8px;
     /* overflow is set by ResumeListScrollContainer.setupContainer() to 'auto' */
+    scroll-behavior: smooth; /* Enable smooth scrolling for all scrollIntoView and scrollTo operations */
 }
 
 /* Shared container for skill cards and rDiv list; same width/spacing for both */
@@ -678,12 +715,92 @@ function onResumeSkillCardClick(event) {
 .resume-divs-control-button:hover {
     background-color: var(--grey-dark-7);
 }
-#color-palette-container,
+
+/* Resume controls row - current resume indicator and resume manager button */
+.resume-controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 0;
+    width: 100%;
+    justify-content: space-between;
+}
+
+/* Header controls row - color palette selector */
+.header-controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 0;
+    width: 100%;
+}
+
+#color-palette-container {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+}
+
 #resume-divs-sorting-container {
     position: relative;
     display: flex;
     padding: 5px 0;
     width: 100%;
+}
+
+/* Resume Manager button - matches other control styling */
+.current-resume-indicator {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--grey-dark-5);
+    color: white;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 13px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.resume-manager-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background-color: var(--grey-dark-6);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+}
+
+.resume-manager-button:hover {
+    background-color: var(--grey-dark-7);
+}
+
+.resume-manager-button svg {
+    flex-shrink: 0;
+}
+
+.resume-manager-button .button-label {
+    font-size: 14px;
+}
+
+/* Hide button label and resume indicator on very small containers */
+@container (max-width: 300px) {
+    .resume-manager-button .button-label {
+        display: none;
+    }
+    .current-resume-indicator {
+        display: none;
+    }
 }
 #color-palette-selector,
 #resume-divs-sorting-selector {
@@ -700,6 +817,15 @@ function onResumeSkillCardClick(event) {
 #color-palette-selector:hover,
 #resume-divs-sorting-selector:hover {
     background-color: var(--grey-dark-7);
+}
+
+/* Style dropdown options for better visibility */
+#color-palette-selector option,
+#resume-divs-sorting-selector option {
+    background-color: #2a2a2a;
+    color: white;
+    padding: 8px;
+    font-weight: normal;
 }
 
 /* Resume-view skill card panel (v-if=false; appended copies use global block + scene.css). */

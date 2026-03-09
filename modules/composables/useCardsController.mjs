@@ -32,8 +32,14 @@ const TIMELINE_PADDING_TOP = 0;
 // Skill card ID counter (for unique IDs)
 let skillCardIdCounter = 0;
 
+// Instance counter to detect multiple instances
+let instanceCounter = 0;
+
 // Vue 3 Reactive Dependencies pattern for CardsController
 export function useCardsController() {
+    const instanceId = ++instanceCounter;
+    console.log(`🔧 [CardsController] Creating instance #${instanceId}`)
+
     const isInitialized = ref(false)
     const bizCardDivs = ref([])
     // Declare early to avoid TDZ when effects call functions that reference this variable
@@ -112,20 +118,30 @@ export function useCardsController() {
     // Try to get scene-plane element via provide/inject or template refs
     scenePlaneElement = inject('scenePlaneElement', null)
 
+    // Mutex lock to prevent concurrent initialization
+    let isInitializing = false
+
     async function initializeCardsController() {
         if (isInitialized.value) {
-            console.debug('[CardsController] already initialized')
+            console.debug(`[CardsController #${instanceId}] already initialized`)
+            return
+        }
+
+        // CRITICAL: Check mutex lock to prevent race conditions
+        if (isInitializing) {
+            console.warn(`[CardsController #${instanceId}] ⚠️ Initialization already in progress, skipping duplicate call`)
             return
         }
 
         const jobs = getGlobalJobsDependency().getJobsData()
         if (!Array.isArray(jobs) || jobs.length === 0) {
-            console.warn('[CardsController] No jobs data yet, skipping init')
+            console.warn(`[CardsController #${instanceId}] No jobs data yet, skipping init`)
             return
         }
 
         try {
-            console.debug('[CardsController] initializing')
+            isInitializing = true
+            console.log(`🔧 [CardsController #${instanceId}] 🚀 STARTING INITIALIZATION with ${jobs.length} jobs`)
             // Initialize timeline first
             if (!timelineInitialized.value) {
                 console.debug('[CardsController] initializing timeline')
@@ -249,23 +265,37 @@ export function useCardsController() {
                 await preCreateAllClones()
                 console.debug('[CardsController] pre-created clones')
             }, 100)
-            
+
         } catch (error) {
             console.error('[CardsController] Initialization failed:', error)
             isInitialized.value = false
             throw error
+        } finally {
+            // CRITICAL: Release mutex lock
+            isInitializing = false
+            console.debug('[CardsController] Released initialization mutex')
         }
     }
 
     async function createBizCardDiv(job, jobNumber, scenePlane) {
         const cardId = createBizCardDivId(jobNumber)
-        
-        // Check if card already exists in registry (no fallback to DOM needed)
+
+        // CRITICAL: Check both registry AND DOM for existing cards
         let existingCard = cardRegistry.getCardElement(jobNumber)
         if (existingCard) {
-            console.debug('[CardsController] card exists', cardId)
+            console.warn(`⚠️ [CardsController #${instanceId}] Card exists in registry: ${cardId}`)
             return null
         }
+
+        // Also check DOM directly in case registry is out of sync
+        const existingInDOM = document.getElementById(cardId)
+        if (existingInDOM) {
+            console.error(`🚨 [CardsController #${instanceId}] DUPLICATE CARD IN DOM: ${cardId} exists but not in registry!`)
+            console.trace('Stack trace for duplicate detection:')
+            return null
+        }
+
+        console.log(`✅ [CardsController #${instanceId}] Creating new card: ${cardId}`)
         
         const card = document.createElement('div')
         card.className = 'biz-card-div'
@@ -782,11 +812,13 @@ export function useCardsController() {
                     tooClose = true
                     rejections++
                     if (rejections > MAX_SKILL_PLACEMENT_TRIAL_REJECTIONS) {
-                        const err = new Error(
-                            `[CardsController] Skill card placement failed: rejections (${rejections}) exceeded threshold (${MAX_SKILL_PLACEMENT_TRIAL_REJECTIONS}) for card index ${cardIndex}, id=${cardId ?? 'unknown'}`
+                        // FALLBACK: When threshold exceeded, accept the position with overlap
+                        console.warn(
+                            `⚠️ [CardsController] Skill card placement exceeded ${MAX_SKILL_PLACEMENT_TRIAL_REJECTIONS} attempts for card index ${cardIndex}, id=${cardId ?? 'unknown'}. Using fallback position (may overlap).`
                         )
-                        reportError(err, '[CardsController] Skill card trial-and-rejection exceeded threshold', '')
-                        throw err
+                        const left = cx - halfCardWidth
+                        const top = cy - halfCardHeight
+                        return { left, top }  // Accept position despite overlap
                     }
                     break
                 }
@@ -2140,16 +2172,42 @@ export function useCardsController() {
      * Call after loadJobs({ force: true, forceResumeId }) so getJobsData() returns new data.
      */
     async function reinitializeResumeData() {
+        console.log('[CardsController] 🔄 reinitializeResumeData called')
+
         const scenePlaneEl = scenePlaneElement ?? elementRegistry.getScenePlane()
         if (scenePlaneEl) {
+            // Count before clearing
+            const bizCardsCount = scenePlaneEl.querySelectorAll('.biz-card-div').length
+            const skillCardsCount = scenePlaneEl.querySelectorAll('.skill-card-div').length
+            const clonesCount = scenePlaneEl.querySelectorAll('[id$="-clone"]').length
+
+            console.log(`[CardsController] Clearing ${bizCardsCount} biz-cards, ${skillCardsCount} skill-cards, ${clonesCount} clones`)
+
+            // Clear originals
             scenePlaneEl.querySelectorAll('.biz-card-div').forEach((el) => el.remove())
             scenePlaneEl.querySelectorAll('.skill-card-div').forEach((el) => el.remove())
+            // Clear ALL clones (critical - prevents duplicates)
+            scenePlaneEl.querySelectorAll('[id$="-clone"]').forEach((el) => el.remove())
+
+            // Verify clearing worked
+            const remainingBizCards = scenePlaneEl.querySelectorAll('.biz-card-div').length
+            const remainingClones = scenePlaneEl.querySelectorAll('[id$="-clone"]').length
+            if (remainingBizCards > 0 || remainingClones > 0) {
+                console.error(`🚨 [CardsController] CLEARING FAILED: ${remainingBizCards} biz-cards and ${remainingClones} clones still remain!`)
+            } else {
+                console.log('[CardsController] ✅ All cards cleared successfully')
+            }
         }
+
         cardRegistry.clearRegistry?.()
         elementRegistry?.clearAllCache?.()
         isInitialized.value = false
+        isInitializing = false  // CRITICAL: Reset mutex to allow reinit
         bizCardDivs.value = []
+
+        console.log('[CardsController] 🔄 Calling initializeCardsController...')
         await initializeCardsController()
+        console.log('[CardsController] ✅ reinitializeResumeData complete')
     }
 
     return {

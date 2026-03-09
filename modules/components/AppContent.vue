@@ -1,26 +1,26 @@
 <template>
   <div id="app-container" :class="appContainerClass">
     <!-- Scene Container -->
-    <SceneContainer 
+    <SceneContainer
       :sceneContainerStyle="sceneContainerStyle"
       :firstContainer="firstContainer"
-      :secondContainer="secondContainer" 
+      :secondContainer="secondContainer"
       :scenePercentage="scenePercentage"
       :timelineAlignment="timelineAlignment"
       ref="sceneContainerRef"
     />
-    
+
     <!-- ResizeHandle - positioned between containers -->
     <ResizeHandle />
-    
+
     <!-- Resume Container -->
-    <div 
+    <div
       id="resume-container"
       :class="{ 'container-first': firstContainer === 'resume-container', 'container-second': secondContainer === 'resume-container' }"
     >
       <div class="resume-content">
         <div class="resume-wrapper">
-          <ResumeContainer />
+          <ResumeContainer @open-resume-manager="openResumeManager" />
         </div>
       </div>
       <!-- Resume Viewer Label - positioned inside resume container like Scene Viewer -->
@@ -30,8 +30,8 @@
     </div>
 
     <div id="bulls-eye" ref="bullsEyeRef">+</div>
-    <div 
-      id="focal-point" 
+    <div
+      id="focal-point"
       ref="focalPointRef"
       :style="focalPointStyle"
       :class="{ locked: focalPointIsLocked, dragging: focalPointIsDragging }"
@@ -56,6 +56,14 @@
         alt=""
       />
     </div>
+
+    <!-- Resume Manager Modal -->
+    <ResumeManager
+      :isOpen="isResumeManagerOpen"
+      :currentResumeId="currentResumeId"
+      @close="closeResumeManager"
+      @resume-selected="handleResumeSelected"
+    />
   </div>
 </template>
 
@@ -66,6 +74,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick, provide, inject
 import SceneContainer from './SceneContainer.vue'
 import ResizeHandle from './ResizeHandle.vue'
 import ResumeContainer from './ResumeContainer.vue'
+import ResumeManager from './ResumeManager.vue'
 
 // Global element registry now provided from main.ts - no need to provide again
 
@@ -83,7 +92,7 @@ import { useSelectedElementIdPersistence } from '../composables/useSelectedEleme
 
 // Resume system initialization (to be migrated)
 import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrolling } from '../resume/resumeSystemInitializer.mjs'
-import { registerResumeListReinit } from '../resume/resumeReinitializer.mjs'
+import { registerResumeListReinit, reinitializeResumeSystem } from '../resume/resumeReinitializer.mjs'
 
 // Vue 3 keyboard navigation (replaces legacy keyDownModule)
 import { useKeyboardNavigation } from '../composables/useKeyboardNavigation.mjs'
@@ -248,6 +257,10 @@ const sceneContainerRef = ref(null)  // Reference to SceneContainer component
 const bullsEyeRef = ref(null)
 const focalPointRef = ref(null)
 
+// Resume Manager state
+const isResumeManagerOpen = ref(false)
+const currentResumeId = ref('default')
+
 // Make template refs reactive - watch for changes and update systems
 watch(focalPointRef, (newRef) => {
   if (newRef) {
@@ -322,6 +335,101 @@ const handleSceneContainerClick = (event) => {
   console.log('Scene container clicked:', event)
 }
 
+// Resume Manager handlers
+function openResumeManager() {
+  isResumeManagerOpen.value = true
+}
+
+function closeResumeManager() {
+  isResumeManagerOpen.value = false
+}
+
+async function handleResumeSelected(resumeId) {
+  console.log('[AppContent] 🔄 Switching to resume:', resumeId)
+
+  try {
+    // STEP 1: Clear all existing scene and resume elements FIRST
+    console.log('[AppContent] 🧹 Clearing all scene and resume elements...')
+
+    // Clear scene cards (both originals and clones)
+    const scenePlane = document.getElementById('scene-plane')
+    if (scenePlane) {
+      // Count before clearing
+      const bizCardsCount = scenePlane.querySelectorAll('.biz-card-div').length
+      const clonesCount = scenePlane.querySelectorAll('[id$="-clone"]').length
+      const skillCardsCount = scenePlane.querySelectorAll('.skill-card-div').length
+
+      // Remove all biz-card-div elements (originals)
+      scenePlane.querySelectorAll('.biz-card-div').forEach(el => el.remove())
+      // Remove all clones (any element with id ending in "-clone")
+      scenePlane.querySelectorAll('[id$="-clone"]').forEach(el => el.remove())
+      // Remove all skill-card-div elements
+      scenePlane.querySelectorAll('.skill-card-div').forEach(el => el.remove())
+
+      console.log(`[AppContent] ✅ Cleared ${bizCardsCount} biz-cards, ${clonesCount} clones, ${skillCardsCount} skill-cards`)
+
+      // Verify clearing worked
+      const remainingBizCards = scenePlane.querySelectorAll('.biz-card-div').length
+      const remainingClones = scenePlane.querySelectorAll('[id$="-clone"]').length
+      if (remainingBizCards > 0 || remainingClones > 0) {
+        console.error(`🚨 CLEARING FAILED: ${remainingBizCards} biz-cards and ${remainingClones} clones still remain!`)
+      }
+    }
+
+    // Clear resume list items
+    const resumeList = document.getElementById('resume-content-div-list')
+    if (resumeList) {
+      while (resumeList.firstChild) {
+        resumeList.firstChild.remove()
+      }
+      console.log('[AppContent] ✅ Cleared resume list items')
+    }
+
+    // Clear card registry
+    if (window.cardRegistry) {
+      window.cardRegistry.clearRegistry?.()
+      console.log('[AppContent] ✅ Cleared card registry')
+    }
+
+    // STEP 2: Update current resume ID
+    currentResumeId.value = resumeId
+    console.log('[AppContent] Updated currentResumeId.value to:', currentResumeId.value)
+
+    // STEP 3: Clear selection state (prevents restoring old resume's selections)
+    if (window.selectionManager) {
+      window.selectionManager.clearSelection?.()
+      console.log('[AppContent] ✅ Cleared selection state')
+    }
+
+    // STEP 4: Update app state and persist to disk
+    const { appState, saveAppState } = useAppState()
+    if (appState.value && appState.value['user-settings']) {
+      appState.value['user-settings'].currentResumeId = resumeId
+      // Clear persisted selection state for new resume
+      appState.value['user-settings'].selectedJobNumber = null
+      appState.value['user-settings'].selectedElementId = null
+      appState.value['user-settings'].selectedDualElementId = null
+      console.log('[AppContent] Saving app state with resumeId:', resumeId)
+      await saveAppState()
+      console.log('[AppContent] ✅ App state saved with cleared selection')
+    }
+
+    // STEP 4: Reinitialize the resume system with the new resume
+    console.log('[AppContent] Calling reinitializeResumeSystem with:', resumeId === 'default' ? null : resumeId)
+    await reinitializeResumeSystem(resumeId === 'default' ? null : resumeId)
+    console.log('[AppContent] ✅ Resume system reinitialized')
+
+    // Close the modal after successful switch
+    closeResumeManager()
+
+    console.log('[AppContent] ✅ Successfully switched to resume:', resumeId)
+  } catch (error) {
+    console.error('[AppContent] ❌ Failed to switch resume:', error)
+    console.error('[AppContent] Error stack:', error.stack)
+    // Modal stays open so user can see the error or try again
+  }
+}
+
 // =============================================================================
 // LIFECYCLE - Vue's standard pattern
 // =============================================================================
@@ -340,9 +448,15 @@ onMounted(async () => {
     
     // PHASE 1: Load AppState from server FIRST
     console.log('[AppContent] 📊 Loading AppState from server...')
-    const { loadAppState } = useAppState()
+    const { loadAppState, appState } = useAppState()
     await loadAppState()
     console.log('[AppContent] ✅ AppState loaded successfully')
+
+    // Load current resume ID from app state
+    if (appState.value && appState.value['user-settings']?.currentResumeId) {
+      currentResumeId.value = appState.value['user-settings'].currentResumeId
+      console.log('[AppContent] 📋 Current resume ID from state:', currentResumeId.value)
+    }
     
     // PHASE 2: Initialize app store
     console.log('[AppContent] 📊 Initializing app store...')
@@ -370,8 +484,12 @@ onMounted(async () => {
     console.log('[AppContent] 📊 Parallax stats:', parallaxStats.value)
     
     // PHASE 5: Resume system (legacy during migration)
+    // NOTE: initializeResumeSystem() automatically loads the currentResumeId from app_state
+    // so we don't need to call reinitializeResumeSystem() during startup
     console.log('[AppContent] 📋 Initializing resume system...')
+    console.log('[AppContent] 📋 Will load resume from app_state:', currentResumeId.value || 'default')
     await initializeResumeSystem()
+    console.log('[AppContent] ✅ Resume system initialized with saved resume')
 
     // Register resume list reinit for parsed-resume switch (rebuild list from new bizCardDivs)
     registerResumeListReinit(async (bizCardDivs) => {
