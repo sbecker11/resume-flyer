@@ -132,7 +132,7 @@ export function useFocalPoint() {
       }
       
       // FOLLOWING: smaller factor = more lag (slower catch-up to mouse)
-      const easingFactor = isDragging.value ? 1 : 0.08
+      const easingFactor = isDragging.value ? 1 : 0.04
       const newX = currentX + (dx * easingFactor)
       const newY = currentY + (dy * easingFactor)
       
