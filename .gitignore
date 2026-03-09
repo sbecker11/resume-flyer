@@ -2,6 +2,7 @@ node_modules/
 .env
 coverage/
 palette-utils-ts/coverage/
+.coverage
 
 # macOS folder metadata (any directory)
 .DS_Store
@@ -11,3 +12,6 @@ app_state.json
 
 # Local-only Cursor command (do not push)
 .cursor/commands/env.md
+
+# Generated parsed resumes (runtime output - symlink)
+parsed_resumes
