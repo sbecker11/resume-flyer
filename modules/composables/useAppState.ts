@@ -55,6 +55,7 @@ function getDefaultState(): AppState {
                 stepCount: 4
             },
             focalPointMode: 'locked',
+            focalPoint: { x: 0, y: 0, mode: 'locked' as const },
             selectedJobNumber: null,
             lastVisitedJobNumber: null,
             selectedElementId: null,
@@ -276,6 +277,11 @@ function migrateState(state: any): AppState {
                 layout: state.layout || { orientation: 'scene-left', scenePercentage: 50, resumePercentage: 50 },
                 resizeHandle: state.resizeHandle || { stepCount: 4 },
                 focalPointMode: state.focalPoint?.mode || 'locked',
+                focalPoint: {
+                    x: state.focalPoint?.x ?? 0,
+                    y: state.focalPoint?.y ?? 0,
+                    mode: (state.focalPoint?.mode || 'locked').toString().toLowerCase()
+                },
                 selectedJobNumber: state.selectedJobNumber || null,
                 lastVisitedJobNumber: state.lastVisitedJobNumber || null,
                 resume: state.resume || { sortRule: { field: 'startDate', direction: 'asc' } },
@@ -290,6 +296,16 @@ function migrateState(state: any): AppState {
         Object.assign(state, newState)
         state.version = "1.3"
         console.log('[AppState] Successfully migrated to v1.3 - restructured to user-settings/system-constants')
+    }
+
+    // Ensure user-settings.focalPoint exists (position + mode persistence)
+    const us = state['user-settings']
+    if (us) {
+        if (!us.focalPoint) {
+            us.focalPoint = { x: 0, y: 0, mode: (us.focalPointMode || 'locked').toString().toLowerCase() as 'locked' | 'following' | 'dragging' }
+        } else {
+            if (us.focalPoint.mode == null && us.focalPointMode) us.focalPoint.mode = (us.focalPointMode as string).toLowerCase() as 'locked' | 'following' | 'dragging'
+        }
     }
 
     // Ensure system-constants.rendering exists (parallax/depth constants; not user-editable)

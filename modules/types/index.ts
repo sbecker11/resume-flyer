@@ -51,6 +51,8 @@ export interface AppState {
     };
     
     focalPointMode: 'locked' | 'following' | 'dragging';
+    /** Persisted focal point position and mode (restored on load) */
+    focalPoint?: { x: number; y: number; mode: 'locked' | 'following' | 'dragging' };
     
     selectedJobNumber: number | null;
     lastVisitedJobNumber: number | null;

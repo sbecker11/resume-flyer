@@ -139,11 +139,13 @@ export const appStoreActions = {
   setFocalPoint(x, y) {
     appStore.focalPoint.x = x
     appStore.focalPoint.y = y
+    schedulePersistFocalPoint()
   },
   
   setFocalPointMode(mode) {
     appStore.focalPoint.mode = mode
     console.log(`[AppStore] Focal point mode: ${mode}`)
+    persistFocalPoint(true) // persist mode immediately
   },
   
   // Aim point actions
@@ -197,11 +199,49 @@ export const appStoreActions = {
   initialize() {
     console.log('[AppStore] Initializing app store...')
     appStore.isInitialized = true
-    
-    // Set initial focal point to center
-    appStore.focalPoint.x = window.innerWidth / 2
-    appStore.focalPoint.y = window.innerHeight / 2
+
+    // Restore focal point from persisted state if present
+    const saved = appState.value?.['user-settings']?.focalPoint
+    if (saved) {
+      if (typeof saved.x === 'number' && typeof saved.y === 'number' && (saved.x !== 0 || saved.y !== 0)) {
+        appStore.focalPoint.x = saved.x
+        appStore.focalPoint.y = saved.y
+      }
+      if (saved.mode) {
+        const modeUpper = String(saved.mode).toUpperCase()
+        appStore.focalPoint.mode = modeUpper === 'LOCKED' ? 'LOCKED' : modeUpper === 'DRAGGING' ? 'DRAGGING' : 'FOLLOWING'
+      }
+    }
+    if (appStore.focalPoint.x === 0 && appStore.focalPoint.y === 0) {
+      appStore.focalPoint.x = window.innerWidth / 2
+      appStore.focalPoint.y = window.innerHeight / 2
+    }
+    console.log('[AppStore] Focal point initialized:', appStore.focalPoint.x, appStore.focalPoint.y, appStore.focalPoint.mode)
   }
+}
+
+// Debounced persist for focal point position (avoid saving on every mousemove)
+let focalPointPersistTimeoutId = null
+function schedulePersistFocalPoint() {
+  if (focalPointPersistTimeoutId) clearTimeout(focalPointPersistTimeoutId)
+  focalPointPersistTimeoutId = setTimeout(() => {
+    focalPointPersistTimeoutId = null
+    persistFocalPoint(false)
+  }, 1500)
+}
+
+function persistFocalPoint(immediate = false) {
+  const mode = appStore.focalPoint.mode
+  const modeLower = mode === 'LOCKED' ? 'locked' : mode === 'DRAGGING' ? 'dragging' : 'following'
+  updateAppState({
+    'user-settings': {
+      focalPoint: {
+        x: appStore.focalPoint.x,
+        y: appStore.focalPoint.y,
+        mode: modeLower
+      }
+    }
+  }, immediate)
 }
 
 // Watchers for cross-system coordination

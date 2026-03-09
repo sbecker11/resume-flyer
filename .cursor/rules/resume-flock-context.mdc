@@ -11,6 +11,8 @@ Use this for continuity when starting a new session. Full session history and ar
 
 - **Scene is STATIC** — Once created and positioned, scene elements are never repositioned. The bulls-eye is the 2D projection of the scene's X=0 onto the scene view plane; the focal point is a 2D element. Together they control the perspective projection (parallax transform) of 3D scene elements to the 2D plane; only that transform is updated, not element positions.
 
+- **Focal point modes** — LOCKED/FOLLOWING: smaller display = circles and lines (SVG). DRAGGING: smaller display hidden; larger display = actual cursor file (crosshair). Element position always drives scene/parallax.
+
 - **Motion parallax** runs only when (1) the scene is ready (`#scene-container`, `#scene-plane`, and at least one `.biz-card-div` or `.skill-card-div`), and (2) focal point or layout changes. Triggers: `focal-point-changed`, `bulls-eye-moved`, `scene-width-changed`, `resize`. No document/scene mousemove listeners. Effective focal position is read from the `#focal-point` DOM element. See `modules/composables/useParallaxVue3Enhanced.mjs`.
 
 - **rDiv remove (×)**  

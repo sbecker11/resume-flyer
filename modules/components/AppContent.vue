@@ -33,9 +33,29 @@
     <div 
       id="focal-point" 
       ref="focalPointRef"
-      :style="focalPointIsDragging ? {} : focalPointStyle" 
+      :style="focalPointStyle"
       :class="{ locked: focalPointIsLocked, dragging: focalPointIsDragging }"
-    >⦻</div>
+      aria-hidden="true"
+    >
+      <!-- Smaller display: circles and lines (LOCKED / FOLLOWING) -->
+      <svg v-show="!focalPointIsDragging" class="focal-point-reticle" viewBox="0 0 24 24" width="24" height="24">
+        <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1" />
+        <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1" />
+        <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1" />
+        <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1" />
+        <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1" />
+      </svg>
+      <!-- DRAGGING: crosshair at saved position so it appears on load/refresh even when mouse is elsewhere -->
+      <img
+        v-show="focalPointIsDragging"
+        class="focal-point-crosshair"
+        src="/static_content/icons/x-hairs/icons8-accuracy-32-whiter.png"
+        width="32"
+        height="32"
+        alt=""
+      />
+    </div>
   </div>
 </template>
 
@@ -548,22 +568,30 @@ watch(orientation, (newOrientation) => {
 
 #focal-point {
   position: absolute;
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   cursor: pointer;
   z-index: var(--z-focal-point, 100);
   transform: translate(-50%, -50%);
   user-select: none;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+#focal-point .focal-point-reticle {
+  display: block;
+  pointer-events: none;
 }
 
 #focal-point.locked {
   color: #666666;
 }
 
-#focal-point.dragging {
-  color: #ff6600;
-  transform: translate(-50%, -50%) scale(1.2);
+/* DRAGGING: show crosshair image at focal position (saved location on load); cursor also crosshair over viewport */
+#focal-point.dragging .focal-point-crosshair {
+  display: block;
+  pointer-events: none;
 }
 
 /* =============================================================================

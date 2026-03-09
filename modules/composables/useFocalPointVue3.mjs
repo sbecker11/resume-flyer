@@ -7,14 +7,18 @@ import { useAppContext, FOCAL_POINT_KEY, provideDependency } from './useAppConte
 import { useBullsEyeService } from '../core/globalServices'
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs'
 
-// Focal point modes
+// Focal point modes:
+// - LOCKED: Focal point is fixed to the bulls-eye (scene center). Parallax stays centered; no mouse tracking.
+// - FOLLOWING: Focal point follows the mouse with smoothing/easing, so it lags behind the cursor. Normal focal icon shown.
+// - DRAGGING: No lag. Focal point updates immediately on mouse motion. The smaller circles/lines display is hidden;
+//   the larger focal display is the actual cursor file (crosshair). Element position still drives scene/parallax.
 export const FOCALPOINT_MODES = {
   LOCKED: 'LOCKED',
-  FOLLOWING: 'FOLLOWING', 
+  FOLLOWING: 'FOLLOWING',
   DRAGGING: 'DRAGGING'
 }
 
-// Cursor for drag mode
+// Larger focal display: cursor file used only in DRAGGING mode (smaller display = circles/lines in LOCKED/FOLLOWING)
 const CROSSHAIR_CURSOR = 'url(\'/static_content/icons/x-hairs/icons8-accuracy-32-whiter.png\') 16 16, crosshair'
 
 export function useFocalPoint() {
@@ -127,7 +131,8 @@ export function useFocalPoint() {
         return
       }
       
-      const easingFactor = isDragging.value ? 1 : 0.15
+      // FOLLOWING: smaller factor = more lag (slower catch-up to mouse)
+      const easingFactor = isDragging.value ? 1 : 0.08
       const newX = currentX + (dx * easingFactor)
       const newY = currentY + (dy * easingFactor)
       
@@ -168,8 +173,7 @@ export function useFocalPoint() {
     }
   }
 
-  // Follow mode: focal point tracks mouse at most once per frame (rAF-throttled) to avoid jerkiness from
-  // excessive store updates and parallax re-renders. Store watcher dispatches focal-point-changed.
+  // Follow mode: focal point eases toward mouse (lag) via setTarget → startEasing. rAF-throttled.
   let followRafScheduled = false
   let lastFollowMouse = { x: 0, y: 0 }
   function createVanillaFollowHandler() {
@@ -183,16 +187,13 @@ export function useFocalPoint() {
         followRafScheduled = false
         if (!focalPointElement.value || !isFollowing.value) return
         const { x, y } = clampToLeftColumn(lastFollowMouse.x, lastFollowMouse.y)
-        const element = focalPointElement.value
-        element.style.left = `${x}px`
-        element.style.top = `${y}px`
-        // Store update triggers appStore deep watcher → single focal-point-changed per frame
-        actions.setFocalPoint(x, y)
+        // Use setTarget so easing runs: focal point lags behind mouse (unlike DRAGGING which sets position directly)
+        setTarget(x, y, 'follow-mouse')
       })
     }
   }
   
-  // Mouse event handler for drag mode
+  // Mouse handler for DRAGGING mode: immediate position update (no lag; parallax stays reactive)
   function createMouseHandler() {
     return (event) => {
       if (isDragging.value) {
@@ -211,9 +212,9 @@ export function useFocalPoint() {
       mouseHandler.value = createVanillaFollowHandler()
       console.log('[FocalPoint] Added VANILLA JS mouse listener for follow mode')
     } else {
-      // Use Vue handler for drag mode
+      // Use Vue handler for DRAGGING mode (immediate follow)
       mouseHandler.value = createMouseHandler()
-      console.log('[FocalPoint] Added Vue mouse listener for drag mode')
+      console.log('[FocalPoint] Added Vue mouse listener for DRAGGING mode')
     }
     
     document.addEventListener('mousemove', mouseHandler.value, { passive: true })
@@ -231,29 +232,40 @@ export function useFocalPoint() {
     console.log('[FocalPoint] Mouse listener removed')
   }
   
-  // Cursor management for drag mode
+  // Cursor management for DRAGGING mode (crosshair cursor). Apply to viewport so it shows on load/refresh without moving mouse.
   function applyCrosshairCursor() {
-    const registry = getElementRegistry();
+    if (typeof document === 'undefined') return false
+    const setCursor = (el) => {
+      if (el) el.style.setProperty('cursor', CROSSHAIR_CURSOR, 'important')
+    }
+    setCursor(document.documentElement)
+    setCursor(document.body)
+    const registry = getElementRegistry()
     const sceneContainer = (registry && registry.getSceneContainer) ? registry.getSceneContainer() : null
     if (sceneContainer) {
-      sceneContainer.style.setProperty('cursor', CROSSHAIR_CURSOR, 'important')
-      const elements = sceneContainer.querySelectorAll('*')
-      elements.forEach(el => {
-        el.style.setProperty('cursor', CROSSHAIR_CURSOR, 'important')
-      })
+      setCursor(sceneContainer)
+      sceneContainer.querySelectorAll('*').forEach(setCursor)
     }
+    const appContainer = document.getElementById('app-container')
+    if (appContainer) setCursor(appContainer)
+    return true
   }
-  
+
   function removeCrosshairCursor() {
-    const registry = getElementRegistry();
+    if (typeof document === 'undefined') return
+    const removeCursor = (el) => {
+      if (el) el.style.removeProperty('cursor')
+    }
+    removeCursor(document.documentElement)
+    removeCursor(document.body)
+    const registry = getElementRegistry()
     const sceneContainer = (registry && registry.getSceneContainer) ? registry.getSceneContainer() : null
     if (sceneContainer) {
-      sceneContainer.style.removeProperty('cursor')
-      const elements = sceneContainer.querySelectorAll('*')
-      elements.forEach(el => {
-        el.style.removeProperty('cursor')
-      })
+      removeCursor(sceneContainer)
+      sceneContainer.querySelectorAll('*').forEach(removeCursor)
     }
+    const appContainer = document.getElementById('app-container')
+    if (appContainer) removeCursor(appContainer)
   }
   
   // Cycle through all three modes (tri-state button)
@@ -281,8 +293,9 @@ export function useFocalPoint() {
 
     function runModeActions() {
       if (newMode === FOCALPOINT_MODES.DRAGGING) {
-        if (focalPointElement.value) focalPointElement.value.style.display = 'none'
-        applyCrosshairCursor()
+        // Single crosshair: only the img at focal position (no CSS cursor) so one size, visible at saved position on load
+        if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
+        removeCrosshairCursor() // ensure no cursor-file crosshair; we use the img only
         addMouseListener()
       } else if (newMode === FOCALPOINT_MODES.FOLLOWING) {
         if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
