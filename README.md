@@ -596,6 +596,9 @@ of return icons indicates the number of jobs and the amount of time used to hone
 `cd <your-local-dev-folder>`
 `git clone git@github.com:sbecker11/resume-flock.git`
 `cd <your-local-dev-folder>/fock-of-postcards`
+
+**Resume parser (optional):** To parse DOCX/PDF resumes into flock data (e.g. `npm run parse-resume`), clone the resume-parser repo:
+`git clone git@github.com:sbecker11/resume-parser.git`
  
 ## Install VSCode + LiverServer  
 
