@@ -26,6 +26,22 @@ const currentResumeDisplay = computed(() => {
   const match = resumeId.match(/resume-(\d+)/);
   return match ? `Resume ${match[1]}` : resumeId;
 });
+
+// Available resume count (for badge on Manager button)
+const availableResumeCount = ref(1);
+
+// Fetch resume count on mount
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/resumes');
+    if (response.ok) {
+      const resumes = await response.json();
+      availableResumeCount.value = Array.isArray(resumes) ? resumes.length : 1;
+    }
+  } catch (error) {
+    console.error('[ResumeContainer] Failed to fetch resume count:', error);
+  }
+});
 const resumeContentWrapperRef = ref(null);
 let resumeContentScrollTimeoutId = null;
 const SCROLL_PERSIST_DEBOUNCE_MS = 300;
@@ -516,13 +532,17 @@ function onResumeSkillCardClick(event) {
             <p class="intro">Welcome to your resume-flock!</p>
             <!-- Resume Manager Row -->
             <div class="resume-controls-row">
-                <div class="current-resume-indicator">
+                <div class="current-resume-indicator" :title="`Currently viewing: ${currentResumeDisplay}`">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                    </svg>
                     <span>{{ currentResumeDisplay }}</span>
                 </div>
                 <button
                     @click="$emit('open-resume-manager')"
                     class="resume-manager-button"
-                    title="Resume Manager - Upload and switch resumes"
+                    title="Resume Manager - Upload, switch, and manage resumes"
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -530,7 +550,8 @@ function onResumeSkillCardClick(event) {
                         <line x1="12" y1="11" x2="12" y2="17" />
                         <polyline points="9 14 12 11 15 14" />
                     </svg>
-                    <span class="button-label">Resume Manager</span>
+                    <span class="button-label">Manager</span>
+                    <span class="button-count" v-if="availableResumeCount > 1">({{ availableResumeCount }})</span>
                 </button>
             </div>
             <!-- Color Palette Row -->
@@ -752,37 +773,53 @@ function onResumeSkillCardClick(event) {
 .current-resume-indicator {
     display: flex;
     align-items: center;
+    gap: 6px;
     padding: 8px 12px;
-    background-color: var(--grey-dark-5);
+    background: linear-gradient(135deg, #2a5298 0%, #1e3a70 100%);
     color: white;
-    border: 1px solid transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     font-weight: bold;
     font-size: 13px;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     white-space: nowrap;
     flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    cursor: help;
+}
+
+.current-resume-indicator svg {
+    flex-shrink: 0;
+    opacity: 0.9;
 }
 
 .resume-manager-button {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 12px;
-    background-color: var(--grey-dark-6);
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #28a745 0%, #20803a 100%);
     color: white;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
     white-space: nowrap;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
     flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .resume-manager-button:hover {
-    background-color: var(--grey-dark-7);
+    background: linear-gradient(135deg, #32c252 0%, #28a745 100%);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+}
+
+.resume-manager-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .resume-manager-button svg {
@@ -793,13 +830,25 @@ function onResumeSkillCardClick(event) {
     font-size: 14px;
 }
 
+.resume-manager-button .button-count {
+    font-size: 12px;
+    opacity: 0.9;
+    font-weight: normal;
+}
+
 /* Hide button label and resume indicator on very small containers */
 @container (max-width: 300px) {
-    .resume-manager-button .button-label {
+    .resume-manager-button .button-label,
+    .resume-manager-button .button-count {
         display: none;
     }
     .current-resume-indicator {
-        display: none;
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+    .current-resume-indicator svg {
+        width: 12px;
+        height: 12px;
     }
 }
 #color-palette-selector,

@@ -649,7 +649,9 @@ section h3 {
 
 .resume-card.active {
   border-color: #2ecc71;
-  background: #2a3a2a;
+  background: linear-gradient(135deg, #1a3a2a 0%, #2a4a3a 100%);
+  box-shadow: 0 0 12px rgba(46, 204, 113, 0.3);
+  transform: scale(1.02);
 }
 
 .resume-card-header {
@@ -669,15 +671,26 @@ section h3 {
 }
 
 .active-badge {
-  background: #2ecc71;
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
   color: #fff;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   margin-left: 8px;
   flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .resume-card-meta {
