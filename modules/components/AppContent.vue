@@ -417,9 +417,6 @@ async function handleResumeSelected(resumeId) {
       }
     }
 
-    // Close the modal after successful switch
-    closeResumeManager()
-
     console.log('[AppContent] ✅ Successfully switched to resume:', resumeId)
   } catch (error) {
     console.error('[AppContent] ❌ Failed to switch resume:', error)
