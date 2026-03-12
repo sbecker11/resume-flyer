@@ -66,8 +66,8 @@ function getLightnessLab(hex: string): number {
  * Rule changed from: bright if HSV.V >= 0.5 → bright if LAB L* >= this (perceptual).
  * 23 keeps very dark colors (L* < 23) with white text; everything else gets black.
  */
-/** L* >= this → light (black text); L* < this → dark (white text). Set so #61478e (L* ≈ 36) is dark. */
-const LAB_LIGHT_THRESHOLD = 37;
+/** L* >= this → light (black text); L* < this → dark (white text). WCAG equal-contrast midpoint ≈ 49.3. */
+const LAB_LIGHT_THRESHOLD = 50;
 
 /** Returns black or white hex for best contrast on the given background: white on dark, black on light. Uses LAB L* (perceptual lightness); bright when L* >= LAB_LIGHT_THRESHOLD → black text/icons. */
 export function getHighContrastMono(hex: string): '#000000' | '#ffffff' {

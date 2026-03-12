@@ -230,6 +230,13 @@ body .biz-resume-div,
     filter: none !important;
     z-index: 99;
 }
+/* Resume div contrast icons: same variant rules as biz/skill (white on dark → invert) */
+.biz-resume-div[data-icon-set-variant="white"] .url-icon,
+.biz-resume-div[data-icon-set-variant="white"] .back-icon,
+.biz-resume-div[data-icon-set-variant="white"] .img-icon {
+    filter: invert(1);
+}
+
 /* Skill card contrast icons: same variant rules as biz (white on dark → invert) */
 .skill-card-div[data-icon-set-variant="white"] .url-icon,
 .skill-card-div[data-icon-set-variant="white"] .back-icon,

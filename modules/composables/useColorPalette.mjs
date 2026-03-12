@@ -644,6 +644,13 @@ export async function applyPaletteToElement(element) {
     element.style.setProperty('--data-icon-set-back', `url(${normalIconSet.back})`);
     element.style.setProperty('--data-icon-set-img', `url(${normalIconSet.img})`);
     element.style.setProperty('--data-icon-set-variant', normalIconSet.variant);
+    // Set as HTML attribute so CSS attribute selectors fire for all element types
+    element.setAttribute('data-icon-set-variant', normalIconSet.variant);
+    // Directly set filter on icon children — same decision as textColor/variant, computed once, applied to both
+    const normalIconFilter = normalIconSet.variant === 'white' ? 'invert(1)' : 'none';
+    element.querySelectorAll('.back-icon, .url-icon, .img-icon').forEach(icon => {
+        icon.style.filter = normalIconFilter;
+    });
     element.style.setProperty('--data-icon-set-hovered-url', `url(${hoveredIconSet.url})`);
     element.style.setProperty('--data-icon-set-hovered-back', `url(${hoveredIconSet.back})`);
     element.style.setProperty('--data-icon-set-hovered-img', `url(${hoveredIconSet.img})`);

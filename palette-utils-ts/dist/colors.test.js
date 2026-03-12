@@ -136,3 +136,39 @@ describe('getHighlightColor', () => {
         expect(a).not.toBe(b);
     });
 });
+describe('getHighContrastForBackground — text color and icon variant must always match', () => {
+    // Each entry: [hex, expectedVariant] where variant drives both textColor and iconSet
+    const cases = [
+        // Dark backgrounds reported as mismatched in production
+        ['#d23f69', 'white'],
+        ['#4057db', 'white'],
+        ['#345418', 'white'],
+        ['#823e55', 'white'],
+        ['#1a6086', 'white'],
+        ['#005277', 'white'],
+        // Additional dark colors
+        ['#000000', 'white'],
+        ['#222222', 'white'],
+        ['#61478e', 'white'],
+        // Light backgrounds — must use black text/icons
+        ['#ffffff', 'black'],
+        ['#f0f0f0', 'black'],
+        ['#ffff00', 'black'],
+        ['#c8e6c9', 'black'],
+    ];
+    for (const [hex, expectedVariant] of cases) {
+        it(`${hex}: textColor and iconSet.variant both '${expectedVariant}'`, () => {
+            const result = getHighContrastForBackground(hex);
+            const expectedText = expectedVariant === 'white' ? '#ffffff' : '#000000';
+            expect(result.textColor).toBe(expectedText);
+            expect(result.iconSet.variant).toBe(expectedVariant);
+            // Core invariant: textColor and variant must agree
+            if (result.textColor === '#ffffff') {
+                expect(result.iconSet.variant).toBe('white');
+            }
+            else {
+                expect(result.iconSet.variant).toBe('black');
+            }
+        });
+    }
+});
