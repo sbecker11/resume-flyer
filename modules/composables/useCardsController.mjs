@@ -177,6 +177,7 @@ export function useCardsController() {
                         console.error(`[CardsController] ❌ Could not apply palette to job ${index}:`, error)
                         throw error
                     }
+                    updateBizCardSkillsVisibility(card)
                 } else {
                     console.warn('[CardsController] Card creation failed for job', index)
                 }
@@ -839,6 +840,19 @@ export function useCardsController() {
                 const top = cy - halfCardHeight
                 return { left, top }
             }
+        }
+    }
+
+    /**
+     * Hide .resume-skills if the remaining card space is too small for the h4 header + one row of skills.
+     * Uses clientHeight (available after card is in DOM with explicit style.height set).
+     * ~40px = h4 (~20px) + one skills row (~20px).
+     */
+    function updateBizCardSkillsVisibility(card) {
+        const skillsEl = card.querySelector('.resume-skills')
+        if (!skillsEl) return
+        if (skillsEl.clientHeight < 40) {
+            skillsEl.style.display = 'none'
         }
     }
 
