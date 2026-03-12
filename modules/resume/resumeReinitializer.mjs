@@ -2,7 +2,7 @@
  * Single path to reinitialize the resume system (Timeline, CardsController, resume list)
  * after loading a different resume (parsed resume id or default).
  *
- * Caller must set app state currentResumeId and persist before calling, then:
+ * Pass the resume id directly — currentResumeId is not stored in app_state (content-scoped).
  *   await reinitializeResumeSystem(resumeId)
  *
  * Registration: components that own Timeline, CardsController, and the resume list

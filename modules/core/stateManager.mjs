@@ -22,8 +22,6 @@ export function getDefaultState() {
         focalPoint: {
             mode: 'locked' // Default to locked mode
         },
-        selectedJobNumber: null, // No default selection - only use saved state
-        lastVisitedJobNumber: null, // Track the last job that was selected
         resume: {
             sortRule: { field: 'startDate', direction: 'asc' } // Default to oldest first
         },

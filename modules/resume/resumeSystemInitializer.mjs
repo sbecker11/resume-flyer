@@ -1,64 +1,83 @@
 // modules/resume/resumeSystemInitializer.mjs
-
+/**
+ * State of the app itself is stored only in app_state.json (bullsEye, focalPoint,
+ * resumeListing, colorPalette, timeline, resizeHandle and their parent elements).
+ *
+ * Content (the divs) is loaded/reloaded separately: window.resumeFlock.allDivs holds
+ * { bizCardDivs, skillCardDivs, bizResumeDivs, skillResumeDivs } and is repopulated on
+ * each resume load (initial and manager load). Replacing allDivs replaces all resume-loaded
+ * content; it is not persisted to app_state.json.
+ */
 import { resumeListController } from './ResumeListController.mjs';
 import { resumeItemsController } from '../resume/ResumeItemsController.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 
 /**
- * Create basic resume divs from loaded jobs data
- * Uses Vue 3 dependency pattern instead of direct jobs import
+ * Single process to build and attach the resume list from card divs.
+ * Used for both hard-refresh (with mock cards) and resume-manager load / reinit (with real cards).
+ * @param {HTMLElement[]} bizCardDivs - Card divs (real or mock with data-job-number, optional data-color-index)
+ * @returns {Promise<boolean>} true if successful
  */
-async function createBasicResumeDivs(resumeListController, resumeItemsController, jobsData) {
-    console.debug('[ResumeSystemInitializer] creating resume divs');
-    
-    try {
-        // Create mock bizCardDivs from jobs data
-        const mockBizCardDivs = jobsData.map((job, index) => {
-            const mockDiv = document.createElement('div');
-            mockDiv.setAttribute('data-job-number', index.toString());
-            mockDiv.setAttribute('data-color-index', (index % 10).toString()); // Simple color cycling
-            return mockDiv;
-        });
-        
-        console.debug('[ResumeSystemInitializer] mock cards', mockBizCardDivs.length);
-        
-        // Use ResumeItemsController to create resume divs
-        const resumeDivs = await resumeItemsController.createAllBizResumeDivs(mockBizCardDivs);
-        console.debug('[ResumeSystemInitializer] resume divs', resumeDivs.length);
-        
-        // Add the resume divs to the DOM
-        const resumeContentDiv = resumeListController.resumeContentDiv;
-        if (resumeContentDiv && resumeDivs.length > 0) {
-            resumeDivs.forEach((div, index) => {
-                if (div instanceof Node) {
-                    resumeContentDiv.appendChild(div);
-                } else {
-                    console.error(`[ResumeSystemInitializer] Resume div ${index} is not a Node:`, div);
-                }
-            });
-            
-            console.debug('[ResumeSystemInitializer] divs added to DOM');
-            
-            // Store the divs in the controllers
-            resumeListController.bizResumeDivs = resumeDivs;
-            resumeItemsController.bizResumeDivs = resumeDivs;
-            
-            // Initialize the sort indices
-            resumeListController.sortedIndices = Array.from({length: jobsData.length}, (_, i) => i);
-            
-            // Setup resume list scroll - this is crucial for scrollability!
-            console.debug('[ResumeSystemInitializer] setting up resume list scroll');
-            resumeListController.setupResumeListScroll();
-            
-            return true;
-        } else {
-            throw new Error('[ResumeSystemInitializer] resumeContentDiv not available or no resume divs created');
-        }
-    } catch (error) {
-        console.error('[ResumeSystemInitializer] Failed to create resume divs:', error);
-        throw error;
+export async function buildResumeListFromCards(bizCardDivs) {
+    if (!bizCardDivs?.length) {
+        console.warn('[ResumeSystemInitializer] buildResumeListFromCards: no cards provided');
+        return false;
     }
+    const app = window.resumeFlock;
+    if (!app) throw new Error('[ResumeSystemInitializer] buildResumeListFromCards: window.resumeFlock not set');
+    const rlc = app.resumeListController;
+    const ric = app.resumeItemsController;
+    if (!rlc || !ric) {
+        throw new Error('[ResumeSystemInitializer] buildResumeListFromCards: resumeListController or resumeItemsController not on window.resumeFlock');
+    }
+    const listEl = rlc.resumeContentDiv || document.getElementById('resume-content-div-list');
+    if (!listEl) {
+        throw new Error('[ResumeSystemInitializer] buildResumeListFromCards: resume list element not available');
+    }
+    console.debug('[ResumeSystemInitializer] building resume list from', bizCardDivs.length, 'cards');
+    while (listEl.firstChild) listEl.firstChild.remove();
+    const resumeDivs = await ric.createAllBizResumeDivs(bizCardDivs);
+    resumeDivs.forEach((div, index) => {
+        if (div instanceof Node) {
+            listEl.appendChild(div);
+        } else {
+            console.error(`[ResumeSystemInitializer] Resume div ${index} is not a Node:`, div);
+        }
+    });
+    rlc.bizResumeDivs = resumeDivs;
+    ric.bizResumeDivs = resumeDivs;
+    // Keep single per-resume div container in sync (only divs loaded on resume load)
+    if (app.allDivs) {
+        app.allDivs.bizResumeDivs = resumeDivs;
+        app.allDivs.skillResumeDivs = []; // Rebuilt list has no skill copies until user adds
+    }
+    rlc.sortedIndices = Array.from({ length: resumeDivs.length }, (_, i) => i);
+    rlc.reinitialize(resumeDivs);
+    console.debug('[ResumeSystemInitializer] resume list built:', resumeDivs.length, 'items');
+    return true;
+}
+
+/**
+ * Create mock card divs from jobs data (for initial load before scene cards exist).
+ */
+function createMockBizCardDivs(jobsData) {
+    return jobsData.map((job, index) => {
+        const mockDiv = document.createElement('div');
+        mockDiv.setAttribute('data-job-number', index.toString());
+        mockDiv.setAttribute('data-color-index', (index % 10).toString());
+        return mockDiv;
+    });
+}
+
+/**
+ * Create basic resume divs from loaded jobs data (initial load).
+ * Uses the same buildResumeListFromCards process as reinit.
+ */
+async function createBasicResumeDivs(jobsData) {
+    console.debug('[ResumeSystemInitializer] creating resume divs (initial load)');
+    const mockBizCardDivs = createMockBizCardDivs(jobsData);
+    return buildResumeListFromCards(mockBizCardDivs);
 }
 
 /**
@@ -72,25 +91,24 @@ export async function initializeResumeSystem() {
         // Get the global jobs dependency manager
         const jobsDependency = getGlobalJobsDependency();
         
-        // Make controllers and managers globally available (as expected by Vue components and other modules)
-        window.resumeListController = resumeListController;
-        window.resumeItemsController = resumeItemsController;
-        window.selectionManager = selectionManager;
-        
-        // Add debug functions for manual testing
-        window.testResumeClick = (jobNumber) => resumeListController.testResumeClick(jobNumber);
-        
-        
-        // Initialize the controllers and managers
-        resumeItemsController.registerForInitialization();
-        
-        // Register resumeListController as dependent on jobs data
+        // Single app-state object: replace window.resumeFlock to replace all application state
+        window.resumeFlock = window.resumeFlock || {};
+        const app = window.resumeFlock;
+        app.resumeListController = resumeListController;
+        app.resumeItemsController = resumeItemsController;
+        app.selectionManager = selectionManager;
+        // Per-resume divs only (loaded on each resume load – initial and manager)
+        app.allDivs = app.allDivs || {
+            bizCardDivs: [],
+            skillCardDivs: [],
+            bizResumeDivs: [],
+            skillResumeDivs: []
+        };
+        window.testResumeClick = (jobNumber) => app.resumeListController?.testResumeClick(jobNumber);
+        app.resumeItemsController.registerForInitialization();
         jobsDependency.registerController('ResumeListController', async (jobsData) => {
             console.debug('[ResumeSystemInitializer] init ResumeListController');
-            
-            // Initialize the controller with jobs data (THIS WAS MISSING!)
-            await resumeListController.initialize(jobsData);
-            
+            await app.resumeListController.initialize(jobsData);
             console.debug('[ResumeSystemInitializer] ResumeListController ready');
         });
         
@@ -109,16 +127,13 @@ export async function initializeResumeSystem() {
                 
                 if (resumeContentDivList && resumeContentWrapper) {
                     console.debug('[ResumeSystemInitializer] DOM elements found');
-                    
-                    // Skill cards and rDivs are children of the same container; rDivs go into resume-content-div-list
-                    resumeListController.resumeContentDiv = resumeContentDivList;
-                    resumeListController.resumeContentWrapper = resumeContentWrapper;
-                    resumeListController.resumecontentdivElement = resumeContentDivList;
-                    resumeListController.resumecontentdivwrapperElement = resumeContentWrapper;
-                    
-                    // Create basic resume divs from loaded jobs data
-                    await createBasicResumeDivs(resumeListController, resumeItemsController, jobsData);
-                    
+                    const rlc = window.resumeFlock?.resumeListController;
+                    if (!rlc) throw new Error('[ResumeSystemInitializer] resumeListController not on window.resumeFlock');
+                    rlc.resumeContentDiv = resumeContentDivList;
+                    rlc.resumeContentWrapper = resumeContentWrapper;
+                    rlc.resumecontentdivElement = resumeContentDivList;
+                    rlc.resumecontentdivwrapperElement = resumeContentWrapper;
+                    await createBasicResumeDivs(jobsData);
                     return true;
                 }
                 
@@ -142,8 +157,9 @@ export async function initializeResumeSystem() {
         indicator.style.cssText = 'position: fixed; bottom: 10px; left: 10px; background: green; color: white; padding: 5px; z-index: 9999; font-size: 12px; line-height: 1.2;';
         
         const totalJobs = jobsData.length;
-        const createdDivs = resumeListController.bizResumeDivs?.length || 0;
-        const scrollItemCount = resumeListController.scrollContainer?.originalItems?.length || 0;
+        const rlc = window.resumeFlock?.resumeListController;
+        const createdDivs = rlc?.bizResumeDivs?.length || 0;
+        const scrollItemCount = rlc?.scrollContainer?.originalItems?.length || 0;
         
         indicator.innerHTML = `✅ Resume System (Vue3)<br/>Jobs: ${totalJobs}<br/>Divs: ${createdDivs}<br/>Scroll: ${scrollItemCount}`;
         document.body.appendChild(indicator);
@@ -162,7 +178,8 @@ export async function initializeResumeSystem() {
  * Check if the resume system is properly initialized
  */
 export function isResumeSystemInitialized() {
-    return !!(window.resumeListController && window.resumeItemsController);
+    const app = window.resumeFlock;
+    return !!(app?.resumeListController && app?.resumeItemsController);
 }
 
 /**
@@ -171,8 +188,10 @@ export function isResumeSystemInitialized() {
  */
 export function testResumeSystem() {
     console.log('=== RESUME SYSTEM TEST (Vue 3 Dependencies) ===');
-    console.log('window.resumeListController exists:', !!window.resumeListController);
-    console.log('window.resumeItemsController exists:', !!window.resumeItemsController);
+    const app = window.resumeFlock;
+    console.log('window.resumeFlock exists:', !!app);
+    console.log('resumeListController exists:', !!app?.resumeListController);
+    console.log('resumeItemsController exists:', !!app?.resumeItemsController);
     
     // Test Vue 3 dependency manager
     const jobsDependency = getGlobalJobsDependency();
@@ -182,29 +201,31 @@ export function testResumeSystem() {
     console.log('- hasError:', jobsDependency.hasError.value);
     console.log('- jobsCount:', jobsDependency.jobsCount.value);
     
-    if (window.resumeListController) {
+    if (app?.resumeListController) {
+        const rlc = app.resumeListController;
         console.log('ResumeListController methods:');
-        console.log('- goToFirstResumeItem:', typeof window.resumeListController.goToFirstResumeItem);
-        console.log('- applySortRule:', typeof window.resumeListController.applySortRule);
-        console.log('- originalJobsData length:', window.resumeListController.originalJobsData?.length);
-        console.log('- bizResumeDivs length:', window.resumeListController.bizResumeDivs?.length);
-        console.log('- scrollContainer exists:', !!window.resumeListController.scrollContainer);
-        console.log('- scrollContainer type:', typeof window.resumeListController.scrollContainer);
+        console.log('- goToFirstResumeItem:', typeof rlc.goToFirstResumeItem);
+        console.log('- applySortRule:', typeof rlc.applySortRule);
+        console.log('- originalJobsData length:', rlc.originalJobsData?.length);
+        console.log('- bizResumeDivs length:', rlc.bizResumeDivs?.length);
+        console.log('- scrollContainer exists:', !!rlc.scrollContainer);
+        console.log('- scrollContainer type:', typeof rlc.scrollContainer);
     }
-    
-    if (window.resumeItemsController) {
+    if (app?.resumeItemsController) {
+        const ric = app.resumeItemsController;
         console.log('ResumeItemsController methods:');
-        console.log('- createAllBizResumeDivs:', typeof window.resumeItemsController.createAllBizResumeDivs);
-        console.log('- isInitialized:', window.resumeItemsController.isInitialized());
-        console.log('- bizResumeDivs length:', window.resumeItemsController.bizResumeDivs?.length);
+        console.log('- createAllBizResumeDivs:', typeof ric.createAllBizResumeDivs);
+        console.log('- isInitialized:', ric.isInitialized());
+        console.log('- bizResumeDivs length:', ric.bizResumeDivs?.length);
     }
     
     // Test selectionManager API compatibility
     console.log('SelectionManager API test:');
     try {
-        console.log('- hoverJobNumber method exists:', typeof window.selectionManager?.hoverJobNumber === 'function');
-        console.log('- clearHover method exists:', typeof window.selectionManager?.clearHover === 'function');
-        console.log('- getSelectedJobNumber method exists:', typeof window.selectionManager?.getSelectedJobNumber === 'function');
+        const sm = app?.selectionManager;
+        console.log('- hoverJobNumber method exists:', typeof sm?.hoverJobNumber === 'function');
+        console.log('- clearHover method exists:', typeof sm?.clearHover === 'function');
+        console.log('- getSelectedJobNumber method exists:', typeof sm?.getSelectedJobNumber === 'function');
     } catch (error) {
         console.error('SelectionManager API test failed:', error);
         throw error;
@@ -251,18 +272,19 @@ export function testScrolling() {
         console.log('- Can scroll:', wrapper.scrollHeight > wrapper.clientHeight);
     }
     
-    if (window.resumeListController?.scrollContainer) {
+    const app = window.resumeFlock;
+    const rlc = app?.resumeListController;
+    if (rlc?.scrollContainer) {
         console.log('ResumeListScrollContainer status:');
-        console.log('- Instance exists:', !!window.resumeListController.scrollContainer);
-        console.log('- Constructor name:', window.resumeListController.scrollContainer.constructor.name);
-        console.log('- Original items length:', window.resumeListController.scrollContainer.originalItems?.length);
-        console.log('- Current index:', window.resumeListController.scrollContainer.currentIndex);
+        console.log('- Instance exists:', !!rlc.scrollContainer);
+        console.log('- Constructor name:', rlc.scrollContainer.constructor.name);
+        console.log('- Original items length:', rlc.scrollContainer.originalItems?.length);
+        console.log('- Current index:', rlc.scrollContainer.currentIndex);
     }
-    
-    if (window.resumeListController) {
+    if (rlc) {
         console.log('ResumeListController scroll info:');
-        console.log('- bizResumeDivs length:', window.resumeListController.bizResumeDivs?.length);
-        console.log('- sortedIndices length:', window.resumeListController.sortedIndices?.length);
+        console.log('- bizResumeDivs length:', rlc.bizResumeDivs?.length);
+        console.log('- sortedIndices length:', rlc.sortedIndices?.length);
     }
     
     console.log('=== END SCROLLING TEST ===');

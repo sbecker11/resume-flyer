@@ -184,6 +184,8 @@ export function useCardsController() {
             console.debug('[CardsController] business cards created:', cards.length)
 
             bizCardDivs.value = cards
+            const allDivs = window.resumeFlock?.allDivs
+            if (allDivs) allDivs.bizCardDivs = [...cards]
 
             // Build unique skills and which jobs reference each (one skill card per skill, shared by multiple biz cards)
             const allSkillNames = new Set()
@@ -249,6 +251,7 @@ export function useCardsController() {
                     }
                 }
                 console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
+                if (window.resumeFlock?.allDivs) window.resumeFlock.allDivs.skillCardDivs = [...skillCardsCreated]
 
                 // Yearly grid lines removed per user request
 
@@ -261,10 +264,6 @@ export function useCardsController() {
             }
             
             console.debug('[CardsController] init complete, cards:', cards.length)
-            setTimeout(async () => {
-                await preCreateAllClones()
-                console.debug('[CardsController] pre-created clones')
-            }, 100)
 
         } catch (error) {
             console.error('[CardsController] Initialization failed:', error)
@@ -897,49 +896,12 @@ export function useCardsController() {
         }
     }
 
-    // Set up event listeners with retry mechanism
-    const setupEventListeners = () => {
-        console.debug('[CardsController] setting up event listeners')
-        if (!selectionManager) {
-            throw new Error('[useCardsController] selectionManager not available')
-        }
-        try {
-            selectionManager.addEventListener('test-event', () => {})
-            selectionManager.eventTarget.dispatchEvent(new CustomEvent('test-event'))
-        } catch (error) {
-            console.error('[CardsController] event system test failed:', error)
-            throw error
-        }
-        try {
-            selectionManager.addEventListener('job-selected', handleJobSelected)
-            selectionManager.addEventListener('card-selected', handleCardSelected)
-            selectionManager.addEventListener('selection-cleared', handleSelectionCleared)
-            selectionManager.addEventListener('cards-unselect-skill', handleCardsUnselectSkill)
-            selectionManager.addEventListener('cards-select', handleCardsSelect)
-            selectionManager.addEventListener('cards-unselect', handleCardsUnselect)
-            selectionManager.addEventListener('cards-scrollIntoView', handleCardsScrollIntoView)
-            selectionManager.addEventListener('job-hovered', handleJobHovered)
-            selectionManager.addEventListener('hoverCleared', handleHoverCleared)
-            window.addEventListener('viewport-changed', handleViewportChangedForClones)
-            window.addEventListener('resize', handleViewportChangedForClones)
-            window._cardsControllerListenersReady = true
-            window._cardsControllerSelectionManagerId = selectionManager.instanceId
-            console.debug('[CardsController] event listeners ready')
-            
-            return true
-        } catch (error) {
-            console.error('[useCardsController] ❌ Failed to set up event listeners:', error)
-            throw error
-        }
-    }
-    
-    // CRITICAL FIX: Use window.selectionManager instead of imported selectionManager
-    // This ensures we use the same singleton instance that's available globally
+    // Use single app-state object: window.resumeFlock
     const setupEventListenersFixed = () => {
         console.debug('[CardsController] setting up event listeners (fixed)')
-        const globalSelectionManager = window.selectionManager
+        const globalSelectionManager = window.resumeFlock?.selectionManager
         if (!globalSelectionManager) {
-            console.error('[CardsController] window.selectionManager not available')
+            console.error('[CardsController] window.resumeFlock.selectionManager not available')
             return false
         }
         try {
@@ -981,7 +943,7 @@ export function useCardsController() {
         setupAttempts++
         console.log(`[useCardsController] Setup attempt ${setupAttempts}/${maxSetupAttempts}`)
         
-        if (window.selectionManager) {
+        if (window.resumeFlock?.selectionManager) {
             const success = setupEventListenersFixed()
             if (success) {
                 console.log('[useCardsController] ✅ Event listener setup successful!')
@@ -1003,133 +965,12 @@ export function useCardsController() {
     // Also try in onMounted as backup
     onMounted(() => {
         console.log('[useCardsController] onMounted called, listeners ready:', !!window._cardsControllerListenersReady)
-        if (!window._cardsControllerListenersReady && window.selectionManager) {
+        if (!window._cardsControllerListenersReady && window.resumeFlock?.selectionManager) {
             console.log('[useCardsController] Retrying event listener setup in onMounted...')
             setupEventListenersFixed()
         }
     })
     
-    // Pre-create all clones at startup
-    async function preCreateAllClones() {
-        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
-        if (!scenePlaneEl) return
-        
-        // // Add a debug element to verify this function ran
-        // const debugEl = document.createElement('div')
-        // debugEl.id = 'pre-creation-debug'
-        // debugEl.textContent = 'Pre-creation ran'
-        // document.body.appendChild(debugEl)
-        
-        // Pre-create clones for all jobs
-        const jobsList = getGlobalJobsDependency().getJobsData()
-        for (let jobNumber = 0; jobNumber < jobsList.length; jobNumber++) {
-            const originalCard = cardRegistry.getCardElement(jobNumber)
-            if (!originalCard) {
-                console.warn(`[preCreateAllClones] Original card not found for job ${jobNumber}`)
-                continue
-            }
-            
-            const cloneId = `${originalCard.id}-clone`
-            
-            // Create clone
-            const clone = originalCard.cloneNode(true)
-            clone.id = cloneId
-            clone.classList.add('clone')
-            clone.classList.add('selected') // Clones are always in selected state
-            clone.classList.remove('hovered')
-            clone.classList.remove('hasClone')
-            clone.setAttribute('data-sceneZ', String(zUtils.SELECTED_CLONE_SCENE_Z))
-            
-            // CRITICAL: Copy original card's computed width to clone's style
-            const originalRect = originalCard.getBoundingClientRect()
-            clone.style.width = `${originalRect.width}px`
-            
-            // Set clone positioning
-            const originalComputedStyle = window.getComputedStyle(originalCard)
-            const cardWidth = parseFloat(originalComputedStyle.width) || 180
-            const cardHeight = parseFloat(originalComputedStyle.height) || 100
-            const originalTop = originalCard.style.top || originalComputedStyle.top || '0px'
-            
-            // CRITICAL: Position clone centerX = bullsEye centerX
-            // cDiv-clone.left = bullsEye.center.x - cDiv.width/2
-            let bullsEyeCenterX = 0
-            if (bullsEyeService && bullsEyeService.getCenter) {
-                const bullsEyeCenter = bullsEyeService.getCenter()
-                bullsEyeCenterX = bullsEyeCenter ? bullsEyeCenter.x : 0
-                console.log(`[preCreateAllClones] Got bullsEye center from service: ${bullsEyeCenterX}`)
-            } else {
-                // Fallback: assume scene center at viewport center
-                const sceneContainer = elementRegistry.getSceneContainer()
-                if (sceneContainer) {
-                    const rect = sceneContainer.getBoundingClientRect()
-                    bullsEyeCenterX = rect.width / 2
-                } else {
-                    console.warn(`[preCreateAllClones] No bullsEye service or scene container, using x=0`)
-                }
-            }
-            const cloneLeft = bullsEyeCenterX - (cardWidth / 2)
-            clone.style.setProperty('left', `${cloneLeft}px`, 'important')
-            clone.style.setProperty('width', `${cardWidth}px`, 'important')
-            clone.style.setProperty('height', `${cardHeight}px`, 'important')
-            clone.style.setProperty('top', originalTop, 'important')
-            clone.style.setProperty('position', 'absolute', 'important')
-            clone.style.setProperty('z-index', '99', 'important')
-            
-            
-            // CRITICAL: Ensure clone gets full selected styling
-            // Remove any copied styling that interferes with selected state
-            clone.style.removeProperty('border')
-            clone.style.removeProperty('outline')
-            clone.style.removeProperty('box-shadow')
-            clone.style.removeProperty('filter')
-            clone.style.removeProperty('background-color')
-            clone.style.removeProperty('color')
-            clone.style.removeProperty('padding')
-            clone.style.removeProperty('border-radius')
-            
-            // CRITICAL: Force selected styling to override any CSS variables or inherited styles
-            clone.style.setProperty('filter', 'none', 'important') // Override parallax filter
-            clone.style.setProperty('border', '2px solid purple', 'important')
-            clone.style.setProperty('outline', 'none', 'important')
-            clone.style.setProperty('box-shadow', '0 0 0 3px white, 0 0 0 8px purple, 0 3px 12px rgba(128, 0, 128, 0.4)', 'important')
-            
-            // Initially hide the clone
-            clone.style.setProperty('display', 'none', 'important')
-            
-            clone.title = `CLONE of Job ${jobNumber}`
-            
-            // Append as last child of container so clone displays over everything else
-            scenePlaneEl.appendChild(clone)
-            
-            // CRITICAL: Apply color palette to clone for proper selected styling
-            try {
-                await applyPaletteToElement(clone)
-                } catch (error) {
-                console.error(`[preCreateAllClones] ❌ Failed to apply palette to clone ${jobNumber}:`, error)
-                throw error
-            }
-            
-            // Add click handler: deselect if this clone is selected, else select (unified selectedCard)
-            clone.addEventListener('click', (event) => {
-                event.stopPropagation()
-                if (!selectionManager) return
-                const sel = selectionManager.selectedCard
-                if (sel?.type === 'biz' && sel.jobNumber === jobNumber) {
-                    selectionManager.clearSelection('CardsController.cloneClick')
-                    return
-                }
-                selectionManager.selectCard({ type: 'biz', jobNumber }, 'CardsController.cloneClick')
-            })
-
-            // Removed debug output
-        }
-        
-        // Clones pre-created
-        
-        // Clear element registry cache  
-        elementRegistry.clearAllCache()
-    }
-
     // Clone management: one selected card at a time
     /** job-selected: resume list sync; scroll cDiv into view. Clone display is in handleCardSelected. */
     function handleJobSelected(event) {
@@ -1145,8 +986,7 @@ export function useCardsController() {
 
         if (previousCard) {
             if (previousCard.type === 'biz') {
-                hideJobClone(previousCard.jobNumber)
-                showJobOriginal(previousCard.jobNumber)
+                removeSpecificClone(previousCard.jobNumber)
             } else {
                 removeSkillCardClone(previousCard.skillCardId)
                 showSkillCardOriginal(previousCard.skillCardId)
@@ -1154,31 +994,8 @@ export function useCardsController() {
         }
 
         if (card.type === 'biz') {
-            const cloneId = `biz-card-div-${card.jobNumber}-clone`
-            const cloneEl = document.getElementById(cloneId)
-            const cloneAlreadyExisted = !!cloneEl
-            const originalCard = cardRegistry.getCardElement(card.jobNumber) || document.getElementById(createBizCardDivId(card.jobNumber))
-            if (cloneAlreadyExisted && originalCard) {
-                // Sync clone geometry from original (original was visible and parallax-updated after showJobOriginal removed hasClone)
-                const os = originalCard.style
-                const oc = typeof window.getComputedStyle === 'function' ? window.getComputedStyle(originalCard) : null
-                const left = os.left || (oc && oc.left) || '0px'
-                const top = os.top || (oc && oc.top) || '0px'
-                const width = os.width || (oc && oc.width) || '180px'
-                const height = os.height || (oc && oc.height) || '180px'
-                const transform = os.transform || (oc && oc.transform) || 'none'
-                cloneEl.style.setProperty('left', left, 'important')
-                cloneEl.style.setProperty('top', top, 'important')
-                cloneEl.style.setProperty('width', width, 'important')
-                cloneEl.style.setProperty('height', height, 'important')
-                if (transform && transform !== 'none') cloneEl.style.setProperty('transform', transform, 'important')
-            }
             hideJobOriginal(card.jobNumber)
-            if (!cloneAlreadyExisted) {
-                createSelectedClone(card.jobNumber)
-            } else {
-                showJobClone(card.jobNumber)
-            }
+            createSelectedClone(card.jobNumber)
             scrollCDivHeaderIntoViewAfterCloneVisible(card.jobNumber)
         } else {
             // Skill selected: show as selected in both scene (clone) and resume (paired skill-resume-div)
@@ -1197,8 +1014,6 @@ export function useCardsController() {
             }
         }
     }
-
-    function handleCardsSelect() {}
 
     /** When the selected card is unselected (e.g. before selecting another), remove its clone and show original */
     function handleCardsUnselect(event) {
@@ -1220,8 +1035,7 @@ export function useCardsController() {
             removeSkillCardClone(previousCard.skillCardId)
             showSkillCardOriginal(previousCard.skillCardId)
         }
-        hideAllClones()
-        showAllOriginals()
+        removeAllClones()
         clearAllSelected()
     }
     
@@ -1401,47 +1215,6 @@ export function useCardsController() {
             // Parallax can now update this original so it doesn’t appear at a stale position (no drift).
             console.log(`[showJobOriginal] ✅ Restored original card visibility for job ${jobNumber}`)
         }
-    }
-    
-    function hideJobClone(jobNumber) {
-        const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`)
-        
-        if (clone) {
-            clone.style.setProperty('display', 'none', 'important')
-        }
-        
-        console.log(`[hideJobClone] ✅ Hidden clone for job ${jobNumber}`)
-    }
-    
-    function showJobClone(jobNumber) {
-        const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`)
-        if (!clone) {
-            console.log(`❌ Clone not found for job ${jobNumber}`)
-            return
-        }
-        clone.style.removeProperty('display')
-        clone.style.setProperty('display', 'block', 'important')
-        // Re-append so clone is last child and displays over everything else
-        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
-        if (scenePlaneEl && clone.parentNode === scenePlaneEl) {
-            scenePlaneEl.appendChild(clone)
-        }
-    }
-    
-    function hideAllClones() {
-        const jobsList = getGlobalJobsDependency().getJobsData()
-        for (let jobNumber = 0; jobNumber < jobsList.length; jobNumber++) {
-            hideJobClone(jobNumber)
-        }
-        console.log(`[hideAllClones] ✅ Hidden all clones`)
-    }
-    
-    function showAllOriginals() {
-        const jobsList = getGlobalJobsDependency().getJobsData()
-        for (let jobNumber = 0; jobNumber < jobsList.length; jobNumber++) {
-            showJobOriginal(jobNumber)
-        }
-        console.log(`[showAllOriginals] ✅ Shown all original cards`)
     }
     
     /** Run scroll only after the biz-card clone is in DOM and verified visible (avoids scene jump down-then-up). */
@@ -1779,6 +1552,7 @@ export function useCardsController() {
         clone.style.removeProperty('display')
         clone.style.removeProperty('visibility')
         clone.style.removeProperty('opacity')
+        clone.style.removeProperty('pointer-events')
         clone.style.setProperty('display', 'block', 'important')
         clone.style.setProperty('visibility', 'visible', 'important')
         clone.style.setProperty('opacity', '1', 'important')
@@ -1839,11 +1613,14 @@ export function useCardsController() {
                 const jobNum = card.id.replace('biz-card-div-', '')
                 updateResumeDivSceneZForJob(parseInt(jobNum, 10))
             }
-            card.style.removeProperty('display')
+            card.style.setProperty('display', 'block', 'important')
+            card.style.setProperty('visibility', 'visible', 'important')
+            card.style.setProperty('opacity', '1', 'important')
+            card.style.removeProperty('pointer-events')
+            card.style.removeProperty('z-index')
             // Remove clone-related classes
             card.classList.remove('hasClone')
             card.classList.remove('force-hidden-for-clone')
-            console.log(`[removeAllClones] ✅ Restored original card ${card.id} with display: ${card.style.display || 'default'}`)
         })
         
         // CRITICAL: Clear element registry cache after removing clones
@@ -1875,6 +1652,7 @@ export function useCardsController() {
             originalCard.style.setProperty('display', 'block', 'important')
             originalCard.style.setProperty('visibility', 'visible', 'important')
             originalCard.style.setProperty('opacity', '1', 'important')
+            originalCard.style.removeProperty('pointer-events')
             originalCard.style.removeProperty('z-index')
             console.log(`[useCardsController] ✅ Restored original card: ${originalId}`)
         }
@@ -2036,9 +1814,10 @@ export function useCardsController() {
             console.log('1. Checking selectionManager instances:')
             console.log('   - useCardsController selectionManager exists:', !!selectionManager)
             console.log('   - useCardsController selectionManager instanceId:', selectionManager?.instanceId)
-            console.log('   - window.selectionManager exists:', !!window.selectionManager)
-            console.log('   - window.selectionManager instanceId:', window.selectionManager?.instanceId)
-            console.log('   - Same instance:', selectionManager === window.selectionManager)
+            const sm = window.resumeFlock?.selectionManager
+            console.log('   - window.resumeFlock.selectionManager exists:', !!sm)
+            console.log('   - selectionManager instanceId:', sm?.instanceId)
+            console.log('   - Same instance:', selectionManager === sm)
             
             console.log('\n2. Checking event listener setup:')
             console.log('   - _cardsControllerListenersReady:', !!window._cardsControllerListenersReady)
@@ -2046,8 +1825,9 @@ export function useCardsController() {
             console.log('   - handleJobSelected type:', typeof handleJobSelected)
             
             console.log('\n3. Checking resume system:')
-            console.log('   - window.resumeListController exists:', !!window.resumeListController)
-            console.log('   - resumeListController.handleBizResumeDivClickEvent type:', typeof window.resumeListController?.handleBizResumeDivClickEvent)
+            const rlc = window.resumeFlock?.resumeListController
+            console.log('   - window.resumeFlock.resumeListController exists:', !!rlc)
+            console.log('   - resumeListController.handleBizResumeDivClickEvent type:', typeof rlc?.handleBizResumeDivClickEvent)
             
             console.log('\n4. Checking DOM elements:')
             const resumeDivs = document.querySelectorAll('.biz-resume-div')
@@ -2068,12 +1848,12 @@ export function useCardsController() {
             
             return {
                 selectionManagerOk: !!selectionManager,
-                resumeControllerOk: !!window.resumeListController,
+                resumeControllerOk: !!window.resumeFlock?.resumeListController,
                 resumeDivCount: resumeDivs.length,
                 cardDivCount: cardDivs.length,
                 handleJobSelectedType: typeof handleJobSelected,
                 listenersReady: !!window._cardsControllerListenersReady,
-                sameInstance: selectionManager === window.selectionManager
+                sameInstance: selectionManager === window.resumeFlock?.selectionManager
             }
         }
         
@@ -2111,8 +1891,8 @@ export function useCardsController() {
             
             // Test 4: Try direct selection
             console.log('\n🎯 Testing direct selection...')
-            if (window.selectionManager?.selectJobNumber) {
-                window.selectionManager.selectJobNumber(8, 'quick-test')
+            if (window.resumeFlock?.selectionManager?.selectJobNumber) {
+                window.resumeFlock.selectionManager.selectJobNumber(8, 'quick-test')
                 setTimeout(() => {
                     console.log('⏱️ Direct selection test completed (check logs above)')
                 }, 1500)
@@ -2206,6 +1986,11 @@ export function useCardsController() {
         isInitialized.value = false
         isInitializing = false  // CRITICAL: Reset mutex to allow reinit
         bizCardDivs.value = []
+        const allDivs = window.resumeFlock?.allDivs
+        if (allDivs) {
+            allDivs.bizCardDivs = []
+            allDivs.skillCardDivs = []
+        }
 
         console.log('[CardsController] 🔄 Calling initializeCardsController...')
         await initializeCardsController()
@@ -2216,7 +2001,6 @@ export function useCardsController() {
         isInitialized,
         bizCardDivs,
         initializeCardsController,
-        reinitializeResumeData,
-        preCreateAllClones
+        reinitializeResumeData
     }
 }

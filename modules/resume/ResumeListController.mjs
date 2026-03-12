@@ -22,6 +22,7 @@ import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // import '../core/colorPaletteManager.mjs'; // No longer exists - using Vue composables
 import * as BizDetailsDivModule from '../scene/bizDetailsDivModule.mjs';
 import * as utils from '../utils/utils.mjs';
+import { resumeItemsController } from './ResumeItemsController.mjs';
 
 /**
  * ResumeListController - Manages the resume list and its scroll container (wrapping list)
@@ -66,8 +67,8 @@ class ResumeListController extends BaseComponent {
     // Store the singleton instance
     ResumeListController.instance = this;
     
-    // Add to window for global access and debugging
-    window.resumeListController = this;
+    // Single app-state object: window.resumeFlock
+    (window.resumeFlock = window.resumeFlock || {}).resumeListController = this;
     
     console.debug('[ResumeListController] singleton stored');
   }
@@ -158,10 +159,10 @@ class ResumeListController extends BaseComponent {
         this.resumeContentWrapper = this.resumecontentdivwrapperElement;
         if (!this.resumeContentWrapper) throw new Error('ResumeListController: setupDom: resume-content-div-wrapper not available via template ref - ensure setResumeContentDivWrapperElement() was called');
         
-        // Create resume divs using CardsController's bizCardDivs (DOM operations moved from initialize)
+        // Create resume divs using same path as initial load (ResumeItemsController) for consistent structure/styling
         if (this.cardsController && this.cardsController.bizCardDivs) {
-            this.bizResumeDivs = await this.createAllBizResumeDivs(this.cardsController.bizCardDivs);
-            
+            this.bizResumeDivs = await resumeItemsController.createAllBizResumeDivs(this.cardsController.bizCardDivs);
+
             // Add resume divs to the DOM
             this.bizResumeDivs.forEach((div, index) => {
                 if (div instanceof Node) {
@@ -300,7 +301,7 @@ class ResumeListController extends BaseComponent {
     if (!this.bizResumeDivs || !this.scrollContainer) return;
     this.resumeListSelectionOrder = [];
     this.sortedIndices.forEach((j) => this.removedJobNumbers.add(j));
-    const itemsController = window.resumeItemsController;
+    const itemsController = window.resumeFlock?.resumeItemsController;
     if (itemsController && itemsController.dismissedJobNumbers) {
       this.sortedIndices.forEach((j) => itemsController.dismissedJobNumbers.add(j));
     }
@@ -384,6 +385,10 @@ class ResumeListController extends BaseComponent {
    * Remove a skill from the list order (e.g. when user clicks X on the skill-resume-div). Re-renders list.
    */
   removeSkillFromResumeListOrder(skillCardId) {
+    const sm = window.resumeFlock?.selectionManager;
+    if (sm?.selectedCard?.type === 'skill' && sm.selectedCard.skillCardId === skillCardId) {
+      sm.clearSelection('removeSkillFromResumeListOrder');
+    }
     this.resumeListSelectionOrder = this.resumeListSelectionOrder.filter(
       (e) => !(e.type === 'skill' && e.skillCardId === skillCardId)
     );
@@ -612,8 +617,8 @@ class ResumeListController extends BaseComponent {
     
     // Add global debug function for testing
     window.debugScrollContainer = (jobNumber) => {
-      if (window.resumeListController) {
-        window.resumeListController.debugScrollToJob(jobNumber);
+      if (window.resumeFlock?.resumeListController) {
+        window.resumeFlock?.resumeListController.debugScrollToJob(jobNumber);
       } else {
         console.log('ResumeListController not available on window object');
       }
@@ -621,9 +626,9 @@ class ResumeListController extends BaseComponent {
     
     // Add global test function for easy testing
     window.testScrollToJob = (jobNumber) => {
-      if (window.resumeListController) {
+      if (window.resumeFlock?.resumeListController) {
         console.log(`[TEST] Testing scroll to job ${jobNumber}`);
-        window.resumeListController.scrollToJobNumber(jobNumber, 'testScrollToJob');
+        window.resumeFlock?.resumeListController.scrollToJobNumber(jobNumber, 'testScrollToJob');
       } else {
         console.log('ResumeListController not available on window object');
       }
@@ -631,8 +636,8 @@ class ResumeListController extends BaseComponent {
     
     // Add global debug function for sort rule consistency
     window.debugSortConsistency = () => {
-      if (window.resumeListController) {
-        window.resumeListController.debugSortRuleConsistency();
+      if (window.resumeFlock?.resumeListController) {
+        window.resumeFlock?.resumeListController.debugSortRuleConsistency();
       } else {
         console.log('ResumeListController not available on window object');
       }
@@ -642,16 +647,16 @@ class ResumeListController extends BaseComponent {
     window.forceSyncControllers = () => {
       console.log('[DEBUG] forceSyncControllers: Forcing synchronization between controllers');
       
-      if (window.resumeListController) {
-        const resumeSortRule = window.resumeListController.getCurrentSortRule();
+      if (window.resumeFlock?.resumeListController) {
+        const resumeSortRule = window.resumeFlock?.resumeListController.getCurrentSortRule();
         console.log('[DEBUG] forceSyncControllers: ResumeListController sort rule:', resumeSortRule);
         
         // Note: CardsController is now using Vue composables, no longer syncing here
-        // window.cardsController.applySortRule(resumeSortRule);
+        // window.resumeFlock?.cardsController.applySortRule(resumeSortRule);
         
         // Check if they're now in sync
         setTimeout(() => {
-          window.resumeListController.debugSortRuleConsistency();
+          window.resumeFlock?.resumeListController.debugSortRuleConsistency();
         }, 100);
       } else {
         console.log('One or both controllers not available');
@@ -661,8 +666,8 @@ class ResumeListController extends BaseComponent {
     // Add global function to test scrolling to specific job numbers
     window.testScrollToJob = (jobNumber) => {
       console.log(`[TEST] Testing scroll to job ${jobNumber}`);
-      if (window.resumeListController) {
-        window.resumeListController.scrollToJobNumber(jobNumber, 'testScrollToJob');
+      if (window.resumeFlock?.resumeListController) {
+        window.resumeFlock?.resumeListController.scrollToJobNumber(jobNumber, 'testScrollToJob');
       } else {
         console.log('ResumeListController not available on window object');
       }
@@ -671,8 +676,8 @@ class ResumeListController extends BaseComponent {
     // Add global function to force scroll to job 10 specifically
     window.forceScrollToJob10 = () => {
       console.log('[TEST] Force scrolling to job 10');
-      if (window.resumeListController && window.resumeListController.scrollContainer) {
-        const scroller = window.resumeListController.scrollContainer;
+      if (window.resumeFlock?.resumeListController && window.resumeFlock?.resumeListController.scrollContainer) {
+        const scroller = window.resumeFlock?.resumeListController.scrollContainer;
         
         // Find job 10 in the original items
         const job10Index = scroller.originalItems.findIndex(item => {
@@ -688,7 +693,7 @@ class ResumeListController extends BaseComponent {
           
           // Also try the job number method
           setTimeout(() => {
-            window.resumeListController.scrollToJobNumber(10, 'forceScrollToJob10');
+            window.resumeFlock?.resumeListController.scrollToJobNumber(10, 'forceScrollToJob10');
           }, 100);
         } else {
           console.log('[TEST] Job 10 not found in original items!');
@@ -701,8 +706,8 @@ class ResumeListController extends BaseComponent {
     // Add global function to log viewport and resume div coordinates
     window.logCoordinates = (jobNumber = 10) => {
       console.log(`[TEST] Logging coordinates for job ${jobNumber}`);
-      if (window.resumeListController) {
-        window.resumeListController.logViewportAndResumeDivCoordinates(jobNumber, 'logCoordinates');
+      if (window.resumeFlock?.resumeListController) {
+        window.resumeFlock?.resumeListController.logViewportAndResumeDivCoordinates(jobNumber, 'logCoordinates');
       } else {
         console.log('ResumeListController not available on window object');
       }
@@ -711,8 +716,8 @@ class ResumeListController extends BaseComponent {
     // Add global function to check what jobs are currently visible in the viewport
     window.checkVisibleJobs = () => {
       console.log(`[TEST] Checking what jobs are currently visible in the viewport`);
-      if (window.resumeListController && window.resumeListController.scrollContainer) {
-        const scroller = window.resumeListController.scrollContainer;
+      if (window.resumeFlock?.resumeListController && window.resumeFlock?.resumeListController.scrollContainer) {
+        const scroller = window.resumeFlock?.resumeListController.scrollContainer;
         const viewportTop = scroller.scrollport.scrollTop;
         const viewportHeight = scroller.scrollport.offsetHeight;
         const viewportBottom = viewportTop + viewportHeight;
@@ -749,8 +754,8 @@ class ResumeListController extends BaseComponent {
     // Add global function to compare Job 5 vs Job 10 positioning
     window.compareJob5vs10 = () => {
       console.log(`[TEST] Comparing Job 5 vs Job 10 positioning`);
-      if (window.resumeListController && window.resumeListController.scrollContainer) {
-        const scroller = window.resumeListController.scrollContainer;
+      if (window.resumeFlock?.resumeListController && window.resumeFlock?.resumeListController.scrollContainer) {
+        const scroller = window.resumeFlock?.resumeListController.scrollContainer;
         const viewportTop = scroller.scrollport.scrollTop;
         const viewportHeight = scroller.scrollport.offsetHeight;
         const viewportBottom = viewportTop + viewportHeight;
@@ -809,8 +814,8 @@ class ResumeListController extends BaseComponent {
 
     // Add global function to debug scroll container state
     window.debugScrollContainer = () => {
-      if (window.resumeListController && window.resumeListController.scrollContainer) {
-        const scroller = window.resumeListController.scrollContainer;
+      if (window.resumeFlock?.resumeListController && window.resumeFlock?.resumeListController.scrollContainer) {
+        const scroller = window.resumeFlock?.resumeListController.scrollContainer;
         console.log('[DEBUG] Resume list scroll container state:');
         console.log('  - Current index:', scroller.currentIndex);
         console.log('  - Original items count:', scroller.originalItems.length);
@@ -859,10 +864,10 @@ class ResumeListController extends BaseComponent {
     window.testJob10Mismatch = () => {
       console.log('[DEBUG] testJob10Mismatch: Testing job 10 -> job 22 mismatch');
       
-      if (window.resumeListController) {
+      if (window.resumeFlock?.resumeListController) {
         // Check what job is at sorted index 10 in resume controller
-        const resumeJob10 = window.resumeListController.sortedIndices[10];
-        // const cardsJob10 = window.cardsController.sortedIndices[10]; // CardsController no longer available
+        const resumeJob10 = window.resumeFlock?.resumeListController.sortedIndices[10];
+        // const cardsJob10 = window.resumeFlock?.cardsController.sortedIndices[10]; // CardsController no longer available
         
         console.log(`[DEBUG] testJob10Mismatch: ResumeListController sortedIndices[10] = ${resumeJob10}`);
         // console.log(`[DEBUG] testJob10Mismatch: CardsController sortedIndices[10] = ${cardsJob10}`);
@@ -872,7 +877,7 @@ class ResumeListController extends BaseComponent {
         
         // Show the job details for resume controller
         if (resumeJob10 !== undefined) {
-          const resumeDiv = window.resumeListController.getBizResumeDivByJobNumber(resumeJob10);
+          const resumeDiv = window.resumeFlock?.resumeListController.getBizResumeDivByJobNumber(resumeJob10);
           if (resumeDiv) {
             const roleElement = resumeDiv.querySelector('.biz-details-role');
             const employerElement = resumeDiv.querySelector('.biz-details-employer');
@@ -891,9 +896,9 @@ class ResumeListController extends BaseComponent {
     // Add global function to force recalculation of heights
     window.forceRecalculateHeights = () => {
       console.log('[TEST] Force recalculating scroll container heights');
-      if (window.resumeListController && window.resumeListController.scrollContainer) {
+      if (window.resumeFlock?.resumeListController && window.resumeFlock?.resumeListController.scrollContainer) {
         dragStateManager.executeOrDefer(() => {
-          window.resumeListController.scrollContainer.recalculateHeights();
+          window.resumeFlock?.resumeListController.scrollContainer.recalculateHeights();
         }, 'forceRecalculateHeights-manual');
       } else {
         console.log('ResumeListController or scroll container not available');
@@ -1873,13 +1878,13 @@ class ResumeListController extends BaseComponent {
     console.log(`  Sorted indices:`, this.sortedIndices);
     
     // Check if CardsController has the same sort rule
-    if (window.cardsController) {
-      console.log(`  CardsController sort rule:`, window.cardsController.currentSortRule);
-      console.log(`  CardsController sorted indices:`, window.cardsController.sortedIndices);
+    if (window.resumeFlock?.cardsController) {
+      console.log(`  CardsController sort rule:`, window.resumeFlock?.cardsController.currentSortRule);
+      console.log(`  CardsController sorted indices:`, window.resumeFlock?.cardsController.sortedIndices);
       
       // Compare sorted indices
       const resumeSorted = this.sortedIndices;
-      const cardsSorted = window.cardsController.sortedIndices;
+      const cardsSorted = window.resumeFlock?.cardsController.sortedIndices;
       
       if (resumeSorted && cardsSorted) {
         const isSame = resumeSorted.length === cardsSorted.length && 

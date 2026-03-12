@@ -10,11 +10,12 @@ function programmaticSoftRefresh() {
   window.CONSOLE_LOG_IGNORE('[LayoutToggle] Starting programmatic soft refresh');
   
   // Step 1: Clear all existing state and positions
-  if (window.bullsEye) {
-    window.bullsEye.cleanup?.();
+  const app = window.resumeFlock;
+  if (app?.bullsEye) {
+    app.bullsEye.cleanup?.();
   }
-  if (window.focalPoint) {
-    window.focalPoint.cleanup?.();
+  if (app?.focalPoint) {
+    app.focalPoint.cleanup?.();
   }
   if (window.aimPoint) {
     window.aimPoint.cleanup?.();
@@ -27,8 +28,8 @@ function programmaticSoftRefresh() {
     // TODO: Replace with Vue composable pattern - skipped for now
     
     // Then reinitialize bullsEye
-    if (window.bullsEye) {
-      window.bullsEye.initialize?.();
+    if (app?.bullsEye) {
+      app.bullsEye.initialize?.();
     }
     
     // Then aimPoint 
@@ -37,8 +38,8 @@ function programmaticSoftRefresh() {
     }
     
     // Finally focal point
-    if (window.focalPoint) {
-      window.focalPoint.initialize?.();
+    if (app?.focalPoint) {
+      app.focalPoint.initialize?.();
     }
     
     window.CONSOLE_LOG_IGNORE('[LayoutToggle] Programmatic soft refresh completed');

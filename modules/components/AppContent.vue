@@ -20,7 +20,7 @@
     >
       <div class="resume-content">
         <div class="resume-wrapper">
-          <ResumeContainer @open-resume-manager="openResumeManager" />
+          <ResumeContainer :currentResumeId="currentResumeId" @open-resume-manager="openResumeManager" />
         </div>
       </div>
       <!-- Resume Viewer Label - positioned inside resume container like Scene Viewer -->
@@ -88,11 +88,11 @@ import { useColorPalette } from '../composables/useColorPalette.mjs'
 import { useLayoutToggle } from '../composables/useLayoutToggle.mjs'
 import { useResizeHandle } from '../composables/useResizeHandle.mjs'
 import { useAppState } from '../composables/useAppState.ts'
-import { useSelectedElementIdPersistence } from '../composables/useSelectedElementIdPersistence.mjs'
 
 // Resume system initialization (to be migrated)
 import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrolling } from '../resume/resumeSystemInitializer.mjs'
 import { registerResumeListReinit, reinitializeResumeSystem } from '../resume/resumeReinitializer.mjs'
+import { buildResumeListFromCards } from '../resume/resumeSystemInitializer.mjs'
 
 // Vue 3 keyboard navigation (replaces legacy keyDownModule)
 import { useKeyboardNavigation } from '../composables/useKeyboardNavigation.mjs'
@@ -126,13 +126,10 @@ const secondContainer = computed(() => store.orientation === 'scene-left' ? 'res
 // Resize handle functionality
 const { sceneContainerStyle } = useResizeHandle()
 
-// Persist and restore last selected DOM element ID
-const { restoreSelectionFromState } = useSelectedElementIdPersistence()
-
 // Color palette management
 const { loadPalettes } = useColorPalette()
 
-// App state management (needed for currentResumeId computed property)
+// App state management
 const { appState, updateAppState } = useAppState()
 
 // Vue 3 bulls-eye system (must run before useFocalPoint so global ref can be set first)
@@ -162,9 +159,9 @@ if (serviceUpdater) {
   serviceUpdater.updateServices({
     bullsEye: bullsEyeForInject,
     focalPoint: null,
-    resumeListController: window.resumeListController || null,
-    resumeItemsController: window.resumeItemsController || null,
-    appState: window.appState || null,
+    resumeListController: window.resumeFlock?.resumeListController ?? null,
+    resumeItemsController: window.resumeFlock?.resumeItemsController ?? null,
+    appState: window.resumeFlock?.appState ?? null,
     debugFunctions
   })
 }
@@ -178,11 +175,14 @@ const {
   setFocalPointElement
 } = useFocalPoint()
 
-// Set focal point in global ref now that we have setFocalPointElement
+// Set focal point in global ref and on single app-state object
+const focalPointApi = { isReady: () => true, getPosition: () => ({ x: store.focalPoint.x, y: store.focalPoint.y }), setFocalPointElement }
 if (serviceUpdater) {
-  serviceUpdater.updateServices({
-    focalPoint: { isReady: () => true, getPosition: () => ({ x: store.focalPoint.x, y: store.focalPoint.y }), setFocalPointElement }
-  })
+  serviceUpdater.updateServices({ focalPoint: focalPointApi })
+}
+if (typeof window !== 'undefined') {
+  window.resumeFlock = window.resumeFlock || {}
+  window.resumeFlock.focalPoint = focalPointApi
 }
 
 // Vue 3 enhanced parallax system (using provide/inject)
@@ -262,10 +262,8 @@ const focalPointRef = ref(null)
 
 // Resume Manager state
 const isResumeManagerOpen = ref(false)
-// currentResumeId is a computed property that reads from appState
-const currentResumeId = computed(() => {
-  return appState.value?.['user-settings']?.currentResumeId || 'default'
-})
+// currentResumeId tracks which resume is loaded at runtime — not persisted to app_state
+const currentResumeId = ref('default')
 
 // Make template refs reactive - watch for changes and update systems
 watch(focalPointRef, (newRef) => {
@@ -391,28 +389,21 @@ async function handleResumeSelected(resumeId) {
       console.log('[AppContent] ✅ Cleared resume list items')
     }
 
-    // Clear card registry
-    if (window.cardRegistry) {
-      window.cardRegistry.clearRegistry?.()
+    // Clear card registry (single app-state object)
+    if (window.resumeFlock?.cardRegistry) {
+      window.resumeFlock.cardRegistry.clearRegistry?.()
       console.log('[AppContent] ✅ Cleared card registry')
     }
 
     // STEP 2: Clear selection state (prevents restoring old resume's selections)
-    if (window.selectionManager) {
-      window.selectionManager.clearSelection?.()
+    if (window.resumeFlock?.selectionManager) {
+      window.resumeFlock.selectionManager.clearSelection?.()
       console.log('[AppContent] ✅ Cleared selection state')
     }
 
-    // STEP 3: Update app state and persist to disk
-    await updateAppState({
-      'user-settings': {
-        currentResumeId: resumeId,
-        selectedJobNumber: null,
-        selectedElementId: null,
-        selectedDualElementId: null
-      }
-    }, true) // immediate = true to save right away
-    console.log('[AppContent] ✅ App state updated and saved with cleared selection')
+    // STEP 3: Track which resume is loaded (runtime only — not persisted to app_state)
+    currentResumeId.value = resumeId || 'default'
+    console.log('[AppContent] ✅ currentResumeId updated to:', currentResumeId.value)
 
     // STEP 4: Reinitialize the resume system with the new resume
     console.log('[AppContent] Calling reinitializeResumeSystem with:', resumeId === 'default' ? null : resumeId)
@@ -477,9 +468,6 @@ onMounted(async () => {
     await loadAppState()
     console.log('[AppContent] ✅ AppState loaded successfully')
 
-    // currentResumeId computed property will automatically reflect the loaded state
-    console.log('[AppContent] 📋 Current resume ID from state:', currentResumeId.value)
-    
     // PHASE 2: Initialize app store
     console.log('[AppContent] 📊 Initializing app store...')
     storeActions.initialize()
@@ -505,30 +493,15 @@ onMounted(async () => {
     checkServices()
     console.log('[AppContent] 📊 Parallax stats:', parallaxStats.value)
     
-    // PHASE 5: Resume system (legacy during migration)
-    // NOTE: initializeResumeSystem() automatically loads the currentResumeId from app_state
-    // so we don't need to call reinitializeResumeSystem() during startup
+    // PHASE 5: Resume system — always loads default resume on startup
     console.log('[AppContent] 📋 Initializing resume system...')
-    console.log('[AppContent] 📋 Will load resume from app_state:', currentResumeId.value || 'default')
     await initializeResumeSystem()
     console.log('[AppContent] ✅ Resume system initialized with saved resume')
 
-    // Register resume list reinit for parsed-resume switch (rebuild list from new bizCardDivs)
+    // Register resume list reinit: same process as initial load (buildResumeListFromCards)
     registerResumeListReinit(async (bizCardDivs) => {
-      const rlc = window.resumeListController
-      if (!rlc || !bizCardDivs?.length) return
-      const listEl = document.getElementById('resume-content-div-list')
-      if (!listEl) return
-      while (listEl.firstChild) listEl.firstChild.remove()
-      const bizResumeDivs = await rlc.createAllBizResumeDivs(bizCardDivs)
-      bizResumeDivs.forEach((div) => listEl.appendChild(div))
-      rlc.reinitialize(bizResumeDivs)
+      await buildResumeListFromCards(bizCardDivs ?? [])
     })
-
-    // Restore last selected DOM element from persisted state (after rDivs exist)
-    setTimeout(() => {
-      restoreSelectionFromState()
-    }, 400)
 
     // PHASE 6: Service readiness logs (now ready from start)
     console.log('[AppContent] 🔧 Service readiness (pre-marked ready) ...')
@@ -544,25 +517,24 @@ onMounted(async () => {
     debugFunctions.checkResumeDivs = checkResumeDivs
     debugFunctions.testScrolling = testScrolling
     
-    // Update services with initialized values (window.* may be set by resume system)
+    // Update services from single app-state object (window.resumeFlock)
+    const app = window.resumeFlock || {}
     if (serviceUpdater) {
       serviceUpdater.updateServices({
-        bullsEye: window.bullsEye || bullsEyeService,
-        resumeListController: window.resumeListController,
-        resumeItemsController: window.resumeItemsController,
-        focalPoint: window.focalPoint || { isReady: () => true, getPosition: () => ({ x: store.focalPoint.x, y: store.focalPoint.y }), setFocalPointElement },
-        appState: window.appState,
+        bullsEye: app.bullsEye || bullsEyeService,
+        resumeListController: app.resumeListController ?? null,
+        resumeItemsController: app.resumeItemsController ?? null,
+        focalPoint: app.focalPoint || { isReady: () => true, getPosition: () => ({ x: store.focalPoint.x, y: store.focalPoint.y }), setFocalPointElement },
+        appState: app.appState ?? null,
         debugFunctions
       })
     }
-    
-    // Keep window globals temporarily for backwards compatibility during migration
     window.testResumeSystem = testResumeSystem
     window.checkResumeDivs = checkResumeDivs
     window.testScrolling = testScrolling
-    
-    // Make card registry globally available for legacy code migration
-    window.cardRegistry = cardRegistry
+    // Attach to single app-state object so replacing window.resumeFlock replaces all state
+    window.resumeFlock = window.resumeFlock || {}
+    window.resumeFlock.cardRegistry = cardRegistry
     console.log('[AppContent] 📋 Card registry made globally available for DOM query optimization')
     
     // PHASE 7: Global event handlers (now handled by Vue 3 composables)
