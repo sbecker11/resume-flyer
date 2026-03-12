@@ -188,6 +188,11 @@ export function useCardsController() {
             }
             console.debug('[CardsController] business cards created:', cards.length)
 
+            // Offset cards that share the same period (same start + end dates).
+            // Groups of N get a symmetric horizontal spread and a downward vertical cascade
+            // so concurrent jobs are visually distinct without drifting far from their date line.
+            applyConcurrentJobOffsets(jobs, cards)
+
             bizCardDivs.value = cards
             const allDivs = window.resumeFlock?.allDivs
             if (allDivs) allDivs.bizCardDivs = [...cards]
@@ -287,6 +292,47 @@ export function useCardsController() {
             // CRITICAL: Release mutex lock
             isInitializing = false
             console.debug('[CardsController] Released initialization mutex')
+        }
+    }
+
+    /**
+     * For each group of cards sharing the same start+end period, apply:
+     *   - Symmetric horizontal spread: cards fan out left/right of their natural X
+     *   - Downward vertical cascade: each card in the group steps down by Y_STEP px
+     * Groups of 1 are untouched.
+     */
+    function applyConcurrentJobOffsets(jobs, cards) {
+        const X_STEP = 35  // px between adjacent concurrent cards horizontally
+        const Y_STEP = 22  // px per rank downward
+
+        // Build a map: normalizedPeriod → array of card indices
+        const groups = new Map()
+        for (let i = 0; i < jobs.length; i++) {
+            if (!cards[i]) continue
+            const job = jobs[i]
+            const start = job.start || job.startDate || ''
+            const end   = job.end   || ''
+            const key   = `${start}|${end}`
+            if (!groups.has(key)) groups.set(key, [])
+            groups.get(key).push(i)
+        }
+
+        for (const indices of groups.values()) {
+            if (indices.length < 2) continue
+            const n = indices.length
+            // rank 0 … n-1; center offset so the group is symmetric
+            const halfSpan = (n - 1) / 2
+            indices.forEach((cardIdx, rank) => {
+                const card = cards[cardIdx]
+                if (!card) return
+                const curLeft = parseFloat(card.style.left) || 0
+                const curTop  = parseFloat(card.style.top)  || 0
+                const xOffset = (rank - halfSpan) * X_STEP
+                const yOffset = rank * Y_STEP
+                card.style.left = `${curLeft + xOffset}px`
+                card.style.top  = `${curTop  + yOffset}px`
+                console.debug(`[CardsController] concurrent offset job ${cardIdx}: rank ${rank}/${n-1} → Δx=${xOffset.toFixed(0)} Δy=${yOffset}`)
+            })
         }
     }
 
