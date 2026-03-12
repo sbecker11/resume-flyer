@@ -544,7 +544,6 @@ onMounted(() => {
 });
 onUnmounted(() => {
   document.removeEventListener('click', handleOutsideClick);
-  if (resumeContentScrollTimeoutId) clearTimeout(resumeContentScrollTimeoutId);
   selectionManager?.eventTarget?.removeEventListener('card-selected', updateSelectedCardSnapshot);
   selectionManager?.eventTarget?.removeEventListener('selection-cleared', updateSelectedCardSnapshot);
   selectionManager?.eventTarget?.removeEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
