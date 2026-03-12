@@ -33,16 +33,9 @@ export function useJobsDependency() {
       return jobsState.value.data
     }
 
-    let resumeId = forceResumeId
-    if (resumeId === undefined) {
-      try {
-        const { useAppState } = await import('./useAppState.ts')
-        const { appState } = useAppState()
-        resumeId = appState.value?.['user-settings']?.currentResumeId ?? null
-      } catch (_) {
-        resumeId = null
-      }
-    }
+    // Always load the default resume unless an explicit forceResumeId is provided.
+    // currentResumeId is not persisted in app_state (content-scoped, not app shell state).
+    const resumeId = forceResumeId ?? null
 
     const url = resumeId
       ? `/api/resumes/${encodeURIComponent(resumeId)}/data`

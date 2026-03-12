@@ -42,26 +42,16 @@ const { updateAppState, appState } = useAppState();
 // Use Vue 3 provide/inject instead of window.bullsEye
 const bullsEye = useBullsEyeService();
 
-// Initialize step count from AppState with proper loading handling
-onMounted(() => {
-  // Initial load if AppState is already available
-  if (appState.value?.resizeHandle?.stepCount) {
-    stepCount.value = appState.value.resizeHandle.stepCount;
-    console.log(`[ResizeHandle] Initialized stepCount from AppState: ${stepCount.value}`);
-  }
-});
-
-// Watch for AppState loading completion
-watch(appState, (newState) => {
-  if (newState?.resizeHandle?.stepCount) {
-    stepCount.value = newState.resizeHandle.stepCount;
-    console.log(`[ResizeHandle] Updated stepCount from AppState: ${stepCount.value}`);
-  } else if (newState && !newState.resizeHandle?.stepCount) {
-    // AppState loaded but no stepCount - use default from state
-    stepCount.value = 4; // Default value
-    console.log(`[ResizeHandle] AppState loaded without stepCount, using default: ${stepCount.value}`);
-  }
-}, { immediate: true });
+// Sync stepCount from AppState (correct path: user-settings.resizeHandle.stepCount)
+watch(
+  () => appState.value?.['user-settings']?.resizeHandle?.stepCount,
+  (newCount) => {
+    if (newCount !== undefined && stepCount.value !== newCount) {
+      stepCount.value = newCount;
+    }
+  },
+  { immediate: true }
+);
 
 // Computed properties for button states - orientation aware
 const isLeftDisabled: ComputedRef<boolean> = computed(() => {
@@ -295,10 +285,12 @@ async function handleSteppingClick(event: MouseEvent): Promise<void> {
   stepCount.value = nextSteps;
   
   try {
-    // Save to AppState
+    // Save to AppState (must include 'user-settings' wrapper)
     await updateAppState({
-      resizeHandle: {
-        stepCount: nextSteps
+      'user-settings': {
+        resizeHandle: {
+          stepCount: nextSteps
+        }
       }
     });
     

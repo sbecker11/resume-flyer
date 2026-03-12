@@ -475,13 +475,17 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     line-height: 1.2;
 }
 
-/* Debug row: job number, z, hex, three contrast icons (separate row under dates) */
+/* Debug row: job number, z, hex, three contrast icons (separate row under dates).
+   Hidden by default for a clean UI after load/refresh; add body class "show-card-debug" to reveal. */
 .biz-details-debug-row {
-    display: block;
+    display: none;
     font-size: 10px;
     margin: 0 0 6px 0;
     line-height: 1.2;
     opacity: 0.85;
+}
+body.show-card-debug .biz-details-debug-row {
+    display: block;
 }
 
 /* Contrast icons in debug row: <img> with black PNGs; invert filter applied by card state (variant) rules below */

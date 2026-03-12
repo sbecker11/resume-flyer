@@ -53,28 +53,13 @@ export interface AppState {
     focalPointMode: 'locked' | 'following' | 'dragging';
     /** Persisted focal point position and mode (restored on load) */
     focalPoint?: { x: number; y: number; mode: 'locked' | 'following' | 'dragging' };
-    
-    selectedJobNumber: number | null;
-    lastVisitedJobNumber: number | null;
-    /** Last selected DOM element ID (e.g. "resume-5", "skill-card-div-3-clone") or null if none selected */
-    selectedElementId: string | null;
-    /** Dual element in the other view (scene ↔ resume). e.g. resume-5 ↔ biz-card-div-5-clone; skill-card-div-3 ↔ resume element with data-skill-card-id="skill-card-div-3". */
-    selectedDualElementId: string | null;
-    /** Resume data source: null = default (static_content), or parsed resume id for /api/resumes/:id/data */
-    currentResumeId: string | null;
 
     resume: {
       sortRule: SortRule;
     };
-    
+
     theme: {
       colorPalette: string; // filename only
-    };
-
-    /** Persisted vertical scroll positions (scrollTop) for scene and resume panels */
-    scrollPositions: {
-      sceneContentScrollTop: number;
-      resumeContentScrollTop: number;
     };
   };
 

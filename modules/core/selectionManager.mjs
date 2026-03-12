@@ -33,16 +33,8 @@ class SelectionManager {
     }
 
     loadInitialSelection() {
-        if (AppState && AppState.selectedJobNumber !== null) {
-            // Use setTimeout to ensure all components are initialized before triggering selection
-            setTimeout(() => {
-                console.debug('[SelectionManager] Loading initial selection from AppState');
-                this.selectJobNumber(AppState.selectedJobNumber, 'SelectionManager.loadInitialSelection');
-            }, 200);
-        }
-        
-        // CRITICAL: Also validate page load state to catch hard-refresh violations
-        // Delay validation to allow initial selection restoration to complete
+        // Selection is content-scoped — job numbers belong to loaded resume, not app_state.
+        // No selection is restored on startup; content loads fresh each time.
         setTimeout(() => this.validatePageLoadState('page-load-validation'), 1500);
     }
 
@@ -58,14 +50,6 @@ class SelectionManager {
         this.selectedJobNumber = card.type === 'biz' ? card.jobNumber : null;
 
         console.debug('[SelectionManager] selectCard', caller, card?.type, card?.type === 'biz' ? card?.jobNumber : card?.skillCardId);
-
-        if (AppState) {
-            AppState.selectedJobNumber = this.selectedJobNumber;
-            if (caller !== 'SelectionManager.loadInitialSelection') {
-                if (card.type === 'biz') AppState.lastVisitedJobNumber = card.jobNumber;
-                saveState(AppState);
-            }
-        }
 
         if (card.type === 'biz') {
             const previousJobNumber = previousCard?.type === 'biz' ? previousCard.jobNumber : null;
@@ -172,11 +156,6 @@ class SelectionManager {
         this.selectedJobNumber = null;
 
         console.debug('[SelectionManager] clearSelection', caller);
-
-        if (AppState) {
-            AppState.selectedJobNumber = null;
-            saveState(AppState);
-        }
 
         this._unselectAllSelectedCards(previousCard);
 
@@ -621,12 +600,13 @@ class SelectionManager {
         let bullsEyeCenterX = 0;
         let bullsEyeCenterY = '50%';
 
-        // Try to get bulls-eye position from global bulls-eye service
-        if (window.bullsEye && typeof window.bullsEye.getBullsEyePosition === 'function') {
-            const bullsEyePos = window.bullsEye.getBullsEyePosition();
+        // Try to get bulls-eye position from single app-state object
+        const bullsEyeApi = window.resumeFlock?.bullsEye;
+        if (bullsEyeApi && typeof bullsEyeApi.getPosition === 'function') {
+            const bullsEyePos = bullsEyeApi.getPosition();
             if (bullsEyePos && typeof bullsEyePos.x === 'number') {
                 bullsEyeCenterX = bullsEyePos.x;
-                console.debug('[SelectionManager] bulls-eye X from window.bullsEye', bullsEyeCenterX);
+                console.debug('[SelectionManager] bulls-eye X from window.resumeFlock.bullsEye', bullsEyeCenterX);
             }
         }
 

@@ -42,7 +42,7 @@ const DEBOUNCE_TIMEOUT = 1000   // 1 second for immediate debouncing
  */
 function getDefaultState(): AppState {
     return {
-        version: "1.3",
+        version: "1.4",
         lastUpdated: new Date().toISOString(),
         
         "user-settings": {
@@ -56,20 +56,11 @@ function getDefaultState(): AppState {
             },
             focalPointMode: 'locked',
             focalPoint: { x: 0, y: 0, mode: 'locked' as const },
-            selectedJobNumber: null,
-            lastVisitedJobNumber: null,
-            selectedElementId: null,
-            selectedDualElementId: null,
-            currentResumeId: null,
             resume: {
                 sortRule: { field: 'startDate', direction: 'asc' }
             },
             theme: {
                 colorPalette: 'sweeps.json'
-            },
-            scrollPositions: {
-                sceneContentScrollTop: 0,
-                resumeContentScrollTop: 0
             }
         },
 
@@ -296,6 +287,22 @@ function migrateState(state: any): AppState {
         Object.assign(state, newState)
         state.version = "1.3"
         console.log('[AppState] Successfully migrated to v1.3 - restructured to user-settings/system-constants')
+    }
+
+    // Migration from 1.3 to 1.4: Remove content-scoped fields from user-settings
+    if (state.version === "1.3") {
+        console.log('[AppState] Migrating state from v1.3 to v1.4: Removing content-scoped fields')
+        const us = state['user-settings']
+        if (us) {
+            delete us.selectedJobNumber
+            delete us.lastVisitedJobNumber
+            delete us.selectedElementId
+            delete us.selectedDualElementId
+            delete us.currentResumeId
+            delete us.scrollPositions
+        }
+        state.version = "1.4"
+        console.log('[AppState] Successfully migrated to v1.4')
     }
 
     // Ensure user-settings.focalPoint exists (position + mode persistence)

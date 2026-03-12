@@ -185,7 +185,7 @@ class ResumeListScrollContainer {
     closeBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const controller = window.resumeItemsController;
+      const controller = window.resumeFlock?.resumeItemsController;
       if (controller && typeof controller.removeRDivFromListing === 'function') {
         controller.removeRDivFromListing(jobNumber);
       }
@@ -206,7 +206,7 @@ class ResumeListScrollContainer {
         sm.clearSelection('ResumeListScrollContainer.rDivCloneClick');
       } else {
         sm.selectJobNumber(jobNumber, 'ResumeListScrollContainer.rDivCloneClick');
-        const controller = window.resumeItemsController;
+        const controller = window.resumeFlock?.resumeItemsController;
         if (controller && typeof controller._scrollRDivIntoView === 'function') {
           controller._scrollRDivIntoView(rDivOrClone, jobNumber);
         }

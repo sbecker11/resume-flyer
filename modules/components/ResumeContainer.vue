@@ -6,23 +6,25 @@ import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
 import { applyPaletteToElement } from '@/modules/composables/useColorPalette.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useResumeListController } from '@/modules/core/globalServices';
-import { useAppState } from '@/modules/composables/useAppState.ts';
 import { parseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
+
+// Define props
+const props = defineProps({
+  currentResumeId: { type: String, default: 'default' }
+});
 
 // Define emits for parent communication
 const emit = defineEmits(['open-resume-manager']);
 
 // Get the same percentage as the resize handle
 const { scenePercentage } = useResizeHandle();
-const { appState, updateAppState } = useAppState();
-
 // Current resume metadata
 const currentResumeMetadata = ref(null);
 const availableResumeCount = ref(1);
 
 // Fetch current resume displayName from API
 async function fetchCurrentResumeMetadata() {
-  let resumeId = appState.value?.['user-settings']?.currentResumeId;
+  let resumeId = props.currentResumeId;
   console.log('[ResumeContainer] 📋 fetchCurrentResumeMetadata called, resumeId:', resumeId);
 
   // Map 'default' to the actual default resume ID
@@ -56,9 +58,9 @@ const currentResumeDisplay = computed(() => {
   return currentResumeMetadata.value?.displayName || 'Loading...';
 });
 
-// Watch for currentResumeId changes and update metadata
+// Watch for currentResumeId prop changes and update metadata
 watch(
-  () => appState.value?.['user-settings']?.currentResumeId,
+  () => props.currentResumeId,
   async (newId, oldId) => {
     console.log('[ResumeContainer] 👁️ Watcher triggered - oldId:', oldId, '-> newId:', newId);
     if (newId !== undefined) {
@@ -83,9 +85,6 @@ onMounted(async () => {
   }
 });
 const resumeContentWrapperRef = ref(null);
-let resumeContentScrollTimeoutId = null;
-const SCROLL_PERSIST_DEBOUNCE_MS = 300;
-
 // Use Vue 3 provide/inject instead of window.resumeListController
 const resumeListController = useResumeListController();
 
@@ -145,7 +144,7 @@ const sortOptions = SORT_OPTIONS;
 
 // Methods for buttons - these will now call the legacy controller via provide/inject
 function selectFirst() {
-  const controller = resumeListController || window.resumeListController;
+  const controller = resumeListController || window.resumeFlock?.resumeListController;
   if (controller) {
     controller.goToFirstResumeItem();
   } else {
@@ -153,7 +152,7 @@ function selectFirst() {
   }
 }
 function selectLast() {
-  const controller = resumeListController || window.resumeListController;
+  const controller = resumeListController || window.resumeFlock?.resumeListController;
   if (controller) {
     controller.goToLastResumeItem();
   } else {
@@ -161,7 +160,7 @@ function selectLast() {
   }
 }
 function clearAllResumeDivs() {
-  const controller = resumeListController || window.resumeListController;
+  const controller = resumeListController || window.resumeFlock?.resumeListController;
   if (controller && typeof controller.clearAllResumeDivsFromListing === 'function') {
     controller.clearAllResumeDivsFromListing();
   } else {
@@ -169,7 +168,7 @@ function clearAllResumeDivs() {
   }
 }
 function selectNext() {
-  const controller = resumeListController || window.resumeListController;
+  const controller = resumeListController || window.resumeFlock?.resumeListController;
   if (controller) {
     controller.goToNextResumeItem();
   } else {
@@ -177,7 +176,7 @@ function selectNext() {
   }
 }
 function selectPrevious() {
-  const controller = resumeListController || window.resumeListController;
+  const controller = resumeListController || window.resumeFlock?.resumeListController;
   if (controller) {
     controller.goToPreviousResumeItem();
   } else {
@@ -331,7 +330,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     return false;
   }
   // Single ordered list = scroll container's contentHolder (#resume-content-div-list).
-  const scroller = (resumeListController || window.resumeListController)?.scrollContainer;
+  const scroller = (resumeListController || window.resumeFlock?.resumeListController)?.scrollContainer;
   const listEl = document.getElementById('resume-content-div-list');
   const appendTarget = listEl || document.getElementById('resume-content-div');
   if (!appendTarget) {
@@ -376,9 +375,14 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     closeBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const rlc = resumeListController || window.resumeListController;
+      const rlc = resumeListController || window.resumeFlock?.resumeListController;
       if (rlc && typeof rlc.removeSkillFromResumeListOrder === 'function') {
         rlc.removeSkillFromResumeListOrder(skillCardId);
+      }
+      const allDivs = window.resumeFlock?.allDivs;
+      if (allDivs && Array.isArray(allDivs.skillResumeDivs)) {
+        const i = allDivs.skillResumeDivs.indexOf(copy);
+        if (i !== -1) allDivs.skillResumeDivs.splice(i, 1);
       }
       const nextSibling = copy.nextElementSibling;
       copy.remove();
@@ -436,8 +440,10 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   } else {
     appendTarget.appendChild(copy);
   }
+  const allDivs = window.resumeFlock?.allDivs;
+  if (allDivs && Array.isArray(allDivs.skillResumeDivs)) allDivs.skillResumeDivs.push(copy);
 
-  const rlc = resumeListController || window.resumeListController;
+  const rlc = resumeListController || window.resumeFlock?.resumeListController;
   if (rlc && typeof rlc.notifySkillAddedToResumeListing === 'function') {
     rlc.notifySkillAddedToResumeListing(skillCardId);
   }
@@ -472,34 +478,11 @@ function onResumeSkillCardScrollIntoView(event) {
 }
 
 function onResumeContentWrapperScroll() {
-  const el = resumeContentWrapperRef.value;
-  if (!el || !appState.value) return;
-  if (resumeContentScrollTimeoutId) clearTimeout(resumeContentScrollTimeoutId);
-  resumeContentScrollTimeoutId = setTimeout(() => {
-    resumeContentScrollTimeoutId = null;
-    const scrollTop = Math.max(0, el.scrollTop);
-    const current = appState.value['user-settings']?.scrollPositions ?? {};
-    updateAppState({
-      'user-settings': {
-        scrollPositions: {
-          ...current,
-          resumeContentScrollTop: scrollTop
-        }
-      }
-    }).catch((e) => {
-      console.error('[ResumeContainer] Failed to persist resume scroll position', e);
-    });
-  }, SCROLL_PERSIST_DEBOUNCE_MS);
+  // Scroll position is content-dependent (geometry changes on each resume load) — not persisted.
 }
 
-watch(resumeContentWrapperRef, (newRef) => {
-  if (!newRef) return;
-  const saved = appState.value?.['user-settings']?.scrollPositions?.resumeContentScrollTop;
-  if (typeof saved === 'number' && saved > 0) {
-    nextTick(() => {
-      newRef.scrollTop = saved;
-    });
-  }
+watch(resumeContentWrapperRef, (_newRef) => {
+  // No scroll restoration — scroll position is not persisted across loads.
 }, { immediate: true });
 
 // When selection becomes a skill card, append copy and scroll (primary path; event is fallback)
@@ -516,7 +499,7 @@ watch(
 );
 
 function syncSortRuleKeyFromController() {
-  const controller = resumeListController || window.resumeListController;
+  const controller = resumeListController || window.resumeFlock?.resumeListController;
   if (controller && typeof controller.getCurrentSortRule === 'function') {
     const rule = controller.getCurrentSortRule();
     sortRuleKey.value = sortRuleToKey(rule);

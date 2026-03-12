@@ -166,13 +166,15 @@ export function useBullsEye() {
     appContext.registerDependency(BULLS_EYE_KEY, bullsEyeInstance)
     provideDependency(BULLS_EYE_KEY, bullsEyeInstance)
     
-    // Make available globally for backwards compatibility
+    // Single app-state object: window.resumeFlock
     if (typeof window !== 'undefined') {
-      window.bullsEye = {
+      const bullsEyeApi = {
         recenter: () => recenter(),
         getPosition: () => ({ x: x.value, y: y.value }),
         isReady: () => isReady.value
       }
+      window.resumeFlock = window.resumeFlock || {}
+      window.resumeFlock.bullsEye = bullsEyeApi
     }
     
     return bullsEyeInstance

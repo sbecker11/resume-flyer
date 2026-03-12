@@ -119,8 +119,9 @@ class ResumeItemsController {
         bizResumeDiv.id = this.createBizResumeDivId(jobNumber);
         bizResumeDiv.className = 'biz-resume-div';
         bizResumeDiv.setAttribute('data-job-number', jobNumber);
-        // Set color index to jobNumber (same logic as cDiv) - palette mapping happens in applyPaletteToElement
-        bizResumeDiv.setAttribute('data-color-index', jobNumber);
+        // Use card's data-color-index when present (reinit with real cards); else jobNumber (initial load with mocks)
+        const colorIndex = bizCardDiv.getAttribute('data-color-index');
+        bizResumeDiv.setAttribute('data-color-index', colorIndex !== null && colorIndex !== '' ? colorIndex : String(jobNumber));
         console.log(`[DEBUG] Color index set - Job ${jobNumber}: rDiv data-color-index=${jobNumber}`);
 
         // Create enhanced resume content with job details
@@ -160,8 +161,12 @@ class ResumeItemsController {
      * Remove the rDiv for the given job from the resume listing (persists until reload).
      */
     removeRDivFromListing(jobNumber) {
+        const sm = window.resumeFlock?.selectionManager;
+        if (sm?.selectedCard?.type === 'biz' && sm.selectedCard.jobNumber === jobNumber) {
+            sm.clearSelection('removeRDivFromListing');
+        }
         this.dismissedJobNumbers.add(jobNumber);
-        const listController = window.resumeListController;
+        const listController = window.resumeFlock?.resumeListController;
         if (listController && typeof listController.removeJobFromListing === 'function') {
             listController.removeJobFromListing(jobNumber);
         } else {
@@ -367,9 +372,9 @@ class ResumeItemsController {
 
     _setupSelectionListeners() {
         // Use global selectionManager instance instead of imported reference
-        const globalSelectionManager = window.selectionManager || selectionManager;
+        const globalSelectionManager = window.resumeFlock?.selectionManager || selectionManager;
         
-        console.log(`[ResumeItemsController] Setting up selection listeners with ${window.selectionManager ? 'global' : 'imported'} selectionManager`);
+        console.log(`[ResumeItemsController] Setting up selection listeners with ${window.resumeFlock?.selectionManager ? 'global' : 'imported'} selectionManager`);
         
         globalSelectionManager.addEventListener('selectionChanged', this.handleSelectionChanged.bind(this));
         globalSelectionManager.addEventListener('selectionCleared', this.handleSelectionCleared.bind(this));
@@ -655,7 +660,7 @@ class ResumeItemsController {
      */
     handleResumeScrollIntoView(event) {
         const { jobNumber } = event.detail;
-        const listController = window.resumeListController;
+        const listController = window.resumeFlock?.resumeListController;
         if (listController && typeof listController.ensureJobInListing === 'function') {
             listController.ensureJobInListing(jobNumber);
         }
@@ -696,7 +701,7 @@ class ResumeItemsController {
         if (ResumeItemsController.instance) {
             // Clean up event listeners
             const instance = ResumeItemsController.instance;
-            const globalSelectionManager = window.selectionManager || selectionManager;
+            const globalSelectionManager = window.resumeFlock?.selectionManager || selectionManager;
             
             globalSelectionManager.removeEventListener('selectionChanged', instance.handleSelectionChanged.bind(instance));
             globalSelectionManager.removeEventListener('selectionCleared', instance.handleSelectionCleared.bind(instance));
@@ -715,8 +720,8 @@ class ResumeItemsController {
     // Helper method to trigger height recalculation (replaces direct window access)
     _triggerHeightRecalculation(debugMessage) {
         // Try to access via window first (backwards compatibility)
-        if (window.resumeListController && window.resumeListController.scrollContainer) {
-            window.resumeListController.scrollContainer.recalculateHeights();
+        if (window.resumeFlock?.resumeListController && window.resumeFlock?.resumeListController.scrollContainer) {
+            window.resumeFlock?.resumeListController.scrollContainer.recalculateHeights();
             console.log(debugMessage);
         } else {
             // Fallback: dispatch event for components using provide/inject
