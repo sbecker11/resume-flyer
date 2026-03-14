@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resume Indicator Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { margin: 10px 0; }
+        .error { color: red; }
+        .success { color: green; }
+        button { margin: 10px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Resume Indicator Diagnostic</h1>
+    <button onclick="testResumeSwitch()">Test Resume Switch</button>
+    <button onclick="checkAppState()">Check App State</button>
+    <button onclick="checkMetadata()">Check Metadata</button>
+    <div id="logs"></div>
+
+    <script>
+        function log(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('logs').appendChild(div);
+        }
+
+        async function testResumeSwitch() {
+            log('Testing resume switch to Kelly Victory...');
+
+            // Check if app is loaded
+            if (!document.getElementById('scene-container')) {
+                log('Scene container not found - is the app loaded?', 'error');
+                return;
+            }
+
+            // Try to fetch resume data
+            try {
+                const response = await fetch('/api/resumes');
+                const resumes = await response.json();
+                log(`Found ${resumes.length} resumes`, 'success');
+
+                const kelly = resumes.find(r => r.displayName.includes('Kelly'));
+                if (kelly) {
+                    log(`Kelly Victory resume ID: ${kelly.id}`, 'success');
+                    log(`Display name: ${kelly.displayName}`, 'success');
+                } else {
+                    log('Kelly Victory resume not found', 'error');
+                }
+            } catch (error) {
+                log(`Error fetching resumes: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkAppState() {
+            log('Checking app state...');
+
+            try {
+                const response = await fetch('/api/state');
+                if (response.ok) {
+                    const state = await response.json();
+                    log(`Current resume ID: ${state?.['user-settings']?.currentResumeId || 'NOT SET'}`, 'success');
+                } else {
+                    log('Could not fetch app state', 'error');
+                }
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkMetadata() {
+            log('Checking current resume metadata display...');
+
+            const indicator = document.querySelector('.current-resume-indicator');
+            if (indicator) {
+                log(`Indicator text: "${indicator.textContent.trim()}"`, 'success');
+                log(`Indicator title: "${indicator.title}"`, 'success');
+            } else {
+                log('Current resume indicator element not found', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
