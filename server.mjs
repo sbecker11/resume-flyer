@@ -40,6 +40,42 @@ app.use(express.json());
 app.use(express.text());
 
 /**
+ * Convert a display name to a slug suitable for use as a folder name.
+ * Lowercases, collapses non-alphanumeric runs to hyphens, trims leading/trailing hyphens.
+ */
+function slugifyDisplayName(name) {
+    return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        || 'resume';
+}
+
+/**
+ * Find a unique folder name under PARSED_RESUMES_DIR based on displayName.
+ * Returns the base slug if available, otherwise appends (1), (2), … until unique.
+ */
+async function generateUniqueResumeId(displayName) {
+    const base = slugifyDisplayName(displayName);
+    try {
+        await fs.access(path.join(PARSED_RESUMES_DIR, base));
+        // Base exists — find the next available suffix
+        let counter = 1;
+        while (true) {
+            const candidate = `${base} (${counter})`;
+            try {
+                await fs.access(path.join(PARSED_RESUMES_DIR, candidate));
+                counter++;
+            } catch {
+                return candidate;
+            }
+        }
+    } catch {
+        return base;
+    }
+}
+
+/**
  * Read jobs, skills, and optional categories from paths and return normalized data
  * for API consumption (jobs array, name-keyed skills, categories dict).
  * Supports both legacy (array jobs, name-keyed skills) and parser format (jobID/skillID dicts).
@@ -149,30 +185,30 @@ app.get('/api/resumes/:id/data', async (req, res) => {
         return res.status(400).json({ error: 'Invalid resume id.' });
     }
     const dir = path.join(PARSED_RESUMES_DIR, id);
-    let jobsPath = path.join(dir, 'jobs', 'jobs.mjs');
     try {
-        await fs.access(jobsPath);
-    } catch (e) {
-        if (e.code === 'ENOENT') {
-            jobsPath = path.join(dir, 'jobs.mjs');
+        let jobsPath = path.join(dir, 'jobs', 'jobs.mjs');
+        try {
             await fs.access(jobsPath);
-        } else {
-            throw e;
+        } catch (e) {
+            if (e.code === 'ENOENT') {
+                jobsPath = path.join(dir, 'jobs.mjs');
+                await fs.access(jobsPath); // throws ENOENT if dir doesn't exist at all
+            } else {
+                throw e;
+            }
         }
-    }
-    let skillsPath = path.join(dir, 'skills', 'skills.mjs');
-    try {
-        await fs.access(skillsPath);
-    } catch (e) {
-        if (e.code === 'ENOENT') {
-            skillsPath = path.join(dir, 'skills.mjs');
-        } else {
-            throw e;
+        let skillsPath = path.join(dir, 'skills', 'skills.mjs');
+        try {
+            await fs.access(skillsPath);
+        } catch (e) {
+            if (e.code === 'ENOENT') {
+                skillsPath = path.join(dir, 'skills.mjs');
+            } else {
+                throw e;
+            }
         }
-    }
-    // skillsPath may not exist (skills optional); readAndNormalizeResumeData treats missing skills as {}
-    const categoriesPath = path.join(dir, 'categories.mjs');
-    try {
+        // skillsPath may not exist (skills optional); readAndNormalizeResumeData treats missing skills as {}
+        const categoriesPath = path.join(dir, 'categories.mjs');
         const { jobs, skills, categories } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
         res.json({ jobs, skills, categories });
     } catch (error) {
@@ -182,6 +218,97 @@ app.get('/api/resumes/:id/data', async (req, res) => {
             console.error('Error reading resume data:', error);
             res.status(500).json({ error: 'Failed to read resume data.' });
         }
+    }
+});
+
+// PATCH /api/resumes/:id/jobs/:jobIndex/skills: Update skillIDs for one job, sync skills.mjs jobIDs
+app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
+    const { id, jobIndex } = req.params;
+    const { skillIDs } = req.body;
+    if (!id || jobIndex == null || !Array.isArray(skillIDs)) {
+        return res.status(400).json({ error: 'Missing id, jobIndex, or skillIDs array.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.mjs');
+    const skillsPath = path.join(dir, 'skills.mjs');
+    try {
+        const [jobsContent, skillsContent] = await Promise.all([
+            fs.readFile(jobsPath, 'utf-8'),
+            fs.readFile(skillsPath, 'utf-8'),
+        ]);
+        const jobs = parseMjsExport(jobsContent, 'jobs');
+        const skills = parseMjsExport(skillsContent, 'skills');
+
+        const idx = String(jobIndex);
+        if (!jobs[idx]) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
+
+        const oldSkillIDs = jobs[idx].skillIDs || [];
+        const newSkillIDs = skillIDs;
+        jobs[idx].skillIDs = newSkillIDs;
+
+        // Sync skills.jobIDs: remove jobIndex from removed skills, add to new ones
+        const jobNum = parseInt(jobIndex, 10);
+        const removed = oldSkillIDs.filter(s => !newSkillIDs.includes(s));
+        const added   = newSkillIDs.filter(s => !oldSkillIDs.includes(s));
+        for (const sid of removed) {
+            if (skills[sid]) skills[sid].jobIDs = (skills[sid].jobIDs || []).filter(j => j !== jobNum);
+        }
+        for (const sid of added) {
+            if (skills[sid] && !skills[sid].jobIDs.includes(jobNum)) skills[sid].jobIDs.push(jobNum);
+        }
+
+        await Promise.all([
+            atomicWriteWithLock(jobsPath, `const jobs = ${JSON.stringify(jobs)};`),
+            atomicWriteWithLock(skillsPath, `const skills = ${JSON.stringify(skills)};`),
+        ]);
+        res.json({ ok: true, skillIDs: newSkillIDs });
+    } catch (err) {
+        console.error('[PATCH jobs skills]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/resumes/:id/other-sections: Return other-sections.mjs data as JSON (contact, title, summary, etc.)
+app.get('/api/resumes/:id/other-sections', async (req, res) => {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Invalid resume id.' });
+    const filePath = path.join(PARSED_RESUMES_DIR, id, 'other-sections.mjs');
+    try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const data = parseMjsExport(content, 'otherSections');
+        res.json(data);
+    } catch {
+        res.status(404).json({ error: 'other-sections.mjs not found for this resume.' });
+    }
+});
+
+// GET /api/resumes/:id/html: Serve the pre-rendered resume.html for printing
+app.get('/api/resumes/:id/html', async (req, res) => {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Invalid resume id.' });
+    const htmlPath = path.join(PARSED_RESUMES_DIR, id, 'resume.html');
+    try {
+        await fs.access(htmlPath);
+        res.sendFile(htmlPath);
+    } catch {
+        res.status(404).json({ error: 'resume.html not found for this resume.' });
+    }
+});
+
+// DELETE /api/resumes/:id: Remove a parsed resume folder entirely
+app.delete('/api/resumes/:id', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') {
+        return res.status(400).json({ error: 'Cannot delete the default resume.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    try {
+        await fs.rm(dir, { recursive: true, force: true });
+        console.log(`[DELETE resume] Removed: ${dir}`);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[DELETE resume]', err);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -354,8 +481,7 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
         }
 
         const displayName = req.body.displayName || path.basename(uploadedFile.originalname, path.extname(uploadedFile.originalname));
-        const timestamp = Date.now();
-        const resumeId = `resume-${timestamp}`;
+        const resumeId = await generateUniqueResumeId(displayName);
         const outputDir = path.join(PARSED_RESUMES_DIR, resumeId);
 
         console.log(`📤 Processing resume: ${uploadedFile.originalname}`);

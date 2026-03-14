@@ -29,6 +29,7 @@ class ResumeItemsController {
         this.isInitialized = false;
         this._setupSelectionListeners();
         this._setupColorPaletteListener();
+        this._setupJobSkillsListener();
         
         // Store the singleton instance
         ResumeItemsController.instance = this;
@@ -141,6 +142,20 @@ class ResumeItemsController {
             this.removeRDivFromListing(jobNumber);
         });
         bizResumeDiv.insertBefore(closeBtn, bizResumeDiv.firstChild);
+
+        // Edit skills button
+        const editSkillsBtn = document.createElement('button');
+        editSkillsBtn.type = 'button';
+        editSkillsBtn.className = 'r-div-edit-skills';
+        editSkillsBtn.setAttribute('aria-label', 'Edit skills for this job');
+        editSkillsBtn.setAttribute('data-job-number', String(jobNumber));
+        editSkillsBtn.textContent = '✎';
+        editSkillsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }));
+        });
+        bizResumeDiv.insertBefore(editSkillsBtn, closeBtn.nextSibling);
 
         // Apply the current color palette
         await applyPaletteToElement(bizResumeDiv);
@@ -368,6 +383,45 @@ class ResumeItemsController {
                 container.appendChild(bulletPoint);
             }
         });
+    }
+
+    _setupJobSkillsListener() {
+        window.addEventListener('job-skills-updated', (e) => {
+            const { jobIndex, jobSkills } = e.detail || {};
+            if (jobIndex != null) this.refreshJobSkills(jobIndex, jobSkills);
+        });
+    }
+
+    /** Refresh the .resume-skills section of an rDiv after skills are saved in JobSkillEditor. */
+    refreshJobSkills(jobIndex, jobSkills) {
+        const rDiv = this.getBizResumeDivByJobNumber(jobIndex);
+        if (!rDiv) return;
+        const detailsDiv = rDiv.querySelector('.biz-resume-details-div');
+        if (!detailsDiv) return;
+        let skillsDiv = detailsDiv.querySelector('.resume-skills');
+        if (!jobSkills || Object.keys(jobSkills).length === 0) {
+            if (skillsDiv) skillsDiv.remove();
+            return;
+        }
+        if (!skillsDiv) {
+            skillsDiv = document.createElement('div');
+            skillsDiv.className = 'resume-skills';
+            const skillsTitle = document.createElement('h4');
+            skillsTitle.textContent = 'Technologies & Skills';
+            skillsDiv.appendChild(skillsTitle);
+            const skillsList = document.createElement('div');
+            skillsList.className = 'skills-list';
+            skillsDiv.appendChild(skillsList);
+            detailsDiv.appendChild(skillsDiv);
+        }
+        const skillsList = skillsDiv.querySelector('.skills-list');
+        if (!skillsList) return;
+        const skillSpans = Object.entries(jobSkills).map(([skillKey, displayName]) => {
+            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillKey}"]`);
+            const idAttr = skillCardEl ? ` data-skill-card-id="${skillCardEl.id}"` : '';
+            return `<span class="biz-card-skill-title" data-skill-name="${skillKey}"${idAttr}>${displayName}</span>`;
+        }).join(' • ');
+        skillsList.innerHTML = '<span class="bullet">•</span><span class="skills-text">' + skillSpans + '</span>';
     }
 
     getBizResumeDivByJobNumber(jobNumber) {

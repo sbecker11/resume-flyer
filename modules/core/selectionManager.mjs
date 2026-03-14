@@ -463,9 +463,25 @@ class SelectionManager {
      * STEP 2: Scroll rDiv into view
      */
     scrollRDivIntoView(jobNumber) {
+        const SCROLL_TOP_GAP = 8;
         const rDiv = document.querySelector(`[data-job-number="${jobNumber}"].biz-resume-div`);
         if (rDiv) {
-            rDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const scrollport = rDiv.closest('#resume-content-listing');
+            if (scrollport) {
+                const rDivRect = rDiv.getBoundingClientRect();
+                const portRect = scrollport.getBoundingClientRect();
+                const portPaddingTop = parseFloat(getComputedStyle(scrollport).paddingTop) || 0;
+                const innerTop = portRect.top + portPaddingTop;
+                // Only scroll if the top border edge is above or too close to the inner top edge
+                if (rDivRect.top < innerTop + SCROLL_TOP_GAP) {
+                    scrollport.scrollTo({
+                        top: scrollport.scrollTop + rDivRect.top - innerTop - SCROLL_TOP_GAP,
+                        behavior: 'smooth'
+                    });
+                }
+            } else {
+                rDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
             console.debug('[SelectionManager] rDiv scrolled into view', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ rDiv not found for scrolling job ${jobNumber}`);
@@ -652,103 +668,32 @@ class SelectionManager {
      * STEP 7: Scroll cDiv clone header into view with healthy gap from top
      */
     scrollCDivHeaderIntoView(jobNumber) {
+        const SCROLL_TOP_GAP = 8;
         const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         if (!clone) {
             console.error(`[SelectionManager] ❌ Clone not found for header scrolling job ${jobNumber}`);
             return;
         }
 
-        // Get the scene container to determine scroll context
-        const sceneContainer = window.globalElementRegistry?.getSceneContainer();
-        if (!sceneContainer) {
-            console.error(`[SelectionManager] ❌ Scene container not found for header scrolling`);
+        // Use scene-content (the scrollable element), not scene-container (the outer wrapper)
+        const sceneContent = window.globalElementRegistry?.getSceneContent?.()
+            || document.getElementById('scene-content');
+        if (!sceneContent) {
+            console.error(`[SelectionManager] ❌ scene-content not found for cDiv scrolling`);
             return;
         }
 
-        // Find all header fields within the clone
-        const headerSelectors = [
-            '.biz-details-role',
-            '.biz-details-employer', 
-            '.biz-details-duration',
-            '.biz-card-header',
-            '.job-header',
-            '.job-title',
-            '.company-name'
-        ];
-        
-        let headerElements = [];
-        headerSelectors.forEach(selector => {
-            const elements = clone.querySelectorAll(selector);
-            headerElements.push(...elements);
-        });
+        // Scroll so the clone's top border edge is exactly SCROLL_TOP_GAP from the inner top edge
+        const cloneRect = clone.getBoundingClientRect();
+        const contentRect = sceneContent.getBoundingClientRect();
+        const paddingTop = parseFloat(getComputedStyle(sceneContent).paddingTop) || 0;
+        const innerTop = contentRect.top + paddingTop;
+        const targetScrollTop = sceneContent.scrollTop + cloneRect.top - innerTop - SCROLL_TOP_GAP;
 
-        if (headerElements.length === 0) {
-            // Fallback: use the clone itself
-            headerElements = [clone];
-            console.debug('[SelectionManager] using clone as header for scroll');
-        }
-
-        // Find the topmost header element
-        let topMostHeader = headerElements[0];
-        let topMostY = Infinity;
-        
-        headerElements.forEach(element => {
-            const rect = element.getBoundingClientRect();
-            if (rect.top < topMostY) {
-                topMostY = rect.top;
-                topMostHeader = element;
-            }
-        });
-
-        // Calculate healthy gap (20% of container height or minimum 60px) - no additional offset
-        const containerRect = sceneContainer.getBoundingClientRect();
-        const baseHealthyGap = Math.max(60, containerRect.height * 0.2);
-        const additionalDownOffset = 100; // Test with 100px additional gap
-        const healthyGap = baseHealthyGap + additionalDownOffset;
-        
-        console.debug('[SelectionManager] scroll gap', { height: containerRect.height, healthyGap });
-
-        // Scroll the topmost header into view with the healthy gap
-        const headerRect = topMostHeader.getBoundingClientRect();
-        const targetScrollTop = sceneContainer.scrollTop + headerRect.top - containerRect.top - healthyGap;
-        
-        console.debug('[SelectionManager] scrollTo', targetScrollTop);
-        
-        // Smooth scroll to the calculated position
-        sceneContainer.scrollTo({
-            top: targetScrollTop,
+        sceneContent.scrollTo({
+            top: Math.max(0, targetScrollTop),
             behavior: 'smooth'
         });
-
-        // TEMPORARY: Add fallback scroll for debugging
-        setTimeout(() => {
-            console.debug('[SelectionManager] fallback scrollIntoView');
-            topMostHeader.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start',
-                inline: 'nearest'
-            });
-        }, 200);
-
-        // DISABLED: Alternative scrollIntoView method (was overriding our custom gap calculation)
-        // setTimeout(() => {
-        //     topMostHeader.scrollIntoView({ 
-        //         behavior: 'smooth', 
-        //         block: 'start',
-        //         inline: 'nearest'
-        //     });
-        //     
-        //     // Apply additional offset after scrollIntoView completes (increase gap to move cDiv down)
-        //     setTimeout(() => {
-        //         const currentScrollTop = sceneContainer.scrollTop;
-        //         const adjustedScrollTop = Math.max(0, currentScrollTop - baseHealthyGap + 20 - additionalDownOffset);
-        //         sceneContainer.scrollTo({
-        //             top: adjustedScrollTop,
-        //             behavior: 'smooth'
-        //         });
-        //         console.log(`[SelectionManager] ✅ Applied scroll adjustment to increase gap by 50px (move cDiv lower): ${adjustedScrollTop}`);
-        //     }, 100);
-        // }, 50);
 
         console.debug('[SelectionManager] clone header scrolled into view', jobNumber);
     }

@@ -68,6 +68,18 @@ export function get_RGB_from_Hex(hex) {
 }
 
 /**
+ * Set the data-color-index attribute on a card/resume element.
+ * Single source of truth: always use the raw jobNumber so cDivs and rDivs
+ * are guaranteed to receive the same index. Palette wrapping is applied later
+ * by applyPaletteToElement() via (index % palette.length).
+ * @param {HTMLElement} element
+ * @param {number} jobNumber
+ */
+export function setJobColorIndex(element, jobNumber) {
+    element.setAttribute('data-color-index', String(jobNumber));
+}
+
+/**
  * True if color is a shade of grey within tolerance.
  * @param {string} hex
  * @param {number} [tolerance=10]

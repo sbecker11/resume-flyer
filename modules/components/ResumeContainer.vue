@@ -7,8 +7,11 @@ import { applyPaletteToElement } from '@/modules/composables/useColorPalette.mjs
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useResumeListController } from '@/modules/core/globalServices';
 import { parseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
-import { listResumes } from '@/modules/api/resumeManagerApi.mjs';
+import { listResumes, getResumeOtherSections, getResumeData } from '@/modules/api/resumeManagerApi.mjs';
+import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
+import ResumeManagerDelete from './ResumeManagerDelete.vue';
+import JobSkillEditor from './JobSkillEditor.vue';
 
 // Define props
 const props = defineProps({
@@ -26,6 +29,7 @@ const { scenePercentage } = useResizeHandle();
 const resumeList = ref([]);
 const isDropdownOpen = ref(false);
 const isUploadModalOpen = ref(false);
+const isManageModalOpen = ref(false);
 const resumeSelectorRef = ref(null);
 
 async function fetchResumeList() {
@@ -63,10 +67,69 @@ function openUploadModal() {
   isUploadModalOpen.value = true;
 }
 
-// Auto-open upload modal when no jobs are loaded
-watch(() => props.noJobsLoaded, (val) => {
-  if (val) openUploadModal();
-});
+function openManageModal() {
+  closeDropdown();
+  isManageModalOpen.value = true;
+}
+
+async function handleResumesDeleted(deletedIds) {
+  try {
+    resumeList.value = await listResumes();
+  } catch (e) {
+    console.warn('[ResumeContainer] Failed to refresh resume list after delete:', e);
+  }
+  if (deletedIds.includes(props.currentResumeId)) {
+    emit('resume-selected', 'default');
+  }
+}
+
+function handleResumeSelectedFromManage(resumeId) {
+  if (resumeId && resumeId !== props.currentResumeId) {
+    emit('resume-selected', resumeId);
+  }
+}
+
+function handleOpenUploadFromManage() {
+  isManageModalOpen.value = false;
+  isUploadModalOpen.value = true;
+}
+
+async function printResume() {
+  const id = props.currentResumeId;
+  if (!id || id === 'default') return;
+  try {
+    // Get live jobs from memory
+    const liveJobs = getGlobalJobsDependency().getJobsData();
+    // Fetch skills/categories and other-sections in parallel
+    const [resumeData, otherSections] = await Promise.all([
+      getResumeData(id),
+      getResumeOtherSections(id),
+    ]);
+    const html = buildPrintHtml(liveJobs, resumeData.skills, resumeData.categories, otherSections);
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+  } catch (err) {
+    console.error('[ResumeContainer] printResume failed:', err);
+    // Fallback to pre-rendered html
+    window.open(`/api/resumes/${encodeURIComponent(id)}/html`, '_blank');
+  }
+}
+
+// When no jobs are loaded: open Manage modal if resumes exist, otherwise Upload modal
+watch(() => props.noJobsLoaded, async (val) => {
+  if (!val) return;
+  try {
+    const existing = await listResumes();
+    if (existing.length > 0) {
+      isManageModalOpen.value = true;
+    } else {
+      openUploadModal();
+    }
+  } catch {
+    openUploadModal();
+  }
+}, { immediate: true });
 
 function closeUploadModal() {
   isUploadModalOpen.value = false;
@@ -86,6 +149,14 @@ function handleOutsideClick(event) {
 }
 
 // Computed display name for current resume
+// 9px top padding + 13px font + 14px line-height + 9px bottom padding = ~36px per row
+const DROPDOWN_ROW_HEIGHT = 36
+const dropdownMenuStyle = computed(() => {
+  const rows = resumeList.value.length + 2 // +2 for Upload and Manage items
+  const divider = 9 // 1px line + 8px vertical margin
+  return { maxHeight: `${rows * DROPDOWN_ROW_HEIGHT + divider}px` }
+})
+
 const currentResumeDisplay = computed(() => {
   const current = props.currentResumeId;
   const effectiveId = (!current || current === 'default') ? 'resume-6' : current;
@@ -273,6 +344,55 @@ function removeSkillCardFromResumeListing() {
 }
 function goToJob(jobNumber) {
   selectionManager?.selectCard({ type: 'biz', jobNumber }, 'ResumeContainer.skillCardJobClick');
+}
+
+// --- Job Skill Editor state ---
+const isSkillEditorOpen = ref(false);
+const editingJobIndex = ref(null);
+const editingJob = ref(null);
+const allSkillsForEditor = ref({});
+
+async function handleEditJobSkills(e) {
+  const { jobNumber } = e.detail || {};
+  if (jobNumber == null) return;
+  const id = props.currentResumeId;
+  if (!id || id === 'default') return;
+  try {
+    const resumeData = await getResumeData(id);
+    const jobs = getGlobalJobsDependency().getJobsData();
+    const job = jobs[jobNumber];
+    if (!job) return;
+    editingJobIndex.value = jobNumber;
+    editingJob.value = {
+      role: job.role || job.Role || '',
+      employer: job.employer || job.Employer || '',
+      skillIDs: job.skillIDs || [],
+    };
+    allSkillsForEditor.value = resumeData.skills || {};
+    isSkillEditorOpen.value = true;
+  } catch (err) {
+    console.error('[ResumeContainer] handleEditJobSkills failed:', err);
+  }
+}
+
+function handleSkillsSaved({ jobIndex, skillIDs }) {
+  const jobs = getGlobalJobsDependency().getJobsData();
+  if (jobs[jobIndex]) {
+    const oldSkillIDs = jobs[jobIndex].skillIDs || [];
+    jobs[jobIndex].skillIDs = skillIDs;
+    // Rebuild job['job-skills'] so rDiv/cDiv display names are keyed by skill ID
+    const newJobSkills = {};
+    for (const sid of skillIDs) {
+      const skill = allSkillsForEditor.value[sid];
+      newJobSkills[sid] = skill?.name || sid;
+    }
+    jobs[jobIndex]['job-skills'] = newJobSkills;
+    // Notify rDiv, cDiv, and skill-card-divs to refresh their skill displays
+    window.dispatchEvent(new CustomEvent('job-skills-updated', {
+      detail: { jobIndex, skillIDs, oldSkillIDs, jobSkills: newJobSkills }
+    }));
+  }
+  isSkillEditorOpen.value = false;
 }
 
 const resumeSkillCardRef = ref(null);
@@ -545,6 +665,7 @@ onMounted(() => {
   document.addEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
   window.addEventListener('sort-rule-changed', onSortRuleChanged);
   window.addEventListener('app-state-loaded', onAppStateLoadedForSort);
+  window.addEventListener('edit-job-skills', handleEditJobSkills);
   nextTick(() => { setTimeout(syncSortRuleKeyFromController, 100); });
   window.__resumeAppendSkillCardCopy = appendSkillCardCopyToResumeListing;
 });
@@ -557,6 +678,7 @@ onUnmounted(() => {
   document.removeEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
   window.removeEventListener('sort-rule-changed', onSortRuleChanged);
   window.removeEventListener('app-state-loaded', onAppStateLoadedForSort);
+  window.removeEventListener('edit-job-skills', handleEditJobSkills);
   delete window.__resumeAppendSkillCardCopy;
 });
 
@@ -577,46 +699,68 @@ function onResumeSkillCardClick(event) {
     <div id="resume-content">
         <div id="resume-content-header">
             <p class="intro">Welcome to your resume-flock!</p>
-            <!-- Resume Selector Dropdown -->
-            <div class="resume-selector" ref="resumeSelectorRef">
-                <div
-                    class="resume-selector-trigger"
-                    :class="{ open: isDropdownOpen }"
-                    @click.stop="toggleDropdown"
-                    :title="currentResumeDisplay"
-                >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" flex-shrink="0">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    <span class="selector-name">{{ currentResumeDisplay }}</span>
-                    <svg class="chevron" :class="{ up: isDropdownOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                </div>
-                <div v-if="isDropdownOpen" class="resume-selector-menu">
+            <!-- Resume Selector + Print Button Row -->
+            <div class="resume-selector-row">
+                <div class="resume-selector" ref="resumeSelectorRef">
                     <div
-                        v-for="resume in resumeList"
-                        :key="resume.id"
-                        class="resume-selector-item"
-                        :class="{ active: isCurrentResume(resume.id) }"
-                        @click.stop="selectResume(resume.id)"
+                        class="resume-selector-trigger"
+                        :class="{ open: isDropdownOpen }"
+                        @click.stop="toggleDropdown"
+                        :title="currentResumeDisplay"
                     >
-                        <span class="item-name">{{ resume.displayName }}</span>
-                        <svg v-if="isCurrentResume(resume.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <polyline points="20 6 9 17 4 12" />
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" flex-shrink="0">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        <span class="selector-name">{{ currentResumeDisplay }}</span>
+                        <svg class="chevron" :class="{ up: isDropdownOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="6 9 12 15 18 9" />
                         </svg>
                     </div>
-                    <div class="resume-selector-divider"></div>
-                    <div class="resume-selector-item upload-option" @click.stop="openUploadModal">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                        <span>Upload Resume…</span>
+                    <div v-if="isDropdownOpen" class="resume-selector-menu" :style="dropdownMenuStyle">
+                        <div
+                            v-for="resume in resumeList"
+                            :key="resume.id"
+                            class="resume-selector-item"
+                            :class="{ active: isCurrentResume(resume.id) }"
+                            @click.stop="selectResume(resume.id)"
+                        >
+                            <span class="item-name">{{ resume.displayName }}</span>
+                            <svg v-if="isCurrentResume(resume.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </div>
+                        <div class="resume-selector-divider"></div>
+                        <div class="resume-selector-item upload-option" @click.stop="openUploadModal">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <span>Upload Resume…</span>
+                        </div>
+                        <div class="resume-selector-item upload-option" @click.stop="openManageModal">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                            <span>Manage Resumes…</span>
+                        </div>
                     </div>
                 </div>
+                <button
+                    v-if="currentResumeId && currentResumeId !== 'default'"
+                    class="print-resume-btn"
+                    @click="printResume"
+                    title="Open printable resume in new tab"
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    Print
+                </button>
             </div>
 
             <!-- Upload Resume Modal -->
@@ -624,6 +768,15 @@ function onResumeSkillCardClick(event) {
                 :isOpen="isUploadModalOpen"
                 @close="closeUploadModal"
                 @resume-selected="handleUploadSuccess"
+            />
+            <!-- Manage Resumes Modal -->
+            <ResumeManagerDelete
+                :isOpen="isManageModalOpen"
+                :currentResumeId="currentResumeId"
+                @close="isManageModalOpen = false"
+                @deleted="handleResumesDeleted"
+                @selected="handleResumeSelectedFromManage"
+                @open-upload="handleOpenUploadFromManage"
             />
             <!-- Color Palette Row -->
             <div class="header-controls-row">
@@ -647,13 +800,24 @@ function onResumeSkillCardClick(event) {
                 </select>
             </div>
             <div id="resume-divs-controls">
-                <button @click="selectFirst" class="resume-divs-control-button">First</button>
+                <button id="resume-divs-first-btn" @click="selectFirst" class="resume-divs-control-button">First</button>
                 <button @click="selectPrevious" class="resume-divs-control-button">Prev</button>
                 <button @click="selectNext" class="resume-divs-control-button">Next</button>
                 <button @click="selectLast" class="resume-divs-control-button">Last</button>
                 <button @click="clearAllResumeDivs" class="resume-divs-control-button">Clear</button>
             </div>
         </div>
+        <!-- Job Skill Editor Modal -->
+        <JobSkillEditor
+            :isOpen="isSkillEditorOpen"
+            :resumeId="currentResumeId"
+            :jobIndex="editingJobIndex"
+            :job="editingJob"
+            :allSkills="allSkillsForEditor"
+            @close="isSkillEditorOpen = false"
+            @saved="handleSkillsSaved"
+        />
+
         <div id="resume-content-listing" ref="resumeContentWrapperRef" class="scrollable-container" @scroll="onResumeContentWrapperScroll">
             <div id="resume-content-div" class="resume-content-div-container">
                 <!-- Skill cards only appear as appended copies in the list below; top panel hidden to avoid duplicate. -->
@@ -717,9 +881,10 @@ function onResumeSkillCardClick(event) {
     background-color: var(--grey-medium);
     color: black; /* default for empty area; .biz-resume-div and .skill-resume-div set their own color */
     position: relative; /* Needed for the absolute positioning of items by the scroller */
-    /* 8px horizontal padding so selected rDiv box-shadow (8px ring) has room; matches cDiv selected border */
+    /* 8px padding on all sides so selected rDiv box-shadow/border has room; matches cDiv selected border */
     padding-left: 8px;
     padding-right: 8px;
+    padding-top: 8px;
     /* overflow is set by ResumeListScrollContainer.setupContainer() to 'auto' */
     scroll-behavior: smooth; /* Enable smooth scrolling for all scrollIntoView and scrollTo operations */
 }
@@ -831,10 +996,19 @@ function onResumeSkillCardClick(event) {
     width: 100%;
 }
 
+/* Resume selector + print button row */
+.resume-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
 /* Resume selector dropdown */
 .resume-selector {
     position: relative;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
 }
 
 .resume-selector-trigger {
@@ -887,7 +1061,6 @@ function onResumeSkillCardClick(event) {
     border-radius: 4px;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
     z-index: 500;
-    max-height: 280px;
     overflow-y: auto;
 }
 
@@ -934,6 +1107,28 @@ function onResumeSkillCardClick(event) {
     color: #9ee0b8;
     background: rgba(126, 200, 160, 0.08);
 }
+
+.print-resume-btn {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    gap: 5px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.print-resume-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
 #color-palette-selector,
 #resume-divs-sorting-selector {
     flex: 1 1 auto;
@@ -1085,6 +1280,32 @@ function onResumeSkillCardClick(event) {
 .biz-resume-div .r-div-close:hover {
     color: #f00;
     border-color: #f00;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+/* Edit-skills pencil button on rDiv */
+.biz-resume-div .r-div-edit-skills {
+    position: absolute;
+    top: 6px;
+    right: 34px; /* sits left of the close button */
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+    color: #4a9eff;
+    background: #fff;
+    border: 1px solid #4a9eff;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.biz-resume-div .r-div-edit-skills:hover {
+    color: #6ab0ff;
+    border-color: #6ab0ff;
     background: rgba(255, 255, 255, 0.9);
 }
 
@@ -1408,13 +1629,13 @@ function onResumeSkillCardClick(event) {
     overflow-wrap: break-word;
 }
 
-/* Clickable skill titles inside biz-card-div and biz-resume-div skills sections */
-.biz-card-skill-title {
+/* Skill titles — only show link styling when a skill-card-div exists for them */
+.biz-card-skill-title[data-skill-card-id] {
     cursor: pointer;
     text-decoration: underline;
 }
 
-.biz-card-skill-title:hover {
+.biz-card-skill-title[data-skill-card-id]:hover {
     font-weight: bold;
     font-style: italic;
 }

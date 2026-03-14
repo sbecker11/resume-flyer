@@ -35,7 +35,9 @@ export function useJobsDependency() {
 
     const resumeId = forceResumeId ?? null
     if (!resumeId) {
-      console.warn('[useJobsDependency] loadJobs called with no resumeId — no jobs loaded')
+      console.warn('[useJobsDependency] loadJobs called with no resumeId — clearing jobs and returning []')
+      jobsState.value.data = []
+      jobsState.value.isInitialized = false
       return []
     }
 

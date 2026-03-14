@@ -331,6 +331,46 @@ watch(percentageVerification, (newVerification) => {
  * Falls back to the card with the lowest top px if sort info is unavailable.
  * Must be called after nextTick so cards are positioned in the DOM.
  */
+/**
+ * Recenter bullsEye, then wait for the parallax loop to settle before
+ * selecting the first card in sorted order.  One nextTick + rAF is not
+ * enough because the parallax loop needs at least one frame after the
+ * bullsEye recenter to apply transforms.  250 ms is a safe settle window.
+ */
+/**
+ * Wait until the ResumeListController scroll container has items loaded,
+ * then click the First button.  Polls every 50ms up to 3s.
+ */
+async function selectFirstCardWhenReady() {
+  await nextTick()
+  window.bullsEye?.recenter?.()
+
+  // Poll until both rDivs (scrollContainer.originalItems) AND cDivs exist.
+  // On first-load via initializeResumeSystem, CardsController creates cDivs asynchronously
+  // via a Vue watcher, so rDivs may be ready before cDivs are in the DOM.
+  const deadline = Date.now() + 3000
+  while (Date.now() < deadline) {
+    const rlc = window.resumeFlock?.resumeListController
+    const items = rlc?.scrollContainer?.originalItems
+    const cDivCount = document.querySelectorAll('.biz-card-div').length
+    if (Array.isArray(items) && items.length > 0 && cDivCount > 0) break
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+
+  // Scale settle time by resume size: 50ms per job, min 500ms, max 2000ms
+  const rlcForCount = window.resumeFlock?.resumeListController
+  const jobCount = rlcForCount?.scrollContainer?.originalItems?.length ?? 0
+  const settleMs = Math.min(2000, Math.max(500, jobCount * 50))
+  await new Promise(resolve => setTimeout(resolve, settleMs))
+
+  const firstBtn = document.getElementById('resume-divs-first-btn')
+  if (firstBtn) {
+    firstBtn.click()
+  } else {
+    console.warn('[AppContent] resume-divs-first-btn not found')
+  }
+}
+
 async function scrollSceneToLatestCard() {
   await nextTick()
   const sceneContentEl = document.getElementById('scene-content')
@@ -353,8 +393,9 @@ async function scrollSceneToLatestCard() {
     )
   }
 
+  const SCROLL_TOP_GAP = 8
   const cardTop = parseInt(targetCard.style.top || '0')
-  sceneContentEl.scrollTop = Math.max(0, cardTop - 100)
+  sceneContentEl.scrollTop = Math.max(0, cardTop - SCROLL_TOP_GAP)
 }
 
 // =============================================================================
@@ -424,12 +465,33 @@ async function handleResumeSelected(resumeId) {
     await updateAppState({ 'user-settings': { currentResumeId: resumeId || 'default' } }, true)
     console.log('[AppContent] ✅ currentResumeId persisted:', resumeId || 'default')
 
-    // STEP 4: Reinitialize the resume system with the new resume
-    console.log('[AppContent] Calling reinitializeResumeSystem with:', resumeId === 'default' ? null : resumeId)
-    await reinitializeResumeSystem(resumeId === 'default' ? null : resumeId)
-    console.log('[AppContent] ✅ Resume system reinitialized')
+    // STEP 4: Initialize or reinitialize the resume system with the new resume
+    const effectiveResumeId = resumeId === 'default' ? null : resumeId
+    const controllersReady = !!(window.resumeFlock?.resumeListController && window.resumeFlock?.resumeItemsController)
+    if (!controllersReady) {
+      // First resume load after fresh start — controllers not yet on window.resumeFlock
+      console.log('[AppContent] Controllers not ready, calling initializeResumeSystem with:', effectiveResumeId)
+      await initializeResumeSystem(effectiveResumeId)
+      registerResumeListReinit(async (bizCardDivs) => {
+        await buildResumeListFromCards(bizCardDivs ?? [])
+      })
+    } else {
+      console.log('[AppContent] Calling reinitializeResumeSystem with:', effectiveResumeId)
+      await reinitializeResumeSystem(effectiveResumeId)
+    }
+    console.log('[AppContent] ✅ Resume system initialized/reinitialized')
 
-    // STEP 5: Scroll scene to show the most recent job card
+    // If no jobs loaded (e.g. switched to default after deleting current resume), show upload modal
+    const loadedJobs = getGlobalJobsDependency().getJobsData()
+    if (!Array.isArray(loadedJobs) || loadedJobs.length === 0) {
+      noJobsLoaded.value = true
+      return
+    }
+
+    // STEP 5: Auto-select the first card once layout has settled
+    await selectFirstCardWhenReady()
+
+    // STEP 6: Scroll scene to show the most recent job card
     await scrollSceneToLatestCard()
 
     console.log('[AppContent] ✅ Successfully switched to resume:', resumeId)
@@ -495,11 +557,25 @@ onMounted(async () => {
       noJobsLoaded.value = true
     } else {
       console.log('[AppContent] 📋 Initializing resume system with:', startupResumeId)
-      await initializeResumeSystem(startupResumeId)
-      console.log('[AppContent] ✅ Resume system initialized')
-      const startupJobs = getGlobalJobsDependency().getJobsData()
-      noJobsLoaded.value = !Array.isArray(startupJobs) || startupJobs.length === 0
-      if (!noJobsLoaded.value) await scrollSceneToLatestCard()
+      try {
+        await initializeResumeSystem(startupResumeId)
+        console.log('[AppContent] ✅ Resume system initialized')
+        const startupJobs = getGlobalJobsDependency().getJobsData()
+        noJobsLoaded.value = !Array.isArray(startupJobs) || startupJobs.length === 0
+        if (!noJobsLoaded.value) {
+          await selectFirstCardWhenReady()
+          await scrollSceneToLatestCard()
+        }
+      } catch (err) {
+        // Resume folder was deleted — clear the stale ID and show the upload modal
+        console.warn(`[AppContent] ⚠️ Resume "${startupResumeId}" not found, clearing persisted ID:`, err.message)
+        noJobsLoaded.value = true
+        try {
+          await updateAppState({ 'user-settings': { currentResumeId: 'default' } }, true)
+        } catch (saveErr) {
+          console.warn('[AppContent] Could not persist cleared resume ID (server may be unavailable):', saveErr.message)
+        }
+      }
     }
 
     // Register resume list reinit: same process as initial load (buildResumeListFromCards)
@@ -554,7 +630,8 @@ onMounted(async () => {
     
   } catch (error) {
     console.error('[AppContent] ❌ App initialization failed:', error)
-    throw error
+    // Don't re-throw — ensure noJobsLoaded is set so the modal appears
+    noJobsLoaded.value = true
   }
 })
 

@@ -8,6 +8,7 @@ import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs'
 import { linearInterp } from '@/modules/utils/mathUtils.mjs'
 import * as mathUtils from '@/modules/utils/mathUtils.mjs'
 import * as zUtils from '@/modules/utils/zUtils.mjs'
+import { setJobColorIndex } from '@/modules/utils/paletteHelpers.mjs'
 import * as filters from '@/modules/core/filters.mjs'
 import {
   BIZCARD_WIDTH,
@@ -404,7 +405,7 @@ export function useCardsController() {
         card.setAttribute('scene-top', y)
         
         // Add color index for palette application
-        card.setAttribute('data-color-index', jobNumber) // Use jobNumber as color index
+        setJobColorIndex(card, jobNumber)
         
         // Debug card creation attributes for all jobs (to identify patterns)
         console.debug('[CardsController] card attributes Job#' + jobNumber, {
@@ -1038,6 +1039,7 @@ export function useCardsController() {
             console.log('[useCardsController] Retrying event listener setup in onMounted...')
             setupEventListenersFixed()
         }
+        window.addEventListener('job-skills-updated', handleJobSkillsUpdated)
     })
     
     /**
@@ -1385,69 +1387,41 @@ export function useCardsController() {
     // Generic card header scroll function
     function scrollCardHeaderIntoView(card, jobNumber, type = 'cDiv') {
         console.log(`[useCardsController] 📜 Scrolling ${type} header for job ${jobNumber}`)
-        
-        // Find the header element - employer name is typically the main header
-        const headerSelectors = [
-            '.biz-details-employer',
-            '.biz-card-header', 
-            '.job-title',
-            '.company-name',
-            '.biz-details-role'
-        ]
-        
-        let headerElement = null
-        for (const selector of headerSelectors) {
-            headerElement = card.querySelector(selector)
-            if (headerElement) {
-                console.log(`[useCardsController] 📜 Found ${type} header element: ${selector}`)
-                break
-            }
-        }
-        
-        // If no specific header found, use the card itself
-        if (!headerElement) {
-            headerElement = card
-            console.log(`[useCardsController] 📜 No specific header found, using ${type} element itself`)
+
+        // Skill cards: center in view (no gap logic needed)
+        if (type !== 'cDiv') {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+            return
         }
 
-        // Biz card: scroll so entire header section is at top of scene view. Skill card: center in view.
-        const scrollBlock = type === 'cDiv' ? 'start' : 'center'
+        // cDiv: scroll scene-content so the card's top border is SCROLL_TOP_GAP from the inner top edge
+        const SCROLL_TOP_GAP = 8
+        const sceneContent = document.getElementById('scene-content')
+        if (!sceneContent) return
 
-        // Check if the card is hidden (has a clone)
+        const doScroll = () => {
+            const cardRect = card.getBoundingClientRect()
+            const contentRect = sceneContent.getBoundingClientRect()
+            const paddingTop = parseFloat(getComputedStyle(sceneContent).paddingTop) || 0
+            const innerTop = contentRect.top + paddingTop
+            const target = sceneContent.scrollTop + cardRect.top - innerTop - SCROLL_TOP_GAP
+            sceneContent.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
+            console.log(`[useCardsController] ✅ ${type} scrolled with ${SCROLL_TOP_GAP}px gap`)
+        }
+
+        // If card is hidden (has clone), briefly show it to get accurate rect, then hide again
         const isHidden = card.style.display === 'none' || card.classList.contains('hasClone')
-        console.log(`[useCardsController] 📜 ${type} is hidden: ${isHidden}`)
-        
         if (isHidden) {
-            // Temporarily show the card for scrolling, then hide it again
-            const originalDisplay = card.style.display
             card.style.display = 'block'
-            console.log(`[useCardsController] 📜 Temporarily showing hidden ${type} for header scroll`)
-            
             setTimeout(() => {
-                headerElement.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: scrollBlock,
-                    inline: 'nearest'
-                })
-                console.log(`[useCardsController] ✅ ${type} header scrolled into view`)
-                
-                // Hide it again after scrolling
+                doScroll()
                 setTimeout(() => {
                     card.style.display = 'none'
                     card.style.setProperty('display', 'none', 'important')
-                    console.log(`[useCardsController] 📜 Re-hidden ${type} after header scroll`)
                 }, 50)
             }, 10)
-            
         } else {
-            // Card is visible, scroll to header directly
-            console.log(`[useCardsController] 📜 Scrolling to visible ${type} header`)
-            headerElement.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: scrollBlock,
-                inline: 'nearest'
-            })
-            console.log(`[useCardsController] ✅ ${type} header scrolled into view`)
+            doScroll()
         }
     }
     
@@ -1887,16 +1861,75 @@ export function useCardsController() {
         console.log('[CardsController] ✅ Created yearly grid lines from 1986 to 2026')
     }
     
+    /** Refresh cDiv .biz-card-skill-titles and skill-card-div data-referencing-biz-card-ids after skills saved. */
+    function handleJobSkillsUpdated(e) {
+        const { jobIndex, skillIDs, oldSkillIDs, jobSkills } = e.detail || {}
+        if (jobIndex == null) return
+
+        // (#2) Update biz-card-div .biz-card-skill-titles
+        const bizCardId = createBizCardDivId(jobIndex)
+        const card = document.getElementById(bizCardId)
+        if (card) {
+            const container = card.querySelector('.biz-card-skill-titles')
+            if (container) {
+                if (!jobSkills || Object.keys(jobSkills).length === 0) {
+                    container.innerHTML = ''
+                    card.removeAttribute('data-skill-card-ids')
+                } else {
+                    const skillCardIds = Object.keys(jobSkills)
+                        .map(skillKey => {
+                            const el = document.querySelector(`.skill-card-div[data-skill-name="${skillKey}"]`)
+                            return el?.id
+                        })
+                        .filter(Boolean)
+                    card.dataset.skillCardIds = skillCardIds.join(',')
+                    card.setAttribute('data-skill-card-ids', skillCardIds.join(','))
+                    container.innerHTML = skillCardIds.map(skillCardId => {
+                        const el = document.getElementById(skillCardId)
+                        const title = el ? (el.getAttribute('data-skill-name') || skillCardId) : skillCardId
+                        return `<span class="biz-card-skill-title" data-skill-card-id="${skillCardId}">${title}</span>`
+                    }).join(' • ')
+                }
+            }
+        }
+
+        // (#3, #4) Update skill-card-div data-referencing-biz-card-ids for added/removed skills
+        const removed = (oldSkillIDs || []).filter(s => !(skillIDs || []).includes(s))
+        const added = (skillIDs || []).filter(s => !(oldSkillIDs || []).includes(s))
+        for (const sid of removed) {
+            const skillName = (jobSkills && jobSkills[sid]) || sid
+            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]`)
+            if (skillCardEl) {
+                const ids = (skillCardEl.getAttribute('data-referencing-biz-card-ids') || '')
+                    .split(',').filter(id => id && id !== bizCardId)
+                skillCardEl.setAttribute('data-referencing-biz-card-ids', ids.join(','))
+            }
+        }
+        for (const sid of added) {
+            const skillName = (jobSkills && jobSkills[sid]) || sid
+            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]`)
+            if (skillCardEl) {
+                const existing = (skillCardEl.getAttribute('data-referencing-biz-card-ids') || '')
+                    .split(',').filter(Boolean)
+                if (!existing.includes(bizCardId)) {
+                    existing.push(bizCardId)
+                    skillCardEl.setAttribute('data-referencing-biz-card-ids', existing.join(','))
+                }
+            }
+        }
+    }
+
     // Cleanup event listeners on unmount
     onUnmounted(() => {
         selectionManager.removeEventListener('job-selected', handleJobSelected)
         selectionManager.removeEventListener('selection-cleared', handleSelectionCleared)
         selectionManager.removeEventListener('job-hovered', handleJobHovered)
         selectionManager.removeEventListener('hoverCleared', handleHoverCleared)
-        
+
         // Remove viewport change listeners
         window.removeEventListener('viewport-changed', handleViewportChangedForClones)
         window.removeEventListener('resize', handleViewportChangedForClones)
+        window.removeEventListener('job-skills-updated', handleJobSkillsUpdated)
     })
 
     // Make test function globally available for debugging

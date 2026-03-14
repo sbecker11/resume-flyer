@@ -12,6 +12,7 @@ import { resumeListController } from './ResumeListController.mjs';
 import { resumeItemsController } from '../resume/ResumeItemsController.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
+import { setJobColorIndex } from '../utils/paletteHelpers.mjs';
 
 /**
  * Single process to build and attach the resume list from card divs.
@@ -52,6 +53,12 @@ export async function buildResumeListFromCards(bizCardDivs) {
         app.allDivs.bizResumeDivs = resumeDivs;
         app.allDivs.skillResumeDivs = []; // Rebuilt list has no skill copies until user adds
     }
+    // Always refresh originalJobsData so updateSortedIndices uses the current resume's jobs.
+    // jobsDependency skips rlc on reinit loads (isReady=true), leaving stale data → wrong sort.
+    const currentJobs = getGlobalJobsDependency().getJobsData();
+    if (Array.isArray(currentJobs) && currentJobs.length > 0) {
+        rlc.initialize(currentJobs);
+    }
     rlc.sortedIndices = Array.from({ length: resumeDivs.length }, (_, i) => i);
     rlc.reinitialize(resumeDivs);
     console.debug('[ResumeSystemInitializer] resume list built:', resumeDivs.length, 'items');
@@ -65,7 +72,7 @@ function createMockBizCardDivs(jobsData) {
     return jobsData.map((job, index) => {
         const mockDiv = document.createElement('div');
         mockDiv.setAttribute('data-job-number', index.toString());
-        mockDiv.setAttribute('data-color-index', (index % 10).toString());
+        setJobColorIndex(mockDiv, index);
         return mockDiv;
     });
 }

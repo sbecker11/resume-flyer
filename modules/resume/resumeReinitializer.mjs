@@ -40,10 +40,14 @@ export function registerGetBizCardDivs(fn) {
  */
 export async function reinitializeResumeSystem(resumeId) {
   const jobsDependency = getGlobalJobsDependency();
-  await jobsDependency.loadJobs({ force: true, forceResumeId: resumeId ?? null });
-  const jobsData = jobsDependency.getJobsData();
+  // Use the return value directly: loadJobs returns [] when resumeId is null without
+  // clearing jobsState.data, so getJobsData() would return stale old-resume jobs.
+  const jobsData = await jobsDependency.loadJobs({ force: true, forceResumeId: resumeId ?? null });
   if (!Array.isArray(jobsData) || jobsData.length === 0) {
-    console.warn('[resumeReinitializer] No jobs data after load');
+    console.warn('[resumeReinitializer] No jobs data after load — clearing scene and resume list');
+    // Clear old cards so deleted resume content doesn't linger
+    if (typeof cardsReinit === 'function') await cardsReinit();
+    if (typeof resumeListReinit === 'function') await resumeListReinit([]);
     return;
   }
 

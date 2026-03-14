@@ -310,7 +310,8 @@ defineExpose({
   /* Fallback: Make scrollbar thin if browser doesn't support 'none' */
   -ms-overflow-style: none !important; /* IE and Edge */
   /* Limit scroll area to actual timeline content height */
-  padding: 0;
+  /* 8px top padding so the topmost cDiv border has room; matches rDiv container */
+  padding: 8px 0 0 0;
   margin: 0;
 }
 

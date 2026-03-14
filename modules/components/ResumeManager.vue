@@ -56,21 +56,26 @@
                 <small class="url-hint">Paste a direct link to a .docx or .pdf file</small>
               </div>
 
-              <!-- Upload Controls (shown when file OR URL is provided) -->
-              <div v-if="selectedFile || resumeUrl" class="upload-controls">
+              <!-- Upload Controls (always visible) -->
+              <div class="upload-controls">
                 <input
+                  v-if="selectedFile || resumeUrl"
                   v-model="displayName"
                   type="text"
                   placeholder="Display name (optional)"
                   class="display-name-input"
                 />
-                <button
-                  @click="handleUpload"
-                  :disabled="uploading"
-                  class="upload-button"
-                >
-                  {{ uploading ? 'Processing...' : (selectedFile ? 'Upload & Parse' : 'Fetch & Parse') }}
-                </button>
+                <div class="upload-actions">
+                  <div v-if="uploading" class="spinner"></div>
+                  <button @click="handleClose" class="cancel-button">Cancel</button>
+                  <button
+                    @click="handleUpload"
+                    :disabled="uploading || (!selectedFile && !resumeUrl)"
+                    class="upload-button"
+                  >
+                    {{ uploading ? 'Processing...' : (selectedFile ? 'Upload & Parse' : 'Fetch & Parse') }}
+                  </button>
+                </div>
               </div>
 
               <div v-if="uploading" class="progress-container">
@@ -117,7 +122,7 @@ const uploadStatus = ref('')
 const uploadError = ref(null)
 const fileInput = ref(null)
 
-function handleFileSelect(event) {
+async function handleFileSelect(event) {
   const file = event.target.files[0]
   if (file) {
     const isDocx = file.name.endsWith('.docx')
@@ -131,6 +136,7 @@ function handleFileSelect(event) {
     resumeUrl.value = '' // Clear URL when file is selected
     displayName.value = file.name.replace(/\.(docx|pdf)$/, '')
     uploadError.value = null
+    await handleUpload()
   }
 }
 
@@ -334,16 +340,22 @@ section h3 {
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  color: #999;
-  transition: color 0.2s;
+  color: #fff;
+  background: #2563eb;
+  border-radius: 6px;
+  padding: 20px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 0.2s;
 }
 
 .file-label:hover {
+  background: #1d4ed8;
   color: #fff;
 }
 
 .file-label svg {
-  opacity: 0.7;
+  opacity: 0.9;
 }
 
 .file-label-text {
@@ -377,13 +389,17 @@ section h3 {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  background: #2563eb;
+  border-radius: 6px;
+  padding: 20px 16px;
+  box-sizing: border-box;
 }
 
 .url-input {
   width: 100%;
   padding: 12px 16px;
-  background: #1e1e1e;
-  border: 2px solid #444;
+  background: #1e1e2e;
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 6px;
   color: #fff;
   font-size: 14px;
@@ -396,11 +412,11 @@ section h3 {
 }
 
 .url-input::placeholder {
-  color: #666;
+  color: #aaa;
 }
 
 .url-hint {
-  color: #666;
+  color: rgba(255, 255, 255, 0.75);
   font-size: 12px;
   margin-left: 4px;
 }
@@ -408,8 +424,29 @@ section h3 {
 .upload-controls {
   margin-top: 20px;
   display: flex;
-  gap: 12px;
-  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upload-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cancel-button {
+  padding: 10px 20px;
+  background: none;
+  border: 1px solid #555;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cancel-button:hover {
+  border-color: #888;
+  color: #fff;
 }
 
 .display-name-input {
@@ -501,6 +538,13 @@ section h3 {
   border-top-color: #3498db;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.upload-actions .spinner {
+  width: 22px;
+  height: 22px;
+  border-width: 2px;
 }
 
 @keyframes spin {

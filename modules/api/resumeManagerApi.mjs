@@ -22,6 +22,19 @@ export async function listResumes() {
 }
 
 /**
+ * Delete a parsed resume by ID (removes the folder from parsed_resumes/)
+ * @param {string} resumeId
+ */
+export async function deleteResume(resumeId) {
+    const response = await fetch(`/api/resumes/${encodeURIComponent(resumeId)}`, { method: 'DELETE' });
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
  * Upload a resume file or fetch from URL for parsing
  * @param {File|string} fileOrUrl - The resume file to upload OR a URL string
  * @param {string} displayName - Optional display name for the resume
@@ -113,6 +126,32 @@ export async function uploadResume(fileOrUrl, displayName = null, onProgress = n
         console.error('[ResumeManagerAPI] Failed to upload resume:', error);
         throw error;
     }
+}
+
+/**
+ * Update skillIDs for a single job, syncing skills.mjs jobIDs on the server.
+ * @param {string} resumeId
+ * @param {number} jobIndex
+ * @param {string[]} skillIDs
+ */
+export async function updateJobSkills(resumeId, jobIndex, skillIDs) {
+    const response = await fetch(
+        `/api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}/skills`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ skillIDs }) }
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+}
+
+/**
+ * Get other-sections data (contact, title, summary, certifications, etc.) for a resume
+ * @param {string} resumeId
+ * @returns {Promise<Object>}
+ */
+export async function getResumeOtherSections(resumeId) {
+    const response = await fetch(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
 }
 
 /**

@@ -37,6 +37,7 @@ function enrichJobFromDescription(description, skillsMap) {
 /**
  * Enrich raw jobs with references and job-skills using the skills map.
  * Expects jobs as array and skills as name-keyed map (server normalizes parser output via parsedResumeAdapter).
+ * Also merges explicitly assigned job.skillIDs (saved via JobSkillEditor) into job-skills.
  * @param {Array<object>} rawJobs - Jobs from API (normalized to array; may be legacy array or parser jobID dict)
  * @param {Record<string, { url?: string, img?: string }>} skills - Skills from API (name-keyed; may be legacy or normalized from parser skillID dict)
  * @returns {Array<object & { references: string[], 'job-skills': Record<string, string> }>}
@@ -46,6 +47,14 @@ export function enrichJobsWithSkills(rawJobs, skills) {
   const skillsMap = skills && typeof skills === 'object' ? skills : {};
   return rawJobs.map((job) => {
     const { refs, jobSkills } = enrichJobFromDescription(job.Description, skillsMap);
+    // Merge explicitly assigned skillIDs (from JobSkillEditor) that aren't already in jobSkills
+    if (Array.isArray(job.skillIDs)) {
+      for (const sid of job.skillIDs) {
+        if (!jobSkills[sid] && skillsMap[sid]) {
+          jobSkills[sid] = sid;
+        }
+      }
+    }
     return {
       ...job,
       references: refs,

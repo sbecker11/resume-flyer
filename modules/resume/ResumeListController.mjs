@@ -3,6 +3,9 @@
 /** Set to true to use a simple scrollable list (no clones, no wrapping). */
 const DISABLE_RESUME_LIST_SCROLL = true;
 
+/** Gap between the container top edge and a scrolled-to element, so the full border is visible. */
+const SCROLL_TOP_GAP = 8;
+
 import { BaseComponent } from '../core/abstracts/BaseComponent.mjs';
 import { ResumeListScrollContainer } from './resumeListScrollContainer.mjs';
 import * as domUtils from '../utils/domUtils.mjs';
@@ -284,14 +287,16 @@ class ResumeListController extends BaseComponent {
   }
 
   /**
-   * Scroll the resume viewport so the given element's top edge is offsetPx from the top-inner edge.
+   * Scroll the resume viewport so the element's top border edge is offsetPx from the container's inner top edge.
    */
-  _scrollResumeDivToTopOffset(element, offsetPx = 5) {
+  _scrollResumeDivToTopOffset(element, offsetPx = SCROLL_TOP_GAP) {
     const scrollport = this.resumeContentWrapper;
     if (!scrollport || !element) return;
     const elTop = element.getBoundingClientRect().top;
-    const portTop = scrollport.getBoundingClientRect().top;
-    scrollport.scrollTop += elTop - portTop - offsetPx;
+    const portRect = scrollport.getBoundingClientRect();
+    const portPaddingTop = parseFloat(getComputedStyle(scrollport).paddingTop) || 0;
+    const innerTop = portRect.top + portPaddingTop;
+    scrollport.scrollTop += elTop - innerTop - offsetPx;
   }
 
   /**
@@ -435,17 +440,33 @@ class ResumeListController extends BaseComponent {
         this.originalItems = items;
         this.allItems = items;
         contentHolder.replaceChildren(...items);
-        if (items[start]) items[start].scrollIntoView({ behavior: 'auto', block: 'start' });
+        if (items[start]) {
+          const el = items[start];
+          const elTop = el.getBoundingClientRect().top;
+          const portTop = scrollport.getBoundingClientRect().top;
+          scrollport.scrollTop += elTop - portTop - SCROLL_TOP_GAP;
+        }
       },
       scrollToIndex(i, animate = false) {
         const el = this.originalItems[i];
-        if (el) el.scrollIntoView({ behavior: animate ? 'smooth' : 'auto', block: 'start' });
+        if (el) {
+          const elTop = el.getBoundingClientRect().top;
+          const portTop = scrollport.getBoundingClientRect().top;
+          scrollport.scrollTop += elTop - portTop - SCROLL_TOP_GAP;
+        }
       },
       getItemAtIndex(i) {
         return this.originalItems[i] ?? null;
       },
       scrollToBizResumeDiv(el, smooth = true) {
-        if (el) el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+        if (el) {
+          const elTop = el.getBoundingClientRect().top;
+          const portTop = scrollport.getBoundingClientRect().top;
+          scrollport.scrollTo({
+            top: scrollport.scrollTop + elTop - portTop - SCROLL_TOP_GAP,
+            behavior: smooth ? 'smooth' : 'auto'
+          });
+        }
         return true;
       },
       getCurrentlyVisibleJob() {
