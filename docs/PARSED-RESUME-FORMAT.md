@@ -14,38 +14,27 @@ The resume-parser writes a **flattened** output folder (no subfolders). All file
 
 Files written: `jobs.mjs`, `skills.mjs`, `categories.mjs`, `other-sections.mjs`, `resume.html`, `resume_template.html`, plus the original `resume.docx` (or PDF) under its original filename.
 
-## Directory layout
+## Directory layout (flat)
 
-**Preferred (resume-flock convention):**
-
-```
-parsed_resumes/
-  <id>/                    # stable slug (e.g. parsed-resume-1, from-static-1734567890)
-    meta.json              # optional for load; required for list UI
-    jobs/
-      jobs.mjs             # required — parser output (export const jobs = {...}; keyed by jobID)
-    skills/
-      skills.mjs           # optional — parser output (export const skills = {...}; keyed by skillID)
-    categories.mjs         # optional — parser output (export const categories = {...}; keyed by categoryID)
-    resume.docx            # optional — original uploaded document (parser copies here under original filename)
-    resume.pdf             # optional — original uploaded document (one of resume.*)
-```
-
-**Alternate (flat, matches parser output):** All parser files at folder root:
+All parser files at folder root. No subfolders.
 
 ```
 parsed_resumes/
   <id>/
-    jobs.mjs               # required — same format as above
-    skills.mjs             # optional — at root; if missing, skills = {}
-    categories.mjs         # optional — at root
-    resume.docx            # optional — parser copies original file here
+    jobs.mjs               # required — parser output (export const jobs = {...}; keyed by jobID)
+    skills.mjs             # optional — parser output (export const skills = {...}; keyed by skillID); if missing, skills = {}
+    categories.mjs         # optional — parser output (export const categories = {...}; keyed by categoryID)
+    other-sections.mjs     # optional — export const otherSections = { ... }
+    meta.json              # optional for load; required for list UI
+    resume.docx            # optional — original uploaded document (parser copies here under original filename)
+    resume.pdf             # optional — original uploaded document (one of resume.*)
 ```
 
 - **`<id>`**: Opaque identifier. Use lowercase alphanumeric and hyphens (e.g. `parsed-resume-1`). Must not be `default` (reserved for static content).
-- **Jobs**: Either `jobs/jobs.mjs` or `jobs.mjs` at folder root. Parser format: dict keyed by jobID; each job has display fields and optional `skillIDs` array. Parsed by `parseMjsExport(content, 'jobs')`.
-- **Skills**: Optional. Either `skills/skills.mjs` or (in flat layout) `skills.mjs`. Parser format: dict keyed by skillID; each skill has `name`, optional `categoryIDs`, optional `jobIDs`. If missing, the server returns `skills: {}`.
-- **Categories**: Optional. Parser format: dict keyed by categoryID; each category has `name`, optional `skillIDs`. Not yet loaded by resume-flock server.
+- **Jobs**: `jobs.mjs` at folder root. Parser format: dict keyed by jobID; each job has display fields and optional `skillIDs` array. Parsed by `parseMjsExport(content, 'jobs')`.
+- **Skills**: Optional. `skills.mjs` at folder root. Parser format: dict keyed by skillID; each skill has `name`, optional `categoryIDs`, optional `jobIDs`. If missing, the server returns `skills: {}`.
+- **Categories**: Optional. `categories.mjs` at folder root. Parser format: dict keyed by categoryID; each category has `name`, optional `skillIDs`.
+- **other-sections.mjs**: Optional. See "other-sections.mjs schema" below.
 - **Original doc**: Parser writes a copy of the input resume (DOCX/PDF) into the output folder under its original filename.
 
 ## meta.json schema
@@ -77,6 +66,50 @@ parsed_resumes/
 - If present, categories file is an object keyed by categoryID; each category has `name` and optional `skillIDs`.
 - Server returns 404 only if the resume folder or jobs file is missing for a given `id`. `meta.json`, `skills`, and `categories` are optional.
 
+## other-sections.mjs schema
+
+The parser should write `other-sections.mjs` with `export const otherSections = { ... }`. The object may include:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `summary` | string | Professional summary |
+| `title` | string | Job title or headline |
+| `contact` | object | `{ name?, email?, phone?, location?, linkedin?, website? }` |
+| `certifications` | array | Each: `{ name, url?, description? }` |
+| `websites` | array | Each: `{ label, url, description? }` |
+| `custom_sections` | array | User-defined sections, e.g. Education, Awards. Each: `{ title, subtitle?, description? }` or `{ title, content? }` |
+
+### Websites: one entry per line
+
+For a resume section containing labeled links (e.g. `Label: URL` lines) such as:
+
+```
+Certifications: https://www.linkedin.com/in/shawnbecker/details/certifications/
+Publications: https://independent.academia.edu/shawnbecker
+Patents: https://patents.justia.com/inventor/shawn-c-becker
+LinkedIn: https://www.linkedin.com/in/shawnbecker
+GitHub: https://github.com/sbecker11
+Portfolio: https://sbecker11.github.io/flock-of-postcards
+```
+
+the parser should emit **each line as its own entry** in the `websites` array:
+
+```js
+export const otherSections = {
+  websites: [
+    { label: "Certifications", url: "https://www.linkedin.com/in/shawnbecker/details/certifications/" },
+    { label: "Publications", url: "https://independent.academia.edu/shawnbecker" },
+    { label: "Patents", url: "https://patents.justia.com/inventor/shawn-c-becker" },
+    { label: "LinkedIn", url: "https://www.linkedin.com/in/shawnbecker" },
+    { label: "GitHub", url: "https://github.com/sbecker11" },
+    { label: "Portfolio", url: "https://sbecker11.github.io/flock-of-postcards" }
+  ]
+  // ... other fields
+};
+```
+
+Each item has `label` (the text before the colon) and `url`. Optional `description` may be used for extra text. The resume-details-editor displays one row per website entry.
+
 ## Using a parsed resume from another directory
 
 The app reads only from **resume-flock’s** `parsed_resumes/` directory (project root). To use a folder you created elsewhere (e.g. `~/workspace-resume/parsed-resumes/parsed-resume-1/`):
@@ -92,7 +125,7 @@ The app reads only from **resume-flock’s** `parsed_resumes/` directory (projec
 ## Relationship to “default” resume
 
 - **Default resume**: Jobs/skills come from `static_content/jobs/jobs.mjs` and `static_content/skills/skills.mjs` (API path `/api/resumes/default/data`). No directory under `parsed_resumes/` is required.
-- **Parsed resume**: Jobs/skills come from `parsed_resumes/<id>/jobs/jobs.mjs` and `.../skills/skills.mjs` (API path `/api/resumes/:id/data`). App state `currentResumeId` holds `id` or `null` for default.
+- **Parsed resume**: Jobs/skills come from `parsed_resumes/<id>/jobs.mjs` and `parsed_resumes/<id>/skills.mjs` (API path `/api/resumes/:id/data`). App state `currentResumeId` holds `id` or `null` for default.
 
 ## Reinitializing the app with a parsed resume
 
@@ -128,7 +161,7 @@ Set and persist in `app_state.json` under `user-settings.currentResumeId`; the a
 
 ### Server behavior
 
-- **Two layouts supported**: (1) `jobs/jobs.mjs` + `skills/skills.mjs`; (2) `jobs.mjs` at folder root with optional `skills.mjs`. Missing skills file → `skills: {}`.
+- **Flat layout only**: `jobs.mjs`, `skills.mjs`, `categories.mjs`, `other-sections.mjs` at folder root. Missing skills file → `skills: {}`.
 - **Reinit path**: Single path in `resumeReinitializer.mjs`: load jobs by id → Timeline reinit → CardsController reinit → resume list reinit.
 
 ### CardsController / jobs race fix

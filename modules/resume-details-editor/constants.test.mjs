@@ -19,7 +19,7 @@ describe('resume-details-editor constants', () => {
             });
             expect(DEFAULT_OTHER_SECTIONS).toHaveProperty('certifications', []);
             expect(DEFAULT_OTHER_SECTIONS).toHaveProperty('websites', []);
-            expect(DEFAULT_OTHER_SECTIONS).toHaveProperty('other_sections', []);
+            expect(DEFAULT_OTHER_SECTIONS).toHaveProperty('custom_sections', []);
         });
 
         it('is frozen', () => {

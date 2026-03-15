@@ -15,3 +15,6 @@ app_state.json
 
 # Generated parsed resumes (runtime output - symlink)
 parsed_resumes
+
+# Schema validator test venv
+.venv-schema/.venv-schema/

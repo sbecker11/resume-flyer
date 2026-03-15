@@ -5,7 +5,7 @@
  *   node scripts/run-parse-resume.mjs --docx <path-to.docx> [--out <output-dir>] [--id <id>] [--force]
  *   Or set RESUME_PARSER_PATH (default: ../../workspace-resume/resume-parser).
  * If --id is given, --out defaults to RESUME_PARSER_PATH/parsed_resumes/<id> (parser repo).
- * If output dir already has jobs (jobs/jobs.mjs or jobs.mjs), exit unless --force.
+ * If output dir already has jobs.mjs at root, exit unless --force.
  */
 import 'dotenv/config';
 import { spawn } from 'child_process';
@@ -35,7 +35,7 @@ function getParserEnv() {
 
 function printHelp() {
   console.log(`
-Parse a resume .docx into a parsed-resume folder (jobs/jobs.mjs, skills/skills.mjs, resume.docx).
+Parse a resume .docx into a parsed-resume folder (jobs.mjs, skills.mjs, categories.mjs at folder root).
 
 Usage:
   npm run parse-resume -- --docx <path-to.docx> (--id <id> | --out <dir>) [--force]
@@ -89,12 +89,6 @@ function parseArgs() {
 
 async function outputDirHasJobs(outDir) {
   try {
-    await fs.access(path.join(outDir, 'jobs', 'jobs.mjs'));
-    return true;
-  } catch (e) {
-    if (e.code !== 'ENOENT') throw e;
-  }
-  try {
     await fs.access(path.join(outDir, 'jobs.mjs'));
     return true;
   } catch (e) {
@@ -132,7 +126,7 @@ async function main() {
 
   const hasExisting = await outputDirHasJobs(outDir);
   if (hasExisting && !force) {
-    console.error('Output dir already contains jobs (jobs/jobs.mjs or jobs.mjs). Use --force to overwrite.');
+    console.error('Output dir already contains jobs.mjs. Use --force to overwrite.');
     process.exit(1);
   }
 

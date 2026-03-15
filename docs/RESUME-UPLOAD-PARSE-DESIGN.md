@@ -20,8 +20,8 @@
 | Item | Description |
 |------|-------------|
 | `resume.pdf` or `resume.docx` | Original uploaded file (keep for “load this resume” and re-parse if needed). |
-| `jobs/jobs.mjs` | Output from parser (same format as `static_content/jobs/jobs.mjs`). |
-| `skills/skills.mjs` | Output from parser (same format as `static_content/skills/skills.mjs`). |
+| `jobs.mjs` | Output from parser at folder root (same format as `static_content/jobs/jobs.mjs`). |
+| `skills.mjs` | Output from parser at folder root (same format as `static_content/skills/skills.mjs`). |
 | `meta.json` | `{ id, displayName, createdAt, fileName, jobCount, skillCount }` for list UI and current-resume state. |
 
 ### 1.3 “Default” vs “current parsed resume”
@@ -54,14 +54,14 @@
   1. Accept multipart file (single file; validate `.docx` / `.pdf`).
   2. Generate new `id`; create `parsed_resumes/<id>/`.
   3. Save uploaded file as `resume.pdf` or `resume.docx` there.
-  4. Run parser with `-o parsed_resumes/<id>` (parser will write `jobs/jobs.mjs` and `skills/skills.mjs` inside that dir).
+  4. Run parser with `-o parsed_resumes/<id>` (parser writes `jobs.mjs`, `skills.mjs` at folder root).
   5. Read job/skill counts from generated files; write `meta.json`.
   6. On success: respond with `{ id, displayName, jobCount, skillCount }`.
   7. On parser error: respond 4xx/5xx with `{ error: string }` (and optionally keep or remove the folder).
 
 ### 2.3 Serving jobs/skills for a parsed resume
 
-- **GET /api/resumes/:id/data**: Read `parsed_resumes/<id>/jobs/jobs.mjs` and `parsed_resumes/<id>/skills/skills.mjs`. Either:
+- **GET /api/resumes/:id/data**: Read `parsed_resumes/<id>/jobs.mjs` and `parsed_resumes/<id>/skills.mjs`. Either:
   - **Option A**: Parse the `.mjs` as JSON (strip `const jobs = ` / `const skills = ` and trailing `;`, then `JSON.parse`), and return `{ jobs, skills }`.
   - **Option B**: If parser output is strict enough, require it to also write `.json` and serve those.
 
@@ -168,6 +168,6 @@ Option A keeps compatibility with existing parser output.
 | **Jobs loading** | `loadJobsFromResumeId(id)` + shared enrichment; re-use same controller notification flow. |
 | **Re-init** | Single “reinitializeResumeSystem(jobsData)” (or equivalent) to rebuild list, scene, timeline from new data. |
 | **Modal** | Upload + Parse, errors, list of saved resumes, Load, Close; optional “Use default resume”. |
-| **Parser** | Unchanged; invoked with `-o parsed_resumes/<id>`, writes `jobs/jobs.mjs` and `skills/skills.mjs` there. |
+| **Parser** | Unchanged; invoked with `-o parsed_resumes/<id>`, writes `jobs.mjs`, `skills.mjs` at folder root. |
 
 This design keeps the existing parser and static default, adds a clear “parsed resume” path, and gives users one place to upload, parse, save, and load any stored resume.

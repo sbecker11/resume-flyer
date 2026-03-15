@@ -83,7 +83,7 @@ describe('buildPrintHtml', () => {
 
     it('includes other sections with title and content', () => {
         const html = buildPrintHtml([], {}, {}, {
-            other_sections: [{ title: 'Education', content: 'BS CS' }]
+            custom_sections: [{ title: 'Education', content: 'BS CS' }]
         });
         expect(html).toContain('Education');
         expect(html).toContain('BS CS');
@@ -91,7 +91,7 @@ describe('buildPrintHtml', () => {
 
     it('includes other sections with subtitle and description', () => {
         const html = buildPrintHtml([], {}, {}, {
-            other_sections: [{ title: 'Awards', subtitle: '2020', description: 'Top performer' }]
+            custom_sections: [{ title: 'Awards', subtitle: '2020', description: 'Top performer' }]
         });
         expect(html).toContain('Awards');
         expect(html).toContain('section-sub');
@@ -114,7 +114,7 @@ describe('buildPrintHtml', () => {
 
     it('linkifies URLs in content', () => {
         const html = buildPrintHtml([], {}, {}, {
-            other_sections: [{ title: 'Links', content: 'See https://example.com' }]
+            custom_sections: [{ title: 'Links', content: 'See https://example.com' }]
         });
         expect(html).toContain('<a href="https://example.com">https://example.com</a>');
     });

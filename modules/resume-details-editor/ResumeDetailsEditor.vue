@@ -1,8 +1,14 @@
 <template>
   <Teleport to="body">
     <div v-if="isOpen" class="rde-overlay" @click.self="cancel">
-      <div class="rde-modal">
-        <div class="rde-header">
+      <div
+        class="rde-modal"
+        :style="modalStyle"
+      >
+        <div
+          class="rde-header rde-drag-handle"
+          @mousedown.prevent="startDrag"
+        >
           <div class="rde-title">Resume Details</div>
           <div class="rde-subtitle">{{ resumeId }}</div>
         </div>
@@ -31,12 +37,6 @@
             :data="otherSections"
             @update:data="onOtherSectionsUpdate"
           />
-          <CategoriesTab
-            v-show="activeTab === 'categories'"
-            :categories="categories"
-            :skills="skills"
-            @update:categories="onCategoriesUpdate"
-          />
         </div>
 
         <div class="rde-footer">
@@ -51,10 +51,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import MetaTab from './tabs/MetaTab.vue';
 import OtherSectionsTab from './tabs/OtherSectionsTab.vue';
-import CategoriesTab from './tabs/CategoriesTab.vue';
 import * as api from './api.mjs';
 
 const props = defineProps({
@@ -66,38 +65,61 @@ const emit = defineEmits(['close', 'saved']);
 
 const tabs = [
   { id: 'meta', label: 'Meta' },
-  { id: 'other-sections', label: 'Other sections' },
-  { id: 'categories', label: 'Categories' }
+  { id: 'other-sections', label: 'Other sections' }
 ];
 
 const activeTab = ref('meta');
 const meta = ref({});
 const otherSections = ref({});
-const categories = ref({});
-const skills = ref({});
 const saving = ref(false);
 
 // Pending edits (only save what changed)
 const pendingMeta = ref(null);
 const pendingOtherSections = ref(null);
-const pendingCategories = ref(null);
+
+// Draggable modal position (offset from center)
+const dragOffset = ref({ x: 0, y: 0 });
+const isDragging = ref(false);
+let dragStart = { x: 0, y: 0, ox: 0, oy: 0 };
+
+const modalStyle = computed(() => ({
+  transform: `translate(calc(-50% + ${dragOffset.value.x}px), calc(-50% + ${dragOffset.value.y}px))`
+}));
+
+function startDrag(e) {
+  if (e.button !== 0) return;
+  isDragging.value = true;
+  dragStart = { x: e.clientX, y: e.clientY, ox: dragOffset.value.x, oy: dragOffset.value.y };
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEnd);
+}
+
+function onDragMove(e) {
+  dragOffset.value = {
+    x: dragStart.ox + (e.clientX - dragStart.x),
+    y: dragStart.oy + (e.clientY - dragStart.y)
+  };
+}
+
+function onDragEnd() {
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+  isDragging.value = false;
+}
 
 watch(() => [props.isOpen, props.resumeId], async ([open, id]) => {
   if (!open || !id || id === 'default') return;
   activeTab.value = 'meta';
+  dragOffset.value = { x: 0, y: 0 };
   pendingMeta.value = null;
   pendingOtherSections.value = null;
-  pendingCategories.value = null;
   try {
-    const [metaRes, otherRes, dataRes] = await Promise.all([
+    const [metaRes, otherRes] = await Promise.all([
       api.getResumeMeta(id).catch(() => ({})),
-      api.getResumeOtherSections(id).catch(() => ({})),
-      api.getResumeData(id).catch(() => ({ jobs: [], skills: {}, categories: {} }))
+      api.getResumeOtherSections(id).catch(() => ({}))
     ]);
     meta.value = metaRes;
     otherSections.value = otherRes;
-    categories.value = dataRes.categories || {};
-    skills.value = dataRes.skills || {};
   } catch (err) {
     console.error('[ResumeDetailsEditor] load failed:', err);
   }
@@ -108,9 +130,6 @@ function onMetaUpdate(updates) {
 }
 function onOtherSectionsUpdate(data) {
   pendingOtherSections.value = data;
-}
-function onCategoriesUpdate(cats) {
-  pendingCategories.value = cats;
 }
 
 function cancel() {
@@ -127,9 +146,6 @@ async function save() {
     }
     if (pendingOtherSections.value !== null) {
       await api.updateResumeOtherSections(id, pendingOtherSections.value);
-    }
-    if (pendingCategories.value !== null) {
-      await api.updateResumeCategories(id, pendingCategories.value);
     }
     emit('saved');
     emit('close');
@@ -151,8 +167,12 @@ async function save() {
   align-items: center;
   justify-content: center;
   z-index: 20000;
+  overflow: hidden;
 }
 .rde-modal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   background: #1e1e1e;
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 8px;
@@ -167,6 +187,10 @@ async function save() {
 .rde-header {
   padding: 14px 16px 10px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.rde-drag-handle {
+  cursor: move;
+  user-select: none;
 }
 .rde-title {
   font-size: 0.75rem;

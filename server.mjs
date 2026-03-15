@@ -178,7 +178,7 @@ app.get('/api/resumes/default/data', async (req, res) => {
 });
 
 // GET /api/resumes/:id/data: Jobs and skills for a parsed resume (parsed_resumes/<id>/)
-// Supports (1) nested: jobs/jobs.mjs, skills/skills.mjs; (2) flat: jobs.mjs, skills.mjs, categories.mjs in folder root.
+// Flat layout only: jobs.mjs, skills.mjs, categories.mjs at folder root.
 app.get('/api/resumes/:id/data', async (req, res) => {
     const { id } = req.params;
     if (!id || id === 'default') {
@@ -186,27 +186,9 @@ app.get('/api/resumes/:id/data', async (req, res) => {
     }
     const dir = path.join(PARSED_RESUMES_DIR, id);
     try {
-        let jobsPath = path.join(dir, 'jobs', 'jobs.mjs');
-        try {
-            await fs.access(jobsPath);
-        } catch (e) {
-            if (e.code === 'ENOENT') {
-                jobsPath = path.join(dir, 'jobs.mjs');
-                await fs.access(jobsPath); // throws ENOENT if dir doesn't exist at all
-            } else {
-                throw e;
-            }
-        }
-        let skillsPath = path.join(dir, 'skills', 'skills.mjs');
-        try {
-            await fs.access(skillsPath);
-        } catch (e) {
-            if (e.code === 'ENOENT') {
-                skillsPath = path.join(dir, 'skills.mjs');
-            } else {
-                throw e;
-            }
-        }
+        const jobsPath = path.join(dir, 'jobs.mjs');
+        await fs.access(jobsPath);
+        const skillsPath = path.join(dir, 'skills.mjs');
         // skillsPath may not exist (skills optional); readAndNormalizeResumeData treats missing skills as {}
         const categoriesPath = path.join(dir, 'categories.mjs');
         const { jobs, skills, categories } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
@@ -457,24 +439,9 @@ app.get('/api/resumes', async (req, res) => {
                     continue;
                 }
 
-                // Get jobs and skills data to count items
-                let jobsPath = path.join(dir, 'jobs', 'jobs.mjs');
-                try {
-                    await fs.access(jobsPath);
-                } catch (e) {
-                    if (e.code === 'ENOENT') {
-                        jobsPath = path.join(dir, 'jobs.mjs');
-                    }
-                }
-
-                let skillsPath = path.join(dir, 'skills', 'skills.mjs');
-                try {
-                    await fs.access(skillsPath);
-                } catch (e) {
-                    if (e.code === 'ENOENT') {
-                        skillsPath = path.join(dir, 'skills.mjs');
-                    }
-                }
+                // Get jobs and skills data to count items (flat layout)
+                const jobsPath = path.join(dir, 'jobs.mjs');
+                const skillsPath = path.join(dir, 'skills.mjs');
 
                 const categoriesPath = path.join(dir, 'categories.mjs');
                 const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);

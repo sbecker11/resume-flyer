@@ -89,7 +89,7 @@ export function buildPrintHtml(jobs, skills, categories, otherSections) {
     const summary = otherSections?.summary || '';
     const certifications = otherSections?.certifications || [];
     const websites = otherSections?.websites || [];
-    const otherSectionsList = otherSections?.other_sections || [];
+    const otherSectionsList = otherSections?.custom_sections ?? otherSections?.other_sections ?? [];
     const skillsByCategory = buildSkillsByCategory(skills, categories);
 
     // --- Header ---

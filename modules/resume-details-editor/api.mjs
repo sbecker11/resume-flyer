@@ -46,7 +46,7 @@ export async function updateResumeMeta(resumeId, updates) {
 
 /**
  * @param {string} resumeId
- * @returns {Promise<Object>} otherSections (summary, title, contact, certifications, websites, other_sections)
+ * @returns {Promise<Object>} otherSections (summary, title, contact, certifications, websites, custom_sections)
  */
 export async function getResumeOtherSections(resumeId) {
     try {

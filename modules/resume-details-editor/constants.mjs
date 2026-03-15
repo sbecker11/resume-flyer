@@ -10,7 +10,7 @@
  * @property {{ name?: string, email?: string, phone?: string, location?: string, linkedin?: string, website?: string }} [contact]
  * @property {{ name: string, url?: string, description?: string }[]} [certifications]
  * @property {{ label: string, url: string, description?: string }[]} [websites]
- * @property {{ title: string, subtitle?: string, description?: string }[]} [other_sections]
+ * @property {{ title: string, subtitle?: string, description?: string }[]} [custom_sections]
  */
 
 export const DEFAULT_OTHER_SECTIONS = Object.freeze({
@@ -26,7 +26,7 @@ export const DEFAULT_OTHER_SECTIONS = Object.freeze({
     },
     certifications: [],
     websites: [],
-    other_sections: []
+    custom_sections: []
 });
 
 export const TAB_IDS = Object.freeze({
