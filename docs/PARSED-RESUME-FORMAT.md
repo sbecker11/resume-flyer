@@ -159,3 +159,17 @@ npm run parse-resume -- --docx /path/to/your/resume.docx --out ~/workspace-resum
 ```
 
 Set `RESUME_PARSER_PATH` if the parser repo is not at `../workspace-resume/resume-parser` relative to resume-flock. The script uses the parser’s `venv/bin/python` when present.
+
+---
+
+## External HTML renderer
+
+The app can invoke an external script that reads resume data from the resume folder and produces HTML. Use the **Render** button to run it and view the result in a new tab.
+
+**Configuration:** Set `RESUME_HTML_RENDERER_SCRIPT` to the path of your Node script (e.g. `./scripts/render-resume-html.mjs` or an absolute path).
+
+**Invocation:** The server runs `node <scriptPath> <resumeFolderPath>`. The script receives the parsed resume folder path (e.g. `parsed_resumes/parsed-resume-1` resolved to an absolute path) as its first argument.
+
+**Output:** The script must write the HTML to `<resumeFolderPath>/rendered.html`. The app then serves that file at `GET /api/resumes/:id/rendered`.
+
+If `RESUME_HTML_RENDERER_SCRIPT` is not set, the Render button returns 501 with an explanatory message.

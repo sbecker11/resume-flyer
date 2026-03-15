@@ -1,0 +1,91 @@
+/**
+ * resume-details-editor API client
+ * Self-contained: all fetch calls for meta, other-sections, categories.
+ * Base URL empty = relative to current origin; for standalone, set via getApiBase().
+ */
+
+/** @returns {string} Base URL for API (empty = same origin) */
+function getApiBase() {
+    return typeof window !== 'undefined' && window.__RESUME_DETAILS_EDITOR_API_BASE__ !== undefined
+        ? window.__RESUME_DETAILS_EDITOR_API_BASE__
+        : '';
+}
+
+async function apiJson(path, options = {}) {
+    const url = getApiBase() + path;
+    const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...options.headers },
+        ...options
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+}
+
+/**
+ * @param {string} resumeId
+ * @returns {Promise<{ id: string, displayName: string, createdAt?: string, fileName?: string, jobCount?: number, skillCount?: number }>}
+ */
+export async function getResumeMeta(resumeId) {
+    return apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/meta`);
+}
+
+/**
+ * @param {string} resumeId
+ * @param {{ displayName?: string, fileName?: string }} updates
+ * @returns {Promise<Object>}
+ */
+export async function updateResumeMeta(resumeId, updates) {
+    return apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/meta`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+    });
+}
+
+/**
+ * @param {string} resumeId
+ * @returns {Promise<Object>} otherSections (summary, title, contact, certifications, websites, other_sections)
+ */
+export async function getResumeOtherSections(resumeId) {
+    try {
+        return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`);
+    } catch (e) {
+        if (e.message.includes('404') || e.message.includes('not found')) return {};
+        throw e;
+    }
+}
+
+/**
+ * @param {string} resumeId
+ * @param {Object} payload - full otherSections object
+ * @returns {Promise<Object>}
+ */
+export async function updateResumeOtherSections(resumeId, payload) {
+    return apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+    });
+}
+
+/**
+ * @param {string} resumeId - use 'default' for static content
+ * @returns {Promise<{ jobs: Array, skills: Object, categories: Object }>}
+ */
+export async function getResumeData(resumeId) {
+    const path = resumeId === 'default' ? '/api/resumes/default/data' : `/api/resumes/${encodeURIComponent(resumeId)}/data`;
+    return apiJson(path);
+}
+
+/**
+ * @param {string} resumeId
+ * @param {Record<string, { name: string, skillIDs?: string[] }>} categories
+ * @returns {Promise<{ categories: Object }>}
+ */
+export async function updateResumeCategories(resumeId, categories) {
+    return apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/categories`, {
+        method: 'PATCH',
+        body: JSON.stringify({ categories })
+    });
+}

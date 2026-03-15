@@ -268,6 +268,45 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
     }
 });
 
+// GET /api/resumes/:id/meta: Return meta.json for a parsed resume
+app.get('/api/resumes/:id/meta', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') return res.status(400).json({ error: 'Invalid or default resume id.' });
+    const metaPath = path.join(PARSED_RESUMES_DIR, id, 'meta.json');
+    try {
+        const content = await fs.readFile(metaPath, 'utf-8');
+        res.json(JSON.parse(content));
+    } catch (e) {
+        if (e.code === 'ENOENT') return res.status(404).json({ error: 'meta.json not found for this resume.' });
+        throw e;
+    }
+});
+
+// PATCH /api/resumes/:id/meta: Update displayName, fileName in meta.json
+app.patch('/api/resumes/:id/meta', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') return res.status(400).json({ error: 'Cannot update meta for default resume.' });
+    const { displayName, fileName } = req.body;
+    const metaPath = path.join(PARSED_RESUMES_DIR, id, 'meta.json');
+    try {
+        let meta = {};
+        try {
+            const content = await fs.readFile(metaPath, 'utf-8');
+            meta = JSON.parse(content);
+        } catch (e) {
+            if (e.code === 'ENOENT') return res.status(404).json({ error: 'meta.json not found for this resume.' });
+            throw e;
+        }
+        if (displayName !== undefined) meta.displayName = displayName;
+        if (fileName !== undefined) meta.fileName = fileName;
+        await atomicWriteWithLock(metaPath, JSON.stringify(meta, null, 2));
+        res.json(meta);
+    } catch (err) {
+        console.error('[PATCH meta]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /api/resumes/:id/other-sections: Return other-sections.mjs data as JSON (contact, title, summary, etc.)
 app.get('/api/resumes/:id/other-sections', async (req, res) => {
     const { id } = req.params;
@@ -276,9 +315,91 @@ app.get('/api/resumes/:id/other-sections', async (req, res) => {
     try {
         const content = await fs.readFile(filePath, 'utf-8');
         const data = parseMjsExport(content, 'otherSections');
-        res.json(data);
+        res.json(data || {});
     } catch {
         res.status(404).json({ error: 'other-sections.mjs not found for this resume.' });
+    }
+});
+
+// PATCH /api/resumes/:id/other-sections: Update or create other-sections.mjs
+app.patch('/api/resumes/:id/other-sections', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') return res.status(400).json({ error: 'Cannot update other-sections for default resume.' });
+    const payload = req.body;
+    if (!payload || typeof payload !== 'object') return res.status(400).json({ error: 'Invalid payload.' });
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const filePath = path.join(dir, 'other-sections.mjs');
+    try {
+        await fs.mkdir(dir, { recursive: true });
+        const mjsContent = `export const otherSections = ${JSON.stringify(payload, null, 2)};\n`;
+        await atomicWriteWithLock(filePath, mjsContent);
+        res.json(payload);
+    } catch (err) {
+        console.error('[PATCH other-sections]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PATCH /api/resumes/:id/categories: Update or create categories.mjs
+app.patch('/api/resumes/:id/categories', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') return res.status(400).json({ error: 'Cannot update categories for default resume.' });
+    const { categories } = req.body;
+    if (!categories || typeof categories !== 'object') return res.status(400).json({ error: 'Invalid categories payload.' });
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const filePath = path.join(dir, 'categories.mjs');
+    try {
+        await fs.mkdir(dir, { recursive: true });
+        const mjsContent = `/** @type {Record<string, { name: string, skillIDs?: string[] }>} */\nexport const categories = ${JSON.stringify(categories, null, 2)};\n`;
+        await atomicWriteWithLock(filePath, mjsContent);
+        res.json({ categories });
+    } catch (err) {
+        console.error('[PATCH categories]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/resumes/:id/render-external: Invoke external HTML renderer script, then return URL to view result.
+// Env: RESUME_HTML_RENDERER_SCRIPT = path to script (receives resume folder path as first arg).
+// Script should write output to <resume-folder>/rendered.html.
+app.post('/api/resumes/:id/render-external', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') return res.status(400).json({ error: 'Invalid resume id.' });
+    const scriptPath = process.env.RESUME_HTML_RENDERER_SCRIPT;
+    if (!scriptPath) {
+        return res.status(501).json({
+            error: 'External HTML renderer not configured. Set RESUME_HTML_RENDERER_SCRIPT to the path of your renderer script.'
+        });
+    }
+    const dir = path.resolve(PARSED_RESUMES_DIR, id);
+    try {
+        await fs.access(dir);
+    } catch {
+        return res.status(404).json({ error: 'Resume folder not found.' });
+    }
+    try {
+        await new Promise((resolve, reject) => {
+            const child = spawn(process.execPath, [scriptPath, dir], { stdio: 'inherit' });
+            child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`Script exited with code ${code}`))));
+            child.on('error', reject);
+        });
+        res.json({ url: `/api/resumes/${encodeURIComponent(id)}/rendered` });
+    } catch (err) {
+        console.error('[render-external]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/resumes/:id/rendered: Serve the externally rendered HTML (written by render script to rendered.html)
+app.get('/api/resumes/:id/rendered', async (req, res) => {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ error: 'Invalid resume id.' });
+    const htmlPath = path.join(PARSED_RESUMES_DIR, id, 'rendered.html');
+    try {
+        await fs.access(htmlPath);
+        res.sendFile(path.resolve(htmlPath));
+    } catch {
+        res.status(404).json({ error: 'rendered.html not found. Run the external renderer first (POST /api/resumes/:id/render-external).' });
     }
 });
 

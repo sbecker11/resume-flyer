@@ -88,6 +88,7 @@ export function buildPrintHtml(jobs, skills, categories, otherSections) {
     const title = otherSections?.title || '';
     const summary = otherSections?.summary || '';
     const certifications = otherSections?.certifications || [];
+    const websites = otherSections?.websites || [];
     const otherSectionsList = otherSections?.other_sections || [];
     const skillsByCategory = buildSkillsByCategory(skills, categories);
 
@@ -135,22 +136,38 @@ export function buildPrintHtml(jobs, skills, categories, otherSections) {
     </ul>
   </section>` : '';
 
-    // --- Certifications ---
+    // --- Certifications (supports { name, url?, description? } or legacy { name, issuer?, date? }) ---
     const certsHtml = certifications.length > 0 ? `
   <section class="section">
     <h2 class="section-head">Certifications</h2>
-    ${certifications.map(c => `
-    <div class="cert">
-      <span class="cert-name">${escapeHtml(c.name)}</span>${c.issuer ? ` – ${escapeHtml(c.issuer)}` : ''}${c.date ? ` (${escapeHtml(c.date)})` : ''}
-    </div>`).join('')}
+    ${certifications.map(c => {
+        const namePart = c.url
+            ? `<a href="${escapeHtml(c.url)}">${escapeHtml(c.name)}</a>`
+            : escapeHtml(c.name);
+        const extra = c.description ? linkify(c.description) : (c.issuer ? ` – ${escapeHtml(c.issuer)}` : '') + (c.date ? ` (${escapeHtml(c.date)})` : '');
+        return `<div class="cert"><span class="cert-name">${namePart}</span>${extra ? ' – ' + extra : ''}</div>`;
+    }).join('')}
   </section>` : '';
 
-    // --- Other sections ---
-    const otherHtml = otherSectionsList.map(sec => `
+    // --- Websites (label, url, optional description) ---
+    const websitesHtml = websites.length > 0 ? `
+  <section class="section">
+    <h2 class="section-head">Websites</h2>
+    <ul class="websites-list">
+      ${websites.map(w => `<li><a href="${escapeHtml(w.url)}">${escapeHtml(w.label || w.url)}</a>${w.description ? ` – ${escapeHtml(w.description)}` : ''}</li>`).join('')}
+    </ul>
+  </section>` : '';
+
+    // --- Other sections (supports { title, content? } or { title, subtitle?, description? }) ---
+    const otherHtml = otherSectionsList.map(sec => {
+        const content = sec.content ?? [sec.subtitle, sec.description].filter(Boolean).join('\n');
+        return `
   <section class="section">
     <h2 class="section-head">${escapeHtml(sec.title)}</h2>
-    <div class="other-section"><div class="content">${linkify(sec.content)}</div></div>
-  </section>`).join('\n');
+    ${sec.subtitle ? `<h3 class="section-sub">${escapeHtml(sec.subtitle)}</h3>` : ''}
+    <div class="other-section"><div class="content">${linkify(content)}</div></div>
+  </section>`;
+    }).join('\n');
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -183,6 +200,9 @@ export function buildPrintHtml(jobs, skills, categories, otherSections) {
     .skills-by-cat .cat-name { font-weight: 600; }
     .cert { margin-bottom: 0.35rem; }
     .cert-name { font-weight: 600; }
+    .section-sub { font-size: 0.9rem; font-weight: 600; margin: 0 0 0.35rem 0; color: var(--text); }
+    .websites-list { list-style: none; padding-left: 0; }
+    .websites-list li { margin-bottom: 0.35rem; }
     .other-section .content { white-space: pre-line; font-size: 0.95rem; }
     a { color: #1967d2; text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -203,6 +223,7 @@ export function buildPrintHtml(jobs, skills, categories, otherSections) {
   </section>
   ${skillsHtml}
   ${certsHtml}
+  ${websitesHtml}
   ${otherHtml}
 </body>
 </html>`;
