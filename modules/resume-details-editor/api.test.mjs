@@ -8,7 +8,8 @@ import {
     getResumeOtherSections,
     updateResumeOtherSections,
     getResumeData,
-    updateResumeCategories
+    updateResumeCategories,
+    updateJob
 } from './api.mjs';
 
 describe('resume-details-editor api', () => {
@@ -148,6 +149,37 @@ describe('resume-details-editor api', () => {
                     body: JSON.stringify({ categories })
                 })
             );
+        });
+    });
+
+    describe('updateJob', () => {
+        it('PATCHes job at index with allowed fields', async () => {
+            const job = { role: 'Engineer', start: '2020-01', end: '2023-06', Description: 'Did stuff.' };
+            fetchMock.mockResolvedValue(okJson({ ok: true, job }));
+            const updates = { role: 'Engineer', start: '2020-01', end: '2023-06', Description: 'Did stuff.' };
+            const result = await updateJob('r1', 0, updates);
+            expect(result).toEqual({ ok: true, job });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/jobs/0',
+                expect.objectContaining({
+                    method: 'PATCH',
+                    body: JSON.stringify(updates)
+                })
+            );
+        });
+
+        it('encodes resume id in URL', async () => {
+            fetchMock.mockResolvedValue(okJson({ ok: true, job: {} }));
+            await updateJob('resume/with/slash', 2, { role: 'Dev' });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/resume%2Fwith%2Fslash/jobs/2',
+                expect.any(Object)
+            );
+        });
+
+        it('throws on HTTP error', async () => {
+            fetchMock.mockResolvedValue(errJson(404, 'Job index 99 not found'));
+            await expect(updateJob('r1', 99, { role: 'X' })).rejects.toThrow('Job index 99 not found');
         });
     });
 

@@ -11,7 +11,6 @@ import { listResumes, getResumeOtherSections, getResumeData } from '@/modules/ap
 import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
-import JobSkillEditor from './JobSkillEditor.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 
 // Define props
@@ -349,54 +348,51 @@ function goToJob(jobNumber) {
 
 // --- Resume Details Editor state ---
 const isDetailsEditorOpen = ref(false);
+const detailsEditorInitialTab = ref('meta');
+const detailsEditorInitialJobIndex = ref(null);
 
-// --- Job Skill Editor state ---
-const isSkillEditorOpen = ref(false);
-const editingJobIndex = ref(null);
-const editingJob = ref(null);
-const allSkillsForEditor = ref({});
+function openDetailsModal(tab = 'meta', jobIndex = null) {
+  detailsEditorInitialTab.value = tab;
+  detailsEditorInitialJobIndex.value = jobIndex;
+  isDetailsEditorOpen.value = true;
+}
 
 async function handleEditJobSkills(e) {
   const { jobNumber } = e.detail || {};
   if (jobNumber == null) return;
   const id = props.currentResumeId;
   if (!id || id === 'default') return;
-  try {
-    const resumeData = await getResumeData(id);
-    const jobs = getGlobalJobsDependency().getJobsData();
-    const job = jobs[jobNumber];
-    if (!job) return;
-    editingJobIndex.value = jobNumber;
-    editingJob.value = {
-      role: job.role || job.Role || '',
-      employer: job.employer || job.Employer || '',
-      skillIDs: job.skillIDs || [],
-    };
-    allSkillsForEditor.value = resumeData.skills || {};
-    isSkillEditorOpen.value = true;
-  } catch (err) {
-    console.error('[ResumeContainer] handleEditJobSkills failed:', err);
-  }
+  openDetailsModal('skills', jobNumber);
 }
 
-function handleSkillsSaved({ jobIndex, skillIDs }) {
+function handleOpenResumeDetails(e) {
+  const { tab, jobIndex } = e.detail || {};
+  if (!tab || jobIndex == null) return;
+  openDetailsModal(tab, jobIndex);
+}
+
+async function handleDetailsSaved(payload) {
+  if (payload == null || payload.jobIndex == null) return;
+  const { jobIndex, skillIDs } = payload;
   const jobs = getGlobalJobsDependency().getJobsData();
-  if (jobs[jobIndex]) {
-    const oldSkillIDs = jobs[jobIndex].skillIDs || [];
-    jobs[jobIndex].skillIDs = skillIDs;
-    // Rebuild job['job-skills'] so rDiv/cDiv display names are keyed by skill ID
+  if (!jobs[jobIndex]) return;
+  const oldSkillIDs = jobs[jobIndex].skillIDs || [];
+  jobs[jobIndex].skillIDs = skillIDs;
+  try {
+    const resumeData = await getResumeData(props.currentResumeId);
+    const skillsMap = resumeData?.skills || {};
     const newJobSkills = {};
     for (const sid of skillIDs) {
-      const skill = allSkillsForEditor.value[sid];
-      newJobSkills[sid] = skill?.name || sid;
+      const skill = skillsMap[sid];
+      newJobSkills[sid] = skill?.name ?? sid;
     }
     jobs[jobIndex]['job-skills'] = newJobSkills;
-    // Notify rDiv, cDiv, and skill-card-divs to refresh their skill displays
     window.dispatchEvent(new CustomEvent('job-skills-updated', {
       detail: { jobIndex, skillIDs, oldSkillIDs, jobSkills: newJobSkills }
     }));
+  } catch (err) {
+    console.error('[ResumeContainer] handleDetailsSaved refresh failed:', err);
   }
-  isSkillEditorOpen.value = false;
 }
 
 const resumeSkillCardRef = ref(null);
@@ -670,6 +666,7 @@ onMounted(() => {
   window.addEventListener('sort-rule-changed', onSortRuleChanged);
   window.addEventListener('app-state-loaded', onAppStateLoadedForSort);
   window.addEventListener('edit-job-skills', handleEditJobSkills);
+  window.addEventListener('open-resume-details', handleOpenResumeDetails);
   nextTick(() => { setTimeout(syncSortRuleKeyFromController, 100); });
   window.__resumeAppendSkillCardCopy = appendSkillCardCopyToResumeListing;
 });
@@ -683,6 +680,7 @@ onUnmounted(() => {
   window.removeEventListener('sort-rule-changed', onSortRuleChanged);
   window.removeEventListener('app-state-loaded', onAppStateLoadedForSort);
   window.removeEventListener('edit-job-skills', handleEditJobSkills);
+  window.removeEventListener('open-resume-details', handleOpenResumeDetails);
   delete window.__resumeAppendSkillCardCopy;
 });
 
@@ -755,7 +753,7 @@ function onResumeSkillCardClick(event) {
                 <button
                     v-if="currentResumeId && currentResumeId !== 'default'"
                     class="resume-details-btn"
-                    @click="isDetailsEditorOpen = true"
+                    @click="openDetailsModal('meta')"
                     title="Edit resume metadata, contact, certifications, categories"
                 >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -823,21 +821,14 @@ function onResumeSkillCardClick(event) {
                 <button @click="clearAllResumeDivs" class="resume-divs-control-button">Clear</button>
             </div>
         </div>
-        <!-- Resume Details Editor Modal -->
+        <!-- Resume Details Editor Modal (Meta, Other sections, Skills tabs) -->
         <ResumeDetailsEditor
             :resume-id="currentResumeId"
             :is-open="isDetailsEditorOpen"
+            :initial-tab="detailsEditorInitialTab"
+            :initial-job-index="detailsEditorInitialJobIndex"
             @close="isDetailsEditorOpen = false"
-        />
-        <!-- Job Skill Editor Modal -->
-        <JobSkillEditor
-            :isOpen="isSkillEditorOpen"
-            :resumeId="currentResumeId"
-            :jobIndex="editingJobIndex"
-            :job="editingJob"
-            :allSkills="allSkillsForEditor"
-            @close="isSkillEditorOpen = false"
-            @saved="handleSkillsSaved"
+            @saved="handleDetailsSaved"
         />
 
         <div id="resume-content-listing" ref="resumeContentWrapperRef" class="scrollable-container" @scroll="onResumeContentWrapperScroll">
@@ -1491,12 +1482,47 @@ function onResumeSkillCardClick(event) {
     margin-bottom: 12px;
 }
 
-.resume-header .biz-details-employer {
+.resume-header .biz-details-employer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-bottom: 4px;
+}
+.resume-header .biz-details-employer-wrap .biz-details-employer {
     font-weight: bold;
     font-size: 16px;
-    margin-bottom: 4px;
+    margin-bottom: 0;
     color: inherit;
+}
+.resume-header .biz-details-edit-btn,
+.resume-description .biz-details-edit-btn,
+.resume-skills .biz-details-edit-btn {
     flex-shrink: 0;
+    padding: 2px 6px;
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.resume-header .biz-details-edit-btn:hover,
+.resume-description .biz-details-edit-btn:hover,
+.resume-skills .biz-details-edit-btn:hover {
+    opacity: 1;
+    border-color: rgba(255,255,255,0.5);
+}
+.resume-section-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px 0;
+    flex-shrink: 0;
+}
+.resume-section-title-wrap h4 {
+    margin: 0;
 }
 
 .resume-header .biz-details-role {
@@ -1546,10 +1572,10 @@ function onResumeSkillCardClick(event) {
     margin-bottom: 12px;
 }
 
-.resume-description h4 {
+.resume-description .resume-section-title-wrap h4 {
     font-size: 13px;
     font-weight: bold;
-    margin: 0 0 6px 0;
+    margin: 0;
     color: inherit;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -1611,10 +1637,10 @@ function onResumeSkillCardClick(event) {
     margin-top: 12px;
 }
 
-.resume-skills h4 {
+.resume-skills .resume-section-title-wrap h4 {
     font-size: 13px;
     font-weight: bold;
-    margin: 0 0 6px 0;
+    margin: 0;
     color: inherit;
     text-transform: uppercase;
     letter-spacing: 0.5px;

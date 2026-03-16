@@ -37,6 +37,18 @@
             :data="otherSections"
             @update:data="onOtherSectionsUpdate"
           />
+          <JobsTab
+            v-show="activeTab === 'jobs'"
+            :resume-id="resumeId"
+            @saved="onJobsSaved"
+            @open-skills-for-job="openSkillsForJob"
+          />
+          <SkillsTab
+            v-show="activeTab === 'skills'"
+            :resume-id="resumeId"
+            :initial-job-index="skillsPreselectJobIndex !== null ? skillsPreselectJobIndex : (initialJobIndex ?? null)"
+            @saved="onSkillsSaved"
+          />
         </div>
 
         <div class="rde-footer">
@@ -54,21 +66,31 @@
 import { ref, computed, watch } from 'vue';
 import MetaTab from './tabs/MetaTab.vue';
 import OtherSectionsTab from './tabs/OtherSectionsTab.vue';
+import JobsTab from './tabs/JobsTab.vue';
+import SkillsTab from './tabs/SkillsTab.vue';
 import * as api from './api.mjs';
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
-  resumeId: { type: String, default: '' }
+  resumeId: { type: String, default: '' },
+  /** When opening, show this tab first (e.g. 'skills' when opened from edit icon). */
+  initialTab: { type: String, default: 'meta' },
+  /** When opening on Skills tab, preselect this job index (0-based). */
+  initialJobIndex: { type: Number, default: null }
 });
 
 const emit = defineEmits(['close', 'saved']);
 
 const tabs = [
   { id: 'meta', label: 'Meta' },
-  { id: 'other-sections', label: 'Other sections' }
+  { id: 'other-sections', label: 'Other sections' },
+  { id: 'jobs', label: 'Jobs' },
+  { id: 'skills', label: 'Skills' }
 ];
 
 const activeTab = ref('meta');
+/** When user clicks "Skills" in Jobs tab, we switch to Skills tab with this job index. */
+const skillsPreselectJobIndex = ref(null);
 const meta = ref({});
 const otherSections = ref({});
 const saving = ref(false);
@@ -109,7 +131,9 @@ function onDragEnd() {
 
 watch(() => [props.isOpen, props.resumeId], async ([open, id]) => {
   if (!open || !id || id === 'default') return;
-  activeTab.value = 'meta';
+  const tab = props.initialTab && tabs.some(t => t.id === props.initialTab) ? props.initialTab : 'meta';
+  activeTab.value = tab;
+  skillsPreselectJobIndex.value = null;
   dragOffset.value = { x: 0, y: 0 };
   pendingMeta.value = null;
   pendingOtherSections.value = null;
@@ -130,6 +154,19 @@ function onMetaUpdate(updates) {
 }
 function onOtherSectionsUpdate(data) {
   pendingOtherSections.value = data;
+}
+
+function onJobsSaved() {
+  emit('saved');
+}
+
+function openSkillsForJob(jobIndex) {
+  skillsPreselectJobIndex.value = jobIndex;
+  activeTab.value = 'skills';
+}
+
+function onSkillsSaved(payload) {
+  emit('saved', payload);
 }
 
 function cancel() {
@@ -177,12 +214,18 @@ async function save() {
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 8px;
   width: min(720px, 92vw);
-  max-height: 85vh;
+  height: min(80vh, 720px);
+  min-width: 320px;
+  min-height: 240px;
+  max-width: 96vw;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: auto;
+  resize: both;
   color: #e0e0e0;
   font-size: 0.85rem;
+  font-family: var(--scene-font-family, 'Inter'), sans-serif;
 }
 .rde-header {
   padding: 14px 16px 10px;

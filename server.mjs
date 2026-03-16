@@ -257,6 +257,37 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
     }
 });
 
+// PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description)
+app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
+    const { id, jobIndex } = req.params;
+    if (!id || id === 'default' || jobIndex == null) {
+        return res.status(400).json({ error: 'Invalid resume id or job index.' });
+    }
+    const allowed = ['label', 'role', 'employer', 'start', 'end', 'Description'];
+    const updates = {};
+    for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No allowed job fields provided.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    try {
+        await fs.access(jobsPath);
+    } catch (e) {
+        if (e.code === 'ENOENT') return res.status(404).json({ error: 'Resume or jobs.json not found.' });
+        throw e;
+    }
+    const content = await fs.readFile(jobsPath, 'utf-8');
+    const jobs = parseResumeFile(content, jobsPath, 'jobs');
+    const idx = Array.isArray(jobs) ? parseInt(jobIndex, 10) : String(jobIndex);
+    if (jobs[idx] == null) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
+    Object.assign(jobs[idx], updates);
+    await atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2));
+    res.json({ ok: true, job: jobs[idx] });
+});
+
 // GET /api/resumes/:id/meta: Return meta.json for a parsed resume
 app.get('/api/resumes/:id/meta', async (req, res) => {
     const { id } = req.params;

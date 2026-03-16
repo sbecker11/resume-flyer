@@ -238,10 +238,24 @@ class ResumeItemsController {
         const headerDiv = document.createElement('div');
         headerDiv.className = 'resume-header';
         
+        const employerWrap = document.createElement('div');
+        employerWrap.className = 'biz-details-employer-wrap';
         const employerDiv = document.createElement('div');
         employerDiv.className = 'biz-details-employer';
         employerDiv.textContent = jobData.employer || 'Unknown Employer';
-        headerDiv.appendChild(employerDiv);
+        employerWrap.appendChild(employerDiv);
+        const employerEditBtn = document.createElement('button');
+        employerEditBtn.type = 'button';
+        employerEditBtn.className = 'biz-details-edit-btn';
+        employerEditBtn.setAttribute('aria-label', 'Edit employer');
+        employerEditBtn.textContent = '✎';
+        employerEditBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'jobs', jobIndex: jobNumber } }));
+        });
+        employerWrap.appendChild(employerEditBtn);
+        headerDiv.appendChild(employerWrap);
 
         const roleDiv = document.createElement('div');
         roleDiv.className = 'biz-details-role';  
@@ -287,9 +301,23 @@ class ResumeItemsController {
             const descDiv = document.createElement('div');
             descDiv.className = 'resume-description';
             
+            const descTitleWrap = document.createElement('div');
+            descTitleWrap.className = 'resume-section-title-wrap';
             const descTitle = document.createElement('h4');
             descTitle.textContent = 'Key Achievements';
-            descDiv.appendChild(descTitle);
+            descTitleWrap.appendChild(descTitle);
+            const descEditBtn = document.createElement('button');
+            descEditBtn.type = 'button';
+            descEditBtn.className = 'biz-details-edit-btn';
+            descEditBtn.setAttribute('aria-label', 'Edit description');
+            descEditBtn.textContent = '✎';
+            descEditBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'jobs', jobIndex: jobNumber } }));
+            });
+            descTitleWrap.appendChild(descEditBtn);
+            descDiv.appendChild(descTitleWrap);
 
             // Parse description and create bullet points with clickable references
             const descContent = document.createElement('div');
@@ -305,9 +333,23 @@ class ResumeItemsController {
             const skillsDiv = document.createElement('div');
             skillsDiv.className = 'resume-skills';
             
+            const skillsTitleWrap = document.createElement('div');
+            skillsTitleWrap.className = 'resume-section-title-wrap';
             const skillsTitle = document.createElement('h4');
             skillsTitle.textContent = 'Technologies & Skills';
-            skillsDiv.appendChild(skillsTitle);
+            skillsTitleWrap.appendChild(skillsTitle);
+            const skillsEditBtn = document.createElement('button');
+            skillsEditBtn.type = 'button';
+            skillsEditBtn.className = 'biz-details-edit-btn';
+            skillsEditBtn.setAttribute('aria-label', 'Edit skills for this job');
+            skillsEditBtn.textContent = '✎';
+            skillsEditBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }));
+            });
+            skillsTitleWrap.appendChild(skillsEditBtn);
+            skillsDiv.appendChild(skillsTitleWrap);
 
             const skillsList = document.createElement('div');
             skillsList.className = 'skills-list';
@@ -406,9 +448,23 @@ class ResumeItemsController {
         if (!skillsDiv) {
             skillsDiv = document.createElement('div');
             skillsDiv.className = 'resume-skills';
+            const skillsTitleWrap = document.createElement('div');
+            skillsTitleWrap.className = 'resume-section-title-wrap';
             const skillsTitle = document.createElement('h4');
             skillsTitle.textContent = 'Technologies & Skills';
-            skillsDiv.appendChild(skillsTitle);
+            skillsTitleWrap.appendChild(skillsTitle);
+            const skillsEditBtn = document.createElement('button');
+            skillsEditBtn.type = 'button';
+            skillsEditBtn.className = 'biz-details-edit-btn';
+            skillsEditBtn.setAttribute('aria-label', 'Edit skills for this job');
+            skillsEditBtn.textContent = '✎';
+            skillsEditBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber: jobIndex } }));
+            });
+            skillsTitleWrap.appendChild(skillsEditBtn);
+            skillsDiv.appendChild(skillsTitleWrap);
             const skillsList = document.createElement('div');
             skillsList.className = 'skills-list';
             skillsDiv.appendChild(skillsList);

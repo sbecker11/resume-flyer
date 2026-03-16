@@ -622,19 +622,42 @@ export function useCardsController() {
         }
         
         card.innerHTML = `
-            <div class="biz-details-employer">${job.employer || 'Unknown Employer'}</div>
+            <div class="biz-details-employer-wrap">
+                <div class="biz-details-employer">${job.employer || 'Unknown Employer'}</div>
+                <button type="button" class="biz-details-edit-btn" aria-label="Edit employer">&#9998;</button>
+            </div>
             <div class="biz-details-role">${job.role || 'Unknown Role'}</div>
             <div class="biz-details-dates">${originalJobStartDate ? originalJobStartDate.toISOString().slice(0, 10) : 'N/A'} - ${isEndPresent ? 'Present' : (originalJobEndDate ? originalJobEndDate.toISOString().slice(0, 10) : 'N/A')}</div>
             <div class="biz-details-debug-row"><span class="biz-details-id-and-hex">#${jobNumber} z:${sceneZ} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span></div>
             ${hasSkills ? `
             <div class="resume-skills">
-                <h4>Technologies &amp; Skills</h4>
+                <div class="resume-section-title-wrap">
+                    <h4>Technologies &amp; Skills</h4>
+                    <button type="button" class="biz-details-edit-btn" aria-label="Edit skills for this job">&#9998;</button>
+                </div>
                 <div class="skills-list">
                     <span class="bullet">&bull;</span>
                     <span class="biz-card-skill-titles skills-text"></span>
                 </div>
             </div>` : ''}
         `
+
+        const employerEditBtn = card.querySelector('.biz-details-employer-wrap .biz-details-edit-btn')
+        if (employerEditBtn) {
+            employerEditBtn.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'jobs', jobIndex: jobNumber } }))
+            })
+        }
+        const skillsEditBtn = card.querySelector('.resume-skills .biz-details-edit-btn')
+        if (skillsEditBtn) {
+            skillsEditBtn.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }))
+            })
+        }
 
         // Add click handler: select this card or deselect if it is the selected card (one at a time). Clicking a skill title (by element id) selects that skill card.
         card.addEventListener('click', (event) => {

@@ -458,6 +458,21 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
 }
 
 /* display headers for both div-card-details and div-resume-details */
+.biz-details-employer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 4px 0;
+}
+.biz-details-employer-wrap .biz-details-employer {
+    font-size: 16px;
+    font-weight: bold;
+    display: block;
+    margin: 0;
+    line-height: 1.2;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
 .biz-details-employer {
     font-size: 16px;
     font-weight: bold;
@@ -466,6 +481,34 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     line-height: 1.2;
     word-wrap: break-word;
     overflow-wrap: break-word;
+}
+.biz-card-div .biz-details-edit-btn,
+.biz-resume-div .biz-details-edit-btn {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.biz-card-div .biz-details-edit-btn:hover,
+.biz-resume-div .biz-details-edit-btn:hover {
+    opacity: 1;
+    border-color: rgba(255,255,255,0.5);
+}
+.biz-card-div .resume-section-title-wrap,
+.biz-resume-div .resume-section-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px 0;
+}
+.biz-card-div .resume-section-title-wrap h4,
+.biz-resume-div .resume-section-title-wrap h4 {
+    margin: 0;
 }
 
 .biz-details-role {
@@ -536,7 +579,7 @@ body.show-card-debug .biz-details-debug-row {
 .biz-card-details-div > h2:not(.header-text),
 .biz-card-details-div > h3:not(.header-text),
 .biz-card-details-div > p:not(.header-text),
-.biz-card-details-div > div:not(.header-text):not(.biz-details-employer):not(.biz-details-role):not(.biz-details-dates):not(.biz-details-debug-row),
+.biz-card-details-div > div:not(.header-text):not(.biz-details-employer):not(.biz-details-employer-wrap):not(.biz-details-role):not(.biz-details-dates):not(.biz-details-debug-row):not(.resume-skills),
 .biz-card-details-div > ul:not(.header-text),
 .biz-card-details-div > li:not(.header-text) {
     display: none;

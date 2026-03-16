@@ -80,6 +80,19 @@ export async function getResumeData(resumeId) {
 
 /**
  * @param {string} resumeId
+ * @param {number} jobIndex - 0-based
+ * @param {{ label?: string, role?: string, employer?: string, start?: string, end?: string, Description?: string }} updates
+ * @returns {Promise<{ ok: boolean, job: object }>}
+ */
+export async function updateJob(resumeId, jobIndex, updates) {
+    return apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+    });
+}
+
+/**
+ * @param {string} resumeId
  * @param {Record<string, { name: string, skillIDs?: string[] }>} categories
  * @returns {Promise<{ categories: Object }>}
  */
