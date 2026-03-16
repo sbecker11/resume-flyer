@@ -28,6 +28,11 @@
     "scrollPositions": {
       "sceneContentScrollTop": 0,
       "resumeContentScrollTop": 0
+    },
+    "focalPoint": {
+      "x": 0,
+      "y": 0,
+      "mode": "locked"
     }
   },
   "system-constants": {
@@ -49,7 +54,10 @@
       "minHeight": 180,
       "maxXOffset": 100,
       "maxWidthOffset": 30,
-      "minZDiff": 2
+      "minZDiff": 2,
+      "skillMinDistance": 200,
+      "concurrentJobsOffsetX": 35,
+      "concurrentJobsOffsetY": 22
     },
     "timeline": {
       "pixelsPerYear": 200,
@@ -177,5 +185,11 @@
       "brightnessAtMaxZ": 1,
       "blurAtMaxZ": 0
     }
+  },
+  "layout": {
+    "orientation": "scene-right"
+  },
+  "resizeHandle": {
+    "stepCount": 1
   }
 }
