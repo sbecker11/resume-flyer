@@ -432,7 +432,49 @@ export function useColorPalette() {
         loadPalettes,
         updateBrightnessFactors,
         updateBorderSettings,
+        applyCurrentPaletteToAllElements: applyCurrentPaletteToAllElementsImpl,
     };
+}
+
+/**
+ * Apply the current palette to all elements that have data-color-index (cDivs, rDivs, skill cards).
+ * Call after initial DOM build (cards + resume list) so palette is applied on first load.
+ * @param {{ clearAllCache?: () => void, getAllElementsWithColorIndex?: () => HTMLElement[] }} [registry] - optional; uses window.globalElementRegistry if not provided
+ */
+export async function applyCurrentPaletteToAllElements(registry = null) {
+    await readyPromise;
+    if (!currentPaletteFilename.value) return;
+    const reg = registry || (typeof window !== 'undefined' && window.globalElementRegistry);
+    if (!reg?.clearAllCache) return;
+    reg.clearAllCache();
+    applySceneBackgroundFromCurrentPalette();
+    const elements = reg.getAllElementsWithColorIndex?.() || [];
+    for (const element of elements) {
+        const paletteColorIndexAttr = element.getAttribute('data-color-index');
+        if (paletteColorIndexAttr === null || isNaN(parseInt(paletteColorIndexAttr, 10))) continue;
+        try {
+            await applyPaletteToElement(element);
+        } catch (err) {
+            console.warn('[ColorPalette] applyCurrentPaletteToAllElements:', element.id || element.className, err);
+        }
+    }
+    const filename = currentPaletteFilename.value;
+    const paletteName = filenameToNameMap.value[filename];
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('color-palette-changed', {
+            detail: { filename, paletteName, previousFilename: null }
+        }));
+    }
+}
+
+async function applyCurrentPaletteToAllElementsImpl() {
+    let reg = null;
+    try {
+        reg = injectGlobalElementRegistry();
+    } catch {
+        reg = typeof window !== 'undefined' ? window.globalElementRegistry : null;
+    }
+    return applyCurrentPaletteToAllElements(reg);
 }
 
 /**
@@ -658,6 +700,10 @@ export async function applyPaletteToElement(element) {
     element.style.setProperty('--data-background-color-hovered', hoveredBackgroundColor);
     element.style.setProperty('--data-foreground-color-hovered', hoveredForegroundColor);
     element.style.setProperty('--data-background-border-radius', borderRadius);
+    /* Link color: same high-contrast as foreground so links are visible on card background */
+    element.style.setProperty('--data-link-color', foregroundColor);
+    element.style.setProperty('--data-link-color-hovered', hoveredForegroundColor);
+    element.style.setProperty('--data-link-color-selected', highlightedTextColor);
 
     // Set CSS custom properties for border and padding. rDiv margin is container-controlled, not theme.
     element.style.setProperty('--data-normal-padding', effectiveBorderSettings.normal.padding);
@@ -730,10 +776,11 @@ export function updateContrastForBrightness(element) {
     const effectiveHex = rgbToHex(effectiveRgb.r, effectiveRgb.g, effectiveRgb.b)
     const contrast = getHighContrastForBackground(effectiveHex, { iconBase: ICON_BASE })
 
-    // Update normal-state icon variant and text color from effective background
+    // Update normal-state icon variant, text color, and link color from effective background
     element.setAttribute('data-icon-set-variant', contrast.iconSet.variant)
     element.style.setProperty('--data-icon-set-variant', contrast.iconSet.variant)
     element.style.setProperty('--data-foreground-color', contrast.textColor)
+    element.style.setProperty('--data-link-color', contrast.textColor)
 
     // Directly set filter on icon elements — CSS attribute selector approach is unreliable
     const iconFilter = contrast.iconSet.variant === 'white' ? 'invert(1)' : 'none'

@@ -383,6 +383,15 @@ function handleOpenResumeDetails(e) {
 }
 
 async function handleDetailsSaved(payload) {
+  // Only refetch resume list when Meta was saved (display name etc.); refetching on job/skills save
+  // would re-render the container and wipe the imperatively-built resume item listing (rDivs).
+  if (payload?.metaSaved === true) {
+    try {
+      await fetchResumeList();
+    } catch (err) {
+      console.warn('[ResumeContainer] handleDetailsSaved fetchResumeList failed:', err);
+    }
+  }
   if (payload == null || payload.jobIndex == null) return;
   const { jobIndex, skillIDs } = payload;
   const jobs = getGlobalJobsDependency().getJobsData();

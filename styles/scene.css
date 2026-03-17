@@ -97,6 +97,37 @@ body .biz-resume-div,
     display: block;
     white-space: normal;
 }
+/* Links: use palette-derived link color so they are visible on current card background (normal/hovered/selected). !important overrides inline color on injected links. */
+.biz-card-div a,
+.biz-resume-div a,
+body .biz-resume-div a,
+#resume-container .biz-resume-div a,
+#resume-content-listing .biz-resume-div a {
+    color: var(--data-link-color, var(--data-foreground-color)) !important;
+    text-decoration: underline;
+}
+.biz-card-div a:hover,
+.biz-resume-div a:hover,
+body .biz-resume-div a:hover,
+#resume-container .biz-resume-div a:hover,
+#resume-content-listing .biz-resume-div a:hover {
+    color: var(--data-link-color, var(--data-foreground-color)) !important;
+    opacity: 0.9;
+}
+.biz-card-div.hovered a,
+.biz-resume-div.hovered a,
+body .biz-resume-div.hovered a,
+#resume-container .biz-resume-div.hovered a,
+#resume-content-listing .biz-resume-div.hovered a {
+    color: var(--data-link-color-hovered, var(--data-foreground-color-hovered)) !important;
+}
+.biz-card-div.clone a,
+.biz-resume-div.selected a,
+body .biz-resume-div.selected a,
+#resume-container .biz-resume-div.selected a,
+#resume-content-listing .biz-resume-div.selected a {
+    color: var(--data-link-color-selected, var(--data-foreground-color-selected)) !important;
+}
 /* High-contrast icon set: matches high-contrast text for the given background (white on dark, black on light). Always transparent background. */
 .url-icon,
 .back-icon,

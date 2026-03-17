@@ -205,13 +205,9 @@ async function saveCurrentJob() {
       end: end || undefined,
       Description: local.value.Description || undefined
     });
-    Object.assign(jobs.value[idx], {
-      employer: local.value.employer,
-      role: local.value.title,
-      start,
-      end,
-      Description: local.value.Description
-    });
+    // Replace job in array so Jobs dropdown option label updates (employer/title) reactively
+    const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
+    jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
     emit('saved');
   } catch (err) {
     console.error('[JobsTab] save failed:', err);

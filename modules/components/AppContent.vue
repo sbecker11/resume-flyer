@@ -121,7 +121,7 @@ const secondContainer = computed(() => store.orientation === 'scene-left' ? 'res
 const { sceneContainerStyle } = useResizeHandle()
 
 // Color palette management
-const { loadPalettes } = useColorPalette()
+const { loadPalettes, applyCurrentPaletteToAllElements } = useColorPalette()
 
 // App state management
 const { appState, updateAppState } = useAppState()
@@ -577,6 +577,15 @@ onMounted(async () => {
         if (!noJobsLoaded.value) {
           await selectFirstCardWhenReady()
           await scrollSceneToLatestCard()
+          // Apply palette to all elements after DOM is built (fixes palette not applied on initial load)
+          await nextTick()
+          requestAnimationFrame(async () => {
+            try {
+              await applyCurrentPaletteToAllElements()
+            } catch (e) {
+              console.warn('[AppContent] Initial palette apply:', e)
+            }
+          })
         }
       } catch (err) {
         // Resume folder was deleted — clear the stale ID and show the upload modal
@@ -781,6 +790,7 @@ watch(orientation, (newOrientation) => {
   transform: translate(-50%, -50%);
   user-select: none;
   transition: color 0.2s ease, opacity 0.2s ease;
+  pointer-events: none; /* let clicks pass through to scene cards; mode cycle is on ResizeHandle */
 }
 
 #focal-point .focal-point-reticle {

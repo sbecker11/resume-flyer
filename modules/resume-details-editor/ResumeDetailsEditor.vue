@@ -322,7 +322,7 @@ async function save() {
     if (pendingOtherSections.value !== null) {
       await api.updateResumeOtherSections(id, pendingOtherSections.value);
     }
-    emit('saved');
+    emit('saved', { metaSaved: true });
     emit('close');
   } catch (err) {
     console.error('[ResumeDetailsEditor] save failed:', err);
