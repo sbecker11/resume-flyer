@@ -48,6 +48,9 @@ const isLoading: Ref<boolean> = ref(false)
 const isLoaded: Ref<boolean> = ref(false)
 const loadError: Ref<Error | null> = ref(null)
 
+/** When false, state API is unavailable (e.g. static hosting); save only to localStorage and skip POST to avoid 405 in console. */
+let stateApiAvailable: boolean | null = null
+
 // Single promise to prevent multiple simultaneous loads
 let loadPromise: Promise<AppState> | null = null
 
@@ -388,6 +391,7 @@ async function loadStateFromServer(): Promise<AppState> {
             const response = await fetch(apiUrl)
             if (!response.ok) {
                 if (response.status === 404) {
+                    stateApiAvailable = false
                     console.log("No saved state found on server, using default state.")
                     // GitHub Pages / static hosting: fall back to localStorage if present
                     try {
@@ -402,6 +406,7 @@ async function loadStateFromServer(): Promise<AppState> {
                 }
             }
         
+            stateApiAvailable = true
             const rawState = await response.json()
             console.log("✅ Loaded raw state from server:", rawState)
             
@@ -447,6 +452,10 @@ async function loadStateFromServer(): Promise<AppState> {
 async function saveStateToServer(state: AppState): Promise<void> {
     try {
         state.lastUpdated = new Date().toISOString()
+        if (stateApiAvailable === false) {
+            localStorage.setItem('resume-flock/app_state', JSON.stringify(state))
+            return
+        }
         console.log('[AppState] 💾 Saving state to server - currentResumeId:', state['user-settings']?.currentResumeId)
         const apiUrl = basePathJoin('api/state')
         const response = await fetch(apiUrl, {
@@ -457,10 +466,16 @@ async function saveStateToServer(state: AppState): Promise<void> {
             body: JSON.stringify(state),
         })
         if (!response.ok) {
-            // GitHub Pages / static hosting can't accept POST. Remedy: persist to localStorage and continue.
+            if (response.status === 404 || response.status === 405) stateApiAvailable = false
+            // GitHub Pages / static hosting: no API (404/405). Persist to localStorage and continue without logging an error.
+            const isStaticHosting = response.status === 404 || response.status === 405
             try {
                 localStorage.setItem('resume-flock/app_state', JSON.stringify(state))
-                reportError(new Error(`Server returned ${response.status}: ${response.statusText}`), '[AppState] Failed to save state to server', 'Remedy: Saved AppState to localStorage instead (static hosting)')
+                if (isStaticHosting) {
+                    console.log('[AppState] State saved to localStorage (no server API on static hosting)')
+                } else {
+                    reportError(new Error(`Server returned ${response.status}: ${response.statusText}`), '[AppState] Failed to save state to server', 'Remedy: Saved AppState to localStorage instead')
+                }
                 return
             } catch (e) {
                 reportError(e, '[AppState] Failed to save AppState to localStorage', 'Remedy: Disabling auto-save to avoid spam')
