@@ -236,9 +236,11 @@ class ResumeItemsController {
         employerEditBtn.setAttribute('aria-label', 'Edit employer');
         employerEditBtn.textContent = '✎';
         employerEditBtn.addEventListener('click', (e) => {
+            console.log('[RDE] pencil click (employer) start', jobNumber);
             e.preventDefault();
             e.stopPropagation();
             window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' } }));
+            console.log('[RDE] pencil click (employer) dispatchEvent done');
         });
         employerWrap.appendChild(employerEditBtn);
         headerDiv.appendChild(employerWrap);
@@ -298,9 +300,11 @@ class ResumeItemsController {
             descEditBtn.setAttribute('aria-label', 'Edit description');
             descEditBtn.textContent = '✎';
             descEditBtn.addEventListener('click', (e) => {
+                console.log('[RDE] pencil click (description) start', jobNumber);
                 e.preventDefault();
                 e.stopPropagation();
                 window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'description' } }));
+                console.log('[RDE] pencil click (description) dispatchEvent done');
             });
             descTitleWrap.appendChild(descEditBtn);
             descDiv.appendChild(descTitleWrap);
