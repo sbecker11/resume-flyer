@@ -32,6 +32,7 @@ async function main() {
     if (!ent.isDirectory()) continue;
     const id = ent.name;
     if (id.startsWith('.')) continue;
+    if (id.startsWith('_local-')) continue;
 
     const dir = path.join(parsedResumesDir, id);
     const metaPath = path.join(dir, 'meta.json');

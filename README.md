@@ -16,6 +16,15 @@
 - **job-skills-selector** — Assign or change skills per job (JobSkillEditor); skills are merged with parser-extracted job-skills and shown on the resume list.
 - **resume-print** — Build a printable HTML resume from the current in-memory data and open it in a new tab (Print button in the resume header).
 
+### Parsed resume storage contract
+
+Parsed resume datasets are persisted under `parsed_resumes/`.
+
+- Folder names that start with `_local-` are **local-only** (not meant to be committed or deployed).
+- Folder names without `_local-` are **publishable** (safe to commit and serve from static hosting like GitHub Pages).
+
+See `docs/PARSED_RESUMES_NAMING.md`.
+
 ## 📚 Framework Documentation
 
 ### Vue 3 Composition API Architecture
