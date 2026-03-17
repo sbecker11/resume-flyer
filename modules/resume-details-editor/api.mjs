@@ -12,11 +12,29 @@ function getApiBase() {
         : '';
 }
 
+function getRuntimeBase() {
+    const envBase = (import.meta?.env?.BASE_URL || '/');
+    let base = envBase;
+    if (typeof window !== 'undefined') {
+        const path = window.location.pathname || '/';
+        const parts = path.split('/').filter(Boolean);
+        const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase));
+        if (useSubpath) base = `/${parts[0]}/`;
+    }
+    return base.endsWith('/') ? base : `${base}/`;
+}
+
 function basePathJoin(relPath) {
-    const base = (import.meta?.env?.BASE_URL || '/');
-    const b = base.endsWith('/') ? base : `${base}/`;
+    const b = getRuntimeBase();
     const p = relPath.startsWith('/') ? relPath.slice(1) : relPath;
     return `${b}${p}`;
+}
+
+function toJobsArray(value) {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === 'object' && Array.isArray(value.jobs)) return value.jobs;
+    if (value && typeof value === 'object') return Object.values(value);
+    return [];
 }
 
 function downloadJson(filename, data) {
@@ -116,8 +134,52 @@ export async function updateResumeOtherSections(resumeId, payload) {
  * @returns {Promise<{ jobs: Array, skills: Object, categories: Object }>}
  */
 export async function getResumeData(resumeId) {
+    const useStaticFirst = typeof window !== 'undefined' && window.location?.origin?.includes('github.io');
+    if (resumeId !== 'default' && useStaticFirst) {
+        try {
+            const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
+            const [jobsRes, skillsRes, categoriesRes] = await Promise.all([
+                fetch(`${base}/jobs.json`),
+                fetch(`${base}/skills.json`).catch(() => null),
+                fetch(`${base}/categories.json`).catch(() => null)
+            ]);
+            if (!jobsRes.ok) throw new Error(`Static jobs not found: ${base}/jobs.json`);
+            const jobsRaw = await jobsRes.json();
+            const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {};
+            const categories = (categoriesRes && categoriesRes.ok) ? await categoriesRes.json() : {};
+            const jobs = toJobsArray(jobsRaw);
+            return { jobs, skills, categories };
+        } catch (e) {
+            if (!e?.message?.includes('404') && !e?.message?.includes('not found')) {
+                reportError(e, '[resume-details-editor/api] Static getResumeData failed');
+            }
+            throw e;
+        }
+    }
     const path = resumeId === 'default' ? '/api/resumes/default/data' : `/api/resumes/${encodeURIComponent(resumeId)}/data`;
-    return apiJson(path);
+    try {
+        return await apiJson(path);
+    } catch (e) {
+        if (resumeId !== 'default' && (e?.message?.includes('404') || e?.message?.includes('not found'))) {
+            try {
+                const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
+                const [jobsRes, skillsRes, categoriesRes] = await Promise.all([
+                    fetch(`${base}/jobs.json`),
+                    fetch(`${base}/skills.json`).catch(() => null),
+                    fetch(`${base}/categories.json`).catch(() => null)
+                ]);
+                if (!jobsRes.ok) throw new Error(`Static jobs not found`);
+                const jobsRaw = await jobsRes.json();
+                const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {};
+                const categories = (categoriesRes && categoriesRes.ok) ? await categoriesRes.json() : {};
+                const jobs = toJobsArray(jobsRaw);
+                return { jobs, skills, categories };
+            } catch (staticErr) {
+                reportError(staticErr, '[resume-details-editor/api] Static fallback for getResumeData failed');
+            }
+        }
+        throw e;
+    }
 }
 
 /**
