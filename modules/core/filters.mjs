@@ -15,10 +15,11 @@ export const CARD_MAX_Z = 14;
  */
 export function get_brightness_value_from_z(z) {
     const { brightnessAtMaxZ } = getRendering();
+    const brightnessFactorAtMaxZ = (typeof brightnessAtMaxZ === 'number' && brightnessAtMaxZ >= 0) ? brightnessAtMaxZ / 100 : 1.0;
     var z_interp = linearInterp(
         z,
         CARD_MIN_Z, 1.0,
-        CARD_MAX_Z, brightnessAtMaxZ
+        CARD_MAX_Z, brightnessFactorAtMaxZ
     );
     var z_brightness_value = (z > 0) ? z_interp : 1.0;
     return z_brightness_value;
@@ -67,10 +68,11 @@ export function get_contrast_str_from_z(z) {
  */
 export function get_saturation_str_from_z(z) {
     const { saturationAtMaxZ } = getRendering();
+    const saturationFactorAtMaxZ = (typeof saturationAtMaxZ === 'number' && saturationAtMaxZ >= 0) ? saturationAtMaxZ / 100 : 1.0;
     var z_interp = linearInterp(
         z,
         CARD_MIN_Z, 1.0,
-        CARD_MAX_Z, saturationAtMaxZ
+        CARD_MAX_Z, saturationFactorAtMaxZ
     );
     var saturation = (z > 0) ? z_interp : 1.0;
     return `saturate(${saturation})`;

@@ -187,9 +187,10 @@ function getDefaultState(): AppState {
                 }
             },
             rendering: {
-                parallaxScaleAtMaxZ: 0.9,
-                saturationAtMaxZ: 1.0,
-                brightnessAtMaxZ: 1.0,
+                parallaxScaleAtMinZ: 1.0,
+                parallaxScaleAtMaxZ: 1.0,
+                saturationAtMaxZ: 100,
+                brightnessAtMaxZ: 100,
                 blurAtMaxZ: 0
             }
         }
@@ -321,7 +322,7 @@ function migrateState(state: any): AppState {
 
     // Ensure system-constants.rendering exists (parallax/depth constants; not user-editable)
     const sc = state['system-constants']
-    const renderingDefaults = { parallaxScaleAtMaxZ: 0.9, saturationAtMaxZ: 1.0, brightnessAtMaxZ: 1.0, blurAtMaxZ: 0 }
+    const renderingDefaults = { parallaxScaleAtMinZ: 1.0, parallaxScaleAtMaxZ: 1.0, saturationAtMaxZ: 100, brightnessAtMaxZ: 100, blurAtMaxZ: 0 }
     const fromUserSettings = state['user-settings']?.rendering
     if (sc) {
         if (!sc.rendering) {
@@ -329,10 +330,19 @@ function migrateState(state: any): AppState {
             console.log('[AppState] Added missing system-constants.rendering (camelCase)')
         } else {
             const r = sc.rendering
+            if (r.parallaxScaleAtMinZ === undefined && r.parallaxScaleAtMaxZ !== undefined) {
+                r.parallaxScaleAtMinZ = renderingDefaults.parallaxScaleAtMinZ
+                r.parallaxScaleAtMaxZ = Math.max(renderingDefaults.parallaxScaleAtMaxZ, Number(r.parallaxScaleAtMaxZ))
+            }
+            if (r.parallaxScaleAtMinZ === undefined) r.parallaxScaleAtMinZ = renderingDefaults.parallaxScaleAtMinZ
             if (r.parallaxScaleAtMaxZ === undefined) r.parallaxScaleAtMaxZ = renderingDefaults.parallaxScaleAtMaxZ
             if (r.saturationAtMaxZ === undefined) r.saturationAtMaxZ = renderingDefaults.saturationAtMaxZ
+            else if (r.saturationAtMaxZ >= 0 && r.saturationAtMaxZ <= 1) r.saturationAtMaxZ = Math.round(r.saturationAtMaxZ * 100)
             if (r.brightnessAtMaxZ === undefined) r.brightnessAtMaxZ = renderingDefaults.brightnessAtMaxZ
+            else if (r.brightnessAtMaxZ <= 1 && r.brightnessAtMaxZ > 0) r.brightnessAtMaxZ = Math.round(r.brightnessAtMaxZ * 100)
             if (r.blurAtMaxZ === undefined) r.blurAtMaxZ = renderingDefaults.blurAtMaxZ
+            if (r.displacementAtMaxZ !== undefined) delete r.displacementAtMaxZ
+            if (r.displacementAtMinZ !== undefined) delete r.displacementAtMinZ
         }
         if (state['user-settings']?.rendering) delete state['user-settings'].rendering
     }
@@ -371,7 +381,7 @@ async function loadStateFromServer(): Promise<AppState> {
             
             // If saved state was missing system-constants.rendering, persist merged state so app_state.json gets the new keys
             const r = rawState['system-constants']?.rendering
-            const renderingKeys = ['parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ'] as const
+            const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ'] as const
             const hadMissingRendering = !r || renderingKeys.some(k => r[k] === undefined)
             if (hadMissingRendering) {
                 try {

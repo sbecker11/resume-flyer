@@ -257,7 +257,7 @@ function migrateState(state) {
 
     // Ensure system-constants.rendering exists (parallax/depth constants; not user-editable)
     const sc = state['system-constants'];
-    const renderingDefaults = { parallaxScaleAtMaxZ: 0.9, saturationAtMaxZ: 1.0, brightnessAtMaxZ: 1.0, blurAtMaxZ: 0 };
+    const renderingDefaults = { parallaxScaleAtMinZ: 1.0, parallaxScaleAtMaxZ: 1.0, saturationAtMaxZ: 100, brightnessAtMaxZ: 100, blurAtMaxZ: 0 };
     const fromUserSettings = state['user-settings']?.rendering;
     if (sc) {
         if (!sc.rendering) {
@@ -265,10 +265,19 @@ function migrateState(state) {
             window.CONSOLE_LOG_IGNORE('[MIGRATION] Added missing system-constants.rendering (camelCase)');
         } else {
             const r = sc.rendering;
+            if (r.parallaxScaleAtMinZ === undefined && r.parallaxScaleAtMaxZ !== undefined) {
+                r.parallaxScaleAtMinZ = renderingDefaults.parallaxScaleAtMinZ;
+                r.parallaxScaleAtMaxZ = Math.max(renderingDefaults.parallaxScaleAtMaxZ, Number(r.parallaxScaleAtMaxZ));
+            }
+            if (r.parallaxScaleAtMinZ === undefined) r.parallaxScaleAtMinZ = renderingDefaults.parallaxScaleAtMinZ;
             if (r.parallaxScaleAtMaxZ === undefined) r.parallaxScaleAtMaxZ = renderingDefaults.parallaxScaleAtMaxZ;
             if (r.saturationAtMaxZ === undefined) r.saturationAtMaxZ = renderingDefaults.saturationAtMaxZ;
+            else if (r.saturationAtMaxZ >= 0 && r.saturationAtMaxZ <= 1) r.saturationAtMaxZ = Math.round(r.saturationAtMaxZ * 100);
             if (r.brightnessAtMaxZ === undefined) r.brightnessAtMaxZ = renderingDefaults.brightnessAtMaxZ;
+            else if (r.brightnessAtMaxZ <= 1 && r.brightnessAtMaxZ > 0) r.brightnessAtMaxZ = Math.round(r.brightnessAtMaxZ * 100);
             if (r.blurAtMaxZ === undefined) r.blurAtMaxZ = renderingDefaults.blurAtMaxZ;
+            if (r.displacementAtMaxZ !== undefined) delete r.displacementAtMaxZ;
+            if (r.displacementAtMinZ !== undefined) delete r.displacementAtMinZ;
         }
         if (state['user-settings']?.rendering) delete state['user-settings'].rendering;
     }

@@ -10,6 +10,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBullsEyeService, useFocalPointService, useDebugFunctions } from '../core/globalServices'
 import { useLayoutToggle } from './useLayoutToggle.mjs'
 import * as zUtils from '../utils/zUtils.mjs'
+import { linearInterp } from '../utils/mathUtils.mjs'
 import { getRendering } from '../core/renderingConfig.mjs'
 import { logger } from '../utils/logger.mjs'
 
@@ -17,14 +18,25 @@ import { logger } from '../utils/logger.mjs'
 const PARALLAX_X_EXAGGERATION_FACTOR = 0.9
 const PARALLAX_Y_EXAGGERATION_FACTOR = 1.0
 const CLONE_Z_SCALE = 0
-function getMaxZScale() {
-  const r = getRendering()
-  const v = r.parallaxScaleAtMaxZ
-  return (typeof v === 'number' && !Number.isNaN(v)) ? v : 0.9
-}
 const PARALLAX_Z_MIN = zUtils.FLOCK_PARALLAX_Z_MIN
 const PARALLAX_Z_MAX = zUtils.FLOCK_PARALLAX_Z_MAX
 const PARALLAX_Z_RANGE = zUtils.FLOCK_PARALLAX_Z_RANGE
+// Base z-scale (built-in ramp): near = 0.9, far = 0; matches legacy MAX_Z_SCALE behavior.
+const BASE_Z_SCALE_AT_NEAR = 0.9
+const BASE_Z_SCALE_AT_FAR = 0
+
+/** Base z-scale (built-in): linear ramp from near (0.9) to far (0). Same idea as legacy useParallaxVue3. */
+function getBaseZScaleAtZ(sceneZ) {
+  return linearInterp(sceneZ, PARALLAX_Z_MIN, BASE_Z_SCALE_AT_NEAR, PARALLAX_Z_MAX, BASE_Z_SCALE_AT_FAR)
+}
+
+/** User-configurable parallax scale at a given scene Z (3D Settings). AtMinZ = near, AtMaxZ = far. */
+function getParallaxScaleAtZ(sceneZ) {
+  const r = getRendering()
+  const atMinZ = (typeof r.parallaxScaleAtMinZ === 'number' && !Number.isNaN(r.parallaxScaleAtMinZ)) ? r.parallaxScaleAtMinZ : 1.0  // at min scene Z (near)
+  const atMaxZ = (typeof r.parallaxScaleAtMaxZ === 'number' && !Number.isNaN(r.parallaxScaleAtMaxZ)) ? r.parallaxScaleAtMaxZ : 1.0  // at max scene Z (far)
+  return linearInterp(sceneZ, PARALLAX_Z_MIN, atMinZ, PARALLAX_Z_MAX, atMaxZ)
+}
 
 // Enhanced parallax composable that uses provide/inject instead of window globals
 export function useParallaxEnhanced() {
@@ -91,12 +103,14 @@ export function useParallaxEnhanced() {
     const sceneZ = parseFloat(cardDiv.getAttribute('data-sceneZ'))
     if (isNaN(sceneZ) || sceneZ < PARALLAX_Z_MIN || sceneZ > PARALLAX_Z_MAX) return false
 
-    // Z = distance from viewer (high Z = far). Closeness = PARALLAX_Z_MAX - Z; more closeness = more parallax.
-    const closeness = PARALLAX_Z_MAX - sceneZ
-    const zScale = (closeness / PARALLAX_Z_RANGE) * getMaxZScale()
-
-    const translateX = bullsEyeCenterXSceneView + dh * zScale
-    const translateY = dv * zScale
+    // Option B: base z-scale (built-in ramp) × user scale (3D Settings). Then apply to x,y displacements.
+    const baseZScale = getBaseZScaleAtZ(sceneZ)
+    const userScale = getParallaxScaleAtZ(sceneZ)
+    const finalScale = baseZScale * userScale
+    const displacementX = dh * finalScale
+    const displacementY = dv * finalScale
+    const translateX = bullsEyeCenterXSceneView + displacementX
+    const translateY = displacementY
 
     cardDiv.style.transform = `translateX(${translateX}px) translateY(${translateY}px)`
 

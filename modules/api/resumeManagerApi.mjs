@@ -133,13 +133,52 @@ export async function uploadResume(fileOrUrl, displayName = null, onProgress = n
  * @param {string} resumeId
  * @param {number} jobIndex
  * @param {string[]} skillIDs
+ * @param {string[]} [newSkills] - Skill names to create on the resume if they don't exist
  */
-export async function updateJobSkills(resumeId, jobIndex, skillIDs) {
+export async function updateJobSkills(resumeId, jobIndex, skillIDs, newSkills = []) {
+    const body = { skillIDs };
+    if (newSkills.length) body.newSkills = newSkills;
     const response = await fetch(
         `/api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}/skills`,
-        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ skillIDs }) }
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+}
+
+/**
+ * Rename an existing skill for a resume (updates skills and all job skillIDs).
+ * @param {string} resumeId
+ * @param {string} oldKey - Current skill id/name (key in skills map)
+ * @param {string} newName - New name (will become the new key)
+ */
+export async function renameSkill(resumeId, oldKey, newName) {
+    const response = await fetch(
+        `/api/resumes/${encodeURIComponent(resumeId)}/skills/rename`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldKey, newName }) }
+    );
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Merge one skill into another (replace fromKey with toKey everywhere, remove fromKey). Normalizes to a single skillID.
+ * @param {string} resumeId
+ * @param {string} fromKey - Skill to merge away (e.g. "JS")
+ * @param {string} toKey - Skill to keep (e.g. "JavaScript")
+ */
+export async function mergeSkill(resumeId, fromKey, toKey) {
+    const response = await fetch(
+        `/api/resumes/${encodeURIComponent(resumeId)}/skills/merge`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromKey, toKey }) }
+    );
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${response.status}`);
+    }
     return response.json();
 }
 

@@ -8,6 +8,7 @@ import { useAppState } from '@/modules/composables/useAppState';
 import type { ResizeHandleProps, ResizeHandleEmits } from '@/modules/types/components';
 import { useBullsEyeService } from '@/modules/core/globalServices';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import Scene3DSettings from './Scene3DSettings.vue';
 
 // Local type definitions
 interface StepButton {
@@ -347,6 +348,7 @@ function handleResizeHandleClick(event: MouseEvent): void {
                     @mouseenter="isSteppingHovering = true"
                     @mouseleave="isSteppingHovering = false"
                     :title="stepCount === 1 ? 'Free dragging (no steps)' : `Stepping: ${stepCount} steps`">{{ displayStepCount }}</button>
+            <Scene3DSettings />
             <button :id="stepRightButton.id" class="toggle-circle" @click.stop="stepRightButton.action" :disabled="stepRightButton.disabled" :title="stepRightButton.title">{{ stepRightButton.icon }}</button>
         </div>
     </div>

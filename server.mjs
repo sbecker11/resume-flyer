@@ -210,10 +210,10 @@ app.get('/api/resumes/:id/data', async (req, res) => {
     }
 });
 
-// PATCH /api/resumes/:id/jobs/:jobIndex/skills: Update skillIDs for one job, sync skills.json jobIDs
+// PATCH /api/resumes/:id/jobs/:jobIndex/skills: Update skillIDs for one job, sync skills.json jobIDs. Optional newSkills: names to create if missing.
 app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
     const { id, jobIndex } = req.params;
-    const { skillIDs } = req.body;
+    const { skillIDs, newSkills } = req.body;
     if (!id || jobIndex == null || !Array.isArray(skillIDs)) {
         return res.status(400).json({ error: 'Missing id, jobIndex, or skillIDs array.' });
     }
@@ -230,6 +230,16 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
 
         const idx = String(jobIndex);
         if (!jobs[idx]) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
+
+        // Create any new skills so they exist before sync
+        const toCreate = Array.isArray(newSkills) ? newSkills : [];
+        for (const entry of toCreate) {
+            const name = typeof entry === 'string' ? entry.trim() : (entry?.name && String(entry.name).trim());
+            if (!name) continue;
+            if (skills[name] == null) {
+                skills[name] = { name, jobIDs: [] };
+            }
+        }
 
         const oldSkillIDs = jobs[idx].skillIDs || [];
         const newSkillIDs = skillIDs;
@@ -253,6 +263,136 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
         res.json({ ok: true, skillIDs: newSkillIDs });
     } catch (err) {
         console.error('[PATCH jobs skills]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Resolve skill key: use direct key if present, else find key where skill.name matches (handles id-keyed skills from parser).
+function resolveSkillKey(skills, keyOrName) {
+    if (skills[keyOrName] != null) return keyOrName;
+    const want = (keyOrName && String(keyOrName).trim()) || '';
+    if (!want) return null;
+    for (const [k, s] of Object.entries(skills)) {
+        if (s && typeof s === 'object' && s.name != null && String(s.name).trim() === want) return k;
+    }
+    return null;
+}
+
+// PATCH /api/resumes/:id/skills/rename: Rename a skill (update key and all job references). If newName already exists, merge into it.
+app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
+    const { id } = req.params;
+    const { oldKey, newName } = req.body;
+    const newNameTrimmed = newName != null ? String(newName).trim() : '';
+    if (!id || id === 'default' || !oldKey || !newNameTrimmed) {
+        return res.status(400).json({ error: 'Missing id, oldKey, or newName.' });
+    }
+    if (oldKey === newNameTrimmed) {
+        return res.json({ ok: true, key: oldKey });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    const skillsPath = path.join(dir, 'skills.json');
+    try {
+        const [jobsContent, skillsContent] = await Promise.all([
+            fs.readFile(jobsPath, 'utf-8'),
+            fs.readFile(skillsPath, 'utf-8'),
+        ]);
+        const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
+        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        const resolvedOldKey = resolveSkillKey(skills, oldKey);
+        if (resolvedOldKey == null) {
+            return res.status(404).json({ error: `Skill "${oldKey}" not found.` });
+        }
+        const jobIDsFromOld = skills[resolvedOldKey].jobIDs || [];
+        delete skills[resolvedOldKey];
+        if (skills[newNameTrimmed] != null) {
+            const existingJobIDs = new Set(skills[newNameTrimmed].jobIDs || []);
+            jobIDsFromOld.forEach(j => existingJobIDs.add(j));
+            skills[newNameTrimmed].jobIDs = [...existingJobIDs];
+        } else {
+            skills[newNameTrimmed] = { name: newNameTrimmed, jobIDs: [...jobIDsFromOld] };
+        }
+        const jobEntries = Array.isArray(jobs) ? jobs.map((j, i) => [i, j]) : Object.entries(jobs);
+        for (const [, job] of jobEntries) {
+            const ids = job.skillIDs;
+            if (!Array.isArray(ids)) continue;
+            const out = [];
+            const seen = new Set();
+            for (const sid of ids) {
+                const use = (sid === resolvedOldKey || sid === oldKey) ? newNameTrimmed : sid;
+                if (!seen.has(use)) { out.push(use); seen.add(use); }
+            }
+            job.skillIDs = out;
+        }
+        await Promise.all([
+            atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
+            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+        ]);
+        res.json({ ok: true, key: newNameTrimmed });
+    } catch (err) {
+        console.error('[PATCH skills/rename]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PATCH /api/resumes/:id/skills/merge: Merge one skill into another (replace fromKey with toKey everywhere, then remove fromKey)
+app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
+    const { id } = req.params;
+    const { fromKey, toKey } = req.body;
+    if (!id || id === 'default' || !fromKey || !toKey) {
+        return res.status(400).json({ error: 'Missing id, fromKey, or toKey.' });
+    }
+    if (fromKey === toKey) {
+        return res.status(400).json({ error: 'fromKey and toKey must be different.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    const skillsPath = path.join(dir, 'skills.json');
+    try {
+        const [jobsContent, skillsContent] = await Promise.all([
+            fs.readFile(jobsPath, 'utf-8'),
+            fs.readFile(skillsPath, 'utf-8'),
+        ]);
+        const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
+        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        const resolvedFromKey = resolveSkillKey(skills, fromKey);
+        const resolvedToKey = resolveSkillKey(skills, toKey);
+        if (resolvedFromKey == null) {
+            return res.status(404).json({ error: `Skill "${fromKey}" not found.` });
+        }
+        if (resolvedToKey == null) {
+            return res.status(404).json({ error: `Target skill "${toKey}" not found.` });
+        }
+        if (resolvedFromKey === resolvedToKey) {
+            return res.status(400).json({ error: 'fromKey and toKey must be different.' });
+        }
+        const fromJobIDs = new Set(skills[resolvedFromKey].jobIDs || []);
+        const toJobIDsSet = new Set(skills[resolvedToKey].jobIDs || []);
+        fromJobIDs.forEach(j => toJobIDsSet.add(j));
+        skills[resolvedToKey].jobIDs = [...toJobIDsSet];
+        delete skills[resolvedFromKey];
+        const jobEntries = Array.isArray(jobs) ? jobs.map((j, i) => [i, j]) : Object.entries(jobs);
+        for (const [, job] of jobEntries) {
+            const ids = job.skillIDs;
+            if (!Array.isArray(ids)) continue;
+            const out = [];
+            const seen = new Set();
+            for (const sid of ids) {
+                if (sid === resolvedFromKey || sid === fromKey) {
+                    if (!seen.has(resolvedToKey)) { out.push(resolvedToKey); seen.add(resolvedToKey); }
+                } else {
+                    if (!seen.has(sid)) { out.push(sid); seen.add(sid); }
+                }
+            }
+            job.skillIDs = out;
+        }
+        await Promise.all([
+            atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
+            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+        ]);
+        res.json({ ok: true, mergedInto: toKey });
+    } catch (err) {
+        console.error('[PATCH skills/merge]', err);
         res.status(500).json({ error: err.message });
     }
 });

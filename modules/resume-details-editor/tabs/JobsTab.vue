@@ -23,7 +23,7 @@
         <section class="rde-section rde-job-fields">
           <div class="rde-field">
             <label class="rde-label">Employer</label>
-            <input v-model="local.employer" type="text" class="rde-input" placeholder="Employer name" />
+            <input ref="employerInputRef" v-model="local.employer" type="text" class="rde-input" placeholder="Employer name" />
           </div>
           <div class="rde-field">
             <label class="rde-label">Title</label>
@@ -60,6 +60,7 @@
           <div class="rde-field">
             <label class="rde-label">Description</label>
             <textarea
+              ref="descriptionInputRef"
               v-model="local.Description"
               class="rde-textarea rde-description"
               placeholder="Job description…"
@@ -81,15 +82,21 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 
 const props = defineProps({
-  resumeId: { type: String, default: '' }
+  resumeId: { type: String, default: '' },
+  /** When opening to this tab, preselect this job index (0-based). */
+  initialJobIndex: { type: Number, default: null },
+  /** After job is selected, focus this field ('employer' | 'description'). */
+  initialFocusField: { type: String, default: null }
 });
 
 const emit = defineEmits(['saved', 'open-skills-for-job']);
 
+const employerInputRef = ref(null);
+const descriptionInputRef = ref(null);
 const jobs = ref([]);
 const loadError = ref('');
 const selectedJobIndex = ref(null);
@@ -120,7 +127,10 @@ watch(() => props.resumeId, async (id) => {
   try {
     const data = await api.getResumeData(id);
     jobs.value = jobsArray(data.jobs);
-    selectedJobIndex.value = jobs.value.length ? 0 : null;
+    const idx = props.initialJobIndex != null && props.initialJobIndex >= 0 && props.initialJobIndex < jobs.value.length
+      ? props.initialJobIndex
+      : (jobs.value.length ? 0 : null);
+    selectedJobIndex.value = idx;
   } catch (err) {
     console.error('[JobsTab] load failed:', err);
     loadError.value = 'Failed to load jobs: ' + err.message;
@@ -165,6 +175,14 @@ watch(selectedJob, (job) => {
     endMonth: end.month,
     Description: job.Description ?? job.description ?? ''
   };
+}, { immediate: true });
+
+watch(() => [props.initialFocusField, selectedJob.value], ([focusField, job]) => {
+  if (!focusField || !job) return;
+  nextTick(() => {
+    const el = focusField === 'employer' ? employerInputRef.value : focusField === 'description' ? descriptionInputRef.value : null;
+    if (el && typeof el.focus === 'function') el.focus();
+  });
 }, { immediate: true });
 
 function jobOptionLabel(job, i) {

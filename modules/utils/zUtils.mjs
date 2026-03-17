@@ -36,6 +36,11 @@ export const ALL_CARDS_Z_MIN = 10;
 // Flock-of-postcards (see sibling repo flock-of-postcards/main.mjs):
 //   "z is distance to viewer" → z = MAX_Z - zindex, zindex = MAX_Z - z.
 // Here: Z = distance from viewer; Z = FLOCK_Z_MAX - z_index (higher z_index = closer = lower Z).
+//
+// Coordinate correspondence:
+//   At view plane (closest to viewer): z-index has MAX values, Z has MIN values.
+//   At scene origin (farthest):       z-index has MIN values, Z has MAX values.
+//
 // - z_index: CSS stacking order (1–3 biz, 4–13 skill); higher = in front.
 // - scene Z (stored on cards): Z = FLOCK_Z_MAX - z_index; range 1–14. No scene div should ever have negative scene Z.
 export const FLOCK_Z_MAX = 14;                    // far plane; Z = FLOCK_Z_MAX - z_index (original used 15)

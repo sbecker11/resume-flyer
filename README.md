@@ -1,7 +1,16 @@
 # resume-flock  
 # Dark, chaotic, and deep  
 
-The `flock` is a glorified resume describing my own work history and skills over my career timeline.
+**resume-flock** is an interactive resume explorer. Upload a DOCX or PDF resume and it is parsed into your employment experience and technical skills. You explore them as **business cards** (one per job) and **skill cards** (one per skill) in 3D or in a linear list. Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
+
+### High-level functionality
+
+- **resume-parser** — Parses uploaded DOCX/PDF resumes at runtime into jobs and skills (via the resume-parser package). Optional **LLM-based skill merging** can normalize and merge skill names during or after parsing.
+- **resume-selector** — Choose which resume to view when you have multiple resumes; switch between them from the header dropdown.
+- **resume-details-editor** — Modal to edit resume-level data: metadata (Meta tab), other sections (summary, contact, certifications, websites; Other tab), and skill categories (Skills tab).
+- **job-details-editor** — Edit each job’s employer, title, dates, and description from the resume-details-editor Jobs tab.
+- **job-skills-selector** — Assign or change skills per job (JobSkillEditor); skills are merged with parser-extracted job-skills and shown on the resume list.
+- **resume-print** — Build a printable HTML resume from the current in-memory data and open it in a new tab (Print button in the resume header).
 
 ## 📚 Framework Documentation
 
@@ -16,307 +25,41 @@ The modern reactive state management and component composition system:
 - **[🔄 Watchers](https://vuejs.org/guide/essentials/watchers.html)** - Reactive data watching
 - **[🔧 TypeScript Support](https://vuejs.org/guide/typescript/overview.html)** - Type-safe Vue development
 
-### ⚡ Vue 3 Architecture Migration (August 2025)
-
-The project has been **fully modernized to Vue 3 Composition API** with TypeScript integration, replacing the legacy Initialization Manager framework:
-
-#### 🎯 **Modern Vue 3 Patterns Implemented**
-
-**1. Composition API with Script Setup**
-```vue
-<script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { useBadgeToggle } from '@/modules/composables/useBadgeToggle.mjs'
-
-// Reactive state
-const isHovering = ref(false)
-const { isBadgesVisible, toggleBadges } = useBadgeToggle()
-
-// Computed properties
-const displayIcon = computed(() => {
-  return isBadgesVisible.value ? '+' : '-'
-})
-
-// Watchers for reactive updates
-watch(isBadgesVisible, (newValue) => {
-  console.log(`Badge visibility changed: ${newValue}`)
-})
-</script>
-```
-
-**2. Composable-Based State Management**
-```javascript
-// useBadgeToggle.mjs - Global reactive state
-import { ref } from 'vue'
-
-const isBadgesVisible = ref(true)
-
-export function useBadgeToggle() {
-  const toggleBadges = () => {
-    isBadgesVisible.value = !isBadgesVisible.value
-    return isBadgesVisible.value
-  }
-  
-  return { isBadgesVisible, toggleBadges }
-}
-```
-
-**3. Template Refs and DOM Access**
-```vue
-<template>
-  <div ref="sceneContainerRef" class="scene-container">
-    <!-- Component content -->
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-
-const sceneContainerRef = ref(null)
-
-onMounted(() => {
-  if (sceneContainerRef.value) {
-    // Direct DOM access when needed
-    sceneContainerRef.value.addEventListener('resize', handleResize)
-  }
-})
-</script>
-```
-
-**4. TypeScript Integration**
-```typescript
-// Type-safe component props and emits
-interface ResizeHandleProps {
-  initialPercentage?: number
-}
-
-interface ResizeHandleEmits {
-  (e: 'resize', value: number): void
-}
-
-const props = withDefaults(defineProps<ResizeHandleProps>(), {
-  initialPercentage: 50
-})
-
-const emit = defineEmits<ResizeHandleEmits>()
-```
-
-#### 📊 **Migration Status**
-
-**✅ Fully Modernized Components:**
-- **Vue Components**: All converted to `<script setup>` with Composition API
-- **Composables**: Reactive state management with `useBadgeToggle`, `useResizeHandle`, `useCardsController`
-- **TypeScript**: Type-safe props, emits, and component interfaces
-- **Template Refs**: Modern DOM access patterns replacing getElementById
-- **Watchers**: Reactive data observation for real-time updates
-- **Performance**: Debounced events and optimized reactive chains
-
-#### 🛠️ **Technical Achievements**
-
-**Modern Architecture:**
-- ✅ **Vue 3 Composition API**: All components use modern reactive patterns
-- ✅ **TypeScript Integration**: Type safety across component interfaces
-- ✅ **Composable State**: Reusable reactive logic with composables
-- ✅ **Template Refs**: Direct DOM access when needed
-- ✅ **Event Optimization**: Debounced events for smooth performance
-
-**Performance Optimizations:**
-- ✅ **Debounced Resize Events**: Eliminated cascading performance issues
-- ✅ **Reactive Watchers**: Efficient state change detection
-- ✅ **Optimized Re-renders**: Minimal reactive updates
-- ✅ **Memory Management**: Proper cleanup with `onUnmounted`
-
-**Developer Experience:**
-- ✅ **Modern Syntax**: Clean, readable `<script setup>` components
-- ✅ **Type Safety**: Full TypeScript support with proper interfaces
-- ✅ **Hot Module Replacement**: Fast development with Vite
-- ✅ **Reactive Debugging**: Clear reactive state management
-
-This **Vue 3 modernization** represents a complete architectural transformation, moving from legacy dependency injection patterns to modern Vue 3 reactive composition, providing better performance, maintainability, and developer experience.
-
 ## 🧬 Critical Inter-Relationships & System Dependencies
 
-Through extensive Vue 3 architecture modernization work, several **critical inter-relationships** have emerged that are essential for understanding how this complex application functions. These dependencies must be preserved during any future modifications.
+These **critical inter-relationships** are essential for understanding how the application functions. Preserve them during modifications.
 
 ### **🎨 Color Palette System Dependencies**
 
-#### **Multi-Layer Element Classification**
-The color palette system must handle **four distinct element types** with different styling approaches:
+The palette system handles **cards** (CSS variables), **clones** (inline selected state), **badges** (SELECTED state colors to match clones), and **timeline** (normal state). Palette or clone changes require **cache clearing** (`clearAllCache()`) so the registry discovers new elements. Badges must update on `color-palette-changed`, `job-selected`, and badge visibility toggle.
 
-```javascript
-// Element types requiring different palette application strategies
-1. **Cards (cDivs/rDivs)**: Use CSS variables → `background-color: var(--data-background-color)`
-2. **Clones**: Use inline styles → `element.style.backgroundColor = selectedStateColor`  
-3. **Badges**: Use SELECTED state colors → `data-background-color-selected`
-4. **Timeline Elements**: Use normal state colors → `data-background-color`
-```
+### **State System Coordination**
 
-#### **Critical Badge Color Dependency**
-**Badges MUST use SELECTED state colors** to visually match clones, not normal state colors:
-
-```javascript
-// CORRECT: Badges match clone appearance
-const selectedBgColor = badge.getAttribute('data-background-color-selected');
-badge.style.backgroundColor = selectedBgColor;
-
-// INCORRECT: Badges use unselected card colors  
-const normalBgColor = badge.getAttribute('data-background-color'); // Wrong!
-```
-
-#### **Element Registry Cache Invalidation Chain**
-Color palette changes require **strategic cache clearing** to find newly created elements:
-
-```
-Palette Change → clearAllCache() → Fresh Element Discovery → Apply Colors
-├── Clone Creation → clearAllCache() → Palette System Finds Clone
-├── Badge Creation → clearAllCache() → Palette System Finds Badges  
-└── Element Removal → clearAllCache() → Palette System Updates
-```
-
-### **🔄 Clone & Badge Lifecycle Dependencies**
-
-#### **Clone Visibility State Machine**
-```
-Original Card (visible) → Selection Event → Clone Creation → Original Hidden
-├── Clone: display=block, visibility=visible, opacity=1
-├── Original: display=none !important, visibility=hidden, opacity=0
-└── Badge Container: positioned relative to CLONE, not original
-```
-
-#### **Badge-Clone Color Synchronization**
-**Critical dependency**: Badges must update when either:
-1. **Color palette changes** (global event)
-2. **Clone is created/updated** (selection event)  
-3. **Badge visibility toggles** (toggle event)
-
-```javascript
-// Badge color update triggers
-watch(isBadgesVisible, (newValue) => {
-  if (selectedCard && newValue) {
-    applySelectedStateColorsToAllBadges();
-  }
-});
-
-selectionManager.addEventListener('job-selected', () => {
-  applySelectedStateColorsToAllBadges();
-});
-
-window.addEventListener('color-palette-changed', () => {
-  applySelectedStateColorsToAllBadges();
-});
-```
-
-### **📊 Percentage Label Synchronization**
-
-#### **Dual Calculation Requirement**
-**Scene** and **Resume** viewer percentages MUST use **identical mapping logic**:
-
-```javascript
-// BOTH SceneContainer.vue AND AppContent.vue must use same logic
-const calculateDisplayPercentage = (rawPercentage) => {
-  if (rawPercentage <= 10) return 0;
-  if (rawPercentage >= 90) return 100;
-  
-  const mapped = ((rawPercentage - 5) / 90) * 100;
-  return Math.round(Math.max(0, Math.min(100, mapped)));
-};
-
-// Scene + Resume MUST always equal 100%
-const scenePercent = calculateDisplayPercentage(rawPercentage);
-const resumePercent = 100 - scenePercent;
-```
-
-#### **State System Coordination**
-**Critical dependency**: Resize handle must update **both state systems**:
-
-```javascript
-// Update both persistence and reactive systems
-updateAppState({ scene: { percentage: newValue } }); // Persistence
-storeActions.setScenePercentage(newValue);           // Reactive UI
-```
+The resize handle must update **both** persistence and reactive UI: `updateAppState(...)` for persistence and `storeActions.setScenePercentage(...)` for labels. Scene and Resume viewer percentages use the same mapping logic and must total 100%.
 
 ### **🎯 Template Ref Injection Dependencies**
 
 #### **DOM Element Availability Chain**
-Components depend on **parent-to-child template ref injection**:
-
-```
-AppContent.vue (parent)
-├── sceneContainerRef → SceneContainer.setupDom()
-├── bullsEyeRef → useBullsEye.setBullsEyeElement()  
-└── focalPointRef → useFocalPoint.setFocalPointElement()
-
-SceneContainer.vue (child)  
-├── scenePlaneRef → useCardsController.setScenePlaneElement()
-└── sceneContentRef → useTimeline.setContentElement()
-```
+**Parent-to-child template ref injection**: AppContent provides sceneContainerRef, bullsEyeRef, and focalPointRef to SceneContainer, bullsEye, and focal point systems; SceneContainer provides scenePlaneRef to CardsController and sceneContentRef to Timeline. Refs are passed into managers via setXxxElement() so DOM is never queried by id.
 
 #### **Initialization Order Dependency**
-**Critical timing**: DOM elements must be available before dependent systems initialize:
-
-```
-1. Vue Mount → Template Refs Available
-2. Template Ref Watchers → Inject Elements into Systems  
-3. System Initialization → Use Injected Elements
-4. Event Binding → Attach to Real DOM Elements
-```
+**Critical timing**: (1) Vue mount makes template refs available; (2) watchers on those refs inject elements into systems; (3) systems then initialize using the injected elements; (4) event binding attaches to the real DOM. Initialization code runs only after refs are set.
 
 ### **⚡ Event System Coordination**
 
 #### **Debounced Event Architecture**
-**Performance dependency**: Resize events use **smart debouncing** to prevent cascade:
-
-```javascript
-// During dragging: debounce events (150ms)
-// After drag ends: immediate flush
-// Step operations: no debouncing (instant)
-
-if (isDragging) {
-  debouncedEventDispatch(newValue, 150);
-} else {
-  immediateEventDispatch(newValue);
-}
-```
+**Performance dependency**: Resize events are debounced (e.g. 150ms) during drag to avoid cascading updates; on drag end or for step operations events dispatch immediately.
 
 #### **Cross-Component Event Chain**
-**Critical event coordination** for selection synchronization:
-
-```
-cDiv Click → selectionManager.selectJobNumber() → 'job-selected' Event
-├── Create Clone (hideOriginal + showClone)
-├── Show Badges (positionRelativeToClone)  
-├── Clear Cache (elementRegistry.clearAllCache)
-├── Apply Palette (selectedStateColors)
-└── Scroll Into View (rDiv + cDiv coordination)
-```
+**Selection sync**: A cDiv click calls selectionManager.selectJobNumber() and fires 'job-selected'. Listeners then create the clone (hide original, show clone), show badges relative to the clone, clear the element registry cache, apply palette (selected state colors), and scroll into view (rDiv and cDiv in sync).
 
 ### **🏗️ System Architecture Dependencies**
 
 #### **Global Element Registry Pattern** 
-**Performance optimization**: Cached DOM queries with **strategic invalidation**:
-
-```javascript
-// Pattern: Cache → Use → Invalidate → Refresh
-elementRegistry.getAllBizCardDivs() // Cached results
-↓
-newElement.appendChild() // DOM changes  
-↓
-elementRegistry.clearAllCache() // Invalidate cache
-↓  
-elementRegistry.getAllBizCardDivs() // Fresh results
-```
+**Performance optimization**: The element registry caches DOM queries (e.g. getAllBizCardDivs). After DOM changes (clone creation, palette updates), call `clearAllCache()` so the next query returns fresh results.
 
 #### **Composable Singleton Pattern**
-**State management**: Global state sharing without tight coupling:
-
-```javascript
-// Singleton composables for global state
-const isBadgesVisible = ref(true); // Shared across all components
-
-export function useBadgeToggle() {
-  return { isBadgesVisible, toggleBadges }; // Same instance everywhere
-}
-```
+**State management**: Composables like useBadgeToggle hold shared refs at module scope so every component gets the same reactive instance (e.g. isBadgesVisible, toggleBadges) without prop drilling.
 
 ### **🔧 Critical Maintenance Guidelines**
 
@@ -356,16 +99,7 @@ The application implements a **multi-layered "Fail Fast" approach** with differe
 
 ### **🚨 1. Immediate Fail-Fast Validation (Development Safety)**
 
-**Strategy**: Throw errors immediately when critical dependencies are missing
-**Location**: `modules/composables/useCardsController.mjs` lines 32-35
-
-```javascript
-// Fail fast - no fallbacks allowed per user requirement
-if (!bullsEyeService) throw new Error('[useCardsController] bullsEyeService not provided')
-if (!timelineService) throw new Error('[useCardsController] timelineService not provided')
-if (!colorPaletteService) throw new Error('[useCardsController] colorPaletteService not provided')
-if (!sceneContainerService) throw new Error('[useCardsController] sceneContainerService not provided')
-```
+**Strategy**: Throw errors immediately when critical dependencies are missing (e.g. bullsEye, timeline, colorPalette, sceneContainer in useCardsController). No fallbacks—missing Provide/Inject services surface at once with clear error messages.
 
 **Benefits**:
 - ✅ **Immediate detection** of missing Vue Provide/Inject services
@@ -375,28 +109,7 @@ if (!sceneContainerService) throw new Error('[useCardsController] sceneContainer
 
 ### **🎯 2. Reactive Readiness Tracking (Smart Waiting)**
 
-**Strategy**: Reactive computed properties that track when dependencies are truly ready
-**Location**: `modules/composables/useCardsController.mjs` lines 38-50
-
-```javascript
-// CRITICAL: Reactive computed that tracks when dependencies are ready
-const allDependenciesReady = computed(() => {
-    const ready = bullsEyeService.isReady?.value && 
-                 timelineService.isReady?.value && 
-                 colorPaletteService.isReady?.value &&
-                 sceneContainerService.isReady?.value
-    
-    console.log('[useCardsController] Dependencies ready:', {
-        bullsEye: bullsEyeService.isReady?.value,
-        timeline: timelineService.isReady?.value,
-        colorPalette: colorPaletteService.isReady?.value,
-        sceneContainer: sceneContainerService.isReady?.value,
-        overall: ready
-    })
-    
-    return ready
-})
-```
+**Strategy**: A reactive computed tracks when all required services report ready (`isReady`). Logging shows which dependency is not ready so initialization proceeds only when the full set is available.
 
 **Benefits**:
 - ✅ **Real-time readiness monitoring** with detailed logging
@@ -406,28 +119,7 @@ const allDependenciesReady = computed(() => {
 
 ### **🏗️ 3. Service Readiness Declaration (Provider Contracts)**
 
-**Strategy**: Services declare their readiness state through standardized `isReady` properties
-**Location**: `modules/components/AppContent.vue` lines 139-163
-
-```javascript
-const bullsEyeService = {
-  isReady: computed(() => true), // Bulls-eye composable is ready when imported
-  setBullsEyeElement,
-  setSceneContainerElement
-}
-
-const timelineService = {
-  isReady: ref(true), // Mark ready immediately; CardsController will initialize timeline if needed
-}
-
-const colorPaletteService = {
-  isReady: computed(() => true), // Color palette composable is ready when loaded
-}
-
-const sceneContainerService = {
-  isReady: ref(true), // Mark ready immediately; CardsController retries if scene-plane isn't yet available
-}
-```
+**Strategy**: Each provided service exposes a standard `isReady` (computed or ref). Parents in AppContent declare when bullsEye, timeline, colorPalette, and sceneContainer are ready so consumers can wait on a single contract.
 
 **Benefits**:
 - ✅ **Standardized readiness interface** across all services
@@ -437,22 +129,7 @@ const sceneContainerService = {
 
 ### **⏰ 4. Idempotent Initialization with Promises (Async Coordination)**
 
-**Strategy**: Single initialization with promise-based coordination
-**Location**: `modules/core/stateManager.mjs` lines 319-331
-
-```javascript
-let initStatePromise = null;
-
-export function initializeState() {
-    if (!initStatePromise) {  // Only initialize once
-        initStatePromise = loadState().then(state => {
-            AppState = state;
-            // ... initialization code
-        });
-    }
-    return initStatePromise;  // Return same promise for subsequent calls
-}
-```
+**Strategy**: State initialization runs once; the same promise is returned for every caller so multiple consumers can await without duplicate work or races (e.g. in stateManager).
 
 **Benefits**:
 - ✅ **Single initialization guarantee** - prevents double-initialization bugs
@@ -462,17 +139,7 @@ export function initializeState() {
 
 ### **🔄 5. Retry with Timeout (Graceful Recovery)**
 
-**Strategy**: Retry initialization if dependencies aren't ready, with timeout
-**Location**: `modules/composables/useCardsController.mjs` line 104
-
-```javascript
-let scenePlaneEl = scenePlaneElement || (elementRegistry && elementRegistry.getScenePlane && elementRegistry.getScenePlane())
-if (!scenePlaneEl) {
-    console.warn('[CardsController] scene-plane element not found, retrying...')
-    setTimeout(initializeCardsController, 500)  // Retry in 500ms
-    return
-}
-```
+**Strategy**: If a required DOM element (e.g. scene-plane) is not yet available, the controller schedules a retry after a short delay instead of failing permanently, so mount-order edge cases recover automatically.
 
 **Benefits**:
 - ✅ **Handles timing edge cases** - DOM elements that aren't ready yet
@@ -482,16 +149,7 @@ if (!scenePlaneEl) {
 
 ### **🛡️ 6. Safe Access Patterns (Runtime Protection)**
 
-**Strategy**: Null-safe access to dependencies that might not be initialized
-**Location**: Throughout `modules/composables/useCardsController.mjs`
-
-```javascript
-// Safe access with comprehensive null checking
-let scenePlaneEl = scenePlaneElement || (elementRegistry && elementRegistry.getScenePlane && elementRegistry.getScenePlane())
-
-// Safe method calls with existence checking  
-if (elementRegistry && elementRegistry.clearAllCache) elementRegistry.clearAllCache()
-```
+**Strategy**: Optional chaining and existence checks before calling registry or service methods (e.g. getScenePlane, clearAllCache) so timing or missing deps do not cause runtime crashes.
 
 **Benefits**:
 - ✅ **Runtime robustness** - prevents crashes from timing issues
@@ -501,17 +159,7 @@ if (elementRegistry && elementRegistry.clearAllCache) elementRegistry.clearAllCa
 
 ### **👁️ 7. Template Ref Watchers (DOM Readiness)**
 
-**Strategy**: Watch for DOM element availability and register when ready
-**Location**: `modules/components/AppContent.vue` lines 216-237
-
-```javascript
-watch(focalPointRef, (newRef) => {
-  if (newRef) {
-    setFocalPointElement(newRef)
-    globalElementRegistry.registerElement('focal-point', newRef)
-  }
-}, { immediate: true })
-```
+**Strategy**: Watchers on template refs (e.g. focalPointRef) run when refs become available; they inject the element into services and register it in the global element registry, with `immediate: true` so already-mounted refs are handled.
 
 **Benefits**:
 - ✅ **DOM timing coordination** - automatically detects when elements are mounted
@@ -521,21 +169,7 @@ watch(focalPointRef, (newRef) => {
 
 ### **🎪 8. Global Singleton Coordination (Legacy Bridge)**
 
-**Strategy**: Store critical singletons globally for cross-component access
-**Location**: Throughout codebase
-
-```javascript
-// Store singleton instances globally
-window.selectionManager = selectionManager;
-window.resumeListController = this;
-
-// Access with fail-fast validation
-const globalSelectionManager = window.selectionManager
-if (!globalSelectionManager) {
-    console.error('❌ CRITICAL: window.selectionManager not available!')
-    return false  // or throw error in development
-}
-```
+**Strategy**: Some singletons (e.g. selectionManager, resumeListController) are attached to `window` for legacy or cross-cutting access. Call sites validate presence and fail fast with clear errors when a singleton is missing.
 
 **Benefits**:
 - ✅ **Cross-cutting coordination** - bridges Vue and legacy systems
@@ -570,110 +204,44 @@ This **layered approach** ensures that dependency problems are caught early in d
 
 Large `business cards`are used to describe various jobs, each with its role, 
 employer, and time period. These cards are larger, slowing moving, and further away from your view. Each `business card` is surrounded by its flock of
-smaller `skill cards`that hovers around them.
+smaller `skill cards` that hover around them. Business cards include a list of skills learned or used during that job. Click on any skill to see that skill card. Each skill card includes a back arrow that points to each job that used that skill.
 
-Mouse motion over the left side of the window causes your point of view to move around, using`motion parallax` and a fuzzy `depth of field`to give the flock its sense of depth. 
+Mouse motion over the scene plane causes your point of view to move around, using `motion parallax` and a fuzzy `depth of field` to give the flock its sense of depth. Besides focal-point–driven motion parallax, a sense of 3D depth is enhanced by blur and darkness that increase with distance from the view plane.
 
-Moving the mouse vertically also causes your view to slide over the `career imeline` shown on the far left edge. 
+Moving the mouse vertically also causes your view to slide over the `career timeline` shown at the scene edge. 
 
-Click on a `business card` or `skill card` to make it pop it into focus at the top of the flock, and to see its details in the right-hand details area. 
+Click on a `business card` or `skill card` to make it pop into focus at the top of the flock, and to see its details in the details area. Use the color palette selector to enhance the viewing experience.
 
-Each job can have a long description, which is defined in an offline-editable Excel spreadsheet. Each description contains related skills, terms, and tools used for that job.
+Each job has a description (from your uploaded resume). Skills, terms, and tools can be marked in the resume details editor. Each skill is displayed as a clickable link that pops up its `skill card`.
 
-Each skill is marked up in with \[square brackets\] in the spreadsheet description, and is displayed as a clickable link that pops up its `skill card`.
+Web links are marked up with \(parens\) and are displayed with clickable world wide web icons <img src="static_content/icons/icons8-url-16-white.ico">. 
 
-Web links are marked up with \(parens\) in the spreadsheet and are displayed with clickable world wide web icons <img src="static_content/icons/icons8-url-16-white.ico">. 
+Image links are marked up with \{curly braces\} and are displayed as clickable image icons <img src="static_content/icons/icons8-img-16-white.png'>. 
 
-Image links are marked up with  \{curly braces\} in the spreadheet and are displayed as clickable image icons <img src="static_content/icons/icons8-img-16-white.png'>. 
-
-A `skill card` is created for each \[square\] bracketed phrase in the job description. A skill is typically used over many jobs, so each `skill card` has 
+A `skill card` is created for each \[square\] bracketed phrase in the job details. A skill is typically used over many jobs, so each `skill card` has 
 one or more return icons <img src="static_content/icons/icons8-back-16-black.png"> that serve as clickable links back to jobs that used that skill. The number 
 of return icons indicates the number of jobs and the amount of time used to hone that skill.
 
-# Run the `resume-flock` career resume web app using VSCode
+# Run the `resume-flock` career resume web app using Cursor with Claude Code agent
 
 ## Clone this repo to your local development folder  
 `cd <your-local-dev-folder>`
 `git clone git@github.com:sbecker11/resume-flock.git`
-`cd <your-local-dev-folder>/fock-of-postcards`
+`cd <your-local-dev-folder>/resume-flock`
 
-**Resume parser (optional):** To parse DOCX/PDF resumes into flock data (e.g. `npm run parse-resume`), clone the resume-parser repo:
+**Resume parser:** DOCX and PDF resumes are parsed at runtime. The app uses the **resume-parser** package to convert uploaded resumes into flock data (jobs and skills). To work on or extend the parser locally, clone the resume-parser repo:
 `git clone git@github.com:sbecker11/resume-parser.git`
  
-## Install VSCode + LiverServer  
+## Cursor IDE with Vite
 
-The `resume-flock` webapp uses ES6 Modules. This requires that you have an ultra lightweight webserver running on your local machine that supports ES6. 
+The app is built with **Vite** and uses ES modules. Use **Cursor** (or another editor) with the project's dev script:
 
-LiveServer is an ultra light weight webserver that works with Google Chrome browser. Installation of Vscode IDE and the LiveServer extension is easy-peasy.  
+- Install dependencies: `npm install`
+- Start the dev server: `npm run dev`
 
-- Install the  <a href="https://code.visualstudio.com">vscode IDE</a> on your local OS.    
-<a href="https://code.visualstudio.com/"><img src="static_content/icons/vscode-IDE-logo.png"/></a>
+This runs the Vite dev server (frontend) and the backend API. Open the URL shown in the terminal (e.g. `http://localhost:5174`) in your browser. Upload a DOCX or PDF resume to explore your career as business cards and skill cards.
 
-- Start vscode and open the newly cloned `resume-flock` folder in vscode  
-
-- Click the "extensions" icon in the left panel of vscode to search for vscode extensions  
-<img src="static_content/icons/vscode-extensions-icon.png"/>  
-
-- Search for and install vscode's <a href="https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer">LiveServer</a> extension  
-<a href="https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer"><img src="static_content/icons/vscode-liveserver-logo.png"/></a>  
-
-
-- Click the "explorer" icon at the top left of vscode to explore your local filesystem  
-<img src="static_content/icons/vscode-explorer-icon.png"/>  
-
-- Click the "Go Live" button at the bottom right in vscode to start the vscode-embedded webserver  
-<img src="static_content/icons/vscode-go-live-icon.png"/> 
-
-- Note that the "Go Live" button now shows either "Port : 5500" or "Port : 5501"
-
-- Click the button below that matches the "Go Live" button's new Port value:  
-    <a href="http://localhost:5500/index.html"><img src="./static_content/graphics/GoLivePort5500.png"/></a>  
-    <a href="http://localhost:5501/index.html"><img src="./static_content/graphics/GoLivePort5501.png"/></a>  
-
-
-You should now be up and running with the website's default configuration which shows off MY OWN stellar technology career.
-
-But wouldn't it be better to configure the app to show off your own illustrious career?
- 
- # How to customize the webapp to show your own illustrious career
-
-- Go to the project's local home folder
-`cd <your-local-dev-folder>/fock-of-postcards`
-
-- Go to jobs folder
-`cd static_content/jobs`
-
-- Edit the `jobs.xlsx` Microsoft Excel spreadsheet file
-
-### Customize the Jobs Spreadsheet  
-
-The jobs spreadsheet has one row for each job description. 
-Each job description has the following columns that you 
-need to fill out:
-* role  
-* employer  
-* start      (YYYY-MM-DD)  
-* end        (YYYY-MM-DD)  
-* z-index    (from 1 to 3)
-* css name	 (darkgreen)
-* css RGB	   (#006900)
-* css color	 (Excel color background)
-* text color (#FFFFFF) or (#000000)
-* description  
-
-The `description` cell holds an arbitrary length bulleted job description. As described above, skills, terms, and tools can be wrapped with \[square brackets\] to create a flock of `skill cards` for each `business card`.
-
-
-### Regenerate the Jobs module  
-
-- Save your updated Excel file
-
-- Go back to your shell and run the python script that converts the Excel jobs spreadsheet file `jobs.xlsx` into a NodeJS module file `jobs.mjs`:
-`python xlsx2mjs.py`
-
-If the app is already running, it will re-load the `jobs.mjs` file. 
-
-# Behold your own glorious flock of postcards
+# Behold your flock of skill cards and business cards
 
 ## Naming Conventions
 
@@ -696,10 +264,7 @@ This project follows consistent naming conventions to avoid conflicts and improv
   - Example: `focalPointStyle`, `sceneContainerStyle`
 
 ### Architecture
-The application uses a reactive architecture with Vue composables:
-```
-viewport → bullsEye → aimPoint → focalPoint
-```
+The application uses a reactive chain: viewport drives bullsEye, which drives aimPoint, which drives focalPoint; Vue composables wire these together.
 
 **Benefits:**
 - Clear distinction between different types of code
@@ -725,23 +290,7 @@ Initialization Sequence:
 This project uses **Vue 3 Composition API** patterns to provide clean, maintainable, and performant reactive state management:
 
 ### 1. **Composable-Based State Management** 
-The project uses **Vue 3 composables** for reactive state without tight coupling:
-
-```javascript
-// useBadgeToggle.mjs - Global reactive state
-import { ref } from 'vue'
-
-const isBadgesVisible = ref(true)
-
-export function useBadgeToggle() {
-  const toggleBadges = () => {
-    isBadgesVisible.value = !isBadgesVisible.value
-    return isBadgesVisible.value
-  }
-  
-  return { isBadgesVisible, toggleBadges }
-}
-```
+The project uses **Vue 3 composables** (e.g. useBadgeToggle, useResizeHandle) that expose shared reactive refs and methods. State lives in composables so components stay decoupled and get automatic UI updates.
 
 **Features:**
 - **Reactive references**: Automatic UI updates when state changes
@@ -749,21 +298,7 @@ export function useBadgeToggle() {
 - **Loose coupling**: Components import only what they need
 
 ### 2. **Vue 3 Watcher System**
-Components use **watchers** for reactive data observation:
-
-```javascript
-// Real-time reactive updates
-watch(isBadgesVisible, (newValue) => {
-  const isCurrentlySelected = selectionManager.getSelectedJobNumber() === jobNumber
-  if (isCurrentlySelected) {
-    if (newValue) {
-      showBadgesWithObserver()
-    } else {
-      hideBadgesWithObserver()
-    }
-  }
-})
-```
+Components use **watchers** so that when shared state (e.g. badge visibility, selection) changes, side effects run—for example showing or hiding badges for the selected job so UI stays in sync without manual wiring.
 
 **Benefits:**
 - **Automatic reactivity**: State changes trigger appropriate actions
@@ -771,94 +306,19 @@ watch(isBadgesVisible, (newValue) => {
 - **Declarative**: Clear cause-and-effect relationships
 
 ### 3. **Template Refs and DOM Access**
-Modern **template refs** replace direct DOM queries:
-
-```vue
-<template>
-  <div ref="sceneContainerRef" class="scene-container">
-    <ResizeHandle ref="resizeHandleRef" />
-  </div>
-</template>
-
-<script setup>
-import { ref, onMounted } from 'vue'
-
-const sceneContainerRef = ref(null)
-const resizeHandleRef = ref(null)
-
-onMounted(() => {
-  // Direct access to DOM elements when needed
-  if (sceneContainerRef.value) {
-    sceneContainerRef.value.addEventListener('resize', handleResize)
-  }
-})
-</script>
-```
+Components use **template refs** (e.g. sceneContainerRef, resizeHandleRef) instead of getElementById. Refs are set after mount, so DOM access and event binding happen in onMounted or in watchers that run when refs become available.
 
 ### 4. **Event-Driven Communication**
-Components communicate via **custom events** and **reactive state**:
-
-```javascript
-// Event dispatching for component communication
-window.dispatchEvent(new CustomEvent('resize-handle-changed', {
-  detail: { sceneWidth: finalSceneWidth }
-}));
-
-// Reactive state updates
-const { isBadgesVisible } = useBadgeToggle() // Automatically reactive
-```
+Components communicate via **custom events** (e.g. resize-handle-changed, job-selected) with detail payloads, and by reading shared **reactive state** from composables so multiple parts of the app stay in sync without direct references.
 
 ### 5. **TypeScript Integration**
-**Type-safe** component interfaces and props:
-
-```typescript
-interface ResizeHandleProps {
-  initialPercentage?: number
-}
-
-interface ResizeHandleEmits {
-  (e: 'resize', value: number): void
-}
-
-const props = withDefaults(defineProps<ResizeHandleProps>(), {
-  initialPercentage: 50
-})
-```
+Components use **typed props and emits** (e.g. ResizeHandleProps, ResizeHandleEmits) with defineProps and defineEmits so the contract between parent and child is clear and the tooling can catch mismatches.
 
 ### 6. **Performance-Optimized Patterns**
-**Debounced events** and **computed properties** for optimal performance:
-
-```javascript
-// Debounced resize events prevent cascade issues
-function dispatchResizeEvents(sceneWidth, immediate = false) {
-  if (immediate || !isDragging.value) {
-    // Immediate dispatch
-    window.dispatchEvent(new CustomEvent('resize-handle-changed', {
-      detail: { sceneWidth }
-    }));
-  } else {
-    // Debounce during dragging
-    _eventDebounceTimeoutId = setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('resize-handle-changed', {
-        detail: { sceneWidth: _pendingSceneWidth }
-      }));
-    }, 150);
-  }
-}
-```
+Resize and other high-frequency updates use **debouncing** (e.g. 150ms during drag) so the UI does not cascade; when not dragging, events dispatch immediately. **Computed properties** avoid redundant work by depending only on reactive inputs.
 
 ### 7. **Module Organization Strategy**
-**Clean separation** of concerns with modern patterns:
-
-```
-modules/
-├── components/     # Vue 3 components with <script setup>
-├── composables/    # Reactive state management composables
-├── types/          # TypeScript type definitions
-├── utils/          # Pure utility functions
-├── core/           # Legacy managers (being phased out)
-└── scene/          # Scene-specific reactive systems
-```
+**Clean separation**: `components/` (Vue SFCs with script setup), `composables/` (reactive state and logic), `types/` (TypeScript definitions), `utils/` (pure helpers), `core/` (managers and services), `scene/` (scene and card logic).
 
 ## 🎯 **Key Benefits of Vue 3 Architecture**
 
@@ -886,54 +346,18 @@ The application contains business card elements (cDivs) that can visually overla
 The fix uses a **tracked hover state** approach with **DOM reordering** and **event capture**:
 
 #### 1. Tracked Hover State
-```javascript
-// CardsController.mjs
-this.currentlyHoveredElement = null; // Track currently hovered element
-
-// Only process if this is a different element than currently hovered
-if (this.currentlyHoveredElement === element) return;
-```
+CardsController keeps a single **currently hovered element**. Incoming mouseenter is ignored if it is for the same element, avoiding redundant updates and flicker.
 
 #### 2. DOM Reordering Strategy
-- **Hovered Element Positioning**: Move hovered cDiv to position N-1 in DOM (just before selected clone at position N)
-- **Original Position Tracking**: Store reference to `nextElementSibling` for restoration
-- **Atomic Operations**: Use `insertBefore()` for seamless DOM manipulation
-
-```javascript
-// Save original position before moving
-const originalNextSibling = element.nextElementSibling;
-element.setAttribute('data-original-next-sibling', 
-  originalNextSibling ? originalNextSibling.getAttribute('data-job-number') : 'null');
-
-// Move to position N-1 (before selected clone)
-const lastChild = parent.lastElementChild;
-if (lastChild && lastChild !== element) {
-  parent.insertBefore(element, lastChild);
-}
-```
+- **Hovered Element Positioning**: The hovered cDiv is moved in the DOM to position N-1 (just before the selected clone at N) so it receives pointer events on top.
+- **Original Position Tracking**: The original next sibling (or a marker) is stored (e.g. in a data attribute) so the element can be restored on mouseleave.
+- **Atomic Operations**: `insertBefore()` is used for a single, predictable DOM update.
 
 #### 3. Event Capture and Propagation Control
-```javascript
-// Use capture phase to prevent event conflicts
-bizCardDiv.addEventListener('mouseenter', (e) => {
-  e.stopPropagation();
-  this.handleMouseEnterEvent(bizCardDiv);
-}, true); // Capture phase
-```
+mouseenter is attached in the **capture phase** and propagation is stopped so overlapping elements do not compete; only the intended handler runs for the hovered card.
 
 #### 4. Position Restoration
-```javascript
-// Restore original position on mouseleave
-const originalNextSiblingJobNumber = element.getAttribute('data-original-next-sibling');
-if (originalNextSiblingJobNumber === 'null') {
-  parent.appendChild(element); // Was last child
-} else {
-  const originalNextSibling = parent.querySelector(`[data-job-number="${originalNextSiblingJobNumber}"]`);
-  if (originalNextSibling) {
-    parent.insertBefore(element, originalNextSibling);
-  }
-}
-```
+On mouseleave, the element is reinserted using the stored original-next-sibling reference (or appended if it was the last child), restoring DOM order and avoiding stale stacking.
 
 ### Key Insights
 - **DOM Order vs Visual Layer**: DOM reordering doesn't affect visual stacking for absolutely positioned elements (z-index controls visual layer)
@@ -963,17 +387,7 @@ This project implements a clear **separation of concerns** across different arch
 - **Reusable**: Can be imported into any other module or component
 - **Testable**: Easy to unit test in isolation
 
-**Examples:**
-```javascript
-// modules/utils/mathUtils.mjs - Pure mathematical functions
-export function calculateDistance(point1, point2) { ... }
-
-// modules/core/stateManager.mjs - Global state management
-export class StateManager { ... }
-
-// modules/utils/colorUtils.mjs - Color manipulation utilities
-export function get_RGB_from_Hex(hex) { ... }
-```
+**Examples:** Pure helpers (e.g. mathUtils, colorUtils), global state (stateManager), and other framework-agnostic logic live in `.mjs` modules.
 
 **Responsibilities:**
 - Data processing and transformation
@@ -991,22 +405,7 @@ export function get_RGB_from_Hex(hex) { ... }
 - **Template-driven**: Combine HTML templates with JavaScript logic
 - **Lifecycle-aware**: Leverage Vue's component lifecycle hooks
 
-**Examples:**
-```javascript
-// modules/components/AppContent.vue - Main application component
-export default {
-  setup() {
-    // Component logic
-  },
-  template: `<div>...</div>`
-}
-
-// modules/components/ResumeContainer.vue - Resume display component
-export default {
-  props: ['data'],
-  emits: ['selection-changed']
-}
-```
+**Examples:** AppContent (main shell), ResumeContainer (resume list and details), and other Vue SFCs use setup(), props, and emits for UI and interaction.
 
 **Responsibilities:**
 - UI rendering and presentation
@@ -1024,22 +423,7 @@ export default {
 - **Stateful**: Maintain reactive state across component instances
 - **Framework-specific**: Built for Vue 3 Composition API
 
-**Examples:**
-```javascript
-// modules/composables/useViewport.mjs - Reactive viewport state
-export function useViewport() {
-  const viewportState = ref({ width: 0, height: 0 });
-  const updateViewport = () => { ... };
-  return { viewportState, updateViewport };
-}
-
-// modules/composables/useColorPalette.mjs - Reactive color management
-export function useColorPalette() {
-  const currentPalette = ref(null);
-  const applyPalette = (element) => { ... };
-  return { currentPalette, applyPalette };
-}
-```
+**Examples:** useViewport, useColorPalette, and other `use*.mjs` composables expose refs and methods (e.g. viewportState/updateViewport, currentPalette/applyPalette) for reactive, shareable state.
 
 **Responsibilities:**
 - Reactive state management
@@ -1070,104 +454,26 @@ The project uses **singleton patterns** strategically to manage global state and
 ### **Singleton Implementation Patterns**
 
 #### **1. Classic Singleton Pattern**
-```javascript
-// modules/core/stateManager.mjs
-class StateManager {
-  constructor() {
-    if (StateManager.instance) {
-      return StateManager.instance;
-    }
-    StateManager.instance = this;
-    this.state = {};
-  }
-}
-
-const stateManager = new StateManager();
-export { stateManager };
-```
+StateManager and similar cores use a static `instance` check in the constructor so only one instance exists; the module exports that single instance (e.g. `stateManager`).
 
 #### **2. EventTarget Singleton**
-```javascript
-// modules/core/selectionManager.mjs
-class SelectionManager extends EventTarget {
-  constructor() {
-    super();
-    if (SelectionManager.instance) {
-      return SelectionManager.instance;
-    }
-    SelectionManager.instance = this;
-    this.selectedItems = new Set();
-  }
-}
-
-const selectionManager = new SelectionManager();
-export { selectionManager };
-```
+SelectionManager extends EventTarget and uses the same constructor guard; one instance is exported so selection and custom events are shared app-wide.
 
 #### **3. Vue Composable Singleton**
-```javascript
-// modules/composables/useViewport.mjs
-let _instance = null;
-
-export function useViewport() {
-  if (_instance) {
-    return _instance;
-  }
-  
-  const viewportState = ref({});
-  const updateViewport = () => { ... };
-  
-  _instance = { viewportState, updateViewport };
-  return _instance;
-}
-```
+Composables like useViewport can keep a module-level `_instance` and return it on subsequent calls so all components share the same reactive state and methods.
 
 ### **Singleton Conversion Process**
 
 When converting a class to a singleton pattern:
 
 #### **Step 1: Analysis**
-```javascript
-// Before: Class with instance
-class ResumeItemsController {
-  constructor() {
-    this.items = [];
-    this.isInitialized = false;
-  }
-}
-
-const resumeItemsController = new ResumeItemsController();
-export { resumeItemsController };
-```
+Identify a class that is currently instantiated once and exported (e.g. ResumeItemsController with items and isInitialized). That candidate is turned into a singleton.
 
 #### **Step 2: Add Singleton Pattern**
-```javascript
-// After: Singleton pattern
-class ResumeItemsController {
-  constructor() {
-    if (ResumeItemsController.instance) {
-      return ResumeItemsController.instance;
-    }
-    
-    this.items = [];
-    this.isInitialized = false;
-    
-    ResumeItemsController.instance = this;
-  }
-}
-
-const resumeItemsController = new ResumeItemsController();
-export { resumeItemsController };
-```
+In the constructor, add a check for `ClassName.instance`; if it exists, return it. Otherwise set `ClassName.instance = this` before any other initialization. Keep a single module-level export.
 
 #### **Step 3: Update Dependencies**
-```javascript
-// Update all imports to use the singleton
-import { resumeItemsController } from '../core/resumeItemsController.mjs';
-
-// No need to create new instances
-// resumeItemsController is already initialized
-```
+Call sites import the singleton from its module and use it directly; no `new` or factory calls—the singleton is already initialized.
 
 ### **Benefits of This Separation**
 
@@ -1194,18 +500,7 @@ This layered approach ensures that the application remains maintainable, testabl
 
 ### **🏗️ Critical Layout Constraint: Available Width Calculation**
 
-**IMPORTANT**: The total available width for scene and resume containers is constrained by the resize handle:
-
-```javascript
-// Available width calculation - FUNDAMENTAL CONSTRAINT
-const windowWidth = window.innerWidth;
-const resizeHandleWidth = 20; // Fixed 20px width from app_state.json
-const availableWidth = windowWidth - resizeHandleWidth;
-
-// Percentage calculations MUST use availableWidth, not windowWidth
-const sceneWidthPixels = (scenePercentage / 100) * availableWidth;
-const resumeWidthPixels = (resumePercentage / 100) * availableWidth;
-```
+**IMPORTANT**: The total available width for scene and resume is **window width minus the fixed 20px resize handle**. All percentage-based layout (scene/resume split, drag, persistence) must use this **available width**, not raw window width.
 
 This constraint affects:
 - **Percentage calculations** in all components
@@ -1215,31 +510,11 @@ This constraint affects:
 
 ### **📐 Layout Math Verification**
 
-All layout calculations must respect this fundamental equation:
-```
-sceneWidthPixels + resumeWidthPixels + resizeHandleWidth = windowWidth
-```
-
-**Example** (1920px window):
-- Available width: `1920 - 20 = 1900px`
-- Scene 60%: `(60/100) * 1900 = 1140px`
-- Resume 40%: `(40/100) * 1900 = 760px`
-- Total: `1140 + 760 + 20 = 1920px` ✅
+All layout calculations must satisfy: **scene width + resume width + 20px handle = window width**. Example: 1920px window → 1900px available; 60% scene = 1140px, 40% resume = 760px; 1140 + 760 + 20 = 1920.
 
 ### **⚠️ Common Implementation Errors**
 
-**❌ WRONG** - Using window width directly:
-```javascript
-// This breaks layout math!
-const sceneWidth = (scenePercentage / 100) * window.innerWidth;
-```
-
-**✅ CORRECT** - Using available width:
-```javascript
-// This respects the resize handle constraint
-const availableWidth = window.innerWidth - 20;
-const sceneWidth = (scenePercentage / 100) * availableWidth;
-```
+**❌ WRONG**: Using `window.innerWidth` directly for percentage-to-pixel conversion. **✅ CORRECT**: Subtract the handle width (20px) first, then apply percentages to that available width.
 
 ### **🔧 Implementation Locations**
 
@@ -1253,20 +528,7 @@ This constraint is implemented in:
 
 ### **🧮 Percentage Calculation Pattern**
 
-All components should use this standardized pattern:
-```javascript
-// Standard available width calculation
-const HANDLE_WIDTH = 20; // From system constants
-const windowWidth = window.innerWidth;
-const availableWidth = windowWidth - HANDLE_WIDTH;
-
-// Percentage to pixels
-const sceneWidthPixels = Math.floor((scenePercentage / 100) * availableWidth);
-const resumeWidthPixels = availableWidth - sceneWidthPixels;
-
-// Pixels to percentage (for drag operations)
-const newPercentage = Math.max(0, Math.min(100, (pixelPosition / availableWidth) * 100));
-```
+Use a constant handle width (20px), compute `availableWidth = windowWidth - HANDLE_WIDTH`, then derive scene/resume pixel widths from percentages of available width. For drag, convert pixel position back to a 0–100% value using available width and clamp.
 
 ## ResizeHandle: The Layout Orchestrator
 
@@ -1278,14 +540,7 @@ The resizeHandle represents a **novel approach to layout management** that goes 
 
 ### **🏗️ Container Hierarchy**
 
-```
-app-container (100vw × 100vh)
-├── scene-container (dynamic width × 100vh)
-├── resume-container (flex layout)
-│   ├── resume-container-left (20px fixed)
-│   │   └── resize-handle (20px × 100vh)
-│   └── resume-container-right (flex-grow)
-```
+The app-container fills the viewport. Inside it: scene-container has dynamic width; resume-container uses flex, with a fixed 20px left strip that holds the resize-handle, and a flex-grow right area for resume content.
 
 ### **🎮 Interactive Features**
 
@@ -1310,71 +565,13 @@ app-container (100vw × 100vh)
 ### **🔧 Technical Implementation**
 
 #### **Composable Architecture**
-```javascript
-// useResizeHandle.mjs - Core Logic
-export function useResizeHandle() {
-  const percentage = ref(50); // Default 50/50 split
-  const stepCount = ref(1); // 1 = infinity (free drag), 2-10 = discrete steps
-  
-  // Layout calculation
-  const scenePercentage = computed(() => percentage.value);
-  const resumePercentage = computed(() => 100 - percentage.value);
-  
-  // Event handling
-  const handleMouseDown = (event) => {
-    // Start drag operation
-    startDrag(event.clientX);
-  };
-  
-  const handleMouseMove = (event) => {
-    // Update layout during drag
-    if (isDragging.value) {
-      updateLayout(event.clientX);
-    }
-  };
-}
-```
+useResizeHandle exposes reactive percentage and stepCount (1 = free drag, 2–10 = discrete steps), computed scene/resume percentages, and mouse handlers that start drag and update layout from clientX. Layout is derived from container width and optional stepping.
 
 #### **State Management**
-```javascript
-// State integration with AppState
-const updateLayout = (clientX) => {
-  const containerWidth = appContainer.clientWidth;
-  const newPercentage = (clientX / containerWidth) * 100;
-  
-  // Apply stepping if stepCount > 1 (stepping enabled)
-  if (stepCount.value > 1) {
-    const stepSize = 100 / stepCount.value;
-    const steppedPercentage = Math.round(newPercentage / stepSize) * stepSize;
-    percentage.value = Math.max(0, Math.min(100, steppedPercentage));
-  } else {
-    // stepCount === 1 means free dragging (infinity mode)
-    percentage.value = Math.max(0, Math.min(100, newPercentage));
-  }
-  
-  // Persist to global state
-  AppState.resizeHandle.percentage = percentage.value;
-  saveState(AppState);
-};
-```
+updateLayout turns clientX into a percentage of container width. If stepCount > 1, the value is snapped to steps; otherwise it’s free. The result is clamped 0–100, written to the composable state, and persisted (e.g. AppState + saveState).
 
 #### **Event Integration**
-```javascript
-// Event-driven layout updates
-const applyLayout = () => {
-  // Update container styles
-  sceneContainer.style.width = `${scenePercentage.value}%`;
-  resumeContainer.style.width = `${resumePercentage.value}%`;
-  
-  // Dispatch layout change event
-  window.dispatchEvent(new CustomEvent('layoutChanged', {
-    detail: {
-      scenePercentage: scenePercentage.value,
-      resumePercentage: resumePercentage.value
-    }
-  }));
-};
-```
+When layout changes, container widths are set from the current percentages and a layoutChanged (or similar) custom event is dispatched with scene and resume percentages so the rest of the app can react.
 
 ### **🎨 Visual Innovations**
 
@@ -1410,67 +607,15 @@ This **resizeHandle** represents a significant advancement in layout management,
 
 ### **🚀 Problem Solved: Cascading Resize Chain**
 
-The resize handle drag operation was causing performance issues due to a cascading chain of reactive updates:
-
-```
-ResizeHandle drag → events → ResumeContainer resize → ResumeListScrollContainer → rDiv recalculation → jerky feedback
-```
-
-**Root Cause**: Resize events fired on every mouse move during dragging, triggering expensive layout recalculations throughout the component hierarchy.
+The resize handle drag was causing a cascade: **ResizeHandle drag → resize events → ResumeContainer resize → ResumeListScrollContainer → rDiv recalculation → jerky feedback**. Firing resize events on every mouse move triggered expensive layout work across the tree.
 
 ### **⚡ Solution: Debounced Event Dispatching**
 
 #### **Smart Event Management System**
-```javascript
-// useResizeHandle.mjs - Debounced Event Architecture
-function dispatchResizeEvents(sceneWidth, immediate = false) {
-  if (immediate || !isDragging.value) {
-    // Dispatch immediately if not dragging or explicitly requested
-    window.dispatchEvent(new CustomEvent('resize-handle-changed', {
-      detail: { sceneWidth }
-    }));
-    window.dispatchEvent(new CustomEvent('scene-width-changed', {
-      detail: { width: sceneWidth }
-    }));
-  } else {
-    // Debounce events during dragging
-    _pendingSceneWidth = sceneWidth;
-    
-    if (_eventDebounceTimeoutId) {
-      clearTimeout(_eventDebounceTimeoutId);
-    }
-    
-    _eventDebounceTimeoutId = setTimeout(() => {
-      // Flush pending events after 150ms
-      window.dispatchEvent(new CustomEvent('resize-handle-changed', {
-        detail: { sceneWidth: _pendingSceneWidth }
-      }));
-      window.dispatchEvent(new CustomEvent('scene-width-changed', {
-        detail: { width: _pendingSceneWidth }
-      }));
-    }, 150);
-  }
-}
-```
+During drag, resize-handle-changed and scene-width-changed are not fired on every move; the latest scene width is stored and a 150ms timer is set. When the timer fires, one event pair is dispatched. If not dragging (or when explicitly requested), events dispatch immediately so step clicks and initial layout stay accurate.
 
 #### **Drag End Optimization**
-```javascript
-// Flush pending events immediately when drag ends
-const handleMouseUp = (event) => {
-  if (isDragging.value) {
-    isDragging.value = false;
-    
-    // Flush any pending debounced events immediately
-    if (_eventDebounceTimeoutId && _pendingSceneWidth !== null) {
-      clearTimeout(_eventDebounceTimeoutId);
-      dispatchResizeEvents(_pendingSceneWidth, true); // immediate = true
-    }
-    
-    dragStateManager.endDrag('ResizeHandle');
-    updateLayout(uiPercentage.value, true);
-  }
-};
-```
+On mouse up, dragging is cleared and any pending debounced events are flushed immediately (clear timeout and dispatch with the last pending width), so the final layout is correct and dragStateManager/updateLayout run with the current percentage.
 
 ### **🎯 Performance Benefits**
 
@@ -1521,57 +666,12 @@ Unlike traditional virtual scrolling that only renders visible items, this syste
 
 ### **🏗️ Architecture Overview**
 
-```javascript
-// resumeListScrollContainer.mjs - Core Structure
-class ResumeListScrollContainer {
-  constructor() {
-    this.allItems = [];           // All items with calculated positions
-    this.visibleItems = [];       // Currently visible items
-    this.contentHolder = null;    // Scrollable container
-    this.scrollport = null;       // Viewport element
-    this.itemHeights = new Map(); // Cached height calculations
-    this.cloneManager = null;     // Manages item clones
-  }
-}
-```
+ResumeListScrollContainer holds all items with computed positions, a visible subset, references to the scrollport and content holder, a cache of item heights, and a clone manager. Items are absolutely positioned; the container manages which are visible and handles clones for the selected item.
 
 ### **📊 Novel Height Calculation System**
 
 #### **Dynamic Height Measurement**
-```javascript
-// resumeListScrollContainer.mjs - Height Calculation
-calculateItemPositions(forceRecalculation = false) {
-  let currentTop = 0;
-  
-  for (const item of this.allItems) {
-    if (forceRecalculation || !this.itemHeights.has(item.id)) {
-      // Measure natural content height
-      item.element.style.height = 'auto';
-      item.element.style.minHeight = 'auto';
-      
-      // Force layout calculation
-      void item.element.offsetHeight;
-      
-      // Get actual content height
-      const contentHeight = item.element.scrollHeight;
-      this.itemHeights.set(item.id, contentHeight);
-    }
-    
-    const height = this.itemHeights.get(item.id);
-    item.top = currentTop;
-    item.height = height;
-    
-    // Apply positioning
-    item.element.style.position = 'absolute';
-    item.element.style.top = `${currentTop}px`;
-    item.element.style.height = `${height}px`;
-    
-    currentTop += height;
-  }
-  
-  return currentTop;
-}
-```
+Heights are measured by temporarily setting height to auto, forcing layout (e.g. reading offsetHeight), then reading scrollHeight; results are cached by item id. Positions are computed by stacking (currentTop += height), then each item gets absolute top and height. A force flag allows invalidating the cache when content changes.
 
 #### **Height Caching Strategy**
 - **Lazy measurement**: Heights are calculated only when needed
@@ -1582,147 +682,23 @@ calculateItemPositions(forceRecalculation = false) {
 ### **🎭 Intelligent Clone Management**
 
 #### **Clone Creation System**
-```javascript
-// resumeListScrollContainer.mjs - Clone Management
-cloneItem(originalElement, originalIndex, cloneType) {
-  const clone = originalElement.cloneNode(true);
-  
-  // Add clone identifiers
-  clone.classList.add('resume-list-clone');
-  clone.classList.add(`${cloneType}-clone`);
-  clone.dataset.originalIndex = originalIndex;
-  clone.dataset.cloneType = cloneType;
-  
-  // Remove IDs to avoid duplicates
-  this.removeIds(clone);
-  
-  // Apply palette styling to the clone
-  if (clone.hasAttribute('data-color-index')) {
-    try {
-      applyPaletteToElement(clone);
-      clone.classList.remove('hovered', 'selected');
-    } catch (error) {
-      console.log('Failed to apply palette to resume-list clone:', error);
-    }
-  }
-  
-  return clone;
-}
-```
-
-#### **Clone Types**
-1. **Selection Clones**: Created when items are selected
-2. **Hover Clones**: Created for hover interactions
-3. **Interaction Clones**: Created for complex interactions
+Clones are created with cloneNode(true), tagged with classes and data attributes (e.g. resume-list-clone, cloneType, originalIndex). Duplicate IDs are stripped. Palette is applied to the clone when it has a color index; hover/selected classes are cleared so the clone can show selected state independently.
 
 ### **🔄 Advanced Scroll Position Management**
 
 #### **Scroll Position Preservation**
-```javascript
-// resumeListScrollContainer.mjs - Scroll Management
-handleScroll() {
-  const scrollTop = this.scrollport.scrollTop;
-  const scrollHeight = this.scrollport.scrollHeight;
-  const clientHeight = this.scrollport.clientHeight;
-  
-  // Calculate visible range
-  const visibleTop = scrollTop;
-  const visibleBottom = scrollTop + clientHeight;
-  
-  // Update visible items
-  this.updateVisibleItems(visibleTop, visibleBottom);
-  
-  // Preserve scroll position during updates
-  this.preserveScrollPosition();
-}
-
-preserveScrollPosition() {
-  // Store current scroll position
-  const currentScrollTop = this.scrollport.scrollTop;
-  const scrollRatio = currentScrollTop / this.scrollport.scrollHeight;
-  
-  // After content updates, restore position
-  this.scrollport.scrollTop = scrollRatio * this.scrollport.scrollHeight;
-}
-```
+On scroll, the visible range (scrollTop to scrollTop + clientHeight) is computed and updateVisibleItems runs. Scroll position is preserved by storing a ratio (scrollTop / scrollHeight) and restoring it after content updates so the user’s place is not lost.
 
 #### **Momentum Scrolling**
-```javascript
-// resumeListScrollContainer.mjs - Momentum System
-handleWheel(event) {
-  event.preventDefault();
-  
-  const delta = event.deltaY;
-  const currentVelocity = this.currentVelocity || 0;
-  
-  // Apply momentum
-  this.currentVelocity = currentVelocity + delta * 0.1;
-  
-  // Apply scroll with momentum
-  this.scrollport.scrollTop += this.currentVelocity;
-  
-  // Decay momentum
-  this.currentVelocity *= 0.95;
-}
-```
+Wheel events update a velocity from deltaY; that velocity is applied to scrollTop and then decayed (e.g. multiplied by 0.95) so scrolling feels natural and continues briefly after the wheel stops.
 
 ### **🎨 Visual Continuity Features**
 
 #### **Smooth Transitions**
-```javascript
-// resumeListScrollContainer.mjs - Transition Management
-updateVisibleItems(visibleTop, visibleBottom) {
-  // Calculate which items should be visible
-  const newVisibleItems = this.allItems.filter(item => 
-    item.top < visibleBottom && (item.top + item.height) > visibleTop
-  );
-  
-  // Smoothly transition items in/out
-  for (const item of this.allItems) {
-    const shouldBeVisible = newVisibleItems.includes(item);
-    const isCurrentlyVisible = this.visibleItems.includes(item);
-    
-    if (shouldBeVisible && !isCurrentlyVisible) {
-      // Fade in
-      item.element.style.opacity = '0';
-      item.element.style.display = 'block';
-      requestAnimationFrame(() => {
-        item.element.style.transition = 'opacity 0.3s ease';
-        item.element.style.opacity = '1';
-      });
-    } else if (!shouldBeVisible && isCurrentlyVisible) {
-      // Fade out
-      item.element.style.transition = 'opacity 0.3s ease';
-      item.element.style.opacity = '0';
-      setTimeout(() => {
-        item.element.style.display = 'none';
-      }, 300);
-    }
-  }
-  
-  this.visibleItems = newVisibleItems;
-}
-```
+Visible items are determined by comparing item top/height to the visible range. Items entering visibility are shown and faded in (opacity transition); items leaving are faded out and then hidden. visibleItems is updated so the list stays in sync with scroll.
 
 #### **Content-Aware Styling**
-```javascript
-// resumeListScrollContainer.mjs - Styling Integration
-applyItemStyling(item) {
-  // Apply palette-based styling
-  if (item.element.hasAttribute('data-color-index')) {
-    applyPaletteToElement(item.element);
-  }
-  
-  // Apply state-based styling
-  if (item.isSelected) {
-    item.element.classList.add('selected');
-  } else if (item.isHovered) {
-    item.element.classList.add('hovered');
-  } else {
-    item.element.classList.remove('hovered', 'selected');
-  }
-}
-```
+Each item gets palette application when it has a color index. Selection and hover state are reflected by adding or removing selected/hovered classes so the list matches global selection and hover.
 
 ### **⚡ Performance Optimizations**
 
@@ -1733,30 +709,7 @@ applyItemStyling(item) {
 4. **RequestAnimationFrame**: Smooth animations using RAF
 
 #### **Memory Management**
-```javascript
-// resumeListScrollContainer.mjs - Memory Optimization
-destroy() {
-  // Remove event listeners
-  this.scrollport.removeEventListener('scroll', this.handleScroll.bind(this));
-  this.scrollport.removeEventListener('wheel', this.handleWheel.bind(this));
-  
-  // Clear timeouts and animations
-  if (this.resizeTimeoutId) {
-    clearTimeout(this.resizeTimeoutId);
-  }
-  if (this.momentumAnimationId) {
-    cancelAnimationFrame(this.momentumAnimationId);
-  }
-  
-  // Clear content
-  this.contentHolder.innerHTML = '';
-  
-  // Clear caches
-  this.itemHeights.clear();
-  this.allItems = [];
-  this.visibleItems = [];
-}
-```
+On destroy, scroll and wheel listeners are removed, resize and momentum timeouts/animation frames are cleared, content is cleared, and caches (itemHeights, allItems, visibleItems) are reset so the container can be garbage-collected and recreated cleanly.
 
 ### **🎯 Novel Features**
 
@@ -1783,22 +736,7 @@ destroy() {
 ### **🔄 Integration with Application Architecture**
 
 #### **Event-Driven Updates**
-```javascript
-// ResumeListController.mjs - Integration
-setupResumeListScroll() {
-  this.scrollContainer = new ResumeListScrollContainer(this.resumeContentWrapper, this.resumeContentDiv, {
-    items: this.bizResumeDivs,
-    onItemSelect: (item) => {
-      selectionManager.selectJobNumber(item.jobNumber, 'ResumeListScrollContainer');
-    },
-    onScroll: () => {
-      // Update scroll position in global state
-      AppState.resume.scrollPosition = this.scrollContainer.getScrollPosition();
-      saveState(AppState);
-    }
-  });
-}
-```
+ResumeListController creates the ResumeListScrollContainer with the resume wrapper and content div, passes in the biz resume divs, and registers callbacks: onItemSelect delegates to selectionManager.selectJobNumber; onScroll persists scroll position to AppState and saves state so scroll is restored on reload.
 
 #### **State Synchronization**
 - **Global state**: Scroll position and selection state are persisted
@@ -1820,121 +758,14 @@ setupResumeListScroll() {
 This **Infinite Scrolling Container** represents a significant advancement in virtual scrolling technology, providing the performance benefits of virtual scrolling while maintaining the visual richness and interaction capabilities of fully rendered content. It's particularly well-suited for applications that require both performance and visual fidelity, such as this resume visualization system.
 
 
-### Future work
-
-⏺ Here are key steps to make the resume-flock app
-  more Vue 3-sanctioned:
-
-  🎯 Vue 3 Modernization Opportunities
-
-  1. State Management Modernization
-
-  - Replace dual state systems (useAppState + useAppStore) with Pinia
-    - Single source of truth for all application state
-    - Better TypeScript integration and devtools support
-    - Eliminate state synchronization issues between systems
-
-  2. Legacy Module Migration
-
-  - Convert remaining legacy modules to composables:
-    - modules/core/parallaxModule.mjs → useParallax.mjs
-    - modules/core/keyDownModule.mjs → useKeyboard.mjs
-    - modules/resume/infiniteScrollingContainer.mjs → useInfiniteScroll.mjs
-  - Eliminate global window dependencies (e.g., window.bullsEye,
-  window.resumeListController)
-
-  3. TypeScript Expansion
-
-  - Convert all .mjs files to .ts:
-    - All composables: useColorPalette.mjs → useColorPalette.ts
-    - All components: Timeline.vue, SceneContainer.vue, etc.
-    - Store modules: appStore.mjs → appStore.ts
-  - Add comprehensive type definitions for all data structures
-
-  4. Component Architecture Enhancement
-
-  - Implement proper component composition:
-    - Split large components (AppContent.vue, SceneContainer.vue) into
-  smaller, focused components
-    - Use <script setup> with proper prop definitions everywhere
-  - Add Vue 3 built-in components:
-    - <Teleport> for modals/overleys instead of fixed positioning
-    - <Suspense> for async component loading
-    - <Transition> for smooth animations
-
-  5. Reactivity System Optimization
-
-  - Replace manual DOM queries with template refs:
-    - All document.getElementById() calls in percentage calculations
-    - Direct DOM measurements in resize calculations
-  - Use Vue 3 reactivity APIs:
-    - shallowRef() for performance optimization where deep reactivity isn't
-   needed
-    - readonly() for preventing accidental mutations
-    - triggerRef() for manual reactivity triggers
-
-  6. Modern Vue 3 Patterns
-
-  - Implement provide/inject for dependency injection instead of global
-  singletons
-  - Use defineAsyncComponent for code splitting large components
-  - Add proper error boundaries with onErrorCaptured
-  - Implement proper SSR support if needed
-
-  7. Build System & Tooling
-
-  - Upgrade to Vite 6 (latest version)
-  - Add Vue 3 specific ESLint rules:
-    - @vue/eslint-config-typescript
-    - Vue 3 composition API linting rules
-  - Implement proper tree-shaking for unused code elimination
-
-  8. Performance Optimization
-
-  - Use v-memo directive for expensive list rendering (infinite scroll)
-  - Implement virtual scrolling with Vue 3 compatible libraries
-  - Add proper lazy loading for components and images
-  - UsemarkRaw() for non-reactive objects
-
-  9. Testing Modernization
-
-  - Add Vue 3 testing setup:
-    - Vitest + Vue Test Utils for component testing
-    - Proper TypeScript test configuration
-    - Component composition testing
-
-  10. Architecture Cleanup
-
-  - Remove IM (Initialization Manager) remnants completely
-  - Eliminate jQuery-style DOM manipulation
-  - Replace custom event systems with Vue 3's built-in event handling
-  - Standardize all async operations with proper loading states
-
-  🚀 Immediate High-Impact Steps
-
-  1. Install Pinia and migrate state management
-  2. Convert core composables to TypeScript (.mjs → .ts)
-  3. Replace global window objects with provide/inject
-  4. Split large components into focused, reusable pieces
-  5. Add proper error handling with Vue 3 patterns
-
-  These changes would transform the app into a modern, Vue 3-first
-  application with better maintainability, performance, and developer
-  experience! 🎯
-
-
-
-
-- Provide the option to print the resume to a PDF file
-- Need to ease focal point to BullsEye when any skillCardDiv is selected (or clicked?)
-- Need to add stamp icons to post cards
-- Click on post card to see it's full-size iomage in right-side detail panel
-- Render bizCards as 3D blocks with rounded corners
-- Rotate 3D bizCard blocks during transitions
-- Toggle debug panel visiblilty with button or key
-
-
 ## Development history  
+
+### version 1.2    March 2025  
+
+- **High-level features**: resume-parser (DOCX/PDF at runtime, optional LLM skill merging), resume-selector, resume-details-editor (Meta / Other / Skills / Jobs tabs), job-details-editor (Jobs tab), job-skills-selector (JobSkillEditor), resume-print (printable HTML). README now introduces these in a “High-level functionality” section.
+- 3D Settings: parallax scale (near/far), blur, brightness, saturation at max Z; modal from 3D button (resize handle and next to color palette). Base z-scale (0.9→0) multiplied by user scale.
+- Run instructions: Cursor IDE with Vite (`npm run dev`); removed VSCode + LiveServer. Resume data from DOCX/PDF parsed at runtime; removed Excel/jobs.xlsx workflow.
+- README: removed Vue 3 migration narrative, reduced Color Palette and State System sections, removed Future Work and “illustrious career” Excel customization, updated resume-parser description.
 
 ### version 1.1    July 8, 2024  
 
@@ -1993,32 +824,32 @@ This **Infinite Scrolling Container** represents a significant advancement in vi
 
 ### version 0.5:   June 26, 2023
 
-- A flock of small skill postcards and larger business cards float over the left-side scene-plane column.
+- A flock of small skill cards and larger business cards float over the scene-plane column (layout can put the scene on the left or right).
 - A timeline is displayed at ground level, to visualize the date range of employment for each business card.
 - A 3-D parallax effect on cards is controlled by the "focalPoint", which tracks the mouse while over the scene-plane.
-- Add line items to the right-side resume column by selecting business cards.
-- Select a postcard or resume line item by clicking it, click again to deselect it.
-- Selected postcards and line-items have a red-dashed border.
-- Once selected, a postcard or business card is temporarily moved above the flock where is not subject to motion parallax.
-- Click on a postcard to select and scroll its resume line item into view.
-- Click on a resume line item to select and scroll its postcard into view.
+- Add line items to the resume column by selecting business cards.
+- Select a skill card or resume line item by clicking it, click again to deselect it.
+- Selected skill cards and line-items have a red-dashed border.
+- Once selected, a skill card or business card is temporarily moved above the flock where it is not subject to motion parallax.
+- Click on a skill card to select and scroll its resume line item into view.
+- Click on a resume line item to select and scroll its skill card into view.
 - The scene-plane viewPort shows "BullsEye" with a plus sign at scene-plane center, where parallax effect is zero.
 - FocalPoint defaults back to the viewPort center BullsEye when it leaves the scene-plane.
 - The focalPoint starts tracking the mouse as soon as it re-enters the scene-plane area.
-- Scene-div auto-scrolling starts when the focalPoint is in top or bottom quqrter of the scene-plane.
+- Scene-div auto-scrolling starts when the focalPoint is in top or bottom quarter of the scene-plane.
 - Autoscrolling stops when the focalPoint moves to viewPort center and when the mouse leaves the scene-plane.
 - Click on a resume line item's top-right delete button to delete it.
 - Click on the bottom-right green next button to open and select the resume line item for the next business card.
-- Skill postcards inherit the color of its parent business card.
-- Click the underlined text in a business cards resume line item to select and bring that skill postcard into view over the flock.
+- Skill cards inherit the color of their parent business card.
+- Click the underlined text in a business card's resume line item to select and bring that skill card into view over the flock.
 
 
 ### version 0.4:   June 18, 2023
 
 - scripted process to convert WordPress media dump xml file into a javascript file of img paths of resized local img files (not included in github) for html inclusion.
-- scripted process to convert excel jobs.xlsx spreadsheet file (included in github) into a javascript file of job objects for html inclusion.
+- scripted process to convert job data into a javascript file of job objects for html inclusion (resumes now parsed from DOCX/PDF at runtime).
 - right side now has fixed header and footer and an auto-scolling content.
-- click on a any postcard or underlying buisness card to add a new deleteble line item to the right column.
+- click on any skill card or underlying business card to add a new deletable line item to the right column.
 
 
 ### version 0.3:   June 7, 2023

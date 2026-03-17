@@ -14,21 +14,15 @@
 
 The Initialization Manager (IM) is a sophisticated **dependency management system** that orchestrates the startup sequence of JavaScript modules and Vue.js components in the resume-flock project. It provides a declarative way to manage component dependencies, prevents circular dependencies, and ensures proper initialization order without tight coupling between components.
 
-### ⚡ **Latest Achievement: 56% IM Compliance (July 2025)**
+### ⚡ **IM Compliance Status**
 
-The IM framework has achieved **56% compliance (14/25 components)** through systematic migration to dependency injection patterns. This represents a major architectural milestone with proven benefits:
+Compliance is measured by the component scanner (dependency injection, DOM separation, no `getElementById` on key elements, etc.). To get the **current** rate and component lists:
 
-**🎯 Key Compliance Patterns:**
-- ✅ **BaseVueComponentMixin Integration** - All Vue components use consistent IM patterns
-- ✅ **DOM Separation Pattern** - initialize() for logic, setupDom() for DOM operations  
-- ✅ **Template Ref Injection** - Replaces direct getElementById() calls
-- ✅ **Server-Side Compliance** - Browser-specific code properly isolated
+- Run: **`node scripts/run-compliance-scan.mjs`** (from project root).  
+  Prints current compliance summary. Use **`--write-fragment`** to write `docs/im/compliance-summary-fragment.md`.
+- See **[How the compliance summary was generated (and how to improve it)](COMPLIANCE-SUMMARY-HOWTO.md)** for details and server options.
 
-**🛠️ Technical Achievements:**
-- ✅ **Clean Compilation** - No syntax errors across all migrated components
-- ✅ **Error Resolution** - Fixed TypeError and Vue compiler issues
-- ✅ **Architecture Improvements** - Consistent dependency injection patterns
-- ✅ **Development Experience** - Better separation of concerns and maintainability
+**Key compliance patterns** the scanner considers: BaseVueComponentMixin / BaseComponent, DOM separation (initialize vs setupDom), template ref injection instead of getElementById, server-side isolation of browser APIs.
 
 ### 🎯 **Enhanced Vue Component Reactive Dependency Injection**
 

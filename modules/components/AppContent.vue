@@ -80,6 +80,7 @@ import { useColorPalette } from '../composables/useColorPalette.mjs'
 import { useLayoutToggle } from '../composables/useLayoutToggle.mjs'
 import { useResizeHandle } from '../composables/useResizeHandle.mjs'
 import { useAppState } from '../composables/useAppState.ts'
+import { get_filterStr_from_z } from '../core/filters.mjs'
 
 // Resume system initialization (to be migrated)
 import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrolling } from '../resume/resumeSystemInitializer.mjs'
@@ -502,6 +503,17 @@ async function handleResumeSelected(resumeId) {
   }
 }
 
+// Re-apply depth filters to scene cards when 3D Settings change (rendering-changed)
+function handleRenderingChanged() {
+  const plane = document.getElementById('scene-plane')
+  if (!plane) return
+  const cards = plane.querySelectorAll('.biz-card-div, .skill-card-div')
+  cards.forEach((card) => {
+    const z = parseFloat(card.getAttribute('data-sceneZ'))
+    if (!Number.isNaN(z)) card.style.filter = get_filterStr_from_z(z)
+  })
+}
+
 // =============================================================================
 // LIFECYCLE - Vue's standard pattern
 // =============================================================================
@@ -625,7 +637,9 @@ onMounted(async () => {
       renderAllCDivs()
       console.log('[AppContent] 🖼️ Scene view render triggered (initial load / refresh)')
     })
-    
+
+    window.addEventListener('rendering-changed', handleRenderingChanged)
+
     console.log('[AppContent] ✅ Vue 3 app initialization complete!')
     
   } catch (error) {
@@ -637,10 +651,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   console.log('[AppContent] 🧹 Cleaning up...')
-  
-  // Vue 3 composables handle their own cleanup automatically
-  // No manual event listener removal needed for Vue composables
-  
+  window.removeEventListener('rendering-changed', handleRenderingChanged)
   console.log('[AppContent] ✅ Cleanup complete')
 })
 

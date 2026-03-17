@@ -165,12 +165,13 @@ export interface AppState {
         selected: BorderOverrideStyle;
       };
     };
-    /** Parallax/depth rendering constants (camelCase; not user-editable) */
+    /** Parallax/depth rendering constants (camelCase; editable via 3D Settings modal) */
     rendering: {
-      parallaxScaleAtMaxZ: number;   // 0–1, scale at max Z (default 0.9)
-      saturationAtMaxZ: number;      // 0–1+ (default 1.0 = no change)
-      brightnessAtMaxZ: number;      // 0–1 (default 1.0 = no darkening)
-      blurAtMaxZ: number;            // px blur at max Z (default 0)
+      parallaxScaleAtMinZ: number;   // at min scene Z (near); scene Z = distance-from-viewer, not z-index; 0–1.5 (default 1.0)
+      parallaxScaleAtMaxZ: number;   // at max scene Z (far), 0–1.5 (default 1.0)
+      saturationAtMaxZ: number;      // 0–100%; 100 = no change (default 100)
+      brightnessAtMaxZ: number;      // 75–100%; 100 = no z-based darkness (default 100)
+      blurAtMaxZ: number;            // 0–5 px at max Z; 0 = no z-based blur (default 0)
     };
   };
 }

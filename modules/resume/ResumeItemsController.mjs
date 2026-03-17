@@ -143,20 +143,6 @@ class ResumeItemsController {
         });
         bizResumeDiv.insertBefore(closeBtn, bizResumeDiv.firstChild);
 
-        // Edit skills button
-        const editSkillsBtn = document.createElement('button');
-        editSkillsBtn.type = 'button';
-        editSkillsBtn.className = 'r-div-edit-skills';
-        editSkillsBtn.setAttribute('aria-label', 'Edit skills for this job');
-        editSkillsBtn.setAttribute('data-job-number', String(jobNumber));
-        editSkillsBtn.textContent = '✎';
-        editSkillsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }));
-        });
-        bizResumeDiv.insertBefore(editSkillsBtn, closeBtn.nextSibling);
-
         // Apply the current color palette
         await applyPaletteToElement(bizResumeDiv);
 
@@ -252,7 +238,7 @@ class ResumeItemsController {
         employerEditBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'jobs', jobIndex: jobNumber } }));
+            window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' } }));
         });
         employerWrap.appendChild(employerEditBtn);
         headerDiv.appendChild(employerWrap);
@@ -314,7 +300,7 @@ class ResumeItemsController {
             descEditBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'jobs', jobIndex: jobNumber } }));
+                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'description' } }));
             });
             descTitleWrap.appendChild(descEditBtn);
             descDiv.appendChild(descTitleWrap);

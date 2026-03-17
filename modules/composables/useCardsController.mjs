@@ -647,7 +647,7 @@ export function useCardsController() {
             employerEditBtn.addEventListener('click', (e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'jobs', jobIndex: jobNumber } }))
+                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' } }))
             })
         }
         const skillsEditBtn = card.querySelector('.resume-skills .biz-details-edit-btn')

@@ -11,6 +11,7 @@ import { listResumes, getResumeOtherSections, getResumeData } from '@/modules/ap
 import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
+import Scene3DSettings from './Scene3DSettings.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 
 // Define props
@@ -350,10 +351,12 @@ function goToJob(jobNumber) {
 const isDetailsEditorOpen = ref(false);
 const detailsEditorInitialTab = ref('meta');
 const detailsEditorInitialJobIndex = ref(null);
+const detailsEditorInitialFocusField = ref(null);
 
-function openDetailsModal(tab = 'meta', jobIndex = null) {
+function openDetailsModal(tab = 'meta', jobIndex = null, focusField = null) {
   detailsEditorInitialTab.value = tab;
   detailsEditorInitialJobIndex.value = jobIndex;
+  detailsEditorInitialFocusField.value = focusField ?? null;
   isDetailsEditorOpen.value = true;
 }
 
@@ -362,13 +365,21 @@ async function handleEditJobSkills(e) {
   if (jobNumber == null) return;
   const id = props.currentResumeId;
   if (!id || id === 'default') return;
-  openDetailsModal('skills', jobNumber);
+  const current = selectionManager?.getSelectedJobNumber?.() ?? null;
+  if (current !== jobNumber) {
+    selectionManager?.selectJobNumber(jobNumber, 'ResumeContainer.handleEditJobSkills');
+  }
+  openDetailsModal('job-skills', jobNumber);
 }
 
 function handleOpenResumeDetails(e) {
-  const { tab, jobIndex } = e.detail || {};
+  const { tab, jobIndex, focusField } = e.detail || {};
   if (!tab || jobIndex == null) return;
-  openDetailsModal(tab, jobIndex);
+  const current = selectionManager?.getSelectedJobNumber?.() ?? null;
+  if (current !== jobIndex) {
+    selectionManager?.selectJobNumber(jobIndex, 'ResumeContainer.handleOpenResumeDetails');
+  }
+  openDetailsModal(tab, jobIndex, focusField);
 }
 
 async function handleDetailsSaved(payload) {
@@ -792,7 +803,7 @@ function onResumeSkillCardClick(event) {
                 @selected="handleResumeSelectedFromManage"
                 @open-upload="handleOpenUploadFromManage"
             />
-            <!-- Color Palette Row -->
+            <!-- Color Palette Row + 3D Settings -->
             <div class="header-controls-row">
                 <div id="color-palette-container" tabindex="-1">
                     <select
@@ -805,6 +816,7 @@ function onResumeSkillCardClick(event) {
                         </option>
                     </select>
                 </div>
+                <Scene3DSettings />
             </div>
             <div id="resume-divs-sorting-container" tabindex="-1">
                 <select id="resume-divs-sorting-selector" v-model="sortRuleKey" tabindex="0">
@@ -827,6 +839,7 @@ function onResumeSkillCardClick(event) {
             :is-open="isDetailsEditorOpen"
             :initial-tab="detailsEditorInitialTab"
             :initial-job-index="detailsEditorInitialJobIndex"
+            :initial-focus-field="detailsEditorInitialFocusField"
             @close="isDetailsEditorOpen = false"
             @saved="handleDetailsSaved"
         />
@@ -1298,32 +1311,6 @@ function onResumeSkillCardClick(event) {
     background: rgba(255, 255, 255, 0.9);
 }
 
-/* Edit-skills pencil button on rDiv */
-.biz-resume-div .r-div-edit-skills {
-    position: absolute;
-    top: 6px;
-    right: 34px; /* sits left of the close button */
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    font-size: 14px;
-    line-height: 1;
-    color: #4a9eff;
-    background: #fff;
-    border: 1px solid #4a9eff;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1;
-}
-.biz-resume-div .r-div-edit-skills:hover {
-    color: #6ab0ff;
-    border-color: #6ab0ff;
-    background: rgba(255, 255, 255, 0.9);
-}
-
 /* Base rDiv layout and sizing only. Spacing between items from flex container gap (ResumeListScrollContainer contentHolder). */
 .biz-resume-div {
     display: flex !important;
@@ -1371,7 +1358,12 @@ function onResumeSkillCardClick(event) {
     /* Styling */
     background-color: transparent !important;
     border-radius: 25px !important;
-    gap: 0; /* Controlled spacing in child sections */
+
+    /* Standard gap: space from edges and between sections */
+    --details-gap: 12px;
+    padding: var(--details-gap);
+    padding-top: 36px; /* leave room for close button */
+    gap: var(--details-gap);
 }
 
 /* Force all nested children to have transparent backgrounds */
@@ -1478,16 +1470,16 @@ function onResumeSkillCardClick(event) {
     
     /* Visual styling */
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding-bottom: 8px;
-    margin-bottom: 12px;
+    padding-bottom: var(--details-gap, 12px);
+    margin-bottom: 0; /* parent gap handles spacing */
 }
 
 .resume-header .biz-details-employer-wrap {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--details-gap, 12px);
     flex-shrink: 0;
-    margin-bottom: 4px;
+    margin-bottom: var(--details-gap, 12px);
 }
 .resume-header .biz-details-employer-wrap .biz-details-employer {
     font-weight: bold;
@@ -1517,8 +1509,8 @@ function onResumeSkillCardClick(event) {
 .resume-section-title-wrap {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin: 0 0 6px 0;
+    gap: var(--details-gap, 12px);
+    margin: 0 0 var(--details-gap, 12px) 0;
     flex-shrink: 0;
 }
 .resume-section-title-wrap h4 {
@@ -1528,7 +1520,7 @@ function onResumeSkillCardClick(event) {
 .resume-header .biz-details-role {
     font-size: 14px;
     font-style: italic;
-    margin-bottom: 4px;
+    margin-bottom: var(--details-gap, 12px);
     color: inherit;
     opacity: 0.9;
     flex-shrink: 0;
@@ -1537,6 +1529,7 @@ function onResumeSkillCardClick(event) {
 .resume-header .biz-details-dates {
     font-size: 12px;
     font-weight: normal;
+    margin-bottom: 0;
     color: inherit;
     opacity: 0.8;
     flex-shrink: 0;
@@ -1568,8 +1561,8 @@ function onResumeSkillCardClick(event) {
     min-height: fit-content;
     flex-shrink: 0;
     
-    /* Spacing */
-    margin-bottom: 12px;
+    /* Spacing: parent gap handles separation; add bottom padding for edge */
+    padding-bottom: var(--details-gap, 12px);
 }
 
 .resume-description .resume-section-title-wrap h4 {
@@ -1593,18 +1586,22 @@ function onResumeSkillCardClick(event) {
     width: 100%;
     height: auto;
     flex-shrink: 0;
+    margin-top: calc(var(--details-gap, 12px) * 0.5); /* space below KEY ACHIEVEMENTS title */
 }
 
 /* Bulleted description items */
 .description-content .job-description-item {
     display: flex;
     align-items: flex-start;
-    margin: 0 0 4px 0;
+    margin: 0 0 var(--details-gap, 12px) 0;
     padding: 0;
     color: inherit;
     opacity: 0.85;
     flex-shrink: 0;
     width: 100%;
+}
+.description-content .job-description-item:last-child {
+    margin-bottom: 0;
 }
 
 .description-content .job-description-item .bullet {
@@ -1633,8 +1630,8 @@ function onResumeSkillCardClick(event) {
     min-height: fit-content;
     flex-shrink: 0;
     
-    /* Spacing */
-    margin-top: 12px;
+    /* Spacing: parent gap handles separation from description */
+    padding-bottom: var(--details-gap, 12px);
 }
 
 .resume-skills .resume-section-title-wrap h4 {
