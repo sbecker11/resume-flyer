@@ -1,6 +1,7 @@
 <template>
   <div class="rde-tab-content rde-jobs">
     <p v-if="loadError" class="rde-error">{{ loadError }}</p>
+    <p v-else-if="!jobsLoaded && resumeId && resumeId !== 'default'" class="rde-loading">Loading jobs…</p>
     <template v-else>
       <section class="rde-section">
         <h3 class="rde-section-title">Job</h3>
@@ -103,6 +104,7 @@ const emit = defineEmits(['saved', 'open-skills-for-job']);
 const employerInputRef = ref(null);
 const descriptionInputRef = ref(null);
 const jobs = ref([]);
+const jobsLoaded = ref(false);
 const loadError = ref('');
 const selectedJobIndex = ref(null);
 const saving = ref(false);
@@ -129,31 +131,35 @@ let focusWatchCount = 0;
 watch(() => props.resumeId, (id) => {
   selectedJobWatchCount = 0;
   focusWatchCount = 0;
-  console.log('[RDE] JobsTab resumeId watch', { id });
+  jobsLoaded.value = false;
   loadError.value = '';
   jobs.value = [];
   selectedJobIndex.value = null;
   if (!id || id === 'default') return;
   nextTick(async () => {
-    console.log('[RDE] JobsTab nextTick getResumeData start', id);
     try {
       const data = await api.getResumeData(id);
-      console.log('[RDE] JobsTab getResumeData resolved, assigning jobs');
       const arr = jobsArray(data.jobs);
       if (arr.length > 500) console.warn('[RDE] JobsTab large jobs array', arr.length);
       jobs.value = arr;
-      console.log('[RDE] JobsTab jobs assigned, assigning selectedIndex');
-      const idx = props.initialJobIndex != null && props.initialJobIndex >= 0 && props.initialJobIndex < jobs.value.length
+      const idx = props.initialJobIndex != null && props.initialJobIndex >= 0 && props.initialJobIndex < arr.length
         ? Number(props.initialJobIndex)
-        : (jobs.value.length ? 0 : null);
+        : (arr.length ? 0 : null);
       selectedJobIndex.value = idx;
-      console.log('[RDE] JobsTab getResumeData done', { jobsCount: jobs.value.length, selectedIndex: idx });
+      jobsLoaded.value = true;
     } catch (err) {
       console.error('[JobsTab] load failed:', err);
       loadError.value = 'Failed to load jobs: ' + err.message;
+      jobsLoaded.value = true;
     }
   });
 }, { immediate: true });
+
+// Keep selection in sync when jobs are empty (e.g. select can emit "" with no options).
+watch([() => jobs.value.length, selectedJobIndex], ([len, idx]) => {
+  if (len === 0 && selectedJobIndex.value != null) selectedJobIndex.value = null;
+  if (len > 0 && (idx === '' || (typeof idx !== 'number' && idx != null))) selectedJobIndex.value = 0;
+});
 
 const selectedJob = computed(() => {
   const idx = selectedJobIndex.value;
@@ -198,11 +204,11 @@ watch(selectedJob, (job) => {
   };
 }, { immediate: true });
 
-watch(() => [props.initialFocusField, selectedJob.value], ([focusField, job]) => {
+// Only run focus after jobs have loaded and we have a selected job (avoids empty-dropdown path).
+watch(() => [jobsLoaded.value, props.initialFocusField, selectedJob.value], ([loaded, focusField, job]) => {
   focusWatchCount++;
   if (focusWatchCount > 5) console.warn('[RDE] JobsTab focus watch LOOP', focusWatchCount);
-  if (!focusField || !job) return;
-  // Defer focus to a later macrotask to avoid locking UI (browser a11y/autofill in same tick).
+  if (!loaded || !focusField || !job) return;
   setTimeout(() => {
     const el = focusField === 'employer' ? employerInputRef.value : focusField === 'description' ? descriptionInputRef.value : null;
     if (el && typeof el.focus === 'function') el.focus();
@@ -252,6 +258,7 @@ function openSkillsForCurrentJob() {
 .rde-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .rde-jobs .rde-section-title { font-size: 0.8rem; font-weight: 600; color: #fff; margin: 0 0 8px; }
 .rde-error { color: #e88; padding: 8px 0; }
+.rde-loading { color: rgba(255,255,255,0.6); padding: 8px 0; font-size: 0.9rem; }
 .rde-select {
   width: 100%;
   background: rgba(255,255,255,0.07);
