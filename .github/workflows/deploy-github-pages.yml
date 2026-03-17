@@ -38,6 +38,7 @@ jobs:
 
       - name: Copy parsed resumes (static)
         run: |
+          mkdir -p parsed_resumes
           node scripts/generate-parsed-resumes-index.mjs
           mkdir -p dist/parsed_resumes
           rsync -av --exclude="**/*.docx" --exclude="**/*.pdf" --exclude="**/*.html" parsed_resumes/ dist/parsed_resumes/

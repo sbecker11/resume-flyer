@@ -19,6 +19,12 @@ async function readJson(p) {
 }
 
 async function main() {
+  // In CI / GitHub Pages builds, parsed_resumes/ may not exist (it can be local-only).
+  // In that case, create it and emit an empty index.json so the static site still builds.
+  if (!(await exists(parsedResumesDir))) {
+    await fs.mkdir(parsedResumesDir, { recursive: true });
+  }
+
   const entries = await fs.readdir(parsedResumesDir, { withFileTypes: true });
   const resumes = [];
 
