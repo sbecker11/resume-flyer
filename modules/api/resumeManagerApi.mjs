@@ -2,9 +2,27 @@
 // API client for resume manager operations
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 
+function getRuntimeBase() {
+    const envBase = (import.meta?.env?.BASE_URL || '/');
+    let base = envBase;
+
+    // Runtime safeguard for GitHub Pages / other subpath hosting
+    if (typeof window !== 'undefined') {
+        const path = window.location.pathname || '/';
+        const parts = path.split('/').filter(Boolean);
+        // When envBase is '/', path.startsWith('/') is always true so we never override.
+        // If path has a first segment (e.g. /resume-flock/), use it as base so subpath hosting works.
+        const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase));
+        if (useSubpath) {
+            base = `/${parts[0]}/`;
+        }
+    }
+
+    return base.endsWith('/') ? base : `${base}/`;
+}
+
 function basePathJoin(relPath) {
-    const base = (import.meta?.env?.BASE_URL || '/');
-    const b = base.endsWith('/') ? base : `${base}/`;
+    const b = getRuntimeBase();
     const p = relPath.startsWith('/') ? relPath.slice(1) : relPath;
     return `${b}${p}`;
 }

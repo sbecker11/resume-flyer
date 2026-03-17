@@ -18,6 +18,30 @@ import type { AppState, UseAppStateReturn } from '../types/index'
 // @ts-ignore - Legacy module
 import { setFromAppState as setRenderingFromAppState } from '../core/renderingConfig.mjs'
 
+function getRuntimeBase(): string {
+    const envBase = (import.meta as any)?.env?.BASE_URL || '/'
+    let base = envBase
+
+    if (typeof window !== 'undefined') {
+        const path = window.location.pathname || '/'
+        const parts = path.split('/').filter(Boolean)
+        // When envBase is '/', path.startsWith('/') is always true so we never override.
+        // If path has a first segment (e.g. /resume-flock/), use it as base so subpath hosting works.
+        const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase))
+        if (useSubpath) {
+            base = `/${parts[0]}/`
+        }
+    }
+
+    return base.endsWith('/') ? base : `${base}/`
+}
+
+function basePathJoin(relPath: string): string {
+    const b = getRuntimeBase()
+    const p = relPath.startsWith('/') ? relPath.slice(1) : relPath
+    return `${b}${p}`
+}
+
 // Singleton state - shared across all component instances
 const appState: Ref<AppState | null> = ref(null)
 const isLoading: Ref<boolean> = ref(false)
@@ -360,8 +384,7 @@ async function loadStateFromServer(): Promise<AppState> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[AppState] Loading state from server (attempt ${attempt}/${maxRetries})...`);
-            const base = (import.meta as any)?.env?.BASE_URL || '/'
-            const apiUrl = (base.endsWith('/') ? base : `${base}/`) + 'api/state'
+            const apiUrl = basePathJoin('api/state')
             const response = await fetch(apiUrl)
             if (!response.ok) {
                 if (response.status === 404) {
@@ -425,8 +448,7 @@ async function saveStateToServer(state: AppState): Promise<void> {
     try {
         state.lastUpdated = new Date().toISOString()
         console.log('[AppState] 💾 Saving state to server - currentResumeId:', state['user-settings']?.currentResumeId)
-        const base = (import.meta as any)?.env?.BASE_URL || '/'
-        const apiUrl = (base.endsWith('/') ? base : `${base}/`) + 'api/state'
+        const apiUrl = basePathJoin('api/state')
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
