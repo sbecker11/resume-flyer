@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import MetaTab from './tabs/MetaTab.vue';
 import OtherSectionsTab from './tabs/OtherSectionsTab.vue';
 import JobsTab from './tabs/JobsTab.vue';
@@ -263,7 +263,7 @@ function onResizeEnd() {
   setTimeout(() => { ignoreNextOverlayClick.value = false; }, 0);
 }
 
-watch(() => [props.isOpen, props.resumeId], async ([open, id]) => {
+watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
   if (!open || !id || id === 'default') return;
   const tab = props.initialTab && tabs.some(t => t.id === props.initialTab) ? props.initialTab : 'meta';
   activeTab.value = tab;
@@ -275,16 +275,19 @@ watch(() => [props.isOpen, props.resumeId], async ([open, id]) => {
   clampDragOffset();
   pendingMeta.value = null;
   pendingOtherSections.value = null;
-  try {
-    const [metaRes, otherRes] = await Promise.all([
-      api.getResumeMeta(id).catch(() => ({})),
-      api.getResumeOtherSections(id).catch(() => ({}))
-    ]);
-    meta.value = metaRes;
-    otherSections.value = otherRes;
-  } catch (err) {
-    console.error('[ResumeDetailsEditor] load failed:', err);
-  }
+  // Defer async load to next tick so modal is painted first; avoids same-tick cascade/freeze.
+  nextTick(async () => {
+    try {
+      const [metaRes, otherRes] = await Promise.all([
+        api.getResumeMeta(id).catch(() => ({})),
+        api.getResumeOtherSections(id).catch(() => ({}))
+      ]);
+      meta.value = metaRes;
+      otherSections.value = otherRes;
+    } catch (err) {
+      console.error('[ResumeDetailsEditor] load failed:', err);
+    }
+  });
 }, { immediate: true });
 
 function onMetaUpdate(updates) {

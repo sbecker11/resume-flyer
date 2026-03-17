@@ -379,7 +379,9 @@ function handleOpenResumeDetails(e) {
   if (current !== jobIndex) {
     selectionManager?.selectJobNumber(jobIndex, 'ResumeContainer.handleOpenResumeDetails');
   }
-  openDetailsModal(tab, jobIndex, focusField);
+  // Defer opening modal to next tick so selection handlers (scroll, DOM updates) finish first;
+  // avoids same-tick cascade that can freeze the app when opening from pencil icon.
+  nextTick(() => openDetailsModal(tab, jobIndex, focusField));
 }
 
 async function handleDetailsSaved(payload) {

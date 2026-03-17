@@ -119,22 +119,25 @@ const yearOptions = computed(() => {
   return out;
 });
 
-watch(() => props.resumeId, async (id) => {
+watch(() => props.resumeId, (id) => {
   loadError.value = '';
   jobs.value = [];
   selectedJobIndex.value = null;
   if (!id || id === 'default') return;
-  try {
-    const data = await api.getResumeData(id);
-    jobs.value = jobsArray(data.jobs);
-    const idx = props.initialJobIndex != null && props.initialJobIndex >= 0 && props.initialJobIndex < jobs.value.length
-      ? props.initialJobIndex
-      : (jobs.value.length ? 0 : null);
-    selectedJobIndex.value = idx;
-  } catch (err) {
-    console.error('[JobsTab] load failed:', err);
-    loadError.value = 'Failed to load jobs: ' + err.message;
-  }
+  // Defer fetch to next tick so we don't run in same flush as modal open (avoids freeze).
+  nextTick(async () => {
+    try {
+      const data = await api.getResumeData(id);
+      jobs.value = jobsArray(data.jobs);
+      const idx = props.initialJobIndex != null && props.initialJobIndex >= 0 && props.initialJobIndex < jobs.value.length
+        ? Number(props.initialJobIndex)
+        : (jobs.value.length ? 0 : null);
+      selectedJobIndex.value = idx;
+    } catch (err) {
+      console.error('[JobsTab] load failed:', err);
+      loadError.value = 'Failed to load jobs: ' + err.message;
+    }
+  });
 }, { immediate: true });
 
 const selectedJob = computed(() => {
