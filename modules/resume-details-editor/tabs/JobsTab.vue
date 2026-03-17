@@ -119,7 +119,11 @@ const yearOptions = computed(() => {
   return out;
 });
 
+let selectedJobWatchCount = 0;
+let focusWatchCount = 0;
 watch(() => props.resumeId, (id) => {
+  selectedJobWatchCount = 0;
+  focusWatchCount = 0;
   console.log('[RDE] JobsTab resumeId watch', { id });
   loadError.value = '';
   jobs.value = [];
@@ -129,7 +133,11 @@ watch(() => props.resumeId, (id) => {
     console.log('[RDE] JobsTab nextTick getResumeData start', id);
     try {
       const data = await api.getResumeData(id);
-      jobs.value = jobsArray(data.jobs);
+      console.log('[RDE] JobsTab getResumeData resolved, assigning jobs');
+      const arr = jobsArray(data.jobs);
+      if (arr.length > 500) console.warn('[RDE] JobsTab large jobs array', arr.length);
+      jobs.value = arr;
+      console.log('[RDE] JobsTab jobs assigned, assigning selectedIndex');
       const idx = props.initialJobIndex != null && props.initialJobIndex >= 0 && props.initialJobIndex < jobs.value.length
         ? Number(props.initialJobIndex)
         : (jobs.value.length ? 0 : null);
@@ -168,6 +176,8 @@ function toStartEnd(l) {
 }
 
 watch(selectedJob, (job) => {
+  selectedJobWatchCount++;
+  if (selectedJobWatchCount > 5) console.warn('[RDE] JobsTab selectedJob watch LOOP', selectedJobWatchCount);
   if (!job) return;
   console.log('[RDE] JobsTab selectedJob watch, setting local');
   const start = parseYearMonth(job.start);
@@ -184,6 +194,8 @@ watch(selectedJob, (job) => {
 }, { immediate: true });
 
 watch(() => [props.initialFocusField, selectedJob.value], ([focusField, job]) => {
+  focusWatchCount++;
+  if (focusWatchCount > 5) console.warn('[RDE] JobsTab focus watch LOOP', focusWatchCount);
   if (!focusField || !job) return;
   console.log('[RDE] JobsTab focus watch, nextTick focus');
   nextTick(() => {
