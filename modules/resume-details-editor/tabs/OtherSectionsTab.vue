@@ -92,13 +92,27 @@ function mergeDefaults(data) {
 
 const local = ref(mergeDefaults(props.data));
 
-watch(() => props.data, (d) => {
-  local.value = mergeDefaults(d);
-}, { immediate: true });
+// Guard flag to avoid emitting updates when we are just syncing from parent props.
+let isSyncingFromParent = false;
 
-watch(local, (l) => {
-  emit('update:data', { ...l });
-}, { deep: true });
+watch(
+  () => props.data,
+  (d) => {
+    isSyncingFromParent = true;
+    local.value = mergeDefaults(d);
+    isSyncingFromParent = false;
+  },
+  { immediate: true }
+);
+
+watch(
+  local,
+  (l) => {
+    if (isSyncingFromParent) return;
+    emit('update:data', { ...l });
+  },
+  { deep: true }
+);
 
 function updateCert(i, v) {
   local.value.certifications[i] = v;
