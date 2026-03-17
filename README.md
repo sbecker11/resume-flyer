@@ -2,7 +2,7 @@
 
 <img src="https://media1.giphy.com/media/)v1.2lkPTc5MGI3NjExd2N3bmVkYmIzajI0cGhydjhxOThzOGs1aWYxcDRvdWxvdHd6ODQzNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OzLgdH8NizyWcLH3Ux/giphy.gif">
 
-Dark, chaotic, and deep
+# Dark, chaotic, and deep
 
 **resume-flock** is an interactive resume explorer. Upload a DOCX or PDF resume and it is parsed into your employment experience and technical skills. You explore them as **business cards** (one per job) and **skill cards** (one per skill) in 3D or in a linear list. Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
 
