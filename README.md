@@ -1,6 +1,6 @@
 # resume-flock
 
-<img src="https://media.giphy.com/media/OzLgdH8NizyWcLH3Ux/giphy.gif" width=300 height=200>
+<img src="static_content/movie.gif" width=300 height=200>
 
 # Dark, chaotic, and deep
 
