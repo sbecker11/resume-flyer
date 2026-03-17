@@ -12,6 +12,13 @@ function getApiBase() {
         : '';
 }
 
+function basePathJoin(relPath) {
+    const base = (import.meta?.env?.BASE_URL || '/');
+    const b = base.endsWith('/') ? base : `${base}/`;
+    const p = relPath.startsWith('/') ? relPath.slice(1) : relPath;
+    return `${b}${p}`;
+}
+
 function downloadJson(filename, data) {
     try {
         const blob = new Blob([JSON.stringify(data, null, 2) + '\n'], { type: 'application/json' });
@@ -29,7 +36,8 @@ function downloadJson(filename, data) {
 }
 
 async function apiJson(path, options = {}) {
-    const url = getApiBase() + path;
+    const base = getApiBase();
+    const url = base ? (base + path) : basePathJoin(path);
     try {
         const res = await fetch(url, {
             headers: { 'Content-Type': 'application/json', ...options.headers },

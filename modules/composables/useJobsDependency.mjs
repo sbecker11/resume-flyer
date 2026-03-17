@@ -5,6 +5,13 @@ import { ref, computed, readonly } from 'vue'
 import { enrichJobsWithSkills } from '../data/enrichedJobs.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 
+function basePathJoin(relPath) {
+  const base = (import.meta?.env?.BASE_URL || '/')
+  const b = base.endsWith('/') ? base : `${base}/`
+  const p = relPath.startsWith('/') ? relPath.slice(1) : relPath
+  return `${b}${p}`
+}
+
 // Global state for jobs dependency
 const jobsState = ref({
   data: null,
@@ -42,7 +49,7 @@ export function useJobsDependency() {
       return []
     }
 
-    const url = `/api/resumes/${encodeURIComponent(resumeId)}/data`
+    const url = basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/data`)
     console.log('[useJobsDependency] 🔄 Loading jobs from resume API:', url)
     jobsState.value.isLoading = true
     jobsState.value.error = null
@@ -58,10 +65,10 @@ export function useJobsDependency() {
         payload = await res.json()
       } catch (e) {
         reportError(e, '[useJobsDependency] Failed to fetch resume data from API', 'Attempting static /parsed_resumes fallback')
-        const staticUrl = `/parsed_resumes/${encodeURIComponent(resumeId)}/jobs.json`
+        const staticUrl = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/jobs.json`)
         const [jobsRes, skillsRes] = await Promise.all([
           fetch(staticUrl),
-          fetch(`/parsed_resumes/${encodeURIComponent(resumeId)}/skills.json`).catch(() => null),
+          fetch(basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/skills.json`)).catch(() => null),
         ])
         if (!jobsRes.ok) {
           const errBody = await jobsRes.text().catch(() => '')

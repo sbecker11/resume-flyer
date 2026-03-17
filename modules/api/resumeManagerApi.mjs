@@ -2,6 +2,13 @@
 // API client for resume manager operations
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 
+function basePathJoin(relPath) {
+    const base = (import.meta?.env?.BASE_URL || '/');
+    const b = base.endsWith('/') ? base : `${base}/`;
+    const p = relPath.startsWith('/') ? relPath.slice(1) : relPath;
+    return `${b}${p}`;
+}
+
 async function fetchJsonOrThrow(url, options = {}) {
     const response = await fetch(url, options);
     if (!response.ok) {
@@ -12,11 +19,11 @@ async function fetchJsonOrThrow(url, options = {}) {
 }
 
 async function fetchStaticResumesIndex() {
-    return fetchJsonOrThrow('/parsed_resumes/index.json');
+    return fetchJsonOrThrow(basePathJoin('parsed_resumes/index.json'));
 }
 
 async function fetchStaticResumeData(resumeId) {
-    const base = `/parsed_resumes/${encodeURIComponent(resumeId)}`;
+    const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
     const [jobs, skills, categories] = await Promise.all([
         fetchJsonOrThrow(`${base}/jobs.json`),
         fetchJsonOrThrow(`${base}/skills.json`).catch(() => ({})),
@@ -31,7 +38,7 @@ async function fetchStaticResumeData(resumeId) {
  */
 export async function listResumes() {
     try {
-        return await fetchJsonOrThrow('/api/resumes');
+        return await fetchJsonOrThrow(basePathJoin('api/resumes'));
     } catch (error) {
         reportError(error, '[ResumeManagerAPI] Failed to list resumes', 'Falling back to static parsed_resumes index (if available)');
         try {
@@ -50,7 +57,7 @@ export async function listResumes() {
  * @param {string} resumeId
  */
 export async function deleteResume(resumeId) {
-    const response = await fetch(`/api/resumes/${encodeURIComponent(resumeId)}`, { method: 'DELETE' });
+    const response = await fetch(basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}`), { method: 'DELETE' });
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${response.status}`);
@@ -142,7 +149,7 @@ export async function uploadResume(fileOrUrl, displayName = null, onProgress = n
             });
 
             // Send request
-            xhr.open('POST', '/api/resumes/upload');
+            xhr.open('POST', basePathJoin('api/resumes/upload'));
             xhr.send(formData);
         });
 
@@ -163,7 +170,7 @@ export async function updateJobSkills(resumeId, jobIndex, skillIDs, newSkills = 
     const body = { skillIDs };
     if (newSkills.length) body.newSkills = newSkills;
     const response = await fetch(
-        `/api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}/skills`,
+        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}/skills`),
         { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -178,7 +185,7 @@ export async function updateJobSkills(resumeId, jobIndex, skillIDs, newSkills = 
  */
 export async function renameSkill(resumeId, oldKey, newName) {
     const response = await fetch(
-        `/api/resumes/${encodeURIComponent(resumeId)}/skills/rename`,
+        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/rename`),
         { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldKey, newName }) }
     );
     if (!response.ok) {
@@ -196,7 +203,7 @@ export async function renameSkill(resumeId, oldKey, newName) {
  */
 export async function mergeSkill(resumeId, fromKey, toKey) {
     const response = await fetch(
-        `/api/resumes/${encodeURIComponent(resumeId)}/skills/merge`,
+        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/merge`),
         { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromKey, toKey }) }
     );
     if (!response.ok) {
@@ -213,10 +220,10 @@ export async function mergeSkill(resumeId, fromKey, toKey) {
  */
 export async function getResumeOtherSections(resumeId) {
     try {
-        return await fetchJsonOrThrow(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`);
+        return await fetchJsonOrThrow(basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/other-sections`));
     } catch (error) {
         reportError(error, `[ResumeManagerAPI] Failed to get other-sections for ${resumeId}`, 'Falling back to static parsed_resumes other-sections.json (if available)');
-        const base = `/parsed_resumes/${encodeURIComponent(resumeId)}`;
+        const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
         return fetchJsonOrThrow(`${base}/other-sections.json`).catch(() => ({}));
     }
 }
@@ -229,8 +236,8 @@ export async function getResumeOtherSections(resumeId) {
 export async function getResumeData(resumeId) {
     try {
         const endpoint = resumeId === 'default'
-            ? '/api/resumes/default/data'
-            : `/api/resumes/${resumeId}/data`;
+            ? basePathJoin('api/resumes/default/data')
+            : basePathJoin(`api/resumes/${resumeId}/data`);
         return await fetchJsonOrThrow(endpoint);
     } catch (error) {
         reportError(error, `[ResumeManagerAPI] Failed to get resume data for ${resumeId}`, 'Falling back to static parsed_resumes data files (if available)');
