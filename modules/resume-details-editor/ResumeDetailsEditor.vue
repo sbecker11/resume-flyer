@@ -29,17 +29,17 @@
 
         <div class="rde-body">
           <MetaTab
-            v-show="activeTab === 'meta'"
+            v-if="activeTab === 'meta'"
             :meta="meta"
             @update:meta="onMetaUpdate"
           />
           <OtherSectionsTab
-            v-show="activeTab === 'other-sections'"
+            v-if="activeTab === 'other-sections'"
             :data="otherSections"
             @update:data="onOtherSectionsUpdate"
           />
           <JobsTab
-            v-show="activeTab === 'resume-jobs'"
+            v-if="activeTab === 'resume-jobs'"
             :resume-id="resumeId"
             :initial-job-index="initialJobIndex ?? null"
             :initial-focus-field="initialFocusField"
@@ -47,7 +47,7 @@
             @open-skills-for-job="openSkillsForJob"
           />
           <SkillsTab
-            v-show="activeTab === 'job-skills'"
+            v-if="activeTab === 'job-skills'"
             :resume-id="resumeId"
             :initial-job-index="skillsPreselectJobIndex !== null ? skillsPreselectJobIndex : (initialJobIndex ?? null)"
             @saved="onSkillsSaved"

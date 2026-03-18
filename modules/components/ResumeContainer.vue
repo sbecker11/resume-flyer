@@ -375,9 +375,8 @@ async function handleEditJobSkills(e) {
 function handleOpenResumeDetails(e) {
   const { tab, jobIndex, focusField } = e.detail || {};
   if (!tab || jobIndex == null) return;
-  // Skip selectJobNumber when opening from pencil: avoids sync cascade (scroll, clone, events)
-  // that can block the main thread and freeze the UI. Modal only needs jobIndex/focusField.
-  nextTick(() => openDetailsModal(tab, jobIndex, focusField));
+  // Defer to macrotask so click/mouseleave/Vue flush finish first; avoids lock before "Loading jobs".
+  setTimeout(() => openDetailsModal(tab, jobIndex, focusField), 0);
 }
 
 async function handleDetailsSaved(payload) {
