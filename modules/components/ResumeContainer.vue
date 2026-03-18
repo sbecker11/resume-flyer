@@ -13,6 +13,27 @@ import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 
+function getRuntimeBase() {
+  const envBase = (import.meta?.env?.BASE_URL || '/');
+  let base = envBase;
+
+  // Runtime safeguard for GitHub Pages / other subpath hosting
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname || '/';
+    const parts = path.split('/').filter(Boolean);
+    const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase));
+    if (useSubpath) base = `/${parts[0]}/`;
+  }
+
+  return base.endsWith('/') ? base : `${base}/`;
+}
+
+function basePathJoin(relPath) {
+  const b = getRuntimeBase();
+  const p = relPath.startsWith('/') ? relPath.slice(1) : relPath;
+  return `${b}${p}`;
+}
+
 // Define props
 const props = defineProps({
   currentResumeId: { type: String, default: 'default' },
@@ -511,7 +532,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   _lastAppendedAt = now;
 
   const colorIndex = data.referencingJobNumbers?.[0] ?? 0;
-  const backIconUrl = '/static_content/icons/anchors/icons8-back-16-black.png';
+  const backIconUrl = basePathJoin('static_content/icons/anchors/icons8-back-16-black.png');
 
   const copy = document.createElement('div');
   copy.className = 'skill-resume-div appended-skill-resume-div';

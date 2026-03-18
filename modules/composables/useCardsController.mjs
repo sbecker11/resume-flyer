@@ -27,6 +27,27 @@ import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElem
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 
+function getRuntimeBase() {
+    const envBase = (import.meta?.env?.BASE_URL || '/')
+    let base = envBase
+
+    // Runtime safeguard for GitHub Pages / other subpath hosting
+    if (typeof window !== 'undefined') {
+        const path = window.location.pathname || '/'
+        const parts = path.split('/').filter(Boolean)
+        const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase))
+        if (useSubpath) base = `/${parts[0]}/`
+    }
+
+    return base.endsWith('/') ? base : `${base}/`
+}
+
+function basePathJoin(relPath) {
+    const b = getRuntimeBase()
+    const p = relPath.startsWith('/') ? relPath.slice(1) : relPath
+    return `${b}${p}`
+}
+
 // Timeline constants (matching Timeline.vue)
 const TIMELINE_PADDING_TOP = 0;
 
@@ -744,7 +765,7 @@ export function useCardsController() {
         skillCard.style.textAlign = 'left'
         skillCard.style.wordBreak = 'break-word'
         skillCard.style.filter = filters.get_filterStr_from_z(sceneZ)
-        const backIconUrl = '/static_content/icons/anchors/icons8-back-16-black.png'
+        const backIconUrl = basePathJoin('static_content/icons/anchors/icons8-back-16-black.png')
         const backIconsHtml = referencingBizCardIds.map(bizCardId => {
             return `<span class="skill-card-biz-title skill-card-back-icon" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; display: inline-flex;"><img class="back-icon" src="${backIconUrl}" alt="" width="16" height="16" aria-hidden="true"></span>`
         }).join('')
