@@ -122,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { updateJobSkills, renameSkill, mergeSkill } from '@/modules/api/resumeManagerApi.mjs';
 
@@ -133,8 +133,8 @@ const props = defineProps({
 
 const emit = defineEmits(['saved']);
 
-const jobs = ref([]);
-const skills = ref({});
+const jobs = shallowRef([]);
+const skills = shallowRef({});
 const initialSkillKeys = ref(new Set());
 const loadError = ref('');
 const selectedJobIndex = ref(null);

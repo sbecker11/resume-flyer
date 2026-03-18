@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import MetaTab from './tabs/MetaTab.vue';
 import OtherSectionsTab from './tabs/OtherSectionsTab.vue';
 import JobsTab from './tabs/JobsTab.vue';
@@ -105,13 +105,13 @@ const tabs = [
 const activeTab = ref('meta');
 /** When user clicks "Skills" in Jobs tab, we switch to Skills tab with this job index. */
 const skillsPreselectJobIndex = ref(null);
-const meta = ref({});
-const otherSections = ref({});
+const meta = shallowRef({});
+const otherSections = shallowRef({});
 const saving = ref(false);
 
 // Pending edits (only save what changed)
-const pendingMeta = ref(null);
-const pendingOtherSections = ref(null);
+const pendingMeta = shallowRef(null);
+const pendingOtherSections = shallowRef(null);
 
 // Modal dimensions and position (center-based with drag offset)
 const modalRef = ref(null);
@@ -265,7 +265,6 @@ function onResizeEnd() {
 
 watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
   if (!open || !id || id === 'default') return;
-  console.log('[RDE] editor watch start', { open, id });
   const tab = props.initialTab && tabs.some(t => t.id === props.initialTab) ? props.initialTab : 'meta';
   activeTab.value = tab;
   skillsPreselectJobIndex.value = null;
@@ -276,17 +275,14 @@ watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
   clampDragOffset();
   pendingMeta.value = null;
   pendingOtherSections.value = null;
-  console.log('[RDE] editor watch sync done, scheduling nextTick load');
   nextTick(async () => {
-    console.log('[RDE] editor nextTick load start');
     try {
       const [metaRes, otherRes] = await Promise.all([
         api.getResumeMeta(id).catch(() => ({})),
         api.getResumeOtherSections(id).catch(() => ({}))
       ]);
-      meta.value = metaRes;
-      otherSections.value = otherRes;
-      console.log('[RDE] editor nextTick load done');
+      meta.value = typeof metaRes === 'object' && metaRes !== null ? { ...metaRes } : metaRes;
+      otherSections.value = typeof otherRes === 'object' && otherRes !== null ? { ...otherRes } : otherRes;
     } catch (err) {
       console.error('[ResumeDetailsEditor] load failed:', err);
     }

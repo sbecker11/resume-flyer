@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 
 const props = defineProps({
@@ -103,7 +103,7 @@ const emit = defineEmits(['saved', 'open-skills-for-job']);
 
 const employerInputRef = ref(null);
 const descriptionInputRef = ref(null);
-const jobs = ref([]);
+const jobs = shallowRef([]);
 const jobsLoaded = ref(false);
 const loadError = ref('');
 const selectedJobIndex = ref(null);
