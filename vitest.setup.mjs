@@ -12,6 +12,14 @@ if (typeof globalThis.window === 'undefined') {
 if (typeof globalThis.window.CONSOLE_LOG_IGNORE !== 'function') {
   globalThis.window.CONSOLE_LOG_IGNORE = () => {};
 }
+// So hasServer() returns true in tests (server branch); unit tests exercise API path
+if (globalThis.window) {
+  globalThis.window.location = {
+    ...(globalThis.window.location || {}),
+    origin: 'http://localhost',
+    pathname: '/',
+  };
+}
 
 // mathUtils.test_mathutils() and isNumericArray use these without importing (assumed global in app)
 import * as utils from './modules/utils/utils.mjs';

@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+vi.mock('@/modules/core/hasServer.mjs', () => ({ hasServer: () => true }));
+
 import { useJobsDependency, getGlobalJobsDependency } from './useJobsDependency.mjs';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
+  if (typeof global.window !== 'undefined') {
+    global.window.hasServer = () => true;
+  }
 });
 
 describe('useJobsDependency', () => {
@@ -30,19 +36,24 @@ describe('useJobsDependency', () => {
     expect(fetch).toHaveBeenCalledWith('/api/resumes/resume-abc-123/data');
   });
 
-  it('loadJobs throws when API returns non-array jobs', async () => {
+  it('loadJobs normalizes non-array jobs to empty array', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ jobs: 'not-an-array', skills: {} }),
     });
-    const { loadJobs } = useJobsDependency();
-    await expect(loadJobs({ force: true, forceResumeId: 'x' })).rejects.toThrow('not an array');
+    const { loadJobs, getJobsData } = useJobsDependency();
+    await loadJobs({ force: true, forceResumeId: 'x' });
+    expect(getJobsData()).toEqual([]);
   });
 
   it('loadJobs throws when API returns 404', async () => {
-    fetch.mockResolvedValueOnce({ ok: false, status: 404, text: async () => 'Not found' });
+    // API returns 404, then static fallback (jobs + skills URLs); mock jobs to fail so we reject
+    fetch
+      .mockResolvedValueOnce({ ok: false, status: 404, text: async () => 'Not found' })
+      .mockResolvedValueOnce({ ok: false, text: async () => '' })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
     const { loadJobs } = useJobsDependency();
-    await expect(loadJobs({ force: true, forceResumeId: 'missing' })).rejects.toThrow(/Resume data not found|404/);
+    await expect(loadJobs({ force: true, forceResumeId: 'missing' })).rejects.toThrow(/Resume data not found|404|Static resume jobs not found/);
   });
 
   it('getJobsData returns an array', () => {

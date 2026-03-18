@@ -2,6 +2,9 @@
 // Unit tests for resume-details-editor API client
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+vi.mock('@/modules/core/hasServer.mjs', () => ({ hasServer: () => true }));
+
 import {
     getResumeMeta,
     updateResumeMeta,
@@ -18,6 +21,9 @@ describe('resume-details-editor api', () => {
     beforeEach(() => {
         fetchMock = vi.fn();
         global.fetch = fetchMock;
+        if (typeof global.window !== 'undefined') {
+            global.window.hasServer = () => true;
+        }
     });
 
     afterEach(() => {
@@ -54,9 +60,10 @@ describe('resume-details-editor api', () => {
             );
         });
 
-        it('throws on HTTP error', async () => {
+        it('returns default meta when fetch fails (404) for missing resume', async () => {
             fetchMock.mockResolvedValue(errJson(404, 'meta.json not found'));
-            await expect(getResumeMeta('missing')).rejects.toThrow('meta.json not found');
+            const result = await getResumeMeta('missing');
+            expect(result).toMatchObject({ id: 'missing', displayName: 'missing' });
         });
     });
 
@@ -188,7 +195,7 @@ describe('resume-details-editor api', () => {
             fetchMock.mockResolvedValue(okJson({}));
             await getResumeMeta('r1');
             expect(fetchMock).toHaveBeenCalledWith(
-                expect.stringMatching(/^\/api\//),
+                expect.stringMatching(/\/api\/resumes\/r1\/meta$/),
                 expect.any(Object)
             );
         });

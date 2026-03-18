@@ -2,6 +2,9 @@
 // Comprehensive unit tests for resume manager API client
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+vi.mock('@/modules/core/hasServer.mjs', () => ({ hasServer: () => true }));
+
 import { listResumes, uploadResume, getResumeData } from './resumeManagerApi.mjs';
 
 describe('resumeManagerApi', () => {
@@ -15,6 +18,9 @@ describe('resumeManagerApi', () => {
         // Mock global fetch
         fetchMock = vi.fn();
         global.fetch = fetchMock;
+        if (typeof global.window !== 'undefined') {
+            global.window.hasServer = () => true;
+        }
     });
 
     afterEach(() => {
@@ -36,7 +42,7 @@ describe('resumeManagerApi', () => {
             const result = await listResumes();
 
             expect(result).toEqual(mockResumes);
-            expect(fetchMock).toHaveBeenCalledWith('/api/resumes');
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes', expect.any(Object));
         });
 
         it('should handle HTTP error responses', async () => {
@@ -44,7 +50,8 @@ describe('resumeManagerApi', () => {
                 ok: false,
                 status: 500,
                 statusText: 'Internal Server Error',
-                json: async () => ({ error: 'Database connection failed' })
+                json: async () => ({ error: 'Database connection failed' }),
+                text: async () => 'Database connection failed'
             });
 
             await expect(listResumes()).rejects.toThrow('Database connection failed');
@@ -56,7 +63,8 @@ describe('resumeManagerApi', () => {
                 ok: false,
                 status: 404,
                 statusText: 'Not Found',
-                json: async () => ({})
+                json: async () => ({}),
+                text: async () => ''
             });
 
             await expect(listResumes()).rejects.toThrow('HTTP 404: Not Found');
@@ -341,7 +349,7 @@ describe('resumeManagerApi', () => {
             const result = await getResumeData('default');
 
             expect(result).toEqual(mockData);
-            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/default/data');
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/default/data', expect.any(Object));
         });
 
         it('should fetch specific resume data', async () => {
@@ -359,7 +367,7 @@ describe('resumeManagerApi', () => {
             const result = await getResumeData('resume-123');
 
             expect(result).toEqual(mockData);
-            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/resume-123/data');
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/resume-123/data', expect.any(Object));
         });
 
         it('should handle HTTP error with custom message', async () => {
@@ -367,7 +375,8 @@ describe('resumeManagerApi', () => {
                 ok: false,
                 status: 404,
                 statusText: 'Not Found',
-                json: async () => ({ error: 'Resume not found' })
+                json: async () => ({ error: 'Resume not found' }),
+                text: async () => 'Resume not found'
             });
 
             await expect(getResumeData('resume-999')).rejects.toThrow('Resume not found');
@@ -379,7 +388,8 @@ describe('resumeManagerApi', () => {
                 ok: false,
                 status: 500,
                 statusText: 'Internal Server Error',
-                json: async () => ({})
+                json: async () => ({}),
+                text: async () => ''
             });
 
             await expect(getResumeData('resume-123')).rejects.toThrow('HTTP 500: Internal Server Error');
@@ -411,7 +421,7 @@ describe('resumeManagerApi', () => {
             await expect(listResumes()).rejects.toThrow();
 
             expect(consoleErrorSpy).toHaveBeenCalledWith(
-                '[ResumeManagerAPI] Failed to list resumes:',
+                expect.stringContaining('[ResumeManagerAPI] Failed to list resumes'),
                 expect.any(Error)
             );
         });
