@@ -20,7 +20,7 @@ const PALETTE_DIR_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'colorPale
 const CSS_FILE_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'css', 'palette-styles.css');
 /** Persisted app state (layout, theme, currentResumeId, system-constants, etc.). */
 const STATE_FILE_PATH = path.resolve(PROJECT_ROOT, 'app_state.json');
-const STATE_EXAMPLE_PATH = path.resolve(PROJECT_ROOT, 'app_state.example.json');
+const STATE_EXAMPLE_PATH = path.resolve(PROJECT_ROOT, 'public', 'app_state.example.json');
 const STATIC_JOBS_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'jobs', 'jobs.mjs');
 const STATIC_SKILLS_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'skills', 'skills.mjs');
 const STATIC_CATEGORIES_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'categories.mjs');

@@ -1,0 +1,196 @@
+{
+  "version": "1.4",
+  "lastUpdated": "2026-03-18T04:05:35.264Z",
+  "user-settings": {
+    "layout": {
+      "orientation": "scene-left",
+      "scenePercentage": 50,
+      "resumePercentage": 50
+    },
+    "resizeHandle": {
+      "stepCount": 4
+    },
+    "focalPointMode": "locked",
+    "focalPoint": {
+      "x": 729,
+      "y": 501,
+      "mode": "following"
+    },
+    "currentResumeId": "shawn-becker-full-stack-developer-ai-ml-engineer",
+    "resume": {
+      "sortRule": {
+        "field": "startDate",
+        "direction": "asc"
+      }
+    },
+    "theme": {
+      "colorPalette": "sweeps.json"
+    },
+    "scrollPositions": {
+      "sceneContentScrollTop": 378
+    }
+  },
+  "system-constants": {
+    "zIndex": {
+      "root": 0,
+      "scene": 1,
+      "sceneGradients": 2,
+      "timeline": 3,
+      "backgroundMax": 6,
+      "cardsMin": 10,
+      "cardsMax": 19,
+      "bullsEye": 98,
+      "selectedCard": 99,
+      "focalPoint": 100,
+      "aimPoint": 101
+    },
+    "cards": {
+      "meanWidth": 180,
+      "minHeight": 180,
+      "maxXOffset": 100,
+      "maxWidthOffset": 30,
+      "minZDiff": 2,
+      "skillMinDistance": 200,
+      "concurrentJobsOffsetX": 35,
+      "concurrentJobsOffsetY": 22
+    },
+    "timeline": {
+      "pixelsPerYear": 200,
+      "paddingTop": 0,
+      "gradientLength": "50vh"
+    },
+    "resizeHandle": {
+      "width": 20,
+      "shadowWidth": 8,
+      "shadowBlur": 5,
+      "defaultWidthPercent": 50
+    },
+    "animation": {
+      "durations": {
+        "fast": "0.2s",
+        "medium": "0.3s",
+        "slow": "0.5s",
+        "spinner": "1s"
+      },
+      "autoScroll": {
+        "repeatMillis": 10,
+        "maxVelocity": 3,
+        "minVelocity": 2,
+        "changeThreshold": 2,
+        "scrollZonePercentage": 0.2
+      }
+    },
+    "performance": {
+      "thresholds": {
+        "resizeTime": 16,
+        "scrollTime": 8,
+        "memoryUsage": 52428800
+      },
+      "debounceTimeout": 100
+    },
+    "typography": {
+      "fontSizes": {
+        "small": "10px",
+        "medium": "12px",
+        "large": "14px",
+        "xlarge": "16px",
+        "xxlarge": "20px",
+        "timeline": "48px"
+      },
+      "fontFamily": "'Inter', sans-serif"
+    },
+    "visualEffects": {
+      "parallax": {
+        "xExaggeration": 0.9,
+        "yExaggeration": 1
+      }
+    },
+    "theme": {
+      "brightnessBoostSelected": 2,
+      "brightnessBoostHovered": 1.75,
+      "borderSettings": {
+        "normal": {
+          "padding": "8px",
+          "innerBorderWidth": "1px",
+          "innerBorderColor": "white",
+          "outerBorderWidth": "0px",
+          "outerBorderColor": "transparent",
+          "borderRadius": "25px"
+        },
+        "hovered": {
+          "padding": "8px",
+          "innerBorderWidth": "1px",
+          "innerBorderColor": "blue",
+          "outerBorderWidth": "0px",
+          "outerBorderColor": "transparent",
+          "borderRadius": "25px"
+        },
+        "selected": {
+          "padding": "8px",
+          "innerBorderWidth": "1px",
+          "innerBorderColor": "purple",
+          "outerBorderWidth": "0px",
+          "outerBorderColor": "transparent",
+          "borderRadius": "25px"
+        }
+      },
+      "rDivBorderOverrideSettings": {
+        "normal": {
+          "padding": "15px",
+          "innerBorderWidth": "1px",
+          "marginTop": "11px"
+        },
+        "hovered": {
+          "padding": "15px",
+          "innerBorderWidth": "1px",
+          "marginTop": "11px"
+        },
+        "selected": {
+          "padding": "15px",
+          "innerBorderWidth": "1px",
+          "marginTop": "11px"
+        }
+      }
+    },
+    "rendering": {
+      "parallaxScaleAtMinZ": 1,
+      "parallaxScaleAtMaxZ": 1,
+      "saturationAtMaxZ": 100,
+      "brightnessAtMaxZ": 100,
+      "blurAtMaxZ": 0
+    },
+    "renderingLimits": {
+      "blurAtMaxZ": {
+        "min": 0,
+        "max": 5,
+        "step": 0.5
+      },
+      "saturationAtMaxZ": {
+        "min": 0,
+        "max": 100,
+        "step": 5
+      },
+      "brightnessAtMaxZ": {
+        "min": 0,
+        "max": 100,
+        "step": 5
+      },
+      "parallaxScaleAtMinZ": {
+        "min": 0,
+        "max": 1.5,
+        "step": 0.05
+      },
+      "parallaxScaleAtMaxZ": {
+        "min": 0,
+        "max": 1.5,
+        "step": 0.05
+      }
+    }
+  },
+  "layout": {
+    "orientation": "scene-left"
+  },
+  "resizeHandle": {
+    "stepCount": 1
+  }
+}

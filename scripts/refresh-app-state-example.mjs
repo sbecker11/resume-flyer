@@ -11,7 +11,7 @@ import path from 'path';
 
 const projectRoot = process.cwd();
 const statePath = path.join(projectRoot, 'app_state.json');
-const examplePath = path.join(projectRoot, 'app_state.example.json');
+const examplePath = path.join(projectRoot, 'public', 'app_state.example.json');
 
 function sanitize(state) {
   const out = JSON.parse(JSON.stringify(state));

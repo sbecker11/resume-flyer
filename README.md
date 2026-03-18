@@ -603,7 +603,7 @@ This constraint is implemented in:
 2. `AppContent.vue` - Layout percentage display
 3. `SceneContainer.vue` - Scene width calculations
 4. `appStore.mjs` - State management
-5. `app_state.json` - Persistent storage (see [docs/LOCAL-FILES-AND-SECRETS.md](docs/LOCAL-FILES-AND-SECRETS.md) for local files and secrets, including `.env`)
+5. `app_state.json` - Persistent storage. See [docs/LOCAL-FILES-AND-SECRETS.md](docs/LOCAL-FILES-AND-SECRETS.md) for local vs GitHub Pages use of app state and `.env`.
 6. **3D Settings limits**: Edit `app_state.json` → `system-constants.renderingLimits` to change min/max/step for 3D sliders (brightness at max Z, saturation, blur, parallax scales). The 3D Settings modals read from app state.
 
 ### **🧮 Percentage Calculation Pattern**

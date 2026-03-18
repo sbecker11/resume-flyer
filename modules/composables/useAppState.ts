@@ -53,6 +53,24 @@ const loadError: Ref<Error | null> = ref(null)
 let stateApiAvailable: boolean | null = null
 
 const STATE_API_UNAVAILABLE_KEY = 'resume-flock/state_api_unavailable'
+const EXAMPLE_STATE_PATH = 'app_state.example.json'
+
+/**
+ * Load state from static app_state.example.json (e.g. on GitHub Pages when no server).
+ * Returns null if fetch or parse fails.
+ */
+async function loadStateFromExampleFile(): Promise<AppState | null> {
+    try {
+        const url = basePathJoin(EXAMPLE_STATE_PATH)
+        const response = await fetch(url)
+        if (!response.ok) return null
+        const raw = await response.json()
+        const migrated = migrateState(raw)
+        return deepMerge(getDefaultState(), migrated)
+    } catch {
+        return null
+    }
+}
 
 // Single promise to prevent multiple simultaneous loads
 let loadPromise: Promise<AppState> | null = null
@@ -424,8 +442,9 @@ async function loadStateFromServer(): Promise<AppState> {
                     try {
                         localStorage.setItem(STATE_API_UNAVAILABLE_KEY, '1')
                     } catch (_) {}
-                    console.log("No saved state found on server, using default state.")
-                    // GitHub Pages / static hosting: fall back to localStorage if present
+                    console.log('[AppState] No saved state on server; using app_state.example.json or localStorage or defaults.')
+                    const fromExample = await loadStateFromExampleFile()
+                    if (fromExample) return fromExample
                     try {
                         const raw = localStorage.getItem('resume-flock/app_state')
                         if (raw) return deepMerge(getDefaultState(), migrateState(JSON.parse(raw)))
@@ -490,6 +509,8 @@ async function loadStateFromServer(): Promise<AppState> {
         } catch (e) {
             reportError(e, '[AppState] Failed to load localStorage state', 'Remedy: Using default state')
         }
+        const fromExample = await loadStateFromExampleFile()
+        if (fromExample) return fromExample
         return getDefaultState()
     }
 }
