@@ -1245,8 +1245,8 @@ function onResumeSkillCardClick(event) {
 /* Close button: match r-div-close (circular, white bg, red border) */
 .skill-resume-div-close {
     position: absolute;
-    top: 6px;
-    right: 8px;
+    top: 4px;
+    right: 4px;
     left: auto;
     width: 22px;
     height: 22px;
@@ -1313,8 +1313,8 @@ function onResumeSkillCardClick(event) {
 /* Red X button on rDiv - remove from resume listing only */
 .biz-resume-div .r-div-close {
     position: absolute;
-    top: 6px;
-    right: 8px;
+    top: 11px;
+    right: 11px;
     width: 22px;
     height: 22px;
     padding: 0;
@@ -1701,13 +1701,15 @@ function onResumeSkillCardClick(event) {
     overflow-wrap: break-word;
 }
 
-/* Skill titles — only show link styling when a skill-card-div exists for them */
-.biz-card-skill-title[data-skill-card-id] {
+/* Skill titles — show link styling for both stamped and lazy-resolved skills */
+.biz-card-skill-title[data-skill-card-id],
+.biz-card-skill-title[data-skill-name] {
     cursor: pointer;
     text-decoration: underline;
 }
 
-.biz-card-skill-title[data-skill-card-id]:hover {
+.biz-card-skill-title[data-skill-card-id]:hover,
+.biz-card-skill-title[data-skill-name]:hover {
     font-weight: bold;
     font-style: italic;
 }

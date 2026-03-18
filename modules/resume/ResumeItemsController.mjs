@@ -312,7 +312,7 @@ class ResumeItemsController {
             // Parse description and create bullet points with clickable references
             const descContent = document.createElement('div');
             descContent.className = 'description-content';
-            this.parseDescriptionToBullets(jobData.Description, descContent, jobData.references);
+            this.parseDescriptionToBullets(jobData.Description, descContent, jobData.references, jobData['job-skills']);
             descDiv.appendChild(descContent);
 
             detailsDiv.appendChild(descDiv);
@@ -381,21 +381,47 @@ class ResumeItemsController {
         return dateStr;
     }
 
-    parseDescriptionToBullets(description, container, references = []) {
+    parseDescriptionToBullets(description, container, references = [], jobSkills = {}) {
         if (!description) return;
+
+        const escapeHtml = (str) => String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
         
-        // Create a map of reference terms to URLs
-        const refMap = new Map();
-        if (references && references.length > 0) {
-            references.forEach(refHtml => {
-                // Extract the link text and href from the reference HTML
-                const match = refHtml.match(/<a href="([^"]*)">\[([^\]]*)\]<\/a>/);
-                if (match) {
-                    const [, url, text] = match;
-                    refMap.set(`[${text}]`, url);
-                }
+        // Focus on resume skills (the same ones driving the resume-skills section).
+        // We ignore bracketed phrases in the description and instead wrap any
+        // occurrence of these skill terms.
+        const skillKeys = jobSkills && typeof jobSkills === 'object'
+            ? Object.keys(jobSkills)
+            : [];
+        if (skillKeys.length === 0) {
+            // Still render bullets, just without skill highlighting.
+            const parts = description.split(/[•\n]+|(?<=\.)\s+/).filter(part => part.trim().length > 0);
+            parts.forEach(part => {
+                const trimmed = part.trim();
+                const bulletPoint = document.createElement('div');
+                bulletPoint.className = 'job-description-item';
+                bulletPoint.innerHTML = '<span class="bullet">•</span><span class="bullet-text">' + trimmed + '</span>';
+                container.appendChild(bulletPoint);
             });
+            return;
         }
+
+        const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const termKeyByLower = new Map(skillKeys.map(k => [String(k).toLowerCase(), k]));
+
+        // Match only when a skill term isn't embedded inside a longer alphanumeric token.
+        // Multi-word phrases are supported because boundaries are only applied to edges.
+        const escapedAlternation = skillKeys
+            .slice()
+            .sort((a, b) => String(b).length - String(a).length)
+            .map(escapeRegex)
+            .join('|');
+
+        const skillRegex = new RegExp(`(^|[^A-Za-z0-9])(${escapedAlternation})(?=[^A-Za-z0-9]|$)`, 'gi');
         
         // Split by various delimiters: bullet points, line breaks, or sentences
         const parts = description.split(/[•\n]+|(?<=\.)\s+/).filter(part => part.trim().length > 0);
@@ -403,10 +429,10 @@ class ResumeItemsController {
         parts.forEach(part => {
             let trimmed = part.trim();
             if (trimmed.length > 0) {
-                // Replace bracketed terms with clickable links
-                refMap.forEach((url, term) => {
-                    const linkHtml = `<a href="${url}" target="_blank" style="color: inherit; text-decoration: underline; pointer-events: auto; cursor: pointer;">${term}</a>`;
-                    trimmed = trimmed.replace(new RegExp(term.replace(/[[\]]/g, '\\$&'), 'g'), linkHtml);
+                trimmed = trimmed.replace(skillRegex, (match, leading, matchedTerm) => {
+                    const lower = String(matchedTerm).toLowerCase();
+                    const canonicalSkillKey = termKeyByLower.get(lower) || matchedTerm;
+                    return `${leading}<span class="biz-card-skill-title" data-skill-name="${escapeHtml(canonicalSkillKey)}">${escapeHtml(matchedTerm)}</span>`;
                 });
                 
                 const bulletPoint = document.createElement('div');
@@ -508,7 +534,39 @@ class ResumeItemsController {
         const skillTitleEl = event?.target?.closest('.biz-card-skill-title');
         if (skillTitleEl) {
             event.stopPropagation();
-            const skillCardId = skillTitleEl.getAttribute('data-skill-card-id');
+            let skillCardId = skillTitleEl.getAttribute('data-skill-card-id');
+            if (!skillCardId) {
+                const skillName = skillTitleEl.getAttribute('data-skill-name');
+                // Resolve lazily so clicks work even before CardsController stamps data-skill-card-id.
+                if (skillName) {
+                    // 1) Exact match first (fast path)
+                    try {
+                        const esc = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(skillName) : String(skillName).replace(/"/g, '\\"')
+                        const exact = document.querySelector(`.skill-card-div[data-skill-name="${esc}"]`);
+                        skillCardId = exact?.id || null;
+                    } catch (_) {}
+
+                    // 2) Normalized match (fixes case/whitespace/dash mismatches like "K-means" vs "K – means")
+                    if (!skillCardId) {
+                        const normalize = (s) => String(s)
+                            .toLowerCase()
+                            .replace(/[\u2010-\u2015]/g, '-') // normalize hyphen variants
+                            .replace(/[^a-z0-9]+/g, '') // drop punctuation/spacing
+                            .trim();
+                        const targetNorm = normalize(skillName);
+                        const all = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]'));
+                        const found = all.find(el => normalize(el.getAttribute('data-skill-name')) === targetNorm);
+                        skillCardId = found?.id || null;
+                    }
+
+                    if (!skillCardId) {
+                        console.warn('[ResumeItemsController] Skill click: could not resolve skillCardId', {
+                            jobNumber: bizResumeDiv?.getAttribute?.('data-job-number'),
+                            skillName
+                        });
+                    }
+                }
+            }
             if (!skillCardId) return;
             const sel = selectionManager.selectedCard;
             if (sel?.type === 'skill' && sel.skillCardId === skillCardId) {

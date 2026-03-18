@@ -19,17 +19,53 @@ function enrichJobFromDescription(description, skillsMap) {
   const jobSkills = {};
   if (!description || typeof description !== 'string') return { refs, jobSkills };
 
+  // Map lowercased skill keys to their canonical keys in skillsMap
+  const skillKeyByLower = new Map(
+    Object.entries(skillsMap).map(([k]) => [String(k).toLowerCase(), k])
+  );
+
+  // Track lowercased skill keys so we can dedupe across bracket/unbracketed matches.
+  const seenLower = new Set();
+
   let match;
-  const seen = new Set();
   while ((match = BRACKET_REGEX.exec(description)) !== null) {
-    const name = match[1].trim();
-    if (!name || seen.has(name)) continue;
-    const skill = skillsMap[name];
-    if (!skill) continue;
-    seen.add(name);
+    const rawName = match[1].trim();
+    if (!rawName) continue;
+
+    const skillKey = skillKeyByLower.get(rawName.toLowerCase());
+    if (!skillKey) continue;
+    const canonicalLower = String(skillKey).toLowerCase();
+    if (seenLower.has(canonicalLower)) continue;
+
+    const skill = skillsMap[skillKey];
     const url = skill.url && skill.url.trim() ? skill.url : '#';
-    refs.push(`<a href="${url}">[${name}]</a>`);
-    jobSkills[name] = name;
+    refs.push(`<a href="${url}">[${skillKey}]</a>`);
+    jobSkills[skillKey] = skillKey;
+    seenLower.add(canonicalLower);
+  }
+
+  // Also detect skill occurrences without requiring [brackets], so a term in the
+  // description like "CocaCola Corp" can still be identified.
+  const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const makeBoundedRegex = (term) => {
+    const escaped = escapeRegex(term);
+    // Match term when it isn't embedded in a longer alphanumeric token.
+    // Boundaries only apply to the edges; multi-word phrases are supported.
+    return new RegExp(`(^|[^A-Za-z0-9])(${escaped})(?=[^A-Za-z0-9]|$)`, 'i');
+  };
+
+  for (const [skillKey, skill] of Object.entries(skillsMap)) {
+    if (!skillKey) continue;
+    const canonicalLower = String(skillKey).toLowerCase();
+    if (seenLower.has(canonicalLower)) continue;
+
+    const bounded = makeBoundedRegex(skillKey);
+    if (!bounded.test(description)) continue;
+
+    const url = skill.url && skill.url.trim() ? skill.url : '#';
+    refs.push(`<a href="${url}">[${skillKey}]</a>`);
+    jobSkills[skillKey] = skillKey;
+    seenLower.add(canonicalLower);
   }
   return { refs, jobSkills };
 }

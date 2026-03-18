@@ -94,4 +94,12 @@ describe('enrichedJobs', () => {
     expect(jobs[0].references).toEqual([]);
     expect(jobs[0]['job-skills']).toEqual({});
   });
+
+  it('detects unbracketed skill occurrences in description', () => {
+    const rawJobs = [{ index: 0, Description: 'Used Python in production.' }];
+    const skills = { Python: { url: 'https://python.org', img: '' } };
+    const jobs = enrichJobsWithSkills(rawJobs, skills);
+    expect(jobs[0].references).toContain('<a href="https://python.org">[Python]</a>');
+    expect(jobs[0]['job-skills']).toHaveProperty('Python');
+  });
 });

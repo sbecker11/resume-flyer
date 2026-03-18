@@ -1019,15 +1019,6 @@
       10
     ]
   },
-  "coca-cola-corp-europe": {
-    "name": "Coca-Cola Corp. Europe",
-    "url": "",
-    "img": "",
-    "categoryIDs": [],
-    "jobIDs": [
-      10
-    ]
-  },
   "medical-services-corp": {
     "name": "Medical Services Corp.",
     "url": "",
@@ -1535,5 +1526,11 @@
       "methodology"
     ],
     "jobIDs": []
+  },
+  "Coca-Cola Corp.": {
+    "name": "Coca-Cola Corp.",
+    "jobIDs": [
+      10
+    ]
   }
 }

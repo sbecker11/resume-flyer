@@ -312,20 +312,24 @@
     "index": 10,
     "role": "Technical Lead, Co-Founder",
     "employer": "Sierra Vista Group",
-    "start": "2002-11-01",
-    "end": "2011-02-01",
+    "start": "2002-11",
+    "end": "2011-02",
     "z-index": 2,
     "css name": "teal",
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Founded boutique consulting firm serving clients in entertainment, medical services, manufacturing, insurance, and cybersecurity including [AMI], [Coca-Cola Corp. Europe], [Medical Services Corp.], and [Intrusic Cyber Security]. • Identified profitable opportunities in product development and software engineering; negotiated budgets and milestones with C-level management. • Architected full-internet and low-bandwidth cache-and-sync [IoT] solutions for enterprise systems with mobile devices.",
+    "Description": "• Founded boutique consulting firm serving clients in entertainment, medical services, manufacturing, insurance, and cybersecurity.\n• Clients included [AMI], [Coca-Cola Corp.], [Medical Services Corp.], and [Intrusic Cyber Security]. \n• Identified profitable opportunities in product development and software engineering; negotiated budgets and milestones with C-level management. \n• Architected full-internet and low-bandwidth cache-and-sync [IoT] solutions for enterprise systems with mobile devices.",
     "skillIDs": [
       "ami",
-      "coca-cola-corp-europe",
+      "Coca-Cola Corp.",
       "medical-services-corp",
       "intrusic-cyber-security",
-      "iot"
+      "iot",
+      "AMI",
+      "Medical Services Corp.",
+      "Intrusic Cyber Security",
+      "IoT"
     ]
   }
 }
