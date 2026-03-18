@@ -1387,7 +1387,7 @@ function onResumeSkillCardClick(event) {
     /* Standard gap: space from edges and between sections */
     --details-gap: 12px;
     padding: var(--details-gap);
-    padding-top: 36px; /* leave room for close button */
+    padding-top: max(0px, calc(36px - 3em)); /* leave room for close button; reduce top text gap by 3em */
     gap: var(--details-gap);
 }
 
