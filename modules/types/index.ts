@@ -137,23 +137,13 @@ export interface AppState {
     };
     visualEffects: {
       parallax: {
-        xExaggerationFactor: number;
-        yExaggerationFactor: number;
-      };
-      depthEffects: {
-        minBrightnessPercent: number;
-        blurScaleFactor: number;
-        filterMultipliers: {
-          brightness: { min: number; factor: number };
-          blur: { min: number; factor: number };
-          contrast: { min: number; factor: number };
-          saturate: { min: number; factor: number };
-        };
+        xExaggeration: number;
+        yExaggeration: number;
       };
     };
     theme: {
-      brightnessFactorSelected: number;
-      brightnessFactorHovered: number;
+      brightnessBoostSelected: number;
+      brightnessBoostHovered: number;
       borderSettings: {
         normal: BorderStyle;
         hovered: BorderStyle;

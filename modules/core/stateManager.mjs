@@ -27,8 +27,8 @@ export function getDefaultState() {
         },
         theme: {
             colorPalette: '50_Dark_Grey_Monotone.json', // Default palette
-            brightnessFactorSelected: 2.0,  // Brightness factor for selected elements (scene cards)
-            brightnessFactorHovered: 1.75,   // Brightness factor for hovered elements (scene cards)
+            brightnessBoostSelected: 2.0,  // Computed; selected card brightness boost (scene cards)
+            brightnessBoostHovered: 1.75,   // Computed; hovered card brightness boost (scene cards)
             /* Padding and border width are identical across states so text does not shift on hover/select */
             borderSettings: {
                 normal: {
@@ -142,18 +142,8 @@ export function getDefaultState() {
             // Visual Effects
             visualEffects: {
                 parallax: {
-                    xExaggerationFactor: 0.9,
-                    yExaggerationFactor: 1.0
-                },
-                depthEffects: {
-                    minBrightnessPercent: 15,
-                    blurScaleFactor: 2.0,
-                    filterMultipliers: {
-                        brightness: { min: 0.4, factor: 0.10 },
-                        blur: { min: 0, factor: 0.10 },
-                        contrast: { min: 0.75, factor: 0.010 },
-                        saturate: { min: 0.75, factor: 0.010 }
-                    }
+                    xExaggeration: 0.9,
+                    yExaggeration: 1.0
                 }
             }
         }
@@ -280,6 +270,20 @@ function migrateState(state) {
             if (r.displacementAtMinZ !== undefined) delete r.displacementAtMinZ;
         }
         if (state['user-settings']?.rendering) delete state['user-settings'].rendering;
+        if (sc.visualEffects?.depthEffects !== undefined) {
+            delete sc.visualEffects.depthEffects;
+            window.CONSOLE_LOG_IGNORE('[MIGRATION] Removed deprecated visualEffects.depthEffects');
+        }
+        const par = sc.visualEffects?.parallax;
+        if (par) {
+            if (par.xExaggerationFactor !== undefined) { par.xExaggeration = par.xExaggerationFactor; delete par.xExaggerationFactor; }
+            if (par.yExaggerationFactor !== undefined) { par.yExaggeration = par.yExaggerationFactor; delete par.yExaggerationFactor; }
+        }
+        const theme = sc.theme;
+        if (theme) {
+            if (theme.brightnessFactorSelected !== undefined) { theme.brightnessBoostSelected = theme.brightnessFactorSelected; delete theme.brightnessFactorSelected; }
+            if (theme.brightnessFactorHovered !== undefined) { theme.brightnessBoostHovered = theme.brightnessFactorHovered; delete theme.brightnessFactorHovered; }
+        }
     }
 
     return state;

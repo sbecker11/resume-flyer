@@ -15,8 +15,8 @@ import { getRendering } from '../core/renderingConfig.mjs'
 import { logger } from '../utils/logger.mjs'
 
 // Parallax constants (flock-of-postcards–aligned: Z 1 = far, Z 14 = close; higher Z = more parallax)
-const PARALLAX_X_EXAGGERATION_FACTOR = 0.9
-const PARALLAX_Y_EXAGGERATION_FACTOR = 1.0
+const PARALLAX_X_EXAGGERATION = 0.9
+const PARALLAX_Y_EXAGGERATION = 1.0
 const CLONE_Z_SCALE = 0
 const PARALLAX_Z_MIN = zUtils.FLOCK_PARALLAX_Z_MIN
 const PARALLAX_Z_MAX = zUtils.FLOCK_PARALLAX_Z_MAX
@@ -144,8 +144,8 @@ export function useParallaxEnhanced() {
 
     // SceneView-relative X so projection works for both scene-left and scene-right (viewport .x alone is wrong when scene is on the right).
     const bullsEyeCenterXSceneView = bullsEyeCenter.x - sceneViewRect.left
-    const dh = (bullsEyeCenter.x - focal.x) * PARALLAX_X_EXAGGERATION_FACTOR
-    const dv = (bullsEyeCenter.y - focal.y) * PARALLAX_Y_EXAGGERATION_FACTOR
+    const dh = (bullsEyeCenter.x - focal.x) * PARALLAX_X_EXAGGERATION
+    const dv = (bullsEyeCenter.y - focal.y) * PARALLAX_Y_EXAGGERATION
 
     // DEBUG tracking disabled for performance (was causing sluggish hover motion)
 

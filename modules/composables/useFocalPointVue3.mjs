@@ -131,10 +131,10 @@ export function useFocalPoint() {
         return
       }
       
-      // FOLLOWING: smaller factor = more lag (slower catch-up to mouse)
-      const easingFactor = isDragging.value ? 1 : 0.04
-      const newX = currentX + (dx * easingFactor)
-      const newY = currentY + (dy * easingFactor)
+      // FOLLOWING: smaller easing = more lag (slower catch-up to mouse)
+      const easing = isDragging.value ? 1 : 0.04
+      const newX = currentX + (dx * easing)
+      const newY = currentY + (dy * easing)
       
       setPosition(newX, newY, 'animation-step')
       updateElementPosition()

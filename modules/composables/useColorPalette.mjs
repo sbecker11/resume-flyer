@@ -324,14 +324,14 @@ export function useColorPalette() {
         return name ? colorPalettes.value[name] : [];
     });
     
-    // Function to update brightness factors
-    async function updateBrightnessFactors(selectedFactor, hoveredFactor) {
+    // Update brightness boosts (computed; not manually adjustable in 3D UI)
+    async function updateBrightnessBoosts(selectedBoost, hoveredBoost) {
         const updates = {};
-        if (selectedFactor !== undefined) {
-            updates.brightnessFactorSelected = selectedFactor;
+        if (selectedBoost !== undefined) {
+            updates.brightnessBoostSelected = selectedBoost;
         }
-        if (hoveredFactor !== undefined) {
-            updates.brightnessFactorHovered = hoveredFactor;
+        if (hoveredBoost !== undefined) {
+            updates.brightnessBoostHovered = hoveredBoost;
         }
         
         if (Object.keys(updates).length > 0) {
@@ -489,7 +489,7 @@ export function useColorPalette() {
         currentPalette,
         setCurrentPalette,
         loadPalettes,
-        updateBrightnessFactors,
+        updateBrightnessBoosts,
         updateBorderSettings,
         applyCurrentPaletteToAllElements: applyCurrentPaletteToAllElementsImpl,
     };
@@ -606,8 +606,8 @@ export async function applyPaletteToElement(element) {
     const systemConstants = appState.value["system-constants"];
     // Selected: single knob 135 → L >= floor(100/1.35) darken (L'=L/1.35), else brighten (L'=L*1.35).
     const selectedHighlightPercent = systemConstants?.theme?.selectedHighlightPercent ?? 135;
-    const selectedBrightenFactor = selectedHighlightPercent / 100;
-    const highLuminosityThreshold = Math.floor(100 / selectedBrightenFactor);
+    const selectedBrightenRatio = selectedHighlightPercent / 100;
+    const highLuminosityThreshold = Math.floor(100 / selectedBrightenRatio);
 
     const selectedBackgroundColor = getHighlightColor(backgroundColor, {
         highlightPercent: selectedHighlightPercent,
@@ -617,7 +617,7 @@ export async function applyPaletteToElement(element) {
     const highlightedTextColor = highlightedContrast.textColor;
     const highlightedIconSet = highlightedContrast.iconSet;
 
-    // Hover = (unselected + selected) / 2 in RGB — no brightness factor. Palette colors are validated at startup.
+    // Hover = (unselected + selected) / 2 in RGB. Palette colors are validated at startup.
     const rgbNorm = hexToRgb(backgroundColor);
     const rgbSel = hexToRgb(selectedBackgroundColor);
     if (!rgbNorm || !rgbSel) {
@@ -819,7 +819,7 @@ export function updateContrastForBrightness(element) {
     const sceneZ = parseFloat(element.getAttribute('data-sceneZ'))
     if (isNaN(sceneZ)) return
 
-    // Derive brightness factor from the same filter function used when rendering
+    // Brightness from same filter as rendering (computed)
     // brightness() CSS filter: 1.0 = full, <1.0 = darker
     const rgb = hexToRgb(rawBg)
     if (!rgb) return

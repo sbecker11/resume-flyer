@@ -897,8 +897,8 @@ export function useCardsController() {
 
         // Progressive relaxation: 1000 attempts per phase, threshold shrinks each phase
         const PHASE_ATTEMPTS = 1000
-        for (const factor of [1.0, 0.75, 0.5, 0.25]) {
-            const threshold = minDistance * factor
+        for (const scale of [1.0, 0.75, 0.5, 0.25]) {
+            const threshold = minDistance * scale
             for (let i = 0; i < PHASE_ATTEMPTS; i++) {
                 const { cx, cy } = samplePosition()
                 if (!isTooClose(cx, cy, threshold)) {

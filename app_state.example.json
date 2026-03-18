@@ -1,6 +1,6 @@
 {
-  "version": "1.3",
-  "lastUpdated": "2020-01-01T00:00:00.000Z",
+  "version": "1.4",
+  "lastUpdated": "2026-03-18T04:05:35.264Z",
   "user-settings": {
     "layout": {
       "orientation": "scene-left",
@@ -11,11 +11,12 @@
       "stepCount": 4
     },
     "focalPointMode": "locked",
-    "selectedJobNumber": null,
-    "lastVisitedJobNumber": null,
-    "selectedElementId": null,
-    "selectedDualElementId": null,
-    "currentResumeId": null,
+    "focalPoint": {
+      "x": 729,
+      "y": 501,
+      "mode": "following"
+    },
+    "currentResumeId": "shawn-becker-full-stack-developer-ai-ml-engineer",
     "resume": {
       "sortRule": {
         "field": "startDate",
@@ -26,13 +27,7 @@
       "colorPalette": "sweeps.json"
     },
     "scrollPositions": {
-      "sceneContentScrollTop": 0,
-      "resumeContentScrollTop": 0
-    },
-    "focalPoint": {
-      "x": 0,
-      "y": 0,
-      "mode": "locked"
+      "sceneContentScrollTop": 378
     }
   },
   "system-constants": {
@@ -106,35 +101,13 @@
     },
     "visualEffects": {
       "parallax": {
-        "xExaggerationFactor": 0.9,
-        "yExaggerationFactor": 1
-      },
-      "depthEffects": {
-        "minBrightnessPercent": 15,
-        "blurScaleFactor": 2,
-        "filterMultipliers": {
-          "brightness": {
-            "min": 0.4,
-            "factor": 0.1
-          },
-          "blur": {
-            "min": 0,
-            "factor": 0.1
-          },
-          "contrast": {
-            "min": 0.75,
-            "factor": 0.01
-          },
-          "saturate": {
-            "min": 0.75,
-            "factor": 0.01
-          }
-        }
+        "xExaggeration": 0.9,
+        "yExaggeration": 1
       }
     },
     "theme": {
-      "brightnessFactorSelected": 2,
-      "brightnessFactorHovered": 1.75,
+      "brightnessBoostSelected": 2,
+      "brightnessBoostHovered": 1.75,
       "borderSettings": {
         "normal": {
           "padding": "8px",
@@ -180,14 +153,42 @@
       }
     },
     "rendering": {
-      "parallaxScaleAtMaxZ": 0.9,
-      "saturationAtMaxZ": 1,
-      "brightnessAtMaxZ": 1,
+      "parallaxScaleAtMinZ": 1,
+      "parallaxScaleAtMaxZ": 1,
+      "saturationAtMaxZ": 100,
+      "brightnessAtMaxZ": 100,
       "blurAtMaxZ": 0
+    },
+    "renderingLimits": {
+      "blurAtMaxZ": {
+        "min": 0,
+        "max": 5,
+        "step": 0.5
+      },
+      "saturationAtMaxZ": {
+        "min": 0,
+        "max": 100,
+        "step": 5
+      },
+      "brightnessAtMaxZ": {
+        "min": 75,
+        "max": 100,
+        "step": 5
+      },
+      "parallaxScaleAtMinZ": {
+        "min": 0,
+        "max": 1.5,
+        "step": 0.05
+      },
+      "parallaxScaleAtMaxZ": {
+        "min": 0,
+        "max": 1.5,
+        "step": 0.05
+      }
     }
   },
   "layout": {
-    "orientation": "scene-right"
+    "orientation": "scene-left"
   },
   "resizeHandle": {
     "stepCount": 1

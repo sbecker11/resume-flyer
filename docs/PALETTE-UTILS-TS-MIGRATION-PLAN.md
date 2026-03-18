@@ -70,7 +70,7 @@ This document plans how to replace all color-palette–related color management 
   - Darkening: palette-utils-ts has no HSV. Options: (i) keep a minimal local HSV darken (only for this block) using `hexToRgb` → local RGB→HSV→RGB, or (ii) use `getHighlightColor(hex, { highlightPercent: 45 })` (or similar) for darker variants and set CSS vars from that. Prefer (ii) if it matches design.
 - **applyPaletteToElement:**
   - Base: `foregroundColor = getHighContrastMono(backgroundColor)`.
-  - Selected: `selectedBackgroundColor = getHighlightColor(backgroundColor, { highlightPercent: brightnessFactorSelected * 100 })`, then `selectedForegroundColor = getHighContrastMono(selectedBackgroundColor)`. Same for hovered with `brightnessFactorHovered`.
+  - Selected: `selectedBackgroundColor = getHighlightColor(backgroundColor, { highlightPercent: brightnessBoostSelected * 100 })`, then `selectedForegroundColor = getHighContrastMono(selectedBackgroundColor)`. Same for hovered with `brightnessBoostHovered`.
   - Keep all existing data attributes and CSS custom properties; only the computation of hex values switches to palette-utils-ts.
 - **Replace all** `colorUtils.*` usages in this file with palette-utils-ts (+ any small local helpers). Remove dependency on `colorUtils.mjs` for color logic.
 

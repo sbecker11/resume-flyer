@@ -166,23 +166,13 @@ function getDefaultState(): AppState {
             },
             visualEffects: {
                 parallax: {
-                    xExaggerationFactor: 0.9,
-                    yExaggerationFactor: 1.0
-                },
-                depthEffects: {
-                    minBrightnessPercent: 15,
-                    blurScaleFactor: 2.0,
-                    filterMultipliers: {
-                        brightness: { min: 0.4, factor: 0.10 },
-                        blur: { min: 0, factor: 0.10 },
-                        contrast: { min: 0.75, factor: 0.010 },
-                        saturate: { min: 0.75, factor: 0.010 }
-                    }
+                    xExaggeration: 0.9,
+                    yExaggeration: 1.0
                 }
             },
             theme: {
-                brightnessFactorSelected: 2.0,
-                brightnessFactorHovered: 1.75,
+                brightnessBoostSelected: 2.0,
+                brightnessBoostHovered: 1.75,
                 /* Padding and border width identical across states so text does not shift */
                 borderSettings: {
                     normal: {
@@ -392,6 +382,22 @@ function migrateState(state: any): AppState {
                 parallaxScaleAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.parallaxScaleAtMaxZ }
             }
             console.log('[AppState] Added missing system-constants.renderingLimits')
+        }
+        // Single system for depth: only system-constants.rendering (max Z). Strip removed depthEffects.
+        if (sc.visualEffects?.depthEffects !== undefined) {
+            delete sc.visualEffects.depthEffects
+            console.log('[AppState] Removed deprecated system-constants.visualEffects.depthEffects (use rendering + renderingLimits)')
+        }
+        // Rename Factor → non-Factor keys (computed, not manually adjustable)
+        const par = sc.visualEffects?.parallax
+        if (par) {
+            if (par.xExaggerationFactor !== undefined) { par.xExaggeration = par.xExaggerationFactor; delete par.xExaggerationFactor }
+            if (par.yExaggerationFactor !== undefined) { par.yExaggeration = par.yExaggerationFactor; delete par.yExaggerationFactor }
+        }
+        const theme = sc.theme
+        if (theme) {
+            if (theme.brightnessFactorSelected !== undefined) { theme.brightnessBoostSelected = theme.brightnessFactorSelected; delete theme.brightnessFactorSelected }
+            if (theme.brightnessFactorHovered !== undefined) { theme.brightnessBoostHovered = theme.brightnessFactorHovered; delete theme.brightnessFactorHovered }
         }
     }
 

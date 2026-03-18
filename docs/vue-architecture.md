@@ -321,7 +321,7 @@ flowchart TD
     subgraph ParallaxSys["Parallax System"]
         Parallax["useParallaxVue3Enhanced.mjs"]
         ZDepth["bizCardUtils.mjs\n(z-depth per card)"]
-        ZUtils["zUtils.mjs\n(z-depth → scale factor)"]
+        ZUtils["zUtils.mjs\n(z-depth)"]
         Transform["CSS transform:\ntranslateX/Y per card"]
     end
 
