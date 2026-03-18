@@ -4,6 +4,9 @@ window.CONSOLE_LOG_IGNORE = () => {};
 // @ts-ignore
 window.CONSOLE_INFO_IGNORE = () => {};
 
+// Ensure hasServer singleton is attached to window (self-initializes on first call)
+import './modules/core/hasServer.mjs';
+
 // Create centralized logging control system
 // 
 // Usage:
@@ -228,10 +231,11 @@ import './styles/core.css'; // Import core styles for BullsEye and other compone
 // Create global element registry BEFORE anything else
 import { createGlobalElementRegistry } from './modules/composables/useGlobalElementRegistry.mjs';
 
-// TypeScript declaration for global registry
+// TypeScript declarations for window globals
 declare global {
   interface Window {
     globalElementRegistry: ReturnType<typeof createGlobalElementRegistry>;
+    hasServer(): boolean;
   }
 }
 

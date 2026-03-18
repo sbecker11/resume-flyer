@@ -4,6 +4,7 @@
 import { ref, computed, readonly } from 'vue'
 import { enrichJobsWithSkills } from '../data/enrichedJobs.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
+import { hasServer } from '@/modules/core/hasServer.mjs'
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/')
@@ -68,29 +69,16 @@ export function useJobsDependency() {
       return []
     }
 
-    const useStaticFirst = typeof window !== 'undefined' && window.location?.origin?.includes('github.io')
     const apiUrl = basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/data`)
     const staticJobsUrl = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/jobs.json`)
     const staticSkillsUrl = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/skills.json`)
-    console.log('[useJobsDependency] 🔄 Loading jobs', useStaticFirst ? '(static first)' : 'from API:', useStaticFirst ? staticJobsUrl : apiUrl)
+    console.log('[useJobsDependency] 🔄 Loading jobs', hasServer() ? 'from API:' : '(static host)', hasServer() ? apiUrl : staticJobsUrl)
     jobsState.value.isLoading = true
     jobsState.value.error = null
 
     try {
       let payload = null
-      if (useStaticFirst) {
-        const [jobsRes, skillsRes] = await Promise.all([
-          fetch(staticJobsUrl),
-          fetch(staticSkillsUrl).catch(() => null),
-        ])
-        if (!jobsRes.ok) {
-          const errBody = await jobsRes.text().catch(() => '')
-          throw new Error(`Static resume jobs not found: ${staticJobsUrl}${errBody ? ` — ${errBody}` : ''}`)
-        }
-        const jobs = await jobsRes.json()
-        const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {}
-        payload = { jobs, skills }
-      } else {
+      if (hasServer()) {
         try {
           const res = await fetch(apiUrl)
           if (!res.ok) {
@@ -115,6 +103,18 @@ export function useJobsDependency() {
           const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {}
           payload = { jobs, skills }
         }
+      } else {
+        const [jobsRes, skillsRes] = await Promise.all([
+          fetch(staticJobsUrl),
+          fetch(staticSkillsUrl).catch(() => null),
+        ])
+        if (!jobsRes.ok) {
+          const errBody = await jobsRes.text().catch(() => '')
+          throw new Error(`Static resume jobs not found: ${staticJobsUrl}${errBody ? ` — ${errBody}` : ''}`)
+        }
+        const jobs = await jobsRes.json()
+        const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {}
+        payload = { jobs, skills }
       }
 
       const rawJobs = toJobsArray(payload?.jobs ?? payload)

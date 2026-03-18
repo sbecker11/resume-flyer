@@ -4,6 +4,7 @@
  * Base URL empty = relative to current origin; for standalone, set via getApiBase().
  */
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import { hasServer } from '@/modules/core/hasServer.mjs';
 
 /** @returns {string} Base URL for API (empty = same origin) */
 function getApiBase() {
@@ -53,10 +54,6 @@ function downloadJson(filename, data) {
     }
 }
 
-function isStaticHost() {
-    return typeof window !== 'undefined' && window.location?.origin?.includes('github.io');
-}
-
 async function apiJson(path, options = {}) {
     const base = getApiBase();
     const url = base ? (base + path) : basePathJoin(path);
@@ -82,26 +79,29 @@ async function apiJson(path, options = {}) {
  * @returns {Promise<{ id: string, displayName: string, createdAt?: string, fileName?: string, jobCount?: number, skillCount?: number }>}
  */
 export async function getResumeMeta(resumeId) {
-    if (resumeId !== 'default' && isStaticHost()) {
+    if (hasServer()) {
         try {
-            const url = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/meta.json`);
-            const res = await fetch(url);
-            if (res.ok) return res.json();
-        } catch (_) {}
-        return { id: resumeId, displayName: resumeId };
-    }
-    try {
-        return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/meta`);
-    } catch (e) {
-        if (e?.message?.includes('404') || e?.message?.includes('not found')) {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/meta`);
+        } catch (e) {
+            if (e?.message?.includes('404') || e?.message?.includes('not found')) {
+                try {
+                    const url = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/meta.json`);
+                    const res = await fetch(url);
+                    if (res.ok) return res.json();
+                } catch (_) {}
+                return { id: resumeId, displayName: resumeId };
+            }
+            throw e;
+        }
+    } else {
+        if (resumeId !== 'default') {
             try {
                 const url = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/meta.json`);
                 const res = await fetch(url);
                 if (res.ok) return res.json();
             } catch (_) {}
-            return { id: resumeId, displayName: resumeId };
         }
-        throw e;
+        return { id: resumeId, displayName: resumeId };
     }
 }
 
@@ -111,15 +111,20 @@ export async function getResumeMeta(resumeId) {
  * @returns {Promise<Object>}
  */
 export async function updateResumeMeta(resumeId, updates) {
-    try {
-        return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/meta`, {
-            method: 'PATCH',
-            body: JSON.stringify(updates)
-        });
-    } catch (e) {
-        reportError(e, '[resume-details-editor/api] Failed to update resume meta', 'Downloading a JSON patch for manual application');
+    if (hasServer()) {
+        try {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/meta`, {
+                method: 'PATCH',
+                body: JSON.stringify(updates)
+            });
+        } catch (e) {
+            reportError(e, '[resume-details-editor/api] Failed to update resume meta', 'Downloading a JSON patch for manual application');
+            downloadJson(`${resumeId}-meta.patch.json`, { resumeId, operation: 'updateResumeMeta', updates });
+            throw e;
+        }
+    } else {
         downloadJson(`${resumeId}-meta.patch.json`, { resumeId, operation: 'updateResumeMeta', updates });
-        throw e;
+        throw new Error('Save is not available on static hosting. A patch file was downloaded for manual application.');
     }
 }
 
@@ -128,26 +133,29 @@ export async function updateResumeMeta(resumeId, updates) {
  * @returns {Promise<Object>} otherSections (summary, title, contact, certifications, websites, custom_sections)
  */
 export async function getResumeOtherSections(resumeId) {
-    if (resumeId !== 'default' && isStaticHost()) {
+    if (hasServer()) {
         try {
-            const url = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/other-sections.json`);
-            const res = await fetch(url);
-            if (res.ok) return res.json();
-        } catch (_) {}
-        return {};
-    }
-    try {
-        return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`);
-    } catch (e) {
-        if (e?.message?.includes('404') || e?.message?.includes('not found')) {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`);
+        } catch (e) {
+            if (e?.message?.includes('404') || e?.message?.includes('not found')) {
+                try {
+                    const url = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/other-sections.json`);
+                    const res = await fetch(url);
+                    if (res.ok) return res.json();
+                } catch (_) {}
+                return {};
+            }
+            throw e;
+        }
+    } else {
+        if (resumeId !== 'default') {
             try {
                 const url = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}/other-sections.json`);
                 const res = await fetch(url);
                 if (res.ok) return res.json();
             } catch (_) {}
-            return {};
         }
-        throw e;
+        return {};
     }
 }
 
@@ -157,15 +165,20 @@ export async function getResumeOtherSections(resumeId) {
  * @returns {Promise<Object>}
  */
 export async function updateResumeOtherSections(resumeId, payload) {
-    try {
-        return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`, {
-            method: 'PATCH',
-            body: JSON.stringify(payload)
-        });
-    } catch (e) {
-        reportError(e, '[resume-details-editor/api] Failed to update other-sections', 'Downloading a JSON patch for manual application');
+    if (hasServer()) {
+        try {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/other-sections`, {
+                method: 'PATCH',
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {
+            reportError(e, '[resume-details-editor/api] Failed to update other-sections', 'Downloading a JSON patch for manual application');
+            downloadJson(`${resumeId}-other-sections.patch.json`, { resumeId, operation: 'updateResumeOtherSections', payload });
+            throw e;
+        }
+    } else {
         downloadJson(`${resumeId}-other-sections.patch.json`, { resumeId, operation: 'updateResumeOtherSections', payload });
-        throw e;
+        throw new Error('Save is not available on static hosting. A patch file was downloaded for manual application.');
     }
 }
 
@@ -174,33 +187,33 @@ export async function updateResumeOtherSections(resumeId, payload) {
  * @returns {Promise<{ jobs: Array, skills: Object, categories: Object }>}
  */
 export async function getResumeData(resumeId) {
-    const useStaticFirst = typeof window !== 'undefined' && window.location?.origin?.includes('github.io');
-    if (resumeId !== 'default' && useStaticFirst) {
+    if (hasServer()) {
+        const path = resumeId === 'default' ? '/api/resumes/default/data' : `/api/resumes/${encodeURIComponent(resumeId)}/data`;
         try {
-            const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
-            const [jobsRes, skillsRes, categoriesRes] = await Promise.all([
-                fetch(`${base}/jobs.json`),
-                fetch(`${base}/skills.json`).catch(() => null),
-                fetch(`${base}/categories.json`).catch(() => null)
-            ]);
-            if (!jobsRes.ok) throw new Error(`Static jobs not found: ${base}/jobs.json`);
-            const jobsRaw = await jobsRes.json();
-            const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {};
-            const categories = (categoriesRes && categoriesRes.ok) ? await categoriesRes.json() : {};
-            const jobs = toJobsArray(jobsRaw);
-            return { jobs, skills, categories };
+            return await apiJson(path);
         } catch (e) {
-            if (!e?.message?.includes('404') && !e?.message?.includes('not found')) {
-                reportError(e, '[resume-details-editor/api] Static getResumeData failed');
+            if (resumeId !== 'default' && (e?.message?.includes('404') || e?.message?.includes('not found'))) {
+                try {
+                    const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
+                    const [jobsRes, skillsRes, categoriesRes] = await Promise.all([
+                        fetch(`${base}/jobs.json`),
+                        fetch(`${base}/skills.json`).catch(() => null),
+                        fetch(`${base}/categories.json`).catch(() => null)
+                    ]);
+                    if (!jobsRes.ok) throw new Error(`Static jobs not found`);
+                    const jobsRaw = await jobsRes.json();
+                    const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {};
+                    const categories = (categoriesRes && categoriesRes.ok) ? await categoriesRes.json() : {};
+                    const jobs = toJobsArray(jobsRaw);
+                    return { jobs, skills, categories };
+                } catch (staticErr) {
+                    reportError(staticErr, '[resume-details-editor/api] Static fallback for getResumeData failed');
+                }
             }
             throw e;
         }
-    }
-    const path = resumeId === 'default' ? '/api/resumes/default/data' : `/api/resumes/${encodeURIComponent(resumeId)}/data`;
-    try {
-        return await apiJson(path);
-    } catch (e) {
-        if (resumeId !== 'default' && (e?.message?.includes('404') || e?.message?.includes('not found'))) {
+    } else {
+        if (resumeId !== 'default') {
             try {
                 const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
                 const [jobsRes, skillsRes, categoriesRes] = await Promise.all([
@@ -208,17 +221,20 @@ export async function getResumeData(resumeId) {
                     fetch(`${base}/skills.json`).catch(() => null),
                     fetch(`${base}/categories.json`).catch(() => null)
                 ]);
-                if (!jobsRes.ok) throw new Error(`Static jobs not found`);
+                if (!jobsRes.ok) throw new Error(`Static jobs not found: ${base}/jobs.json`);
                 const jobsRaw = await jobsRes.json();
                 const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {};
                 const categories = (categoriesRes && categoriesRes.ok) ? await categoriesRes.json() : {};
                 const jobs = toJobsArray(jobsRaw);
                 return { jobs, skills, categories };
-            } catch (staticErr) {
-                reportError(staticErr, '[resume-details-editor/api] Static fallback for getResumeData failed');
+            } catch (e) {
+                if (!e?.message?.includes('404') && !e?.message?.includes('not found')) {
+                    reportError(e, '[resume-details-editor/api] Static getResumeData failed');
+                }
+                throw e;
             }
         }
-        throw e;
+        throw new Error('Default resume data is not available on static hosting.');
     }
 }
 
@@ -229,15 +245,20 @@ export async function getResumeData(resumeId) {
  * @returns {Promise<{ ok: boolean, job: object }>}
  */
 export async function updateJob(resumeId, jobIndex, updates) {
-    try {
-        return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}`, {
-            method: 'PATCH',
-            body: JSON.stringify(updates)
-        });
-    } catch (e) {
-        reportError(e, '[resume-details-editor/api] Failed to update job', 'Downloading a JSON patch for manual application');
+    if (hasServer()) {
+        try {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}`, {
+                method: 'PATCH',
+                body: JSON.stringify(updates)
+            });
+        } catch (e) {
+            reportError(e, '[resume-details-editor/api] Failed to update job', 'Downloading a JSON patch for manual application');
+            downloadJson(`${resumeId}-job-${jobIndex}.patch.json`, { resumeId, jobIndex, operation: 'updateJob', updates });
+            throw e;
+        }
+    } else {
         downloadJson(`${resumeId}-job-${jobIndex}.patch.json`, { resumeId, jobIndex, operation: 'updateJob', updates });
-        throw e;
+        throw new Error('Save is not available on static hosting. A patch file was downloaded for manual application.');
     }
 }
 
@@ -247,14 +268,19 @@ export async function updateJob(resumeId, jobIndex, updates) {
  * @returns {Promise<{ categories: Object }>}
  */
 export async function updateResumeCategories(resumeId, categories) {
-    try {
-        return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/categories`, {
-            method: 'PATCH',
-            body: JSON.stringify({ categories })
-        });
-    } catch (e) {
-        reportError(e, '[resume-details-editor/api] Failed to update categories', 'Downloading a JSON patch for manual application');
+    if (hasServer()) {
+        try {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/categories`, {
+                method: 'PATCH',
+                body: JSON.stringify({ categories })
+            });
+        } catch (e) {
+            reportError(e, '[resume-details-editor/api] Failed to update categories', 'Downloading a JSON patch for manual application');
+            downloadJson(`${resumeId}-categories.patch.json`, { resumeId, operation: 'updateResumeCategories', categories });
+            throw e;
+        }
+    } else {
         downloadJson(`${resumeId}-categories.patch.json`, { resumeId, operation: 'updateResumeCategories', categories });
-        throw e;
+        throw new Error('Save is not available on static hosting. A patch file was downloaded for manual application.');
     }
 }

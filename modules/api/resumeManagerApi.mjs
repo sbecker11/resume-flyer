@@ -1,6 +1,7 @@
 // modules/api/resumeManagerApi.mjs
 // API client for resume manager operations
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import { hasServer } from '@/modules/core/hasServer.mjs';
 
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -55,29 +56,29 @@ async function fetchStaticResumeData(resumeId) {
  * @returns {Promise<Array>} Array of resume objects with metadata
  */
 export async function listResumes() {
-    const useStaticFirst = typeof window !== 'undefined' && window.location?.origin?.includes('github.io');
-    if (useStaticFirst) {
+    if (hasServer()) {
+        try {
+            return await fetchJsonOrThrow(basePathJoin('api/resumes'));
+        } catch (error) {
+            const is404 = error?.message?.includes('404');
+            if (!is404) {
+                reportError(error, '[ResumeManagerAPI] Failed to list resumes', 'Falling back to static parsed_resumes index (if available)');
+            }
+            try {
+                const idx = await fetchStaticResumesIndex();
+                return Array.isArray(idx) ? idx : (idx?.resumes || []);
+            } catch (staticError) {
+                reportError(staticError, '[ResumeManagerAPI] Static resume index fallback failed');
+                throw error;
+            }
+        }
+    } else {
         try {
             const idx = await fetchStaticResumesIndex();
             return Array.isArray(idx) ? idx : (idx?.resumes || []);
         } catch (e) {
             reportError(e, '[ResumeManagerAPI] Static resume index failed');
             throw e;
-        }
-    }
-    try {
-        return await fetchJsonOrThrow(basePathJoin('api/resumes'));
-    } catch (error) {
-        const is404 = error?.message?.includes('404');
-        if (!is404) {
-            reportError(error, '[ResumeManagerAPI] Failed to list resumes', 'Falling back to static parsed_resumes index (if available)');
-        }
-        try {
-            const idx = await fetchStaticResumesIndex();
-            return Array.isArray(idx) ? idx : (idx?.resumes || []);
-        } catch (staticError) {
-            reportError(staticError, '[ResumeManagerAPI] Static resume index fallback failed');
-            throw error;
         }
     }
 }
@@ -87,12 +88,16 @@ export async function listResumes() {
  * @param {string} resumeId
  */
 export async function deleteResume(resumeId) {
-    const response = await fetch(basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}`), { method: 'DELETE' });
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${response.status}`);
+    if (hasServer()) {
+        const response = await fetch(basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}`), { method: 'DELETE' });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    } else {
+        throw new Error('Delete is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
     }
-    return response.json();
 }
 
 /**
@@ -103,89 +108,93 @@ export async function deleteResume(resumeId) {
  * @returns {Promise<Object>} Resume metadata and parsing results
  */
 export async function uploadResume(fileOrUrl, displayName = null, onProgress = null) {
-    try {
-        if (!fileOrUrl) {
-            throw new Error('No file or URL provided');
-        }
-
-        const formData = new FormData();
-
-        // Check if it's a URL string or a File object
-        if (typeof fileOrUrl === 'string') {
-            // URL provided
-            if (!fileOrUrl.startsWith('http://') && !fileOrUrl.startsWith('https://')) {
-                throw new Error('Invalid URL: must start with http:// or https://');
+    if (hasServer()) {
+        try {
+            if (!fileOrUrl) {
+                throw new Error('No file or URL provided');
             }
-            formData.append('resumeUrl', fileOrUrl);
-        } else {
-            // File provided
-            const isDocx = fileOrUrl.name.endsWith('.docx');
-            const isPdf = fileOrUrl.name.endsWith('.pdf');
-            if (!isDocx && !isPdf) {
-                throw new Error('Only .docx and .pdf files are supported');
+
+            const formData = new FormData();
+
+            // Check if it's a URL string or a File object
+            if (typeof fileOrUrl === 'string') {
+                // URL provided
+                if (!fileOrUrl.startsWith('http://') && !fileOrUrl.startsWith('https://')) {
+                    throw new Error('Invalid URL: must start with http:// or https://');
+                }
+                formData.append('resumeUrl', fileOrUrl);
+            } else {
+                // File provided
+                const isDocx = fileOrUrl.name.endsWith('.docx');
+                const isPdf = fileOrUrl.name.endsWith('.pdf');
+                if (!isDocx && !isPdf) {
+                    throw new Error('Only .docx and .pdf files are supported');
+                }
+                formData.append('resume', fileOrUrl);
             }
-            formData.append('resume', fileOrUrl);
-        }
 
-        if (displayName) {
-            formData.append('displayName', displayName);
-        }
+            if (displayName) {
+                formData.append('displayName', displayName);
+            }
 
-        // Create XMLHttpRequest for progress tracking
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
+            // Create XMLHttpRequest for progress tracking
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
 
-            // Track upload progress
-            if (onProgress) {
-                xhr.upload.addEventListener('progress', (event) => {
-                    if (event.lengthComputable) {
-                        const percentComplete = Math.round((event.loaded / event.total) * 100);
-                        onProgress(percentComplete);
+                // Track upload progress
+                if (onProgress) {
+                    xhr.upload.addEventListener('progress', (event) => {
+                        if (event.lengthComputable) {
+                            const percentComplete = Math.round((event.loaded / event.total) * 100);
+                            onProgress(percentComplete);
+                        }
+                    });
+                }
+
+                // Handle completion
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const result = JSON.parse(xhr.responseText);
+                            resolve(result);
+                        } catch (error) {
+                            reject(new Error('Failed to parse server response'));
+                        }
+                    } else {
+                        try {
+                            const error = JSON.parse(xhr.responseText);
+                            // Combine error and details for better debugging
+                            let errorMessage = error.error || `Upload failed with status ${xhr.status}`;
+                            if (error.details) {
+                                errorMessage += `\n\nDetails: ${error.details}`;
+                            }
+                            reject(new Error(errorMessage));
+                        } catch (e) {
+                            reject(new Error(`Upload failed with status ${xhr.status}`));
+                        }
                     }
                 });
-            }
 
-            // Handle completion
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const result = JSON.parse(xhr.responseText);
-                        resolve(result);
-                    } catch (error) {
-                        reject(new Error('Failed to parse server response'));
-                    }
-                } else {
-                    try {
-                        const error = JSON.parse(xhr.responseText);
-                        // Combine error and details for better debugging
-                        let errorMessage = error.error || `Upload failed with status ${xhr.status}`;
-                        if (error.details) {
-                            errorMessage += `\n\nDetails: ${error.details}`;
-                        }
-                        reject(new Error(errorMessage));
-                    } catch (e) {
-                        reject(new Error(`Upload failed with status ${xhr.status}`));
-                    }
-                }
+                // Handle errors
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Network error during upload'));
+                });
+
+                xhr.addEventListener('abort', () => {
+                    reject(new Error('Upload aborted'));
+                });
+
+                // Send request
+                xhr.open('POST', basePathJoin('api/resumes/upload'));
+                xhr.send(formData);
             });
 
-            // Handle errors
-            xhr.addEventListener('error', () => {
-                reject(new Error('Network error during upload'));
-            });
-
-            xhr.addEventListener('abort', () => {
-                reject(new Error('Upload aborted'));
-            });
-
-            // Send request
-            xhr.open('POST', basePathJoin('api/resumes/upload'));
-            xhr.send(formData);
-        });
-
-    } catch (error) {
-        console.error('[ResumeManagerAPI] Failed to upload resume:', error);
-        throw error;
+        } catch (error) {
+            console.error('[ResumeManagerAPI] Failed to upload resume:', error);
+            throw error;
+        }
+    } else {
+        throw new Error('Upload is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
     }
 }
 
@@ -197,14 +206,18 @@ export async function uploadResume(fileOrUrl, displayName = null, onProgress = n
  * @param {string[]} [newSkills] - Skill names to create on the resume if they don't exist
  */
 export async function updateJobSkills(resumeId, jobIndex, skillIDs, newSkills = []) {
-    const body = { skillIDs };
-    if (newSkills.length) body.newSkills = newSkills;
-    const response = await fetch(
-        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}/skills`),
-        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-    );
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    if (hasServer()) {
+        const body = { skillIDs };
+        if (newSkills.length) body.newSkills = newSkills;
+        const response = await fetch(
+            basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}/skills`),
+            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    } else {
+        throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
+    }
 }
 
 /**
@@ -214,15 +227,19 @@ export async function updateJobSkills(resumeId, jobIndex, skillIDs, newSkills = 
  * @param {string} newName - New name (will become the new key)
  */
 export async function renameSkill(resumeId, oldKey, newName) {
-    const response = await fetch(
-        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/rename`),
-        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldKey, newName }) }
-    );
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${response.status}`);
+    if (hasServer()) {
+        const response = await fetch(
+            basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/rename`),
+            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldKey, newName }) }
+        );
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    } else {
+        throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
     }
-    return response.json();
 }
 
 /**
@@ -232,15 +249,19 @@ export async function renameSkill(resumeId, oldKey, newName) {
  * @param {string} toKey - Skill to keep (e.g. "JavaScript")
  */
 export async function mergeSkill(resumeId, fromKey, toKey) {
-    const response = await fetch(
-        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/merge`),
-        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromKey, toKey }) }
-    );
-    if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${response.status}`);
+    if (hasServer()) {
+        const response = await fetch(
+            basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/merge`),
+            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromKey, toKey }) }
+        );
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    } else {
+        throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
     }
-    return response.json();
 }
 
 /**
@@ -249,10 +270,15 @@ export async function mergeSkill(resumeId, fromKey, toKey) {
  * @returns {Promise<Object>}
  */
 export async function getResumeOtherSections(resumeId) {
-    try {
-        return await fetchJsonOrThrow(basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/other-sections`));
-    } catch (error) {
-        reportError(error, `[ResumeManagerAPI] Failed to get other-sections for ${resumeId}`, 'Falling back to static parsed_resumes other-sections.json (if available)');
+    if (hasServer()) {
+        try {
+            return await fetchJsonOrThrow(basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/other-sections`));
+        } catch (error) {
+            reportError(error, `[ResumeManagerAPI] Failed to get other-sections for ${resumeId}`, 'Falling back to static parsed_resumes other-sections.json (if available)');
+            const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
+            return fetchJsonOrThrow(`${base}/other-sections.json`).catch(() => ({}));
+        }
+    } else {
         const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
         return fetchJsonOrThrow(`${base}/other-sections.json`).catch(() => ({}));
     }
@@ -264,14 +290,21 @@ export async function getResumeOtherSections(resumeId) {
  * @returns {Promise<Object>} Resume data with jobs, skills, and categories
  */
 export async function getResumeData(resumeId) {
-    try {
-        const endpoint = resumeId === 'default'
-            ? basePathJoin('api/resumes/default/data')
-            : basePathJoin(`api/resumes/${resumeId}/data`);
-        return await fetchJsonOrThrow(endpoint);
-    } catch (error) {
-        reportError(error, `[ResumeManagerAPI] Failed to get resume data for ${resumeId}`, 'Falling back to static parsed_resumes data files (if available)');
-        if (!resumeId || resumeId === 'default') throw error;
-        return fetchStaticResumeData(resumeId);
+    if (hasServer()) {
+        try {
+            const endpoint = resumeId === 'default'
+                ? basePathJoin('api/resumes/default/data')
+                : basePathJoin(`api/resumes/${resumeId}/data`);
+            return await fetchJsonOrThrow(endpoint);
+        } catch (error) {
+            reportError(error, `[ResumeManagerAPI] Failed to get resume data for ${resumeId}`, 'Falling back to static parsed_resumes data files (if available)');
+            if (!resumeId || resumeId === 'default') throw error;
+            return fetchStaticResumeData(resumeId);
+        }
+    } else {
+        if (resumeId && resumeId !== 'default') {
+            return fetchStaticResumeData(resumeId);
+        }
+        throw new Error('Default resume is not available on static hosting.');
     }
 }

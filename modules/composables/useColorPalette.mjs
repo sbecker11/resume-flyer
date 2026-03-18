@@ -3,6 +3,7 @@ import { useAppState } from './useAppState.ts';
 import { parsePaletteJson, normalizePaletteColors, getHighContrastForBackground, getHighlightColor, formatHexDisplay, hexToRgb, rgbToHex } from 'color-palette-utils-ts';
 import { getPerceivedBrightness } from '@/modules/utils/paletteHelpers.mjs';
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
+import { hasServer } from '@/modules/core/hasServer.mjs';
 
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -114,18 +115,23 @@ export function useColorPalette() {
             // console.log(`[ColorPalette] Initialized currentPaletteFilename from appState.colorPalette: ${appState.value.theme.colorPalette}`);
 
             let manifestData = null;
-            try {
-                const staticRes = await fetch(STATIC_MANIFEST_URL);
-                if (staticRes.ok) {
+            if (hasServer()) {
+                try {
+                    const apiRes = await fetch(API_MANIFEST_URL);
+                    if (apiRes.ok) {
+                        manifestData = await apiRes.json();
+                    } else {
+                        throw new Error(`API manifest ${apiRes.status}`);
+                    }
+                } catch (e) {
+                    const staticRes = await fetch(STATIC_MANIFEST_URL);
+                    if (!staticRes.ok) throw new Error('Failed to fetch palette manifest');
                     manifestData = await staticRes.json();
-                } else {
-                    throw new Error(`Static manifest ${staticRes.status}`);
                 }
-            } catch (e) {
-                // Local dev: fall back to API endpoint served by node.
-                const apiRes = await fetch(API_MANIFEST_URL);
-                if (!apiRes.ok) throw new Error('Failed to fetch palette manifest');
-                manifestData = await apiRes.json();
+            } else {
+                const staticRes = await fetch(STATIC_MANIFEST_URL);
+                if (!staticRes.ok) throw new Error(`Static palette manifest ${staticRes.status}`);
+                manifestData = await staticRes.json();
             }
             // console.log(`[ColorPalette] Loaded manifest with ${manifestData.length} palette files`);
 

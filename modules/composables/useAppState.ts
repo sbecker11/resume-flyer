@@ -17,6 +17,7 @@ import { reportError } from '../utils/errorReporting.mjs'
 import type { AppState, UseAppStateReturn } from '../types/index'
 // @ts-ignore - Legacy module
 import { setFromAppState as setRenderingFromAppState } from '../core/renderingConfig.mjs'
+import { hasServer } from '../core/hasServer.mjs'
 
 function getRuntimeBase(): string {
     const envBase = (import.meta as any)?.env?.BASE_URL || '/'
@@ -386,28 +387,9 @@ async function loadStateFromServer(): Promise<AppState> {
     const maxRetries = 5;
     const retryDelay = 1000; // 1 second
 
-    // Skip GET when we know state API is unavailable, or when on known static host (e.g. GitHub Pages), to avoid 404 in console
-    const isLikelyStaticHost = typeof window !== 'undefined' && window.location?.origin?.includes('github.io')
-    const skipStateApi = typeof localStorage !== 'undefined' && (
-      localStorage.getItem(STATE_API_UNAVAILABLE_KEY) || isLikelyStaticHost
-    )
-    if (skipStateApi) {
-        stateApiAvailable = false
-        if (typeof localStorage !== 'undefined') {
-          try {
-            localStorage.setItem(STATE_API_UNAVAILABLE_KEY, '1')
-          } catch (_) {}
-        }
-        try {
-            const raw = localStorage.getItem('resume-flock/app_state')
-            if (raw) return deepMerge(getDefaultState(), migrateState(JSON.parse(raw)))
-        } catch (e) {
-            reportError(e, '[AppState] Failed to load localStorage state', 'Remedy: Using default state')
-        }
-        return getDefaultState()
-    }
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const skipServer = typeof localStorage !== 'undefined' && localStorage.getItem(STATE_API_UNAVAILABLE_KEY)
+    if (hasServer() && !skipServer) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[AppState] Loading state from server (attempt ${attempt}/${maxRetries})...`);
             const apiUrl = basePathJoin('api/state')
@@ -466,22 +448,33 @@ async function loadStateFromServer(): Promise<AppState> {
             if (attempt === maxRetries) throw error
             await new Promise(resolve => setTimeout(resolve, retryDelay))
         }
+        }
+        // This should never be reached due to the loop logic above
+        throw new Error('[AppState] loadStateFromServer: unreachable')
+    } else {
+        stateApiAvailable = false
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem(STATE_API_UNAVAILABLE_KEY, '1')
+          } catch (_) {}
+        }
+        try {
+            const raw = localStorage.getItem('resume-flock/app_state')
+            if (raw) return deepMerge(getDefaultState(), migrateState(JSON.parse(raw)))
+        } catch (e) {
+            reportError(e, '[AppState] Failed to load localStorage state', 'Remedy: Using default state')
+        }
+        return getDefaultState()
     }
-    
-    // This should never be reached due to the loop logic above
-    throw new Error('[AppState] loadStateFromServer: unreachable')
 }
 
 /**
- * Save application state to server
+ * Save application state to server (or localStorage when no server)
  */
 async function saveStateToServer(state: AppState): Promise<void> {
     try {
         state.lastUpdated = new Date().toISOString()
-        if (stateApiAvailable === false) {
-            localStorage.setItem('resume-flock/app_state', JSON.stringify(state))
-            return
-        }
+        if (hasServer() && stateApiAvailable !== false) {
         console.log('[AppState] 💾 Saving state to server - currentResumeId:', state['user-settings']?.currentResumeId)
         const apiUrl = basePathJoin('api/state')
         const response = await fetch(apiUrl, {
@@ -514,6 +507,13 @@ async function saveStateToServer(state: AppState): Promise<void> {
             throw new Error(`Server returned ${response.status}: ${response.statusText}`)
         }
         console.log('[AppState] ✅ State saved to server successfully')
+        } else {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('resume-flock/app_state', JSON.stringify(state))
+                if (!hasServer()) console.log('[AppState] State saved to localStorage (static host, no server)')
+            }
+            return
+        }
     } catch (error) {
         reportError(error, '[AppState] Failed to save state to server', 'Remedy: Auto-save will be disabled for this session')
         // For static hosting, do not rethrow here; callers (auto-save) should not crash the app.
