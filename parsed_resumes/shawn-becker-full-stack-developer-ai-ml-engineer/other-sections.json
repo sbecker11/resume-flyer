@@ -1,0 +1,46 @@
+{
+  "summary": "Full stack developer with 20+ years of experience building production-grade applications and AI-powered solutions for Fortune 500 clients. Combines deep AI/ML expertise—including LLM integration, RAG pipelines, and CNN-based classification—with polished front-end development, RESTful API design, and scalable cloud infrastructure on AWS. PhD from MIT in Computer Vision/Computer Graphics.",
+  "title": "Full Stack Developer & AI/ML Engineer",
+  "contact": {
+    "name": "SHAWN BECKER",
+    "email": "shawn.becker@spexture.com",
+    "phone": "(857) 891-0896",
+    "location": "Lehi, UT",
+    "linkedin": "",
+    "website": ""
+  },
+  "certifications": [],
+  "websites": [
+    {
+      "label": "Certifications",
+      "url": "https://www.linkedin.com/in/shawnbecker/details/certifications/",
+      "description": ""
+    },
+    {
+      "label": "Publications",
+      "url": "https://independent.academia.edu/shawnbecker",
+      "description": ""
+    },
+    {
+      "label": "Patents",
+      "url": "https://patents.justia.com/inventor/shawn-c-becker",
+      "description": ""
+    },
+    {
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/in/shawnbecker",
+      "description": ""
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/sbecker11",
+      "description": ""
+    },
+    {
+      "label": "Portfolio",
+      "url": "https://sbecker11.github.io/flock-of-postcards",
+      "description": ""
+    }
+  ],
+  "custom_sections": []
+}

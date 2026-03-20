@@ -15,7 +15,10 @@ app_status.json
 .cursor/commands/env.md
 
 # Generated parsed resumes (runtime output)
-parsed_resumes/
+# Keep local-only parsed outputs ignored; allow curated non-_local datasets to be committed.
+parsed_resumes/_local-*/
+parsed_resumes/_local-*/**
+parsed_resumes/.DS_Store
 
 # Schema validator test venv
 .venv-schema/.venv-schema/
