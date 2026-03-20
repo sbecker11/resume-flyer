@@ -764,10 +764,9 @@ export async function applyPaletteToElement(element) {
     element.style.setProperty('--data-icon-set-variant', normalIconSet.variant);
     // Set as HTML attribute so CSS attribute selectors fire for all element types
     element.setAttribute('data-icon-set-variant', normalIconSet.variant);
-    // Directly set filter on icon children — same decision as textColor/variant, computed once, applied to both
-    const normalIconFilter = normalStyle.iconFilter;
+    // Clear any stale per-icon inline filter; state selectors should control icon contrast.
     element.querySelectorAll('.back-icon, .url-icon, .img-icon').forEach(icon => {
-        icon.style.filter = normalIconFilter;
+        icon.style.removeProperty('filter');
     });
     element.style.setProperty('--data-icon-set-hovered-url', `url(${hoveredIconSet.url})`);
     element.style.setProperty('--data-icon-set-hovered-back', `url(${hoveredIconSet.back})`);
@@ -884,9 +883,9 @@ export function updateContrastForBrightness(element) {
     element.style.setProperty('--data-link-color-hovered', hoveredStyle.linkColor)
     element.style.setProperty('--data-link-color-selected', selectedStyle.linkColor)
 
-    // Base state icon filter for <img> icons; hovered/selected are handled by CSS selectors.
+    // Clear stale inline filter so selected/hovered state selectors can control icon contrast.
     element.querySelectorAll('.back-icon, .url-icon, .img-icon').forEach(icon => {
-        icon.style.filter = normalStyle.iconFilter
+        icon.style.removeProperty('filter')
     })
 
     const isBizOrRDiv = element.classList.contains('biz-card-div') || element.classList.contains('biz-resume-div')

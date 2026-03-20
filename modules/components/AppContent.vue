@@ -81,6 +81,7 @@ import { useLayoutToggle } from '../composables/useLayoutToggle.mjs'
 import { useResizeHandle } from '../composables/useResizeHandle.mjs'
 import { useAppState } from '../composables/useAppState.ts'
 import { get_filterStr_from_z } from '../core/filters.mjs'
+import { updateContrastForBrightness } from '../composables/useColorPalette.mjs'
 import { reportError } from '../utils/errorReporting.mjs'
 import { listResumes } from '../api/resumeManagerApi.mjs'
 
@@ -537,7 +538,11 @@ function handleRenderingChanged() {
   const cards = plane.querySelectorAll('.biz-card-div, .skill-card-div')
   cards.forEach((card) => {
     const z = parseFloat(card.getAttribute('data-sceneZ'))
-    if (!Number.isNaN(z)) card.style.filter = get_filterStr_from_z(z)
+    if (!Number.isNaN(z)) {
+      card.style.filter = get_filterStr_from_z(z)
+      // Recompute icon/text contrast whenever effective background changes via 3D filters.
+      updateContrastForBrightness(card)
+    }
   })
 }
 
