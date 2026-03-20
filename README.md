@@ -1,8 +1,8 @@
 # resume-flock
 
-<img src="static_content/movie.gif" width=400 height=300>
+<img src="https://raw.githubusercontent.com/sbecker11/resume-flock/master/static_content/movie.gif" height="420" alt="resume-flock demo animation">
 
-<img src="static_content/resume.png">
+<br><br>
 
 # Dark, chaotic, and deep
 
