@@ -1240,13 +1240,16 @@ function onResumeSkillCardClick(event) {
     position: relative;
     display: flex;
     flex: 1 1 auto;
+    min-width: 0;
     gap: 6px;
     align-items: center;
 }
 
 .palette-image-btn {
-    flex-shrink: 0;
+    flex: 0 0 32px;
     width: 32px;
+    min-width: 32px;
+    max-width: 32px;
     height: 32px;
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1464,9 +1467,22 @@ function onResumeSkillCardClick(event) {
     border-color: rgba(255, 255, 255, 0.4);
 }
 
-#color-palette-selector,
+#color-palette-selector {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 8px 12px;
+    background-color: var(--grey-dark-6);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+}
+
 #resume-divs-sorting-selector {
     flex: 1 1 auto;
+    min-width: 0;
     padding: 8px 12px;
     background-color: var(--grey-dark-6);
     color: white;
