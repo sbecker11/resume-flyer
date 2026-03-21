@@ -145,7 +145,7 @@ function getDefaultState(): AppState {
                 sortRule: { field: 'startDate', direction: 'asc' }
             },
             theme: {
-                colorPalette: 'sweeps.json'
+                colorPalette: 'sweeps'
             }
         },
 
@@ -357,7 +357,7 @@ function migrateState(state: any): AppState {
                 lastVisitedJobNumber: state.lastVisitedJobNumber || null,
                 resume: state.resume || { sortRule: { field: 'startDate', direction: 'asc' } },
                 theme: {
-                    colorPalette: state.theme?.colorPalette || 'sweeps.json'
+                    colorPalette: state.theme?.colorPalette || 'sweeps'
                 }
             },
             "system-constants": state.constants || getDefaultState()["system-constants"]

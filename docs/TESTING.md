@@ -26,10 +26,11 @@ The app test run enforces **at least 80% line coverage for each file** that is i
 
 Files that are **excluded from coverage** (and thus not subject to the 80% rule) are listed in `coverage.exclude` in `vitest.config.js`. They include:
 
-- **Vue/DOM-heavy composables** (e.g. `useCardsController`, `useColorPalette`, `useResizeHandle`, `resume/*`) — not unit-tested to 80% without full Vue/DOM setup.
+- **Vue/DOM-heavy composables** (e.g. `useCardsController`, `useColorPalette`, `useResizeHandle`, `useSceneAutoScroll`, `resume/*`) — not unit-tested to 80% without full Vue/DOM setup.
 - **stateManager.mjs** — large default state and migrations; covered by integration and state tests elsewhere.
 - **parseMjsExport.mjs** — one branch is unreachable for the current parser output format; ~75% line coverage.
 - **mathUtils.mjs**, **domUtils.mjs**, **appStore.mjs**, **selectionManager.mjs**, **BaseComponent.mjs** — excluded so the 80% rule applies to the remaining, more unit-testable modules.
+- **skillCardContrastGuard.mjs** — DOM-heavy (getComputedStyle, getClientRects, skill-card classes).
 
 To meet 80% for a new or currently excluded file, add it to the include set (remove from exclude), add unit tests until line coverage is ≥ 80%, then run `npm run test:coverage`.
 
@@ -37,7 +38,7 @@ To meet 80% for a new or currently excluded file, add it to the include set (rem
 
 Unit tests exist for modules that can run in Node without a browser or Vue:
 
-- **utils:** `paletteHelpers`, `utils`, `dateUtils`, `mathUtils`, `bizCardUtils`, `zUtils`
+- **utils:** `paletteHelpers`, `utils`, `dateUtils`, `mathUtils`, `bizCardUtils`, `zUtils`, `paletteBundleFromImageMetadata`
 - **core:** `eventBus`, `filters`, `cardConstants`, `InitializationPhases`, `dragStateManager`, `abstracts/BaseComponent`
 - **data:** `enrichedJobs`, `parseMjsExport`
 - **composables:** `useJobsDependency` (mocked fetch)
@@ -81,4 +82,5 @@ The current Vitest config uses `environment: 'node'`. Switching to `environment:
 | `modules/data/enrichedJobs.test.mjs` | Unit tests for job enrichment (references, job-skills, parser job shape). |
 | `modules/data/resumeParserCompat.integration.test.mjs` | Integration: parse + enrich pipeline; optional read from static_content. |
 | `modules/composables/useJobsDependency.test.mjs` | Unit tests for loadJobs (URL, 404, non-array), getJobsData (mocked fetch). |
+| `modules/utils/paletteBundleFromImageMetadata.test.mjs` | Unit tests for JSONL parsing (valid/invalid lines, backgroundSwatchIndex, imagePublicUrl, normalization). |
 

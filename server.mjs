@@ -11,12 +11,13 @@ import fetch from 'node-fetch';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
+import { parsePaletteBundleFromImageMetadataJsonl } from './modules/utils/paletteBundleFromImageMetadata.mjs';
 
 // Load .env from project root (see docs/REPLICATE-PORTS-CONFIG.md)
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 const PROJECT_ROOT = process.cwd();
-const PALETTE_DIR_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'colorPalettes');
+const COLOR_PALETTES_JSONL_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'color_palettes.jsonl');
 const CSS_FILE_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'css', 'palette-styles.css');
 /** Persisted app state (layout, theme, currentResumeId, system-constants, etc.). */
 const STATE_FILE_PATH = path.resolve(PROJECT_ROOT, 'app_state.json');
@@ -824,25 +825,17 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
     }
 });
 
-// GET /api/palette-manifest: Provides a sorted list of color palettes
+// GET /api/palette-manifest: Full palette bundle from static_content/color_palettes.jsonl
 app.get('/api/palette-manifest', async (req, res) => {
     try {
-        const allEntries = await fs.readdir(PALETTE_DIR_PATH);
-        const jsonFiles = allEntries.filter(entry => entry.endsWith('.json'));
-        jsonFiles.sort((a, b) => {
-            const regex = /^(\d+)-/;
-            const matchA = a.match(regex);
-            const matchB = b.match(regex);
-            const numA = matchA ? parseInt(matchA[1], 10) : -1;
-            const numB = matchB ? parseInt(matchB[1], 10) : -1;
-            if (numA !== -1 && numB !== -1) return numA - numB;
-            if (numA !== -1) return -1;
-            if (numB !== -1) return 1;
-            return a.localeCompare(b);
-        });
-        res.json(jsonFiles);
+        const raw = await fs.readFile(COLOR_PALETTES_JSONL_PATH, 'utf8');
+        const bundle = parsePaletteBundleFromImageMetadataJsonl(raw);
+        res.json(bundle);
     } catch (error) {
-        res.status(error.code === 'ENOENT' ? 404 : 500).json({ error: 'Failed to read palette directory.' });
+        console.error('[palette-manifest] Failed to load color_palettes.jsonl:', error);
+        const code = /** @type {{ code?: string }} */ (error).code;
+        const status = code === 'ENOENT' ? 404 : 500;
+        res.status(status).json({ error: 'Failed to load palette bundle from color_palettes.jsonl.' });
     }
 });
 
@@ -2424,8 +2417,8 @@ function startServer(port) {
         actualBackendPort = port;
         // Success!
         console.log(`Server listening on http://localhost:${port}`);
-        console.log(`Serving dynamic palette manifest at /api/palette-manifest`);
-        console.log(`Palette directory path: ${PALETTE_DIR_PATH}`);
+        console.log(`Serving palette bundle at /api/palette-manifest (from color_palettes.jsonl)`);
+        console.log(`Color palettes path: ${COLOR_PALETTES_JSONL_PATH}`);
         
         // Clean up any stale lock files from previous crashed processes
         await cleanStaleLock(STATE_FILE_PATH, 30000);

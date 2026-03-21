@@ -21,14 +21,14 @@ This document plans how to replace all color-palette–related color management 
 | Layer | File(s) | Role |
 |-------|---------|------|
 | **Low-level color utils** | `modules/utils/colorUtils.mjs` | Hex validation, RGB/HSV conversion, `adjustBrightness`, `getPerceivedBrightness`, `getContrastingColor`, `isHexColor`, `isGrey` |
-| **Palette composable** | `modules/composables/useColorPalette.mjs` | Load palettes from manifest/API, current palette state, `applyPaletteToElement`, document-level CSS vars (--background-light, --background-dark), brightness/border settings |
+| **Palette composable** | `modules/composables/useColorPalette.mjs` | Load palettes from `static_content/color_palettes.jsonl` (via `/api/palette-manifest` or static fetch), current palette state, `applyPaletteToElement`, document-level CSS vars (--background-light, --background-dark), brightness/border settings |
 | **Re-exports / consumers** | `modules/utils/domUtils.mjs` | Imports `get_RGB_from_Hex`, `getContrastingColor`, `isHexColor` (as `isHexColorString`) from colorUtils |
 | **Archive** | `archive/cssColors.mjs` | Uses `colorUtils.isHexColorString` (note: colorUtils exports `isHexColor`; may be a naming bug) |
 
 ### 1.3 Where colorUtils / useColorPalette are used
 
 - **useColorPalette.mjs** (core):
-  - **Loading:** Fetches manifest, loads JSON; validates `paletteData.name` and `paletteData.colors` (can use `parsePaletteJson` / `isExportedPalette`).
+  - **Loading:** Fetches palette bundle from `/api/palette-manifest` (or static `static_content/color_palettes.jsonl`); parses JSONL via `parsePaletteBundleFromImageMetadataJsonl`; validates `paletteData.name` and `paletteData.colors` (can use `normalizePaletteColors`).
   - **Document theming:** Picks “darkest” color by `getPerceivedBrightness`, then uses `get_RGB_from_Hex` → `get_HSV_from_RGB` → darken (v, s) → `get_RGB_from_HSV` to set `--background-light` and `--background-dark`.
   - **applyPaletteToElement:** For base color at index: `getContrastingColor` (foreground), `adjustBrightness(base, factorSelected)` / `adjustBrightness(base, factorHovered)` for selected/hovered background, then `getContrastingColor` again for those states.
 - **ResumeListController.mjs, ResumeItemsController.mjs, infiniteScrollingContainer.mjs, useCardsController.mjs:** Call `applyPaletteToElement` only; no direct colorUtils.

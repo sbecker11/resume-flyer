@@ -41,6 +41,7 @@ export default defineConfig({
         'modules/composables/useKeyboardNavigation.mjs',
         'modules/composables/useResumeItemsController.mjs',
         'modules/composables/useScenePlaneOptimized.mjs',
+        'modules/composables/useSceneAutoScroll.mjs',
         'modules/composables/useGlobalElementRegistry.mjs',
         'modules/composables/useJobsDependency.mjs',
         'modules/core/selectionManager.mjs',
@@ -53,6 +54,8 @@ export default defineConfig({
         'modules/core/stateManager.mjs',
         // Export branch unreachable for parser output format; 75% line coverage.
         'modules/data/parseMjsExport.mjs',
+        // DOM-heavy (getComputedStyle, getClientRects, skill-card classes).
+        'modules/debug/skillCardContrastGuard.mjs',
       ],
       thresholds: {
         perFile: true,

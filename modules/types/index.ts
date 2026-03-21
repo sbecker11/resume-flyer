@@ -61,7 +61,7 @@ export interface AppState {
     };
 
     theme: {
-      colorPalette: string; // filename only
+      colorPalette: string; // palette name key from color_palettes.jsonl (legacy: *.json)
     };
   };
 
@@ -234,6 +234,7 @@ export interface UseFocalPointReturn {
 
 export interface UseColorPaletteReturn {
   colorPalettes: Ref<Record<string, string[]>>;
+  imagePublicUrlByPaletteName: Ref<Record<string, string>>;
   orderedPaletteNames: Ref<string[]>;
   filenameToNameMap: Ref<Record<string, string>>;
   isLoading: Ref<boolean>;

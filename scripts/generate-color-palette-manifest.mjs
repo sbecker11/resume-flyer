@@ -1,24 +1,23 @@
-import fs from 'fs/promises';
+/**
+ * Validates static_content/color_palettes.jsonl (palette source of truth).
+ * Previously generated static_content/colorPalettes/manifest.json — that folder is removed.
+ */
+import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { parsePaletteBundleFromImageMetadataJsonl } from '../modules/utils/paletteBundleFromImageMetadata.mjs';
 
-const projectRoot = process.cwd();
-const palettesDir = path.join(projectRoot, 'static_content', 'colorPalettes');
-const outPath = path.join(palettesDir, 'manifest.json');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(__dirname, '..');
+const jsonlPath = path.join(projectRoot, 'static_content', 'color_palettes.jsonl');
 
-async function main() {
-  const entries = await fs.readdir(palettesDir, { withFileTypes: true });
-  const files = entries
-    .filter((e) => e.isFile())
-    .map((e) => e.name)
-    .filter((n) => n.toLowerCase().endsWith('.json') && n !== 'manifest.json')
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-
-  await fs.writeFile(outPath, JSON.stringify(files, null, 2) + '\n', 'utf8');
-  console.log(`[generate-color-palette-manifest] Wrote ${files.length} entries to ${outPath}`);
+try {
+    const raw = fs.readFileSync(jsonlPath, 'utf8');
+    const bundle = parsePaletteBundleFromImageMetadataJsonl(raw);
+    console.log(
+        `[validate-color-palettes] OK — ${bundle.palettes.length} palette(s) in color_palettes.jsonl`
+    );
+} catch (e) {
+    console.error('[validate-color-palettes] Failed:', e);
+    process.exit(1);
 }
-
-main().catch((e) => {
-  console.error('[generate-color-palette-manifest] Failed:', e);
-  process.exitCode = 1;
-});
-

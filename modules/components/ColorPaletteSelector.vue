@@ -112,16 +112,8 @@ const selectPalette = (paletteName) => {
 
 const getPalettePreview = (paletteName) => {
   const palette = colorPalettes.value[paletteName]
-  if (!palette) return []
-  
-  // Return first 4 colors from palette for preview
-  const colors = []
-  if (palette.backgroundColor) colors.push(palette.backgroundColor)
-  if (palette.foregroundColor) colors.push(palette.foregroundColor)
-  if (palette.accentColor) colors.push(palette.accentColor)
-  if (palette.borderColor) colors.push(palette.borderColor)
-  
-  return colors.slice(0, 4)
+  if (!palette || !Array.isArray(palette)) return []
+  return palette.slice(0, 4)
 }
 
 // Close dropdown when clicking outside

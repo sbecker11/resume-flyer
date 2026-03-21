@@ -1,9 +1,11 @@
 import { ref, watch, computed, getCurrentInstance } from 'vue';
 import { useAppState } from './useAppState.ts';
-import { parsePaletteJson, normalizePaletteColors, getHighContrastForBackground, getHighlightColor, formatHexDisplay, hexToRgb, rgbToHex } from 'color-palette-utils-ts';
+import { normalizePaletteColors, getHighContrastForBackground, getHighlightColor, formatHexDisplay, hexToRgb, rgbToHex } from 'color-palette-utils-ts';
 import { getPerceivedBrightness } from '@/modules/utils/paletteHelpers.mjs';
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import { parsePaletteBundleFromImageMetadataJsonl } from '@/modules/utils/paletteBundleFromImageMetadata.mjs';
+import { reportError } from '@/modules/utils/errorReporting.mjs';
 
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -30,8 +32,7 @@ function basePathJoin(relPath) {
     return `${b}${p}`;
 }
 
-const PALETTE_DIR = basePathJoin('static_content/colorPalettes/');
-const STATIC_MANIFEST_URL = basePathJoin('static_content/colorPalettes/manifest.json');
+const COLOR_PALETTES_JSONL_URL = basePathJoin('static_content/color_palettes.jsonl');
 const API_MANIFEST_URL = basePathJoin('api/palette-manifest');
 /** Base path for contrast icons (url/back/img); must contain icons8-{url,back,img}-16-black.png. */
 const ICON_BASE = basePathJoin('static_content/icons');
@@ -53,20 +54,79 @@ function resolveTextAndIconStyle(backgroundHex) {
 // --- Reactive State ---
 // This state is shared across all components that use this composable
 const colorPalettes = ref({});
-/** Per-palette background swatch: map palette name -> index. Each palette may define its own default background color via backgroundSwatchIndex in its JSON. */
+/** Per-palette background swatch: map palette name -> index (from color_palettes.jsonl backgroundSwatchIndex when set). */
 const backgroundSwatchIndexByPalette = ref({});
 const orderedPaletteNames = ref([]);
+/** Maps stored theme key → display name; keys are palette names from color_palettes.jsonl (identity map). Kept for ResumeContainer native select option values. */
 const filenameToNameMap = ref({});
+/** Optional S3/public image URL per palette (from color_palettes.jsonl). */
+const imagePublicUrlByPaletteName = ref({});
 const isLoading = ref(false);
 
-/** Resolve palette name from stored filename; use map, then fallback to name derived from filename (e.g. "55 Emerald.json" -> "55 Emerald"). */
-function resolvePaletteNameFromFilename(filename) {
-    if (!filename) return null;
-    const fromMap = filenameToNameMap.value[filename];
-    if (fromMap) return fromMap;
-    const nameFromFilename = filename.replace(/\.json$/i, '').trim();
-    if (nameFromFilename && colorPalettes.value[nameFromFilename]) return nameFromFilename;
+/**
+ * Legacy .json basenames / underscores → palette keys in color_palettes.jsonl (when names changed).
+ * Keys are lowercase.
+ */
+const LEGACY_PALETTE_KEY_ALIASES = {
+    '55 emerald': 'emerald',
+    black_monotone: 'Black Monotone',
+    'black monotone': 'Black Monotone',
+    white_monotone: 'White Monotone',
+    'white monotone': 'White Monotone',
+    medium_grey_monotone: 'Medium Grey Monotone',
+    'medium grey monotone': 'Medium Grey Monotone',
+    '50 dark grey monotone': 'Medium Grey Monotone',
+    snow_springtime: 'snow springtime',
+    blue_berries_on_cheese: 'blue berry & cheese',
+    rose_blush: 'rose blush',
+    vivid_yellow_on_blue: 'vivid yellow on blue',
+    mitzibushi_red: 'mitzibushi red',
+    blue_caddelack: 'blue caddelack',
+    yellow_grey: 'yellow grey',
+    blue_tonal: 'blue tonal',
+    so_cherry: 'so cherry',
+    '20 hyperpop': 'procreate',
+    '25 retro': 'luca',
+    '30 canyon': 'gold',
+    '40 cosmic': 'purpley',
+    '10 oceanic': 'blue tonal',
+};
+
+function resolveStoredPaletteKey(stored) {
+    if (!stored || typeof stored !== 'string') return null;
+    const trimmed = stored.trim();
+    const palettes = colorPalettes.value;
+    if (trimmed && palettes[trimmed]) return trimmed;
+
+    const mapped = filenameToNameMap.value[trimmed];
+    if (mapped && palettes[mapped]) return mapped;
+
+    const base = trimmed.replace(/\.json$/i, '').trim();
+    if (!base) return null;
+    const baseSpaced = base.replace(/_/g, ' ');
+
+    const aliasCandidates = [
+        LEGACY_PALETTE_KEY_ALIASES[base.toLowerCase()],
+        LEGACY_PALETTE_KEY_ALIASES[baseSpaced.toLowerCase()],
+    ].filter(Boolean);
+
+    const tryExact = [base, baseSpaced, ...aliasCandidates];
+    for (const k of tryExact) {
+        if (k && palettes[k]) return k;
+    }
+
+    const lowerToCanonical = new Map(Object.keys(palettes).map((k) => [k.toLowerCase(), k]));
+    for (const k of tryExact) {
+        if (!k) continue;
+        const canon = lowerToCanonical.get(k.toLowerCase());
+        if (canon) return canon;
+    }
     return null;
+}
+
+/** Resolve palette display key from persisted theme value (.json legacy or palette name). */
+function resolvePaletteNameFromFilename(filename) {
+    return resolveStoredPaletteKey(filename);
 }
 let resolveReady;
 export const readyPromise = new Promise((resolve) => { resolveReady = resolve; });
@@ -138,56 +198,61 @@ export function useColorPalette() {
             currentPaletteFilename.value = appState.value["user-settings"].theme.colorPalette;
             // console.log(`[ColorPalette] Initialized currentPaletteFilename from appState.colorPalette: ${appState.value.theme.colorPalette}`);
 
-            let manifestData = null;
+            /** @type {{ version?: number, palettes?: Array<{ name: string, colors: string[], backgroundSwatchIndex?: number, imagePublicUrl?: string }> } | null} */
+            let bundle = null;
             if (hasServer()) {
                 try {
                     const apiRes = await fetch(API_MANIFEST_URL);
                     if (apiRes.ok) {
-                        manifestData = await apiRes.json();
+                        bundle = await apiRes.json();
                     } else {
-                        throw new Error(`API manifest ${apiRes.status}`);
+                        throw new Error(`API palette bundle ${apiRes.status}`);
                     }
                 } catch (e) {
-                    const staticRes = await fetch(STATIC_MANIFEST_URL);
-                    if (!staticRes.ok) throw new Error('Failed to fetch palette manifest');
-                    manifestData = await staticRes.json();
+                    reportError(e, '[ColorPalette] API palette-manifest fetch failed', 'Falling back to static color_palettes.jsonl');
+                    const staticRes = await fetch(COLOR_PALETTES_JSONL_URL);
+                    if (!staticRes.ok) {
+                        throw new Error(`Failed to fetch color_palettes.jsonl (${staticRes.status})`);
+                    }
+                    const rawJsonl = await staticRes.text();
+                    bundle = parsePaletteBundleFromImageMetadataJsonl(rawJsonl);
                 }
             } else {
-                const staticRes = await fetch(STATIC_MANIFEST_URL);
-                if (!staticRes.ok) throw new Error(`Static palette manifest ${staticRes.status}`);
-                manifestData = await staticRes.json();
+                const staticRes = await fetch(COLOR_PALETTES_JSONL_URL);
+                if (!staticRes.ok) {
+                    throw new Error(`Static color_palettes.jsonl ${staticRes.status}`);
+                }
+                const rawJsonl = await staticRes.text();
+                bundle = parsePaletteBundleFromImageMetadataJsonl(rawJsonl);
             }
-            // console.log(`[ColorPalette] Loaded manifest with ${manifestData.length} palette files`);
+
+            if (!bundle || bundle.version !== 2 || !Array.isArray(bundle.palettes) || bundle.palettes.length === 0) {
+                throw new Error(
+                    'Invalid palette bundle (expected { version: 2, palettes: [...] } from server or parsed jsonl)'
+                );
+            }
 
             const tempLoadedColorPalettes = {};
             const tempBackgroundSwatchIndexByPalette = {};
             const tempFilenameToNameMap = {};
+            const tempImageUrls = {};
             const tempOrderedNames = [];
 
-            const paletteFilenames = Array.isArray(manifestData)
-                ? manifestData.filter((f) => typeof f === 'string' && f.endsWith('.json') && f.toLowerCase() !== 'manifest.json')
-                : [];
-            if (paletteFilenames.length === 0) {
-                throw new Error('No palette files in manifest (expected array of .json filenames, excluding manifest.json)');
-            }
-            for (const filename of paletteFilenames) {
-                const filePath = PALETTE_DIR + filename;
-                const paletteResponse = await fetch(filePath);
-                if (!paletteResponse.ok) {
-                    throw new Error(`Palette fetch failed: ${filePath} (${paletteResponse.status})`);
+            for (const p of bundle.palettes) {
+                if (!p || typeof p.name !== 'string' || !Array.isArray(p.colors)) {
+                    throw new Error('Invalid palette entry in bundle');
                 }
-                const raw = await paletteResponse.text();
-                const paletteData = parsePaletteJson(raw);
-                if (!paletteData) {
-                    throw new Error(`Invalid palette JSON: ${filename}`);
+                normalizePaletteColors(p.colors);
+                tempLoadedColorPalettes[p.name] = p.colors;
+                if (p.backgroundSwatchIndex != null) {
+                    tempBackgroundSwatchIndexByPalette[p.name] =
+                        Math.max(0, Math.floor(p.backgroundSwatchIndex)) % p.colors.length;
                 }
-                normalizePaletteColors(paletteData.colors);
-                tempLoadedColorPalettes[paletteData.name] = paletteData.colors;
-                if (paletteData.backgroundSwatchIndex != null) {
-                    tempBackgroundSwatchIndexByPalette[paletteData.name] = Math.max(0, Math.floor(paletteData.backgroundSwatchIndex)) % paletteData.colors.length;
+                tempFilenameToNameMap[p.name] = p.name;
+                tempOrderedNames.push(p.name);
+                if (p.imagePublicUrl) {
+                    tempImageUrls[p.name] = p.imagePublicUrl;
                 }
-                tempFilenameToNameMap[filename] = paletteData.name;
-                tempOrderedNames.push(paletteData.name);
             }
 
             // Fast-fail: validate every palette color at startup; invalid hex fails entire startup.
@@ -203,36 +268,55 @@ export function useColorPalette() {
             backgroundSwatchIndexByPalette.value = tempBackgroundSwatchIndexByPalette;
             filenameToNameMap.value = tempFilenameToNameMap;
             orderedPaletteNames.value = tempOrderedNames;
-            
-            // console.log(`[ColorPalette] Successfully loaded ${tempOrderedNames.length} palettes:`, tempOrderedNames);
-            // console.log(`[ColorPalette] Updated refs - orderedPaletteNames:`, orderedPaletteNames.value);
-            // console.log(`[ColorPalette] Updated refs - filenameToNameMap:`, filenameToNameMap.value);
-            
-            // Note: We no longer store palettes in appState - they're loaded dynamically
-            
-            // IMPORTANT: Ensure colorPalette is set correctly in theme section
-            if (!appState.value["user-settings"].theme.colorPalette && Object.keys(tempFilenameToNameMap).length > 0) {
-                const firstFilename = Object.keys(tempFilenameToNameMap)[0];
+            imagePublicUrlByPaletteName.value = tempImageUrls;
+
+            const firstKey = tempOrderedNames[0];
+            if (!firstKey) {
+                throw new Error('Palette bundle produced no ordered names');
+            }
+
+            if (!appState.value['user-settings'].theme.colorPalette) {
                 await updateAppState({
-                    "user-settings": {
+                    'user-settings': {
                         theme: {
-                            colorPalette: firstFilename
-                        }
-                    }
+                            colorPalette: firstKey,
+                        },
+                    },
                 });
-                // console.log(`[ColorPalette] Set theme.colorPalette to: ${firstFilename}`);
             }
-            
-            if (!currentPaletteFilename.value && Object.keys(tempFilenameToNameMap).length > 0) {
-                currentPaletteFilename.value = Object.keys(tempFilenameToNameMap)[0];
-                // console.log(`[ColorPalette] Set default palette to: ${currentPaletteFilename.value}`);
+
+            const storedKey = appState.value['user-settings'].theme.colorPalette;
+            let resolvedKey = resolveStoredPaletteKey(storedKey);
+            if (!resolvedKey) {
+                console.log(
+                    `Remedy: Unknown theme.colorPalette "${storedKey}" — using first available palette "${firstKey}"`
+                );
+                resolvedKey = firstKey;
+                await updateAppState({
+                    'user-settings': {
+                        theme: {
+                            colorPalette: resolvedKey,
+                        },
+                    },
+                });
+            } else if (resolvedKey !== storedKey) {
+                console.log(`Remedy: Normalized theme.colorPalette "${storedKey}" → "${resolvedKey}"`);
+                await updateAppState({
+                    'user-settings': {
+                        theme: {
+                            colorPalette: resolvedKey,
+                        },
+                    },
+                });
             }
+
+            currentPaletteFilename.value = resolvedKey;
 
             // Ensure scene view background is updated when restoring selected palette from state (initial load / hard refresh)
             applySceneBackgroundFromCurrentPalette();
 
         } catch (error) {
-            console.error("[ColorPalette] Failed to load color palettes:", error);
+            reportError(error, '[ColorPalette] Failed to load color palettes');
             throw error;
         } finally {
             isLoading.value = false;
@@ -253,31 +337,32 @@ export function useColorPalette() {
             await readyPromise;
         }
         
-        if (filename && filenameToNameMap.value[filename]) {
+        const canonical = resolveStoredPaletteKey(filename) || null;
+        if (canonical && colorPalettes.value[canonical]) {
             const previousFilename = currentPaletteFilename.value;
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] setCurrentPalette called: ${previousFilename} → ${filename}`);
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] setCurrentPalette called: ${previousFilename} → ${canonical}`);
             window.CONSOLE_LOG_IGNORE(`[ColorPalette] appState.theme.colorPalette: ${appState.value?.["user-settings"]?.theme?.colorPalette}`);
             window.CONSOLE_LOG_IGNORE(`[ColorPalette] currentPaletteFilename.value: ${currentPaletteFilename.value}`);
             
             // Check if appState and reactive state are in sync
             if (appState.value?.["user-settings"]?.theme?.colorPalette !== currentPaletteFilename.value) {
                 // console.warn(`[ColorPalette] State mismatch detected! appState: ${appState.value?.theme?.colorPalette}, reactive: ${currentPaletteFilename.value}`);
-                window.CONSOLE_LOG_IGNORE(`[ColorPalette] User selected ${filename}, proceeding with user choice`);
+                window.CONSOLE_LOG_IGNORE(`[ColorPalette] User selected ${canonical}, proceeding with user choice`);
             }
             
             // Only proceed if actually changing to a different palette from what user selected
-            if (currentPaletteFilename.value === filename && appState.value?.theme?.colorPalette === filename) {
-                window.CONSOLE_LOG_IGNORE(`[ColorPalette] No change needed - already using ${filename}`);
+            if (currentPaletteFilename.value === canonical && appState.value?.['user-settings']?.theme?.colorPalette === canonical) {
+                window.CONSOLE_LOG_IGNORE(`[ColorPalette] No change needed - already using ${canonical}`);
                 return;
             }
             
-            currentPaletteFilename.value = filename;
+            currentPaletteFilename.value = canonical;
             
             // Update appState with new palette selection
             await updateAppState({
                 "user-settings": {
                     theme: {
-                        colorPalette: filename
+                        colorPalette: canonical
                     }
                 }
             });
@@ -314,18 +399,21 @@ export function useColorPalette() {
             }
             
             // Dispatch event for components that need to respond to palette changes
-            const paletteName = filenameToNameMap.value[filename];
             window.dispatchEvent(new CustomEvent('color-palette-changed', {
                 detail: { 
-                    filename: filename,
-                    paletteName: paletteName,
+                    filename: canonical,
+                    paletteName: canonical,
                     previousFilename: previousFilename
                 }
             }));
             
         } else {
-            // console.warn(`[ColorPalette] setCurrentPalette called with invalid filename: ${filename}`);
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Available palettes:`, Object.keys(filenameToNameMap.value));
+            reportError(
+                new Error(`Invalid palette: ${filename}`),
+                '[ColorPalette] setCurrentPalette',
+                'Ignored; user selection did not match a loaded palette'
+            );
+            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Available palettes:`, Object.keys(colorPalettes.value));
         }
     }
 
@@ -497,6 +585,7 @@ export function useColorPalette() {
         colorPalettes,
         orderedPaletteNames,
         filenameToNameMap,
+        imagePublicUrlByPaletteName,
         isLoading,
         currentPaletteFilename,
         currentPaletteName,

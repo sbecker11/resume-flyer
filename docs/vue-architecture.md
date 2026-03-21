@@ -434,7 +434,7 @@ flowchart TD
 
     subgraph BackendAPI["Backend API"]
         Server["server.mjs"]
-        Endpoints["/api/resumes\n/api/palette\n/api/content"]
+        Endpoints["/api/resumes\n/api/palette-manifest\n/api/content"]
         APIClient["resumeManagerApi.mjs"]
     end
 
