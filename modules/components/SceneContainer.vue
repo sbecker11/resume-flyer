@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 
 // Vue components
 import Timeline from './Timeline.vue'
@@ -29,9 +29,9 @@ import Timeline from './Timeline.vue'
 // Scene-specific composables
 import { useCardsController } from '../composables/useCardsController.mjs'
 import { useTimeline } from '../composables/useTimeline.mjs'
-import { useFocalPoint } from '../composables/useFocalPointVue3.mjs'
 import { useViewport } from '../composables/useViewport.mjs'
 import { useScenePlaneOptimized } from '../composables/useScenePlaneOptimized.mjs'
+import { useSceneAutoScroll } from '../composables/useSceneAutoScroll.mjs'
 import { injectGlobalElementRegistry } from '../composables/useGlobalElementRegistry.mjs'
 import { useAppState } from '../composables/useAppState.ts'
 
@@ -53,10 +53,6 @@ console.log(`🎬 [SceneContainer] Creating instance #${sceneContainerInstanceId
 const { appState, updateAppState } = useAppState()
 let sceneContentScrollTimeoutId = null
 const SCROLL_PERSIST_DEBOUNCE_MS = 300
-
-// Legacy imports removed - now using Vue 3 composables
-// import { bullsEye } from '../core/bullsEye.mjs' - replaced by useBullsEyeVue3
-// import * as scenePlaneModule from '../scene/scenePlaneModule.mjs' - integrated into Vue composables
 
 // Props from parent AppContent
 const props = defineProps({
@@ -98,9 +94,7 @@ const {
   setSceneContainerElement,
   setSceneContentElement,
   dimensions,
-  elementCounts,
-  scenePlanePosition,
-  isInitialized: scenePlaneInitialized
+  elementCounts
 } = useScenePlaneOptimized()
 
 // Enhanced template ref watchers with optimized scene plane integration
@@ -128,7 +122,8 @@ function onSceneContentScroll() {
   if (sceneContentScrollTimeoutId) clearTimeout(sceneContentScrollTimeoutId)
   sceneContentScrollTimeoutId = setTimeout(() => {
     sceneContentScrollTimeoutId = null
-    const scrollTop = Math.max(0, el.scrollTop)
+    const maxTop = Math.max(0, el.scrollHeight - el.clientHeight)
+    const scrollTop = Math.min(Math.max(0, el.scrollTop), maxTop)
     const current = appState.value['user-settings']?.scrollPositions ?? {}
     updateAppState({
       'user-settings': {
@@ -142,6 +137,12 @@ function onSceneContentScroll() {
     })
   }, SCROLL_PERSIST_DEBOUNCE_MS)
 }
+
+watch([sceneContentRef, sceneContainerRef], ([content, container]) => {
+  if (content && container) {
+    autoScroll.install()
+  }
+}, { immediate: true })
 
 watch(sceneContentRef, (newRef) => {
   if (newRef) {
@@ -209,7 +210,7 @@ watch(timelineHeight, (newHeight) => {
 // Cards controller will auto-initialize when scene-plane-ready event fires
 console.log(`🎬 [SceneContainer #${sceneContainerInstanceId}] Creating CardsController...`)
 const cardsController = useCardsController()
-const { initializeCardsController, reinitializeResumeData, bizCardDivs } = cardsController
+const { reinitializeResumeData, bizCardDivs } = cardsController
 console.log(`🎬 [SceneContainer #${sceneContainerInstanceId}] CardsController created`)
 
 // Register reinit callbacks for resume system (parsed resume switch)
@@ -217,9 +218,13 @@ registerTimelineReinit((jobsData) => timelineReinitialize(jobsData))
 registerCardsReinit(() => reinitializeResumeData())
 registerGetBizCardDivs(() => bizCardDivs.value ?? [])
 
-// Focal point system (aim point removed)
-const { setFocalPointElement } = useFocalPoint()
 const { initializeViewport } = useViewport()
+
+// Focal-point-driven auto-scroll (scene-content scrolls when mouse nears top/bottom edges)
+const autoScroll = useSceneAutoScroll(
+  () => sceneContentRef.value,
+  () => sceneContainerRef.value
+)
 
 // Event handlers
 const handleSceneContainerClick = (event) => {
@@ -247,14 +252,6 @@ onMounted(async () => {
       document.documentElement.style.setProperty('--timeline-height', `${timelineHeight.value}px`)
     }
     
-    // Viewport initialization now handled by reactive watcher
-    
-    // Cards controller will auto-initialize when scene-plane-ready event fires
-    // No manual initialization needed here
-    
-    // Scene plane initialization now handled by Vue composables
-    // await scenePlaneModule.initialize() - replaced by Vue 3 composables
-    
     console.log('[SceneContainer] ✅ Scene initialization complete!')
     
   } catch (error) {
@@ -265,6 +262,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (sceneContentScrollTimeoutId) clearTimeout(sceneContentScrollTimeoutId)
+  autoScroll.teardown()
 })
 
 // Expose refs to parent if needed
@@ -283,9 +281,7 @@ defineExpose({
 #scene-container {
   position: relative;
   overflow: visible;
-  background: var(--background-dark, #1a1a1a);
   flex-shrink: 0;
-  /* Ensure gradients position relative to this container */
 }
 
 #scene-container.container-first {
@@ -309,9 +305,7 @@ defineExpose({
   scrollbar-width: none !important;
   /* Fallback: Make scrollbar thin if browser doesn't support 'none' */
   -ms-overflow-style: none !important; /* IE and Edge */
-  /* Limit scroll area to actual timeline content height */
-  /* 8px top padding so the topmost cDiv border has room; matches rDiv container */
-  padding: 8px 0 0 0;
+  padding: 0;
   margin: 0;
 }
 
@@ -346,9 +340,7 @@ defineExpose({
   overflow: visible;
   /* Height now calculated to exactly match bottom-most content position */
   /* Removed min-height: 100% to prevent overscroll beyond timeline content */
-  /* Force no extra spacing */
   margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 

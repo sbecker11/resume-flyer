@@ -1,3 +1,23 @@
+/*
+ * #scene-plane: full-height wedge (light → transparent → light; mid shows --background-dark through).
+ * #scene-container: **flat** top/bottom bands of --background-light (hard edge to dark, no fade).
+ *   WebKit overscroll reveals this behind #scene-content. Middle of the panel stays dark.
+ * #scene-content: solid dark fill inside the scrollport.
+ */
+:root {
+    --scene-wedge-stop-start-pct: 40%;
+    --scene-wedge-stop-end-pct: 60%;
+    --scene-vertical-wedge-gradient: linear-gradient(in oklch to bottom,
+        var(--background-light, rgba(24, 24, 111, 1)) 0%,
+        transparent var(--scene-wedge-stop-start-pct),
+        transparent var(--scene-wedge-stop-end-pct),
+        var(--background-light, rgba(24, 24, 111, 1)) 100%);
+    /* Flat light band height at top/bottom of scene panel (overshoot + edge match); vh for large trackpad pull */
+    --scene-overshoot-light-band: min(40vh, 320px);
+    --scene-overshoot-surface: var(--background-light, rgba(24, 24, 111, 1));
+    --scene-overshoot-mid: var(--background-dark, rgba(0, 0, 77, 1));
+}
+
 #scene-container {
     width: 50%; /* Initial width */
     height: 100vh; /* Full viewPort height */
@@ -29,30 +49,35 @@
 html[native-dark-active][native-dark-active] #scene-container,
 html[native-dark-active] #scene-container,
 #scene-container {
-   background: var(--background-dark, #1a1a1a) !important;
+   /* Flat light caps; hard stop to dark mid-panel */
+   background: linear-gradient(
+     to bottom,
+     var(--scene-overshoot-surface) 0,
+     var(--scene-overshoot-surface) var(--scene-overshoot-light-band),
+     var(--scene-overshoot-mid) var(--scene-overshoot-light-band),
+     var(--scene-overshoot-mid) calc(100% - var(--scene-overshoot-light-band)),
+     var(--scene-overshoot-surface) calc(100% - var(--scene-overshoot-light-band)),
+     var(--scene-overshoot-surface) 100%
+   ) !important;
 }
 
+
+#scene-container #scene-content {
+    background-color: var(--scene-overshoot-mid);
+}
 
 #scene-plane {
     position: relative;
     transform-style: preserve-3d;
-    /* Gradient attached to scroll content: bright edges only visible at top/bottom of scroll.
-       Fades to transparent (not a color) so no hard demarcation edge — container dark shows through. */
-    background: linear-gradient(in oklch to bottom,
-      var(--background-light, #2a2a2a) 0%,
-      transparent 40%,
-      transparent 60%,
-      var(--background-light, #2a2a2a) 100%
-    );
+    /* Bright top/bottom wedges; transparent mid-band lets --background-dark from #scene-content show through. */
+    background: var(--scene-vertical-wedge-gradient);
     width: 100%;
     scroll-behavior: smooth;
     z-index: 2;
     isolation: isolate;
-    padding-top: 50px;
+    padding-top: 58px;
     /* Note: No flexbox - ConnectionLines use absolute positioning */
 }
-    
-/* scene/scene.css */
 
 /* CONVENTION: Border styling for bizCard (.biz-card-div) and bizCardLineItem (.biz-resume-div) must always be identical (normal, hovered, selected). */
 /* Normal state: single rule so cDiv and rDiv cannot diverge */
