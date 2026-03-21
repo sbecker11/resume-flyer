@@ -2,6 +2,8 @@
 
 <img src="https://raw.githubusercontent.com/sbecker11/resume-flock/master/static_content/movie.gif" height="420" alt="resume-flock demo animation">
 
+**Live app (GitHub Pages):** [https://sbecker11.github.io/resume-flock/](https://sbecker11.github.io/resume-flock/)
+
 <br><br>
 
 # Dark, chaotic, and deep
