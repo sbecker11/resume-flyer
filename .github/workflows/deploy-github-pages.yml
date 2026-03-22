@@ -18,8 +18,13 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Attach build to the same environment as deploy so secrets stored under
+    # Settings → Environments → github-pages are available (not only "Repository secrets").
+    # If this job ever waits on "Required reviewers" for github-pages, move S3 secrets to repository secrets instead.
+    environment:
+      name: github-pages
     # Single source of truth: every step (verify + vite build) sees the same S3_* / AWS_* values.
-    # GitHub repo → Settings → Secrets and variables → Actions → New repository secret.
+    # Repository secrets: Settings → Secrets and variables → Actions.
     # You need ONE of these bundles (see modules/utils/paletteCatalogS3Url.mjs + .env.example):
     #   • S3_COLOR_PALETTES_JSON_URL  (full HTTPS URL to the .jsonl catalog)
     #   • OR S3_IMAGES_BUCKET + AWS_REGION + S3_PALETTES_JSONL_KEY
@@ -45,22 +50,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Fail fast if secrets above don’t resolve to a catalog URL (empty build = broken palettes on Pages).
+      # Fail fast if env doesn’t resolve to a catalog URL (empty build = broken palettes on Pages).
       - name: Verify S3 palette catalog secrets
-        run: |
-          node --input-type=module -e "
-            import { resolvePaletteCatalogS3UrlFromRecord } from './modules/utils/paletteCatalogS3Url.mjs';
-            const u = resolvePaletteCatalogS3UrlFromRecord(process.env);
-            if (!u) {
-              console.error('No palette catalog URL from secrets. Add at least one of:');
-              console.error('  S3_COLOR_PALETTES_JSON_URL');
-              console.error('  or S3_IMAGES_BUCKET + AWS_REGION + S3_PALETTES_JSONL_KEY');
-              console.error('  or legacy S3_BUCKET + S3_REGION + S3_COLOR_PALETTES_OBJECT_KEY');
-              console.error('See .env.example and Settings → Secrets → Actions.');
-              process.exit(1);
-            }
-            console.log('Palette catalog URL OK for build (length', u.length, ')');
-          "
+        run: node scripts/verify-palette-catalog-env.mjs
 
       - name: Build (Vite)
         env:
