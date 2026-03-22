@@ -36,8 +36,10 @@ for (const k of KEYS) {
     console.error(`  ${k}: ${keyStatus(k)}`);
 }
 console.error('');
-console.error('Where to add them:');
-console.error('  1) Repo → Settings → Secrets and variables → Actions → Repository secrets (recommended), OR');
-console.error('  2) Same names under Settings → Environments → github-pages (this workflow attaches the build job to that environment so those secrets are visible).');
+console.error('Where to add them (exact names above — typos break the build):');
+console.error('  1) Repo → Settings → Secrets and variables → Actions → tab "Secrets" OR tab "Variables"');
+console.error('     (public catalog URL is OK as a Variable; use Secrets if you prefer).');
+console.error('  2) Or same names under Settings → Environments → github-pages (secrets or variables).');
+console.error('  3) Fork: add them on YOUR fork’s repo settings — upstream secrets are not copied.');
 console.error('See .env.example.');
 process.exit(1);

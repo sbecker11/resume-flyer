@@ -24,19 +24,20 @@ jobs:
     environment:
       name: github-pages
     # Single source of truth: every step (verify + vite build) sees the same S3_* / AWS_* values.
-    # Repository secrets: Settings → Secrets and variables → Actions.
+    # Repository secrets OR variables (same names). Public catalog URL is OK under Variables.
+    # Settings → Secrets and variables → Actions. Environment github-pages secrets/vars also apply.
     # You need ONE of these bundles (see modules/utils/paletteCatalogS3Url.mjs + .env.example):
     #   • S3_COLOR_PALETTES_JSON_URL  (full HTTPS URL to the .jsonl catalog)
     #   • OR S3_IMAGES_BUCKET + AWS_REGION + S3_PALETTES_JSONL_KEY
     #   • OR S3_BUCKET + S3_REGION + S3_COLOR_PALETTES_OBJECT_KEY  (legacy)
     env:
-      S3_COLOR_PALETTES_JSON_URL: ${{ secrets.S3_COLOR_PALETTES_JSON_URL }}
-      S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      S3_PALETTES_JSONL_KEY: ${{ secrets.S3_PALETTES_JSONL_KEY }}
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
-      S3_REGION: ${{ secrets.S3_REGION }}
-      S3_COLOR_PALETTES_OBJECT_KEY: ${{ secrets.S3_COLOR_PALETTES_OBJECT_KEY }}
+      S3_COLOR_PALETTES_JSON_URL: ${{ secrets.S3_COLOR_PALETTES_JSON_URL || vars.S3_COLOR_PALETTES_JSON_URL }}
+      S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET || vars.S3_IMAGES_BUCKET }}
+      AWS_REGION: ${{ secrets.AWS_REGION || vars.AWS_REGION }}
+      S3_PALETTES_JSONL_KEY: ${{ secrets.S3_PALETTES_JSONL_KEY || vars.S3_PALETTES_JSONL_KEY }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET || vars.S3_BUCKET }}
+      S3_REGION: ${{ secrets.S3_REGION || vars.S3_REGION }}
+      S3_COLOR_PALETTES_OBJECT_KEY: ${{ secrets.S3_COLOR_PALETTES_OBJECT_KEY || vars.S3_COLOR_PALETTES_OBJECT_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
