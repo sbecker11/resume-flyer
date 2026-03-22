@@ -18,7 +18,7 @@ The codebase uses **fast failure** and **consistent error reporting**: every err
 
 | Area | Behavior |
 |------|----------|
-| Palette load | Invalid JSON, failed fetch, or invalid hex in any palette → throw; startup fails. |
+| Palette load | **S3 only** (no API/static/cache fallbacks). Missing catalog URL, non-OK fetch, bad NDJSON, invalid bundle, or invalid hex → throw; startup fails. |
 | State load | Fetch or parse error → throw (no default state fallback). |
 | App init | Palette load or resume system init failure → rethrow; app does not start in a broken state. |
 | applyPaletteToElement | Invalid color (e.g. hexToRgb null) → throw (palette was validated at startup). |

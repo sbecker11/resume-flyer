@@ -53,6 +53,14 @@
             <span>Parallax scale at max scene Z / far (0–1.5)</span>
             <input v-model.number="form3D.parallaxScaleAtMaxZ" type="number" :min="renderingLimits.parallaxScaleAtMaxZ.min" :max="renderingLimits.parallaxScaleAtMaxZ.max" :step="renderingLimits.parallaxScaleAtMaxZ.step" />
           </label>
+          <label class="modal-row modal-row-checkbox">
+            <span>Show focal point (opacity 0 when off; position and parallax unchanged)</span>
+            <input v-model="form3D.focalPointUiVisible" type="checkbox" />
+          </label>
+          <label class="modal-row modal-row-checkbox">
+            <span>Show bulls-eye (opacity 0 when off; centering and parallax unchanged)</span>
+            <input v-model="form3D.bullsEyeUiVisible" type="checkbox" />
+          </label>
         </div>
         <div class="modal-footer">
           <button type="button" class="modal-btn modal-btn-cancel" @click="close3DModal">Cancel</button>
@@ -68,6 +76,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useColorPalette } from '../composables/useColorPalette.mjs'
 import { useAppState } from '../composables/useAppState.ts'
 import { setFromAppState as setRenderingFromAppState, getRendering, clampRenderingValue } from '../core/renderingConfig.mjs'
+import { reportError } from '../utils/errorReporting.mjs'
 
 // Use color palette composable
 const {
@@ -92,7 +101,9 @@ const form3D = ref({
   saturationAtMaxZ: 100,
   brightnessAtMaxZ: 100,
   parallaxScaleAtMinZ: 1.0,
-  parallaxScaleAtMaxZ: 1.0
+  parallaxScaleAtMaxZ: 1.0,
+  focalPointUiVisible: true,
+  bullsEyeUiVisible: true
 })
 
 // Show selector after palettes are loaded
@@ -136,7 +147,9 @@ function open3DModal() {
     saturationAtMaxZ: clampRenderingValue(limits, 'saturationAtMaxZ', saturationPct),
     brightnessAtMaxZ: clampRenderingValue(limits, 'brightnessAtMaxZ', brightnessPct),
     parallaxScaleAtMinZ: clampRenderingValue(limits, 'parallaxScaleAtMinZ', r.parallaxScaleAtMinZ),
-    parallaxScaleAtMaxZ: clampRenderingValue(limits, 'parallaxScaleAtMaxZ', r.parallaxScaleAtMaxZ)
+    parallaxScaleAtMaxZ: clampRenderingValue(limits, 'parallaxScaleAtMaxZ', r.parallaxScaleAtMaxZ),
+    focalPointUiVisible: r.focalPointUiVisible !== false,
+    bullsEyeUiVisible: r.bullsEyeUiVisible !== false
   }
   show3DModal.value = true
 }
@@ -154,7 +167,9 @@ async function save3DSettings() {
     saturationAtMaxZ: clampRenderingValue(limits, 'saturationAtMaxZ', form3D.value.saturationAtMaxZ),
     brightnessAtMaxZ: clampRenderingValue(limits, 'brightnessAtMaxZ', form3D.value.brightnessAtMaxZ),
     parallaxScaleAtMinZ: clampRenderingValue(limits, 'parallaxScaleAtMinZ', form3D.value.parallaxScaleAtMinZ),
-    parallaxScaleAtMaxZ: clampRenderingValue(limits, 'parallaxScaleAtMaxZ', form3D.value.parallaxScaleAtMaxZ)
+    parallaxScaleAtMaxZ: clampRenderingValue(limits, 'parallaxScaleAtMaxZ', form3D.value.parallaxScaleAtMaxZ),
+    focalPointUiVisible: !!form3D.value.focalPointUiVisible,
+    bullsEyeUiVisible: !!form3D.value.bullsEyeUiVisible
   }
   try {
     await updateAppState({
@@ -167,7 +182,8 @@ async function save3DSettings() {
     window.dispatchEvent(new CustomEvent('rendering-changed'))
     close3DModal()
   } catch (e) {
-    console.error('[ColorPaletteSelector] Failed to save 3D settings:', e)
+    reportError(e, '[ColorPaletteSelector] Failed to save 3D settings')
+    throw e
   }
 }
 
@@ -178,7 +194,7 @@ onMounted(async () => {
     isVisible.value = true
     document.addEventListener('click', handleClickOutside)
   } catch (error) {
-    console.error('[ColorPaletteSelector] Failed to load palettes:', error)
+    reportError(error, '[ColorPaletteSelector] Failed to load palettes')
     throw error
   }
 })
@@ -323,6 +339,13 @@ onUnmounted(() => {
   border: 1px solid #555;
   background: #222;
   color: white;
+}
+
+.modal-row-checkbox input[type='checkbox'] {
+  width: auto;
+  min-width: auto;
+  padding: 0;
+  accent-color: #0088cc;
 }
 
 .modal-footer {

@@ -265,7 +265,9 @@ function getDefaultState(): AppState {
                 parallaxScaleAtMaxZ: 1.0,
                 saturationAtMaxZ: 100,
                 brightnessAtMaxZ: 100,
-                blurAtMaxZ: 0
+                blurAtMaxZ: 0,
+                focalPointUiVisible: true,
+                bullsEyeUiVisible: true
             }
             // renderingLimits: only from app_state.json / app_state.default.json (never from code)
         }
@@ -397,7 +399,15 @@ function migrateState(state: any): AppState {
 
     // Ensure system-constants.rendering exists (parallax/depth constants; not user-editable)
     const sc = state['system-constants']
-    const renderingDefaults = { parallaxScaleAtMinZ: 1.0, parallaxScaleAtMaxZ: 1.0, saturationAtMaxZ: 100, brightnessAtMaxZ: 100, blurAtMaxZ: 0 }
+    const renderingDefaults = {
+        parallaxScaleAtMinZ: 1.0,
+        parallaxScaleAtMaxZ: 1.0,
+        saturationAtMaxZ: 100,
+        brightnessAtMaxZ: 100,
+        blurAtMaxZ: 0,
+        focalPointUiVisible: true,
+        bullsEyeUiVisible: true
+    }
     const fromUserSettings = state['user-settings']?.rendering
     if (sc) {
         if (!sc.rendering) {
@@ -416,6 +426,8 @@ function migrateState(state: any): AppState {
             if (r.brightnessAtMaxZ === undefined) r.brightnessAtMaxZ = renderingDefaults.brightnessAtMaxZ
             else if (r.brightnessAtMaxZ <= 1 && r.brightnessAtMaxZ > 0) r.brightnessAtMaxZ = Math.round(r.brightnessAtMaxZ * 100)
             if (r.blurAtMaxZ === undefined) r.blurAtMaxZ = renderingDefaults.blurAtMaxZ
+            if (r.focalPointUiVisible === undefined) r.focalPointUiVisible = renderingDefaults.focalPointUiVisible
+            if (r.bullsEyeUiVisible === undefined) r.bullsEyeUiVisible = renderingDefaults.bullsEyeUiVisible
             if (r.displacementAtMaxZ !== undefined) delete r.displacementAtMaxZ
             if (r.displacementAtMinZ !== undefined) delete r.displacementAtMinZ
         }
@@ -514,7 +526,7 @@ async function loadStateFromServer(): Promise<AppState> {
             // If saved state was missing system-constants.rendering or renderingLimits, persist merged state so app_state.json gets the new keys
             const scRaw = rawState['system-constants']
             const r = scRaw?.rendering
-            const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ'] as const
+            const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ', 'focalPointUiVisible', 'bullsEyeUiVisible'] as const
             const hadMissingRendering = !r || renderingKeys.some(k => r[k] === undefined)
             const hadMissingRenderingLimits = !scRaw?.renderingLimits
             if (hadMissingRendering || hadMissingRenderingLimits) {

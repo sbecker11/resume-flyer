@@ -31,9 +31,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # S3 catalog: S3_COLOR_PALETTES_JSON_URL or CPM-aligned S3_IMAGES_BUCKET + AWS_REGION + S3_PALETTES_JSONL_KEY (see color-palette-utils-ts/DEVELOPMENT.md). Legacy secrets still supported.
       - name: Build (Vite)
         env:
           VITE_BASE: /resume-flock/
+          S3_COLOR_PALETTES_JSON_URL: ${{ secrets.S3_COLOR_PALETTES_JSON_URL }}
+          S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_PALETTES_JSONL_KEY: ${{ secrets.S3_PALETTES_JSONL_KEY }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_REGION: ${{ secrets.S3_REGION }}
+          S3_COLOR_PALETTES_OBJECT_KEY: ${{ secrets.S3_COLOR_PALETTES_OBJECT_KEY }}
         run: npm run build
 
       - name: Copy parsed resumes (static)
@@ -43,9 +51,8 @@ jobs:
           mkdir -p dist/parsed_resumes
           rsync -av --exclude="**/*.docx" --exclude="**/*.pdf" --exclude="**/*.html" parsed_resumes/ dist/parsed_resumes/
 
-      - name: Copy static_content (color_palettes/icons/media)
+      - name: Copy static_content (icons/media/jobs/skills as applicable)
         run: |
-          node scripts/generate-color-palette-manifest.mjs
           mkdir -p dist/static_content
           rsync -av static_content/ dist/static_content/
 

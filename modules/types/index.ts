@@ -61,7 +61,7 @@ export interface AppState {
     };
 
     theme: {
-      colorPalette: string; // palette name key from color_palettes.jsonl (legacy: *.json)
+      colorPalette: string; // palette name key from S3 catalog (legacy: *.json)
     };
   };
 

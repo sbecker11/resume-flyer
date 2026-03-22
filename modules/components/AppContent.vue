@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <div id="bulls-eye" ref="bullsEyeRef">+</div>
+    <div id="bulls-eye" ref="bullsEyeRef" :style="{ opacity: bullsEyeUiOpacity }">+</div>
     <div
       id="focal-point"
       ref="focalPointRef"
@@ -242,13 +242,22 @@ const focalPointY = computed(() => store.focalPoint.y)
 // COMPUTED PROPERTIES
 // =============================================================================
 
+/** Opacity-only hide for scene UI: focal/bulls-eye stay in DOM and parallax still uses them (opacity 0). */
+const focalPointUiOpacity = computed(() =>
+  appState.value?.['system-constants']?.rendering?.focalPointUiVisible === false ? 0 : 1
+)
+const bullsEyeUiOpacity = computed(() =>
+  appState.value?.['system-constants']?.rendering?.bullsEyeUiVisible === false ? 0 : 1
+)
+
 // Create dynamic focal point style from position
 const focalPointStyle = computed(() => ({
   left: `${focalPointX.value}px`,
   top: `${focalPointY.value}px`,
   transform: 'translate(-50%, -50%)',
   position: 'fixed',
-  visibility: (focalPointX.value > 0 && focalPointY.value > 0) ? 'visible' : 'hidden'
+  visibility: (focalPointX.value > 0 && focalPointY.value > 0) ? 'visible' : 'hidden',
+  opacity: focalPointUiOpacity.value
 }))
 
 // =============================================================================

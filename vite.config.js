@@ -15,6 +15,8 @@ const base = process.env.VITE_BASE || '/'
 export default defineConfig({
   base,
   publicDir: 'public',
+  // Expose S3_* so S3_COLOR_PALETTES_JSON_URL is available to the app (palette catalog fetch + cache; see color-palette-utils-ts/README-ts.md).
+  envPrefix: ['VITE_', 'S3_'],
   plugins: [vue()],
   resolve: {
     alias: {

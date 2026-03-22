@@ -11,13 +11,16 @@ import fetch from 'node-fetch';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
-import { parsePaletteBundleFromImageMetadataJsonl } from './modules/utils/paletteBundleFromImageMetadata.mjs';
-
+import {
+    refreshPaletteCatalogCache,
+    getCachedPaletteCatalogBundle,
+    getLastPaletteCatalogSourceUrl,
+    hasPaletteCatalogCache,
+} from './modules/utils/paletteCatalogServerCache.mjs';
 // Load .env from project root (see docs/REPLICATE-PORTS-CONFIG.md)
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 const PROJECT_ROOT = process.cwd();
-const COLOR_PALETTES_JSONL_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'color_palettes.jsonl');
 const CSS_FILE_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'css', 'palette-styles.css');
 /** Persisted app state (layout, theme, currentResumeId, system-constants, etc.). */
 const STATE_FILE_PATH = path.resolve(PROJECT_ROOT, 'app_state.json');
@@ -825,17 +828,25 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
     }
 });
 
-// GET /api/palette-manifest: Full palette bundle from static_content/color_palettes.jsonl
-app.get('/api/palette-manifest', async (req, res) => {
+// GET /api/palette-catalog — in-memory copy of S3 NDJSON (validated). Warmed on server startup.
+// Send X-Palette-Catalog-Refresh: 1 to refetch S3 (e.g. browser hard reload).
+app.get('/api/palette-catalog', async (req, res) => {
+    const wantsRefresh = req.get('x-palette-catalog-refresh') === '1';
     try {
-        const raw = await fs.readFile(COLOR_PALETTES_JSONL_PATH, 'utf8');
-        const bundle = parsePaletteBundleFromImageMetadataJsonl(raw);
+        if (wantsRefresh || !hasPaletteCatalogCache()) {
+            await refreshPaletteCatalogCache();
+        }
+        const bundle = getCachedPaletteCatalogBundle();
+        res.set('Cache-Control', 'private, no-store');
         res.json(bundle);
     } catch (error) {
-        console.error('[palette-manifest] Failed to load color_palettes.jsonl:', error);
-        const code = /** @type {{ code?: string }} */ (error).code;
-        const status = code === 'ENOENT' ? 404 : 500;
-        res.status(status).json({ error: 'Failed to load palette bundle from color_palettes.jsonl.' });
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error('[palette-catalog] GET /api/palette-catalog failed:', msg);
+        res.status(503).json({
+            error: 'Palette catalog unavailable',
+            message: msg,
+            hint: 'S3 fetch/parse/validate failed — see server console for PALETTE S3 FAILED banner',
+        });
     }
 });
 
@@ -2417,9 +2428,6 @@ function startServer(port) {
         actualBackendPort = port;
         // Success!
         console.log(`Server listening on http://localhost:${port}`);
-        console.log(`Serving palette bundle at /api/palette-manifest (from color_palettes.jsonl)`);
-        console.log(`Color palettes path: ${COLOR_PALETTES_JSONL_PATH}`);
-        
         // Clean up any stale lock files from previous crashed processes
         await cleanStaleLock(STATE_FILE_PATH, 30000);
 
@@ -2452,4 +2460,20 @@ export { app };
 // Start server only when this file is run as the main module (not when imported by tests)
 const __filename = fileURLToPath(import.meta.url);
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename);
-if (isMain) startServer(START_PORT);
+if (isMain) {
+    (async () => {
+        try {
+            await refreshPaletteCatalogCache();
+            const bundle = getCachedPaletteCatalogBundle();
+            console.log(
+                `[palette-catalog] Startup: warmed from S3 (${getLastPaletteCatalogSourceUrl()}) — ${bundle.palettes.length} palette(s)`
+            );
+        } catch {
+            console.error(
+                '[palette-catalog] Startup: S3 warm failed — exiting (fast-fail). Fix .env and S3; see PALETTE S3 FAILED banner above.'
+            );
+            process.exit(1);
+        }
+        startServer(START_PORT);
+    })();
+}

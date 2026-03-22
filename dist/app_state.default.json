@@ -157,7 +157,9 @@
       "parallaxScaleAtMaxZ": 1,
       "saturationAtMaxZ": 100,
       "brightnessAtMaxZ": 100,
-      "blurAtMaxZ": 0
+      "blurAtMaxZ": 0,
+      "focalPointUiVisible": true,
+      "bullsEyeUiVisible": true
     },
     "renderingLimits": {
       "blurAtMaxZ": {

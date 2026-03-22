@@ -1,17 +1,16 @@
 /**
- * Resume-flock-only helpers for palette/color logic that palette-utils-ts does not provide.
- * All color conversion and contrast logic comes from color-palette-utils-ts; this module
- * only adds luminance comparison, hex validation, and compatibility wrappers.
+ * Resume-flock-only helpers on top of {@link resumeFlockPaletteColors.mjs}
+ * (local color math; color-palette-utils-ts is vendor/readonly for S3 catalog only).
  */
-import { formatHexDisplay, hexToRgb, rgbToHex } from 'color-palette-utils-ts';
+import { formatHexDisplay, hexToRgb, rgbToHex } from './resumeFlockPaletteColors.mjs';
 
-/** sRGB channel to linear (same as palette-utils-ts internal). */
+/** sRGB channel to linear (WCAG / resumeFlockPaletteColors). */
 function srgbToLinear(c) {
     return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
 /**
- * Relative luminance 0–1 for a hex color (matches palette-utils-ts logic for ordering).
+ * Relative luminance 0–1 for a hex color (matches resumeFlockPaletteColors logic for ordering).
  * @param {string} hex
  * @returns {number}
  */

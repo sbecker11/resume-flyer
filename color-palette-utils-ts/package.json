@@ -1,0 +1,47 @@
+{
+  "name": "color-palette-utils-ts",
+  "version": "1.0.0",
+  "description": "TypeScript types and utilities for the public palette catalog (NDJSON from S3)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "vitest.config.ts",
+    "tsconfig.json",
+    "README-ts.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --testNamePattern='integration'",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "dotenv": "^17.3.1",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.0"
+  },
+  "keywords": [
+    "color",
+    "palette",
+    "hex",
+    "contrast",
+    "typescript",
+    "ndjson",
+    "color-palette-maker"
+  ],
+  "license": "MIT"
+}

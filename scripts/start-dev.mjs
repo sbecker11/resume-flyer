@@ -82,7 +82,7 @@ async function main() {
         process.exit(1);
     });
 
-    const ok = await waitForUrl(`http://127.0.0.1:${backendPort}/api/palette-manifest`);
+    const ok = await waitForUrl(`http://127.0.0.1:${backendPort}/api/palette-catalog`);
     if (!ok) {
         console.warn('Backend may not be ready yet; starting Vite anyway.');
     }

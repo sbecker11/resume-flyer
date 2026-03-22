@@ -1,11 +1,57 @@
 import { ref, watch, computed, getCurrentInstance } from 'vue';
 import { useAppState } from './useAppState.ts';
-import { normalizePaletteColors, getHighContrastForBackground, getHighlightColor, formatHexDisplay, hexToRgb, rgbToHex } from 'color-palette-utils-ts';
+import {
+    getHighContrastForBackground,
+    getHighlightColor,
+    formatHexDisplay,
+    hexToRgb,
+    rgbToHex,
+} from '@/modules/utils/resumeFlockPaletteColors.mjs';
 import { getPerceivedBrightness } from '@/modules/utils/paletteHelpers.mjs';
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { parsePaletteBundleFromImageMetadataJsonl } from '@/modules/utils/paletteBundleFromImageMetadata.mjs';
+import { resolvePaletteCatalogS3Url } from '@/modules/utils/paletteCatalogS3Url.mjs';
+import { assertValidPaletteCatalogBundle } from '@/modules/utils/paletteCatalogValidate.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import { complainLoudlyPaletteS3Failure } from '@/modules/utils/paletteS3LoudError.mjs';
+
+/** @param {unknown} err */
+function isPaletteCatalogOrS3Failure(err) {
+    const m = err instanceof Error ? err.message : String(err);
+    return (
+        m.includes('S3') ||
+        m.includes('catalog') ||
+        m.includes('NDJSON') ||
+        m.includes('jsonl') ||
+        m.includes('Invalid hex in palette') ||
+        m.includes('Invalid S3 catalog') ||
+        m.includes('Invalid palette entry') ||
+        m.includes('palette bundle') ||
+        m.includes('Palette bundle produced') ||
+        m.includes('Failed to fetch') ||
+        m.includes('NetworkError') ||
+        m.includes('Load failed') ||
+        m.includes('API palette catalog') ||
+        m.includes('Palette catalog unavailable')
+    );
+}
+
+function isDocumentReloadNavigation() {
+    if (typeof performance === 'undefined') return false;
+    const nav = performance.getEntriesByType?.('navigation')?.[0];
+    if (nav && 'type' in nav && /** @type {{ type?: string }} */ (nav).type === 'reload') {
+        return true;
+    }
+    try {
+        // @ts-ignore — legacy Navigation Timing
+        const n = performance.navigation;
+        if (n && typeof n.type === 'number' && n.type === 1) return true;
+    } catch {
+        /* ignore */
+    }
+    return false;
+}
 
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -32,8 +78,6 @@ function basePathJoin(relPath) {
     return `${b}${p}`;
 }
 
-const COLOR_PALETTES_JSONL_URL = basePathJoin('static_content/color_palettes.jsonl');
-const API_MANIFEST_URL = basePathJoin('api/palette-manifest');
 /** Base path for contrast icons (url/back/img); must contain icons8-{url,back,img}-16-black.png. */
 const ICON_BASE = basePathJoin('static_content/icons');
 
@@ -54,17 +98,17 @@ function resolveTextAndIconStyle(backgroundHex) {
 // --- Reactive State ---
 // This state is shared across all components that use this composable
 const colorPalettes = ref({});
-/** Per-palette background swatch: map palette name -> index (from color_palettes.jsonl backgroundSwatchIndex when set). */
+/** Per-palette background swatch: map palette name -> index (S3 catalog backgroundSwatchIndex when set). */
 const backgroundSwatchIndexByPalette = ref({});
 const orderedPaletteNames = ref([]);
-/** Maps stored theme key → display name; keys are palette names from color_palettes.jsonl (identity map). Kept for ResumeContainer native select option values. */
+/** Maps stored theme key → display name; keys match S3 catalog palette names. Kept for ResumeContainer native select option values. */
 const filenameToNameMap = ref({});
-/** Optional S3/public image URL per palette (from color_palettes.jsonl). */
+/** Optional S3/public image URL per palette (from catalog). */
 const imagePublicUrlByPaletteName = ref({});
 const isLoading = ref(false);
 
 /**
- * Legacy .json basenames / underscores → palette keys in color_palettes.jsonl (when names changed).
+ * Legacy .json basenames / underscores → palette keys in S3 catalog (when names changed).
  * Keys are lowercase.
  */
 const LEGACY_PALETTE_KEY_ALIASES = {
@@ -178,6 +222,13 @@ export function useColorPalette() {
         return elementRegistry;
     }
 
+    /** Registry from setup-time inject; do not call inject() here (e.g. rAF callbacks are outside setup). */
+    async function applyCurrentPaletteToAllElementsBound() {
+        const reg =
+            elementRegistry || (typeof window !== 'undefined' && window.globalElementRegistry);
+        return applyCurrentPaletteToAllElements(reg);
+    }
+
     async function loadPalettes() {
         if (isLoading.value) return; // Don't reload if already loading
         isLoading.value = true;
@@ -200,11 +251,61 @@ export function useColorPalette() {
 
             /** @type {{ version?: number, palettes?: Array<{ name: string, colors: string[], backgroundSwatchIndex?: number, imagePublicUrl?: string }> } | null} */
             let bundle = null;
-            if (hasServer()) {
+            /** @type {string | null} Human-readable catalog origin (DEV log + support). */
+            let catalogLoadOrigin = null;
+
+            // Permanent S3 catalog (startup + hard refresh): S3_COLOR_PALETTES_JSON_URL or S3_BUCKET + S3_REGION + S3_COLOR_PALETTES_OBJECT_KEY (see color-palette-utils-ts README / test URL decomposition).
+            const s3Url = resolvePaletteCatalogS3Url();
+            if (s3Url) {
+                try {
+                    const res = await fetch(s3Url, { method: 'GET', cache: 'no-store' });
+                    if (!res.ok) {
+                        throw new Error(`S3 palette catalog ${res.status} ${res.statusText} (${s3Url})`);
+                    }
+                    const raw = await res.text();
+                    writeCachedPaletteCatalogNdjson(s3Url, raw);
+                    bundle = parsePaletteBundleFromImageMetadataJsonl(raw);
+                    catalogLoadOrigin = `S3 live (${s3Url})`;
+                } catch (e) {
+                    const cached = readCachedPaletteCatalogNdjson(s3Url);
+                    if (cached) {
+                        try {
+                            bundle = parsePaletteBundleFromImageMetadataJsonl(cached);
+                            catalogLoadOrigin = `S3 localStorage cache (fetch failed; url ${s3Url})`;
+                            reportError(
+                                e,
+                                '[ColorPalette] S3 catalog fetch failed',
+                                'Remedy: Using readonly localStorage snapshot of last successful catalog'
+                            );
+                        } catch (parseErr) {
+                            reportError(
+                                parseErr,
+                                '[ColorPalette] Cached S3 catalog parse failed',
+                                'Remedy: Clearing invalid cache entry'
+                            );
+                            clearCachedPaletteCatalog(s3Url);
+                            reportError(
+                                e,
+                                '[ColorPalette] S3 palette catalog unavailable after cache discard',
+                                'Falling back to API/static'
+                            );
+                        }
+                    } else {
+                        reportError(
+                            e,
+                            '[ColorPalette] S3 palette catalog fetch failed (no local cache)',
+                            'Falling back to API/static'
+                        );
+                    }
+                }
+            }
+
+            if (!bundle && hasServer()) {
                 try {
                     const apiRes = await fetch(API_MANIFEST_URL);
                     if (apiRes.ok) {
                         bundle = await apiRes.json();
+                        catalogLoadOrigin = `API ${API_MANIFEST_URL}`;
                     } else {
                         throw new Error(`API palette bundle ${apiRes.status}`);
                     }
@@ -216,14 +317,29 @@ export function useColorPalette() {
                     }
                     const rawJsonl = await staticRes.text();
                     bundle = parsePaletteBundleFromImageMetadataJsonl(rawJsonl);
+                    catalogLoadOrigin = `static ${COLOR_PALETTES_JSONL_URL} (after API failure)`;
                 }
-            } else {
+            }
+
+            if (!bundle) {
                 const staticRes = await fetch(COLOR_PALETTES_JSONL_URL);
                 if (!staticRes.ok) {
                     throw new Error(`Static color_palettes.jsonl ${staticRes.status}`);
                 }
                 const rawJsonl = await staticRes.text();
                 bundle = parsePaletteBundleFromImageMetadataJsonl(rawJsonl);
+                catalogLoadOrigin = catalogLoadOrigin || `static ${COLOR_PALETTES_JSONL_URL}`;
+            }
+
+            if (import.meta.env?.DEV && catalogLoadOrigin && typeof console !== 'undefined') {
+                console.log(
+                    `[ColorPalette] Catalog loaded (${bundle?.palettes?.length ?? 0} palettes): ${catalogLoadOrigin}`
+                );
+            }
+            if (!s3Url && import.meta.env?.DEV && typeof console !== 'undefined') {
+                console.log(
+                    '[ColorPalette] S3 catalog disabled: set S3_COLOR_PALETTES_JSON_URL or S3_BUCKET+S3_REGION+S3_COLOR_PALETTES_OBJECT_KEY in .env (see .env.example)'
+                );
             }
 
             if (!bundle || bundle.version !== 2 || !Array.isArray(bundle.palettes) || bundle.palettes.length === 0) {
@@ -316,6 +432,9 @@ export function useColorPalette() {
             applySceneBackgroundFromCurrentPalette();
 
         } catch (error) {
+            if (isPaletteCatalogOrS3Failure(error)) {
+                complainLoudlyPaletteS3Failure('[ColorPalette] loadPalettes — browser fetch from S3 failed or catalog invalid', error);
+            }
             reportError(error, '[ColorPalette] Failed to load color palettes');
             throw error;
         } finally {
@@ -594,7 +713,7 @@ export function useColorPalette() {
         loadPalettes,
         updateBrightnessBoosts,
         updateBorderSettings,
-        applyCurrentPaletteToAllElements: applyCurrentPaletteToAllElementsImpl,
+        applyCurrentPaletteToAllElements: applyCurrentPaletteToAllElementsBound,
     };
 }
 
@@ -627,16 +746,6 @@ export async function applyCurrentPaletteToAllElements(registry = null) {
             detail: { filename, paletteName, previousFilename: null }
         }));
     }
-}
-
-async function applyCurrentPaletteToAllElementsImpl() {
-    let reg = null;
-    try {
-        reg = injectGlobalElementRegistry();
-    } catch {
-        reg = typeof window !== 'undefined' ? window.globalElementRegistry : null;
-    }
-    return applyCurrentPaletteToAllElements(reg);
 }
 
 /**
@@ -700,7 +809,7 @@ export async function applyPaletteToElement(element) {
         throw new Error(`Color palette not found for name: ${paletteName}`);
     }
 
-    // Calculate base colors (palette-utils-ts: LCH-based highlight, high-contrast text + icons from single call)
+    // Calculate base colors (resumeFlockPaletteColors: LCH highlight, high-contrast text + icons from single call)
     const backgroundColor = formatHexDisplay(colorPalette[paletteColorIndex % colorPalette.length]) || colorPalette[paletteColorIndex % colorPalette.length];
     const normalStyle = resolveTextAndIconStyle(backgroundColor);
     const foregroundColor = normalStyle.textColor;

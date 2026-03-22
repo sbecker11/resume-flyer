@@ -1,5 +1,5 @@
 /**
- * Build the app palette bundle from static_content/color_palettes.jsonl (one JSON object per line).
+ * Build the app palette bundle from S3 catalog NDJSON (one JSON object per line; same format as CPM-ts).
  * Each line may include paletteName, colorPalette (hex strings), optional backgroundSwatchIndex, imagePublicUrl.
  *
  * @param {string} rawFileContents - Full file text

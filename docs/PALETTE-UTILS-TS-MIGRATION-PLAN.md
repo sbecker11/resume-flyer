@@ -1,6 +1,8 @@
-# Migration Plan: Replace color-palette Logic with palette-utils-ts
+# Migration Plan (historical): palette-utils-ts → resume-flock + color-palette-utils-ts
 
-This document plans how to replace all color-palette–related color management in resume-flock with the shared TypeScript package **palette-utils-ts** (folder `palette-utils-ts/`), using its README-ts.md as the API reference.
+> **Current architecture:** **`color-palette-utils-ts`** is vendored **read-only** (S3 catalog only). App color math lives in **`modules/utils/resumeFlockPaletteColors.mjs`**. See root **README.md** and **`color-palette-utils-ts/README-ts.md`** for S3 setup.
+
+This document originally planned migrating color logic into the shared TypeScript package **palette-utils-ts** (later renamed / split). It is kept for history; paths and folder names below may be outdated.
 
 ---
 
@@ -21,14 +23,14 @@ This document plans how to replace all color-palette–related color management 
 | Layer | File(s) | Role |
 |-------|---------|------|
 | **Low-level color utils** | `modules/utils/colorUtils.mjs` | Hex validation, RGB/HSV conversion, `adjustBrightness`, `getPerceivedBrightness`, `getContrastingColor`, `isHexColor`, `isGrey` |
-| **Palette composable** | `modules/composables/useColorPalette.mjs` | Load palettes from `static_content/color_palettes.jsonl` (via `/api/palette-manifest` or static fetch), current palette state, `applyPaletteToElement`, document-level CSS vars (--background-light, --background-dark), brightness/border settings |
+| **Palette composable** | `modules/composables/useColorPalette.mjs` | Load palettes **from S3 only** (NDJSON URL from env); no API/static/localStorage fallbacks; fast-fail on error; `applyPaletteToElement`, document-level CSS vars, brightness/border settings |
 | **Re-exports / consumers** | `modules/utils/domUtils.mjs` | Imports `get_RGB_from_Hex`, `getContrastingColor`, `isHexColor` (as `isHexColorString`) from colorUtils |
 | **Archive** | `archive/cssColors.mjs` | Uses `colorUtils.isHexColorString` (note: colorUtils exports `isHexColor`; may be a naming bug) |
 
 ### 1.3 Where colorUtils / useColorPalette are used
 
 - **useColorPalette.mjs** (core):
-  - **Loading:** Fetches palette bundle from `/api/palette-manifest` (or static `static_content/color_palettes.jsonl`); parses JSONL via `parsePaletteBundleFromImageMetadataJsonl`; validates `paletteData.name` and `paletteData.colors` (can use `normalizePaletteColors`).
+  - **Loading:** Fetches palette NDJSON from **S3** (`resolvePaletteCatalogS3Url` + `fetch`); parses via `parsePaletteBundleFromImageMetadataJsonl`; validates bundle and hex (no fallbacks).
   - **Document theming:** Picks “darkest” color by `getPerceivedBrightness`, then uses `get_RGB_from_Hex` → `get_HSV_from_RGB` → darken (v, s) → `get_RGB_from_HSV` to set `--background-light` and `--background-dark`.
   - **applyPaletteToElement:** For base color at index: `getContrastingColor` (foreground), `adjustBrightness(base, factorSelected)` / `adjustBrightness(base, factorHovered)` for selected/hovered background, then `getContrastingColor` again for those states.
 - **ResumeListController.mjs, ResumeItemsController.mjs, infiniteScrollingContainer.mjs, useCardsController.mjs:** Call `applyPaletteToElement` only; no direct colorUtils.
