@@ -201,20 +201,17 @@ const {
 } = useLayoutToggle();
 
 const isHovering = ref(false);
-/** Keyboard focus: show same custom tooltip as hover (native title can't be positioned). */
-const focalTriStateFocused = ref(false);
 const isSteppingHovering = ref(false);
 const isLayoutHovering = ref(false);
 const hasJustClicked = ref(false); // Track if we just clicked (to maintain hover state)
 
-const showFocalTriStateTooltip = computed(
-  () => isHovering.value || focalTriStateFocused.value
-);
+/** Tooltip visible only on mouse hover over the tri-state button. */
+const showFocalTriStateTooltip = computed(() => isHovering.value);
 
 const FOCAL_MODE_TITLE: Record<string, string> = {
-  [FOCALPOINT_MODES.LOCKED]: 'focal point locked at viewport center (bulls eye)',
-  [FOCALPOINT_MODES.FOLLOWING]: 'focal point eases to mouse',
-  [FOCALPOINT_MODES.DRAGGING]: 'mouse drags focal point',
+  [FOCALPOINT_MODES.LOCKED]: 'focal point locked at viewport center (bulls eye)\n→ no motion parallax',
+  [FOCALPOINT_MODES.FOLLOWING]: 'focal point eases to mouse\n→ smooth motion parallax',
+  [FOCALPOINT_MODES.DRAGGING]: 'mouse drags focal point\n→ fast motion parallax',
 };
 
 /** Tooltip and aria: current mode only, no "click to cycle". */
@@ -240,11 +237,12 @@ const layoutButtonText = computed(() => {
 /** Current mode only (no next-mode preview on hover). */
 const displayedIconMode = computed(() => String(focalPointMode.value).toLowerCase());
 
-/** 15x15 PNG path: current mode, inverted (black) on hover. Following uses locked icon (same reticle). */
+/** 15x15 PNG path for LOCKED and DRAGGING only. FOLLOWING keeps SVG (no changes). */
 const focalTriStateIconSrc = computed(() => {
   const mode = focalPointMode.value;
+  if (mode === FOCALPOINT_MODES.FOLLOWING) return null;
   const variant = isHovering.value ? 'black' : 'white';
-  const iconMode = mode === FOCALPOINT_MODES.FOLLOWING ? 'locked' : String(mode).toLowerCase();
+  const iconMode = String(mode).toLowerCase();
   return `/static_content/icons/x-hairs/15/${iconMode}-15-${variant}.png`;
 });
 
@@ -337,10 +335,9 @@ function handleResizeHandleClick(event: MouseEvent): void {
                       @click.stop="toggleFocalLock" 
                       @mouseenter="isHovering = true; hasJustClicked = false"
                       @mouseleave="isHovering = false; hasJustClicked = false"
-                      @focus="focalTriStateFocused = true"
-                      @blur="focalTriStateFocused = false"
                       :aria-label="triStateFocalAriaLabel">
                 <img
+                  v-if="focalTriStateIconSrc"
                   :src="focalTriStateIconSrc"
                   class="tri-state-icon-img"
                   width="15"
@@ -348,6 +345,20 @@ function handleResizeHandleClick(event: MouseEvent): void {
                   alt=""
                   aria-hidden="true"
                 />
+                <!-- FOLLOWING: unchanged (SVG reticle, inverted on hover via currentColor) -->
+                <svg
+                  v-else
+                  class="tri-state-reticle"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1" />
+                  <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1" />
+                  <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1" />
+                  <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1" />
+                  <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1" />
+                </svg>
               </button>
               <div
                 v-show="showFocalTriStateTooltip"
@@ -490,7 +501,7 @@ function handleResizeHandleClick(event: MouseEvent): void {
     pointer-events: none;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
     text-align: left;
-    white-space: normal;
+    white-space: pre-line;
     hyphens: none;
     overflow-wrap: break-word;
     word-break: normal;
@@ -514,12 +525,25 @@ function handleResizeHandleClick(event: MouseEvent): void {
     position: relative;
 }
 
-#tri-state-toggle .tri-state-icon-img {
-    display: block;
+#tri-state-toggle .tri-state-icon-img,
+#tri-state-toggle .tri-state-reticle {
     width: 15px;
     height: 15px;
-    object-fit: contain;
     flex-shrink: 0;
+    display: block;
+    transform: translate(-0.5px, 0.5px);
+}
+
+#tri-state-toggle .tri-state-icon-img {
+    object-fit: contain;
+}
+
+#tri-state-toggle .tri-state-reticle {
+    color: inherit;
+}
+
+#tri-state-toggle.hovering .tri-state-reticle {
+    color: black;
 }
 
 /* Hover: inverted icon (black on white) via PNG variant */

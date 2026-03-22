@@ -62,6 +62,47 @@
               </label>
             </span>
           </div>
+          <div class="focal-mode-radios">
+            <label
+              v-for="opt in FOCAL_MODE_OPTIONS"
+              :key="opt.value"
+              class="focal-mode-radio"
+              :class="{ selected: store.focalPoint.mode === opt.value }"
+              :title="opt.tooltip"
+            >
+              <input
+                type="radio"
+                name="focal-mode"
+                :value="opt.value"
+                :checked="store.focalPoint.mode === opt.value"
+                @change="appStoreActions.setFocalPointMode(opt.value)"
+              />
+              <span class="focal-mode-icon">
+                <img
+                  v-if="opt.icon !== 'following'"
+                  :src="`/static_content/icons/x-hairs/15/${opt.icon}-15-white.png`"
+                  width="15"
+                  height="15"
+                  alt=""
+                  class="focal-mode-icon-img"
+                />
+                <svg
+                  v-else
+                  class="focal-mode-icon-svg"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1" />
+                  <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1" />
+                  <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1" />
+                  <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1" />
+                  <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1" />
+                </svg>
+              </span>
+              <span class="focal-mode-tooltip">{{ opt.tooltip }}</span>
+            </label>
+          </div>
         </div>
         <p v-else class="modal-body">Loading state…</p>
         <div class="modal-footer">
@@ -76,10 +117,31 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useAppState } from '../composables/useAppState.ts'
+import { useAppStore } from '../stores/appStore.mjs'
+import { FOCALPOINT_MODES } from '../composables/useFocalPointVue3.mjs'
 import { setFromAppState as setRenderingFromAppState, getRendering, clampRenderingValue } from '../core/renderingConfig.mjs'
 import { reportError } from '../utils/errorReporting.mjs'
 
 const { appState, updateAppState } = useAppState()
+const { store, actions: appStoreActions } = useAppStore()
+
+const FOCAL_MODE_OPTIONS = [
+  {
+    value: FOCALPOINT_MODES.LOCKED,
+    tooltip: 'focal point locked at viewport center (bulls eye)\n→ no motion parallax',
+    icon: 'locked',
+  },
+  {
+    value: FOCALPOINT_MODES.FOLLOWING,
+    tooltip: 'focal point eases to mouse\n→ smooth motion parallax',
+    icon: 'following',
+  },
+  {
+    value: FOCALPOINT_MODES.DRAGGING,
+    tooltip: 'mouse drags focal point\n→ fast motion parallax',
+    icon: 'dragging',
+  },
+]
 
 /** Only from app_state.json / app_state.default.json (no default in code). */
 const renderingLimits = computed(() => appState.value?.['system-constants']?.renderingLimits)
@@ -302,6 +364,72 @@ async function save() {
 .switch input:focus-visible + .switch-slider {
   outline: 2px solid #88c8ff;
   outline-offset: 2px;
+}
+
+/* Vertical bank of focal-mode radio buttons */
+.focal-mode-radios {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #444;
+}
+
+.focal-mode-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #ddd;
+  font-size: 12px;
+  line-height: 1.35;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.focal-mode-radio:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.focal-mode-radio.selected {
+  background: rgba(0, 102, 170, 0.25);
+  color: #fff;
+}
+
+.focal-mode-radio input[type='radio'] {
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #0088cc;
+}
+
+.focal-mode-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+
+.focal-mode-icon-img,
+.focal-mode-icon-svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  transform: translate(-0.5px, 0.5px);
+}
+
+.focal-mode-icon-svg {
+  color: currentColor;
+}
+
+.focal-mode-tooltip {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-line;
 }
 
 .modal-footer {
