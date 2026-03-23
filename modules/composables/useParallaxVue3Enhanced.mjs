@@ -82,6 +82,13 @@ export function useParallaxEnhanced() {
         return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
       }
     }
+    // FocalPoint service (useFocalPointVue3.mjs) exposes `position` (computed ref) — no `getPosition`.
+    if (focalPoint?.position) {
+      const p = focalPoint.position?.value ?? focalPoint.position
+      if (p && typeof p === 'object' && typeof p.x === 'number' && typeof p.y === 'number') {
+        return { x: p.x, y: p.y }
+      }
+    }
     if (focalPoint?.getPosition) return focalPoint.getPosition()
     return debugFunctions?.getFocalPointPosition?.() || { x: window.innerWidth / 2, y: window.innerHeight / 2 }
   }

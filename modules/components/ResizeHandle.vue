@@ -548,7 +548,7 @@ function handleResizeHandleClick(event: MouseEvent): void {
     height: 15px;
     flex-shrink: 0;
     display: block;
-    transform: translate(-0.5px, 0.5px);
+    transform: translate(-0.5px, -0.5px);
 }
 
 #tri-state-toggle .tri-state-icon-img {
