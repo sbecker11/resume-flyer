@@ -277,35 +277,45 @@ export function useColorPalette() {
 
             /** @type {{ version: number, palettes: unknown[] } | null} */
             let catalogJson = null;
-            const apiCatalogRes = await fetch(getPaletteCatalogApiUrl());
-            if (apiCatalogRes.ok) {
-                const ct = (apiCatalogRes.headers.get('content-type') || '').toLowerCase();
-                if (ct.includes('json')) {
-                    try {
-                        catalogJson = await apiCatalogRes.json();
-                    } catch {
-                        catalogJson = null;
+            const s3Url = resolvePaletteCatalogS3Url();
+
+            /** Load NDJSON catalog from public HTTPS URL (GitHub Pages has no /api). */
+            const loadCatalogFromS3 = async () => {
+                if (!s3Url) return;
+                const s3Res = await fetch(s3Url, { method: 'GET', cache: 'no-store', mode: 'cors' });
+                if (!s3Res.ok) {
+                    throw new Error(`Palette catalog HTTP ${s3Res.status} (${s3Url})`);
+                }
+                const raw = await s3Res.text();
+                catalogJson = parsePaletteBundleFromImageMetadataJsonl(raw);
+                ensureSyntheticPaletteFilenamesForClient(catalogJson);
+            };
+
+            // Production static hosts: avoid GET /api/palette-catalog (404 + noisy console); use baked S3 URL only.
+            if (import.meta.env.PROD && s3Url) {
+                await loadCatalogFromS3();
+            } else {
+                const apiCatalogRes = await fetch(getPaletteCatalogApiUrl());
+                if (apiCatalogRes.ok) {
+                    const ct = (apiCatalogRes.headers.get('content-type') || '').toLowerCase();
+                    if (ct.includes('json')) {
+                        try {
+                            catalogJson = await apiCatalogRes.json();
+                        } catch {
+                            catalogJson = null;
+                        }
                     }
                 }
-            }
-            const apiLooksLikeV2 =
-                catalogJson &&
-                catalogJson.version === 2 &&
-                Array.isArray(catalogJson.palettes) &&
-                catalogJson.palettes.length > 0;
-            if (!apiLooksLikeV2) {
-                const s3Url = resolvePaletteCatalogS3Url();
-                if (s3Url) {
-                    const s3Res = await fetch(s3Url, { method: 'GET', cache: 'no-store', mode: 'cors' });
-                    if (!s3Res.ok) {
-                        throw new Error(`Palette catalog HTTP ${s3Res.status} (${s3Url})`);
-                    }
-                    const raw = await s3Res.text();
-                    catalogJson = parsePaletteBundleFromImageMetadataJsonl(raw);
+                const apiLooksLikeV2 =
+                    catalogJson &&
+                    catalogJson.version === 2 &&
+                    Array.isArray(catalogJson.palettes) &&
+                    catalogJson.palettes.length > 0;
+                if (!apiLooksLikeV2 && s3Url) {
+                    await loadCatalogFromS3();
+                } else if (apiLooksLikeV2) {
                     ensureSyntheticPaletteFilenamesForClient(catalogJson);
                 }
-            } else {
-                ensureSyntheticPaletteFilenamesForClient(catalogJson);
             }
 
             const useV2Catalog =
