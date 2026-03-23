@@ -16,6 +16,13 @@
     <div id="scene-view-label">
       <span class="viewer-label">Scene Viewer ({{ roundedScenePercentage }}%)</span>
     </div>
+    <!-- Scroll indicators: Up/Down during autoscroll; Top/Bottom when at scroll edge -->
+    <div v-show="autoscrollDirection === AUTOSCROLL_DIRECTION.UP || autoscrollDirection === AUTOSCROLL_DIRECTION.TOP" class="autoscroll-gif autoscroll-gif--top" aria-hidden="true">
+      <img :src="autoscrollDirection === AUTOSCROLL_DIRECTION.TOP ? AUTOSCROLL_TOP_SRC : AUTOSCROLL_UP_SRC" width="32" height="32" alt="" />
+    </div>
+    <div v-show="autoscrollDirection === AUTOSCROLL_DIRECTION.DOWN || autoscrollDirection === AUTOSCROLL_DIRECTION.BOTTOM" class="autoscroll-gif autoscroll-gif--bottom" aria-hidden="true">
+      <img :src="autoscrollDirection === AUTOSCROLL_DIRECTION.BOTTOM ? AUTOSCROLL_BOTTOM_SRC : AUTOSCROLL_DOWN_SRC" width="32" height="32" alt="" />
+    </div>
   </div>
 </template>
 
@@ -31,7 +38,7 @@ import { useCardsController } from '../composables/useCardsController.mjs'
 import { useTimeline } from '../composables/useTimeline.mjs'
 import { useViewport } from '../composables/useViewport.mjs'
 import { useScenePlaneOptimized } from '../composables/useScenePlaneOptimized.mjs'
-import { useSceneAutoScroll } from '../composables/useSceneAutoScroll.mjs'
+import { useSceneAutoScroll, AUTOSCROLL_UP_SRC, AUTOSCROLL_DOWN_SRC, AUTOSCROLL_TOP_SRC, AUTOSCROLL_BOTTOM_SRC, AUTOSCROLL_DIRECTION } from '../composables/useSceneAutoScroll.mjs'
 import { injectGlobalElementRegistry } from '../composables/useGlobalElementRegistry.mjs'
 import { useAppState } from '../composables/useAppState.ts'
 
@@ -225,6 +232,7 @@ const autoScroll = useSceneAutoScroll(
   () => sceneContentRef.value,
   () => sceneContainerRef.value
 )
+const { autoscrollDirection } = autoScroll
 
 // Event handlers
 const handleSceneContainerClick = (event) => {
@@ -416,4 +424,28 @@ defineExpose({
 }
 
 /* .viewer-label styling consolidated in AppContent.vue */
+
+/* Auto-scroll zone GIF overlays: top-right and bottom-right of scene container */
+.autoscroll-gif {
+  position: absolute;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  z-index: 10001;
+}
+
+.autoscroll-gif--top {
+  top: 10px;
+}
+
+.autoscroll-gif--bottom {
+  bottom: 10px; /* above viewer label; moved down 30px from 40px */
+}
+
+.autoscroll-gif img {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
 </style>

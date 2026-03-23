@@ -117,6 +117,17 @@ function getLightnessLab(hex) {
     return lab.L;
 }
 
+/** Parse computed rgb/rgba string to hex. e.g. "rgb(0, 0, 77)" or "rgba(0, 0, 77, 1)". */
+export function parseRgbStringToHex(rgbStr) {
+    if (!rgbStr || typeof rgbStr !== 'string') return null;
+    const m = rgbStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (!m) return null;
+    const r = Math.min(255, Math.max(0, parseInt(m[1], 10)));
+    const g = Math.min(255, Math.max(0, parseInt(m[2], 10)));
+    const b = Math.min(255, Math.max(0, parseInt(m[3], 10)));
+    return rgbToHex(r, g, b);
+}
+
 /** Black or white hex for best contrast on background (LAB L*). */
 export function getHighContrastMono(hex) {
     const L = getLightnessLab(hex);

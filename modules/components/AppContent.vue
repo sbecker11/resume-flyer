@@ -243,9 +243,10 @@ const focalPointY = computed(() => store.focalPoint.y)
 // =============================================================================
 
 /** Opacity-only hide for scene UI: focal/bulls-eye stay in DOM and parallax still uses them (opacity 0). */
-const focalPointUiOpacity = computed(() =>
-  appState.value?.['system-constants']?.rendering?.focalPointUiVisible === false ? 0 : 1
-)
+const focalPointUiOpacity = computed(() => {
+  if (store.sceneView?.isAutoscrolling) return 0
+  return appState.value?.['system-constants']?.rendering?.focalPointUiVisible === false ? 0 : 1
+})
 const bullsEyeUiOpacity = computed(() =>
   appState.value?.['system-constants']?.rendering?.bullsEyeUiVisible === false ? 0 : 1
 )
