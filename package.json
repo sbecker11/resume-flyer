@@ -41,7 +41,8 @@
     "test:watch": "vitest --config vitest.config.js",
     "test:coverage": "vitest run --config vitest.config.js --coverage && (cd palette-utils-ts && npm run test:coverage)",
     "parse-resume": "node scripts/run-parse-resume.mjs",
-    "compliance": "node scripts/run-compliance-scan.mjs"
+    "compliance": "node scripts/run-compliance-scan.mjs",
+    "sync-color-palette-utils-ts": "node scripts/sync-color-palette-utils-ts.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

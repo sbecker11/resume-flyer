@@ -34,6 +34,21 @@ export interface SortRule {
   direction: 'asc' | 'desc';
 }
 
+/** Slider/input bounds for 3D Settings (Scene3DSettings / ColorPaletteSelector) */
+export interface RenderingLimitRange {
+  min: number;
+  max: number;
+  step: number;
+}
+
+export interface RenderingLimits {
+  blurAtMaxZ: RenderingLimitRange;
+  saturationAtMaxZ: RenderingLimitRange;
+  brightnessAtMaxZ: RenderingLimitRange;
+  parallaxScaleAtMinZ: RenderingLimitRange;
+  parallaxScaleAtMaxZ: RenderingLimitRange;
+}
+
 export interface AppState {
   version: string;
   lastUpdated: string;
@@ -173,6 +188,8 @@ export interface AppState {
       brightnessAtMaxZ: number;      // 75–100%; 100 = no z-based darkness (default 100)
       blurAtMaxZ: number;            // 0–5 px at max Z; 0 = no z-based blur (default 0)
     };
+    /** Min/max/step for 3D Settings inputs; kept in state so validators and UIs stay aligned */
+    renderingLimits: RenderingLimits;
   };
 }
 

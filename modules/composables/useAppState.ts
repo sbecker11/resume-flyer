@@ -37,6 +37,39 @@ let isDragModeActive = false
 const AUTO_SAVE_INTERVAL = 5000 // 5 seconds
 const DEBOUNCE_TIMEOUT = 1000   // 1 second for immediate debouncing
 
+/** Matches Scene3DSettings / ColorPaletteSelector number input bounds */
+const DEFAULT_RENDERING_LIMITS = {
+    blurAtMaxZ: { min: 0, max: 5, step: 0.5 },
+    saturationAtMaxZ: { min: 0, max: 100, step: 5 },
+    brightnessAtMaxZ: { min: 75, max: 100, step: 5 },
+    parallaxScaleAtMinZ: { min: 0, max: 1.5, step: 0.05 },
+    parallaxScaleAtMaxZ: { min: 0, max: 1.5, step: 0.05 }
+} as const
+
+type RenderingLimitKey = keyof typeof DEFAULT_RENDERING_LIMITS
+
+function ensureRenderingLimitsOnSystemConstants(sc: Record<string, unknown> | undefined): void {
+    if (!sc) return
+    if (!sc.renderingLimits || typeof sc.renderingLimits !== 'object') {
+        sc.renderingLimits = { ...DEFAULT_RENDERING_LIMITS }
+        console.log('[AppState] Added missing system-constants.renderingLimits')
+        return
+    }
+    const rl = sc.renderingLimits as Record<string, { min?: unknown; max?: unknown; step?: unknown }>
+    for (const key of Object.keys(DEFAULT_RENDERING_LIMITS) as RenderingLimitKey[]) {
+        const cur = rl[key]
+        if (
+            !cur ||
+            typeof cur !== 'object' ||
+            typeof cur.min !== 'number' ||
+            typeof cur.max !== 'number' ||
+            typeof cur.step !== 'number'
+        ) {
+            rl[key] = { ...DEFAULT_RENDERING_LIMITS[key] }
+        }
+    }
+}
+
 /**
  * Gets the default state - preserving existing user/system separation
  */
@@ -192,6 +225,13 @@ function getDefaultState(): AppState {
                 saturationAtMaxZ: 100,
                 brightnessAtMaxZ: 100,
                 blurAtMaxZ: 0
+            },
+            renderingLimits: {
+                blurAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.blurAtMaxZ },
+                saturationAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.saturationAtMaxZ },
+                brightnessAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.brightnessAtMaxZ },
+                parallaxScaleAtMinZ: { ...DEFAULT_RENDERING_LIMITS.parallaxScaleAtMinZ },
+                parallaxScaleAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.parallaxScaleAtMaxZ }
             }
         }
     };
@@ -345,6 +385,7 @@ function migrateState(state: any): AppState {
             if (r.displacementAtMinZ !== undefined) delete r.displacementAtMinZ
         }
         if (state['user-settings']?.rendering) delete state['user-settings'].rendering
+        ensureRenderingLimitsOnSystemConstants(sc)
     }
 
     return state
@@ -379,16 +420,38 @@ async function loadStateFromServer(): Promise<AppState> {
             // Merge with defaults to ensure all keys exist
             const finalState = deepMerge(getDefaultState(), migratedState)
             
-            // If saved state was missing system-constants.rendering, persist merged state so app_state.json gets the new keys
+            // If saved state was missing system-constants.rendering or renderingLimits, persist merged state so app_state.json gets the new keys
             const r = rawState['system-constants']?.rendering
             const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ'] as const
             const hadMissingRendering = !r || renderingKeys.some(k => r[k] === undefined)
-            if (hadMissingRendering) {
+            const rl = rawState['system-constants']?.renderingLimits
+            const limitKeys = ['blurAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ'] as const
+            const hadMissingRenderingLimits =
+                !rl ||
+                typeof rl !== 'object' ||
+                limitKeys.some(k => {
+                    const v = (rl as Record<string, { min?: unknown; max?: unknown; step?: unknown }>)[k]
+                    return (
+                        !v ||
+                        typeof v !== 'object' ||
+                        typeof v.min !== 'number' ||
+                        typeof v.max !== 'number' ||
+                        typeof v.step !== 'number'
+                    )
+                })
+            if (hadMissingRendering || hadMissingRenderingLimits) {
                 try {
                     await saveStateToServer(finalState)
-                    console.log('[AppState] Persisted state so app_state.json includes system-constants.rendering')
+                    const added: string[] = []
+                    if (hadMissingRendering) added.push('rendering')
+                    if (hadMissingRenderingLimits) added.push('renderingLimits')
+                    console.log('[AppState] Persisted state so app_state.json includes system-constants.' + added.join(' and '))
                 } catch (e) {
-                    reportError(e, '[AppState] Failed to persist state after adding rendering defaults', 'app_state.json will update on next normal save')
+                    reportError(
+                        e,
+                        '[AppState] Failed to persist state after adding rendering/renderingLimits defaults',
+                        'app_state.json will update on next normal save'
+                    )
                 }
             }
 

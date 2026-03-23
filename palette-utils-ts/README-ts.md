@@ -1,231 +1,115 @@
 # color-palette-utils-ts
 
-TypeScript types and color utilities for projects that use **Color Palette Maker** exported palette JSON files. The app exports palettes as `{ name, colors }` (e.g. `My_Palette.json`). This package lets you load, validate, and style those palettes with full type safety.
+TypeScript types and utilities for the **public palette catalog** (NDJSON from S3).
 
-## Exported palette JSON shape (externally created)
+## Color palette nomenclature
 
-Color palettes are externally created (e.g. via Color Palette Maker “Export Palette”) and consumed by the app. The palette file has required fields and optional attributes:
+- The **jsonl file** (read from S3) contains the complete catalog of **color palettes**.
+- Each **color palette** is stored as a line in the jsonl file; it describes a collection of **color swatches**.
+- Each indexed **color swatch** has a unique hex color.
+- `imagePublicUrl` references the S3 image from which color swatches were sampled.
+- `backgroundSwatchIndex` references the color swatch used for the background color of the sceneView.
 
-**Required:**
+## 1. Installing CPM-ts into your app
 
-- **`name`** (string): Palette display name.
-- **`colors`** (string[]): Array of hex color strings (e.g. `["#ff0000", "#00ff00"]`).
+Copy the `color-palette-utils-ts` folder into your project root folder.
 
-**Optional attribute (part of the external palette format):**
-
-- **`backgroundSwatchIndex`** (number): Index of the swatch to use as this palette’s default background (for document `--background-light` / `--background-dark`). Each palette may specify a different swatch. If omitted, the app may derive a background (e.g. darkest color). Must be a valid index into `colors`.
-
-Example:
-
-```json
-{
-  "name": "My Palette",
-  "colors": ["#ff0000", "#00ff00", "#0000ff"],
-  "backgroundSwatchIndex": 0
-}
-```
-
-## Installation
-
-From this repo (e.g. monorepo or file dependency):
+Install, test, and build CPM-ts in isolation:
 
 ```bash
-# In your other project
-npm install /path/to/color-palette-maker-react/palette-utils-ts
-```
-
-Or copy the `palette-utils-ts` folder into your project and add a `package.json` dependency:
-
-```json
-"dependencies": {
-  "color-palette-utils-ts": "file:./palette-utils-ts"
-}
-```
-
-Then run `npm install` in `palette-utils-ts` to install devDependencies and build:
-
-```bash
-cd palette-utils-ts && npm install && npm run build
-```
-
-## Updating a TypeScript project (e.g. resume-flyer)
-
-Use these steps to add Color Palette Maker–style palettes to an existing TypeScript app (e.g. [resume-flyer](https://github.com/sbecker11/resume-flyer)) that will consume exported palette JSON files.
-
-1. **Add the dependency**  
-   From your project root (e.g. `resume-flyer`), add the package as a file dependency. If both repos are siblings:
-   ```bash
-   npm install ../color-palette-maker-react/palette-utils-ts
-   ```
-   Or in `package.json`:
-   ```json
-   "dependencies": {
-     "color-palette-utils-ts": "file:../color-palette-maker-react/palette-utils-ts"
-   }
-   ```
-   Then run `npm install`.
-
-2. **Build the utils package (one-time)**  
-   The package ships built output in `dist/`. If you cloned fresh or the package has no `dist/`:
-   ```bash
-   cd node_modules/color-palette-utils-ts && npm install && npm run build && cd ../..
-   ```
-   (Or build from the palette-utils-ts repo: `cd /path/to/color-palette-maker-react/palette-utils-ts && npm run build`.)
-
-3. **Import types and helpers**  
-   In your app, import the exported palette type and the helpers you need:
-   ```ts
-   import type { ExportedPalette } from 'color-palette-utils-ts';
-   import {
-     parsePaletteJson,
-     getHighContrastMono,
-     getHighlightColor,
-     formatHexDisplay,
-   } from 'color-palette-utils-ts';
-   ```
-
-4. **Load and validate palette JSON**  
-   Load the file (e.g. from `public/` or an API) and validate before use:
-   ```ts
-   const res = await fetch('/palettes/theme.json');
-   const raw = await res.text();
-   const palette = parsePaletteJson(raw);
-   if (!palette) throw new Error('Invalid palette JSON');
-   // palette.name, palette.colors
-   ```
-
-5. **Use colors in your UI**  
-   Use the helpers for contrast text, hover/highlight colors, and consistent hex display:
-   ```ts
-   for (const hex of palette.colors) {
-     const textColor = getHighContrastMono(hex);
-     const highlightHex = getHighlightColor(hex, { highlightPercent: 135 });
-     const displayHex = formatHexDisplay(hex); // #rrggbb lowercase
-     // Render swatch with backgroundColor: hex, color: textColor, etc.
-   }
-   ```
-
-Place exported `.json` files (from Color Palette Maker's "Export Palette") in your app's static assets or serve them from your backend, then load them as above.
-
-## Usage
-
-### Types for the exported file
-
-```ts
-import type { ExportedPalette } from 'color-palette-utils-ts';
-
-const data: ExportedPalette = await fetch('/palettes/theme.json').then((r) => r.json());
-// data.name: string
-// data.colors: string[]
-```
-
-### Load and validate JSON
-
-```ts
-import { parsePaletteJson, isExportedPalette } from 'color-palette-utils-ts';
-
-const jsonString = await fs.promises.readFile('palette.json', 'utf-8');
-const palette = parsePaletteJson(jsonString);
-if (palette) {
-  console.log(palette.name, palette.colors);
-}
-
-// Or validate an unknown object
-if (isExportedPalette(someObject)) {
-  // someObject is ExportedPalette
-}
-```
-
-### Color utilities
-
-Use the same helpers as the app for contrast text, highlight swatches, and icon sets:
-
-```ts
-import {
-  formatHexDisplay,
-  getHighContrastMono,
-  getHighlightColor,
-  getContrastIconSet,
-  hexToRgb,
-  rgbToHex,
-  normalizePaletteColors,
-} from 'color-palette-utils-ts';
-
-// Normalize hex to #rrggbb
-const hex = formatHexDisplay('#f00'); // '#ff0000'
-
-// Text color on a swatch background
-const textColor = getHighContrastMono('#c1543c'); // '#ffffff' or '#000000'
-
-// Slightly brighter/darker variant (e.g. hover)
-const highlightHex = getHighlightColor('#c1543c', { highlightPercent: 135 });
-const highlightTextColor = getHighContrastMono(highlightHex);
-
-// Icon paths and variant for CSS (e.g. filter: invert(1) when variant === 'white')
-const icons = getContrastIconSet('#c1543c', { iconBase: '/icons/anchors' });
-// { url, back, img, variant: 'black' | 'white' }
-
-// Normalize all colors in a loaded palette
-normalizePaletteColors(palette.colors);
-```
-
-### Full example (Node or bundler)
-
-```ts
-import {
-  parsePaletteJson,
-  getHighContrastMono,
-  getHighlightColor,
-  type ExportedPalette,
-} from 'color-palette-utils-ts';
-
-const raw = await fs.promises.readFile('my-palette.json', 'utf-8');
-const palette = parsePaletteJson(raw);
-if (!palette) throw new Error('Invalid palette JSON');
-
-for (const hex of palette.colors) {
-  const text = getHighContrastMono(hex);
-  const highlight = getHighlightColor(hex);
-  console.log(hex, { text, highlight });
-}
-```
-
-## Selected border / theme colors (resume-flyer)
-
-In the app, **all colors for the selected bizCard border (clone and bizCardLineItem) come from palette-utils**, except the **white separator layer** (`#ffffff`), which is fixed. The purple layers (e.g. `#801a81` for the 2px inner border and 5px outer ring) should be sourced from the palette or from a theme constant defined via palette-utils so that selected-border styling stays consistent with the rest of the palette.
-
-## API summary
-
-| Export | Description |
-|--------|-------------|
-| **Types** | `ExportedPalette`, `RGB`, `ContrastIconSet`, `GetHighlightColorOptions`, `GetContrastIconSetOptions`, etc. |
-| `parsePaletteJson(json)` | Parse JSON string → `ExportedPalette \| null` |
-| `isExportedPalette(value)` | Type guard for unknown data |
-| `normalizePaletteColors(colors)` | Normalize hex strings to #rrggbb in place |
-| `formatHexDisplay(hex)` | Normalize hex to 7-char lowercase |
-| `hexToRgb(hex)` | `#rrggbb` → `{ r, g, b }` or null |
-| `rgbToHex(r,g,b)` | RGB 0–255 → `#rrggbb` |
-| `getHighContrastMono(hex)` | `'#000000'` or `'#ffffff'` for contrast |
-| `getHighlightColor(hex, options?)` | Perceptually adjusted highlight color |
-| `getContrastIconSet(hex, options?)` | `{ url, back, img, variant }` for icon paths |
-
-## Build
-
-```bash
-cd palette-utils-ts
+cd color-palette-utils-ts
 npm install
+npm audit fix --force
+npm run test:coverage
+npm run test:integration
 npm run build
 ```
 
-Output is in `dist/` (ESM `.js` + `.d.ts`). Consuming projects should use the built files; no need to compile this package from source in your app.
+- `npm audit fix --force` is optional; it can bump **major** versions (e.g. Vitest). Omit it if you prefer to stay on declared semver ranges.
+- Output is in `dist/` (ESM `.js` + `.d.ts`). Your app uses the built files.
 
-## Tests
+### Integration test (S3 fetch)
 
-Unit tests are included in the package (under `src/*.test.ts`). From the package directory:
+CPM-ts runs entirely in isolation. The integration test fetches the live palette catalog from S3:
 
+- Reads `S3_COLOR_PALETTES_JSON_URL` from `.env.example` in this package (does not use or overwrite `.env`)
+- **FAIL FAST**: throws if the URL is missing, empty, or wrong
+- Asserts `fetchColorPalettesFromS3()` returns `ColorPaletteRecord[]` and logs each record's fields
+
+#### Integration test: `403 Forbidden`
+
+S3 public read is required. This project's setup includes AWS S3 — run `scripts/create-s3-palette-bucket.sh` and see [S3 storage](../docs/S3-STORAGE.md) in the parent repo.
+
+## 2. Integrating the CPM-ts into your app
+
+Add the CPM-ts to your project's package.json file
+   ```json
+   "dependencies": {
+     "color-palette-utils-ts": "file:./color-palette-utils-ts"
+   }
+   ```
+Install and test your app with the CPM-ts installation
+
+From your project's root directory
 ```bash
 npm install
 npm test
 ```
 
 Use `npm run test:watch` for watch mode.
+
+## 3. Integrating CPM-ts into your app
+
+### Listing all palettes in S3
+
+The catalog is NDJSON at a public S3 URL. Each line is one color palette. See **Color palette structure** below for the format.
+
+### Loading palettes from S3
+
+1. Add to `.env` or `.env.local`:
+   ```bash
+   S3_COLOR_PALETTES_JSON_URL=https://sbecker11-color-palette-images.s3.us-west-1.amazonaws.com/metadata/color_palettes.jsonl
+   ```
+
+2. In your app:
+   ```ts
+   import { fetchColorPalettesFromS3 } from 'color-palette-utils-ts';
+
+   const palettes = await fetchColorPalettesFromS3();
+   ```
+
+### Caching all palettes
+
+Fetch once at app init or when the catalog URL changes, then store in state (e.g. React `useState`/`useEffect` or a global store). Avoid refetching on every render.
+
+### Selecting a palette
+
+Filter or find from `palettes` by `paletteName` or other fields:
+
+```ts
+const selected = palettes.find((p) => p.paletteName === 'jungle') ?? palettes[0];
+```
+
+### Color palette structure with swatches
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paletteName` | string | Display name / identifier |
+| `colorPalette` | string[] | Array of color swatches (hex), e.g. `["#81a936", "#56831c"]` |
+| `imagePublicUrl` | string | S3 image from which swatches were sampled |
+| `backgroundSwatchIndex` | number? | Index of the swatch used for sceneView background |
+
+Other optional fields (`createdDateTime`, `regions`, etc.) 
+
+```ts
+const idx = palette.backgroundSwatchIndex ?? 0;
+const bgHex = palette.colorPalette[idx];
+// Use bgHex directly in CSS: backgroundColor: bgHex
+```
+
+## API summary
+
+| Export | Description |
+|--------|-------------|
+| `ColorPaletteRecord` | Type: one color palette (see structure table above) |
+| `fetchColorPalettesFromS3()` | Fetches catalog from S3 (URL from `S3_COLOR_PALETTES_JSON_URL` in .env); returns `ColorPaletteRecord[]` |

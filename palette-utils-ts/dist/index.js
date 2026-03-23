@@ -1,9 +1,7 @@
 /**
  * color-palette-utils-ts
  *
- * TypeScript types and utilities for projects that consume Color Palette Maker
- * exported palette JSON files ({ name, colors }). Use for contrast text, highlight
- * colors, icon sets, and loading/validating palette JSON.
+ * TypeScript types and utilities for the Color Palette Maker public palette catalog (NDJSON from S3).
+ * See README-ts.md for nomenclature and usage.
  */
-export { formatHexDisplay, getContrastIconSet, getHighlightColor, getHighContrastForBackground, getHighContrastMono, getIconSetForBackgroundColor, hexToRgb, rgbToHex, } from './colors.js';
-export { isExportedPalette, normalizePaletteColors, parsePaletteJson, } from './palette.js';
+export { fetchColorPalettesFromS3 } from './palettesCatalog.js';
