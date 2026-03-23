@@ -14,10 +14,11 @@ import { linearInterp } from '../utils/mathUtils.mjs'
 import { getRendering } from '../core/renderingConfig.mjs'
 import { logger } from '../utils/logger.mjs'
 
-// Parallax constants (resume-flyer–aligned: Z 1 = far, Z 14 = close; higher Z = more parallax)
-const PARALLAX_X_EXAGGERATION_FACTOR = 0.9
-const PARALLAX_Y_EXAGGERATION_FACTOR = 1.0
+// Parallax constants (Z 1 = far, Z 14 = close; higher scene Z = more parallax)
+const PARALLAX_X_EXAGGERATION = 0.9
+const PARALLAX_Y_EXAGGERATION = 1.0
 const CLONE_Z_SCALE = 0
+// zUtils: master uses PARALLAX_SCENE_Z_*; this branch exports FLYER_PARALLAX_Z_* (same 1–14 range).
 const PARALLAX_Z_MIN = zUtils.FLYER_PARALLAX_Z_MIN
 const PARALLAX_Z_MAX = zUtils.FLYER_PARALLAX_Z_MAX
 const PARALLAX_Z_RANGE = zUtils.FLYER_PARALLAX_Z_RANGE
@@ -144,8 +145,8 @@ export function useParallaxEnhanced() {
 
     // SceneView-relative X so projection works for both scene-left and scene-right (viewport .x alone is wrong when scene is on the right).
     const bullsEyeCenterXSceneView = bullsEyeCenter.x - sceneViewRect.left
-    const dh = (bullsEyeCenter.x - focal.x) * PARALLAX_X_EXAGGERATION_FACTOR
-    const dv = (bullsEyeCenter.y - focal.y) * PARALLAX_Y_EXAGGERATION_FACTOR
+    const dh = (bullsEyeCenter.x - focal.x) * PARALLAX_X_EXAGGERATION
+    const dv = (bullsEyeCenter.y - focal.y) * PARALLAX_Y_EXAGGERATION
 
     // DEBUG tracking disabled for performance (was causing sluggish hover motion)
 

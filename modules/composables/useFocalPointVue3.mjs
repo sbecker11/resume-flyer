@@ -18,8 +18,26 @@ export const FOCALPOINT_MODES = {
   DRAGGING: 'DRAGGING'
 }
 
-// Larger focal display: cursor file used only in DRAGGING mode (smaller display = circles/lines in LOCKED/FOLLOWING)
-const CROSSHAIR_CURSOR = 'url(\'/static_content/icons/x-hairs/icons8-accuracy-32-whiter.png\') 16 16, crosshair'
+function getRuntimeBase() {
+  const envBase = (import.meta?.env?.BASE_URL || '/')
+  let base = envBase
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname || '/'
+    const parts = path.split('/').filter(Boolean)
+    const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase))
+    if (useSubpath) base = `/${parts[0]}/`
+  }
+  return base.endsWith('/') ? base : `${base}/`
+}
+function basePathJoin(relPath) {
+  const b = getRuntimeBase()
+  const p = relPath.startsWith('/') ? relPath.slice(1) : relPath
+  return `${b}${p}`
+}
+function getCrosshairCursor() {
+  const url = basePathJoin('static_content/icons/x-hairs/32/dragging-32-white.png')
+  return `url('${url}') 16 16, crosshair`
+}
 
 export function useFocalPoint() {
   const { store, actions } = useAppStore()
@@ -131,10 +149,10 @@ export function useFocalPoint() {
         return
       }
       
-      // FOLLOWING: smaller factor = more lag (slower catch-up to mouse)
-      const easingFactor = isDragging.value ? 1 : 0.04
-      const newX = currentX + (dx * easingFactor)
-      const newY = currentY + (dy * easingFactor)
+      // FOLLOWING: smaller easing = more lag (slower catch-up to mouse)
+      const easing = isDragging.value ? 1 : 0.04
+      const newX = currentX + (dx * easing)
+      const newY = currentY + (dy * easing)
       
       setPosition(newX, newY, 'animation-step')
       updateElementPosition()
@@ -236,7 +254,7 @@ export function useFocalPoint() {
   function applyCrosshairCursor() {
     if (typeof document === 'undefined') return false
     const setCursor = (el) => {
-      if (el) el.style.setProperty('cursor', CROSSHAIR_CURSOR, 'important')
+      if (el) el.style.setProperty('cursor', getCrosshairCursor(), 'important')
     }
     setCursor(document.documentElement)
     setCursor(document.body)

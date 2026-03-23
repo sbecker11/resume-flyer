@@ -41,7 +41,7 @@ resume-flyer uses the same contrast icon concept as **resume-flyer**. This doc s
 
 ## In resume-flyer (palette-utils + useColorPalette)
 
-- We use **palette-utils-ts** `getIconSetForBackgroundColor(hex, { iconBase })` (or `getContrastIconSet`):
+- We use **`modules/utils/colorUtils.mjs`** `getIconSetForBackgroundColor(hex, { iconBase })` (or `getContrastIconSet`); the readonly **color-palette-utils-ts** package is catalog-only (S3 fetch).
   - Returns **one set of paths** (black PNGs only): `url`, `back`, `img`.
   - Returns **variant:** `'black'` | `'white'` (same rule as text: `getHighContrastMono` — white on dark, black on light). The icon set always matches the high-contrast text color for the given background.
 - **Transparent background:** The icon set is always displayed with a transparent background; `.url-icon`, `.back-icon`, `.img-icon` have `background: transparent` in CSS so icons never show an opaque background.

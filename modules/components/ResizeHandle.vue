@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, type Ref, type ComputedRef } from 'vue';
 // useAimPoint removed during Vue 3 migration cleanup
-import { useFocalPoint } from '@/modules/composables/useFocalPointVue3.mjs';
+import { FOCALPOINT_MODES } from '@/modules/composables/useFocalPointVue3.mjs';
+import { useAppStore } from '@/modules/stores/appStore.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useAppState } from '@/modules/composables/useAppState';
@@ -39,6 +40,7 @@ const stepCount: Ref<number> = ref(1);
 
 const { orientation } = useLayoutToggle();
 const { updateAppState, appState } = useAppState();
+const { store, actions: appStoreActions } = useAppStore();
 
 // Use Vue 3 provide/inject instead of window.bullsEye
 const bullsEye = useBullsEyeService();
@@ -175,16 +177,22 @@ const stepRightButton: ComputedRef<StepButton> = computed(() => {
   }
 });
 
-// Get focal point mode from useFocalPoint - restored tri-state functionality
-const { 
-  mode: focalPointMode,
-  cycleMode: cycleFocalPointMode
-} = useFocalPoint();
+// Focal tri-state: use shared app store only (avoid a second useFocalPoint() instance in this component).
+const focalPointMode = computed(() => store.focalPoint.mode);
 
-// Debug watcher to see mode changes
-watch(focalPointMode, (newMode, oldMode) => {
-  console.log(`ResizeHandle: focalPointMode changed from ${oldMode} to ${newMode}`);
-}, { immediate: true });
+const FOCAL_CYCLE_ORDER = [
+  FOCALPOINT_MODES.LOCKED,
+  FOCALPOINT_MODES.FOLLOWING,
+  FOCALPOINT_MODES.DRAGGING,
+] as const;
+
+function cycleFocalPointMode(): void {
+  const modes = FOCAL_CYCLE_ORDER;
+  const i = modes.indexOf(store.focalPoint.mode as (typeof modes)[number]);
+  const currentIndex = i >= 0 ? i : 0;
+  const next = modes[(currentIndex + 1) % modes.length];
+  appStoreActions.setFocalPointMode(next);
+}
 
 const {
   toggleOrientation,
@@ -197,13 +205,22 @@ const isSteppingHovering = ref(false);
 const isLayoutHovering = ref(false);
 const hasJustClicked = ref(false); // Track if we just clicked (to maintain hover state)
 
-const nextMode = computed(() => {
-  switch (focalPointMode.value) {
-    case 'locked': return 'following';
-    case 'following': return 'dragging';
-    case 'dragging': return 'locked';
-    default: return 'locked';
-  }
+/** Tooltip visible only on mouse hover over the tri-state button. */
+const showFocalTriStateTooltip = computed(() => isHovering.value);
+
+const FOCAL_MODE_TITLE: Record<string, string> = {
+  [FOCALPOINT_MODES.LOCKED]: 'focal point locked at viewport center (bulls eye)\n→ no motion parallax',
+  [FOCALPOINT_MODES.FOLLOWING]: 'focal point eases to mouse\n→ smooth motion parallax',
+  [FOCALPOINT_MODES.DRAGGING]: 'mouse drags focal point\n→ fast motion parallax',
+};
+
+/** Tooltip and aria: current mode only, no "click to cycle". */
+const triStateFocalButtonTitle = computed(() => {
+  return FOCAL_MODE_TITLE[focalPointMode.value] ?? `Mode: ${focalPointMode.value}`;
+});
+
+const triStateFocalAriaLabel = computed(() => {
+  return FOCAL_MODE_TITLE[focalPointMode.value] ?? String(focalPointMode.value);
 });
 
 // Get layout button text - shows opposite direction on hover
@@ -217,27 +234,33 @@ const layoutButtonText = computed(() => {
   }
 });
 
-// The mode whose icon we're currently displaying (for CSS class styling)
-const displayedIconMode = computed(() => {
-    return isHovering.value ? nextMode.value : focalPointMode.value;
-});
+/** Current mode only (no next-mode preview on hover). */
+const displayedIconMode = computed(() => String(focalPointMode.value).toLowerCase());
 
-// The actual icon to show
-const displayIcon = computed(() => {
-    const modeToShow = isHovering.value ? nextMode.value : focalPointMode.value;
-    // console.log('displayIcon computed:', {
-    //     isHovering: isHovering.value,
-    //     currentMode: focalPointMode.value,
-    //     nextMode: nextMode.value,
-    //     modeToShow,
-    //     hasJustClicked: hasJustClicked.value
-    // });
-    switch (modeToShow) {
-        case 'locked': return '⦻';
-        case 'following': return '›';
-        case 'dragging': return '⤮';
-        default: return '⦻';
-    }
+function getRuntimeBase() {
+  const envBase = (import.meta?.env?.BASE_URL || '/');
+  let base = envBase;
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname || '/';
+    const parts = path.split('/').filter(Boolean);
+    const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase));
+    if (useSubpath) base = `/${parts[0]}/`;
+  }
+  return base.endsWith('/') ? base : `${base}/`;
+}
+function basePathJoin(relPath: string) {
+  const b = getRuntimeBase();
+  const p = relPath.startsWith('/') ? relPath.slice(1) : relPath;
+  return `${b}${p}`;
+}
+
+/** 15x15 PNG path for LOCKED and DRAGGING only. FOLLOWING keeps SVG (no changes). */
+const focalTriStateIconSrc = computed(() => {
+  const mode = focalPointMode.value;
+  if (mode === FOCALPOINT_MODES.FOLLOWING) return null;
+  const variant = isHovering.value ? 'black' : 'white';
+  const iconMode = String(mode).toLowerCase();
+  return basePathJoin(`static_content/icons/x-hairs/15/${iconMode}-15-${variant}.png`);
 });
 
 // CSS classes for the button
@@ -267,8 +290,6 @@ function toggleFocalLock(event: MouseEvent): void {
   // Mark that we just clicked (don't reset hover state yet)
   hasJustClicked.value = true;
   
-  // Force a small delay to ensure the mode change has been processed
-  // This allows the nextMode computed to recalculate with the new current mode
   setTimeout(() => {
     // This setTimeout ensures the DOM and computeds have updated
     // The isHovering state remains true, so we'll show the next mode of the NEW current mode
@@ -323,15 +344,48 @@ function handleResizeHandleClick(event: MouseEvent): void {
     <div id="resize-handle" class="resize-handle" @mousedown="startDrag" @click="handleResizeHandleClick">
         <div class="button-container" @click.stop @mousedown.stop>
             <button :id="stepLeftButton.id" class="toggle-circle" @click.stop="stepLeftButton.action" :disabled="stepLeftButton.disabled" :title="stepLeftButton.title">{{ stepLeftButton.icon }}</button>
-            <button id="tri-state-toggle" 
-                    class="toggle-circle" 
-                    :class="buttonClasses"
-                    @click.stop="toggleFocalLock" 
-                    @mouseenter="isHovering = true; hasJustClicked = false"
-                    @mouseleave="isHovering = false; hasJustClicked = false"
-                    :title="isHovering ? 'Next: ' + nextMode + ' (click to switch)' : 'Current: ' + focalPointMode + ' (hover to preview next)'">
-                <span>{{ displayIcon }}</span>
-            </button>
+            <div class="tri-state-wrap">
+              <button id="tri-state-toggle" 
+                      type="button"
+                      class="toggle-circle" 
+                      :class="buttonClasses"
+                      @click.stop="toggleFocalLock" 
+                      @mouseenter="isHovering = true; hasJustClicked = false"
+                      @mouseleave="isHovering = false; hasJustClicked = false"
+                      :aria-label="triStateFocalAriaLabel">
+                <img
+                  v-if="focalTriStateIconSrc"
+                  :src="focalTriStateIconSrc"
+                  class="tri-state-icon-img"
+                  width="15"
+                  height="15"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <!-- FOLLOWING: unchanged (SVG reticle, inverted on hover via currentColor) -->
+                <svg
+                  v-else
+                  class="tri-state-reticle"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1" />
+                  <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1" />
+                  <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1" />
+                  <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1" />
+                  <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1" />
+                </svg>
+              </button>
+              <div
+                v-show="showFocalTriStateTooltip"
+                id="tri-state-tooltip-text"
+                class="tri-state-tooltip"
+                role="tooltip"
+              >
+                {{ triStateFocalButtonTitle }}
+              </div>
+            </div>
             <button id="layout-toggle" 
                     class="toggle-circle" 
                     :class="{ 'hovering': isLayoutHovering }"
@@ -371,6 +425,7 @@ function handleResizeHandleClick(event: MouseEvent): void {
     padding-bottom: 20px;
     box-sizing: border-box;
     flex-shrink: 0;
+    overflow: visible;
 }
 
 /* Add drop shadow on the scene-facing edge */
@@ -396,6 +451,7 @@ function handleResizeHandleClick(event: MouseEvent): void {
     align-items: center;
     gap: 10px;
     pointer-events: auto; /* Ensure buttons can receive clicks */
+    overflow: visible; /* tooltip must not shrink to ~24px strip width */
 }
 
 .toggle-circle {
@@ -416,47 +472,101 @@ function handleResizeHandleClick(event: MouseEvent): void {
     transition: all 0.2s ease;
 }
 
+.tri-state-wrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+/*
+ * Focal-mode tooltip: parent column is only ~24px wide; without explicit width,
+ * shrink-to-fit can crush the box (serif fallback + “chimney” wrapping).
+ */
+.tri-state-tooltip {
+    position: absolute;
+    left: calc(100% + 6px);
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    box-sizing: border-box;
+    width: clamp(200px, min(268px, calc(100vw - 32px)), 268px);
+    padding: 10px 12px;
+    background: rgba(32, 32, 32, 0.98);
+    color: #f2f2f2;
+    border: 1px solid #777;
+    border-radius: 6px;
+    font-family: var(
+        --scene-font-family,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        Roboto,
+        'Helvetica Neue',
+        Arial,
+        sans-serif
+    );
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    z-index: 10002;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    text-align: left;
+    white-space: pre-line;
+    hyphens: none;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+/* 15x15 PNG dead center; on-hover shows inverted (black) variant */
 #tri-state-toggle {
     width: 24px;
     height: 24px;
+    min-width: 24px;
+    min-height: 24px;
     border-radius: 50%;
     border: 2px solid white;
     background-color: rgba(0,0,0,0.5);
     background-image: none;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 16px;
-    line-height: 1;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     position: relative;
 }
 
-/* Default state: current mode with white icon on black background */
-#tri-state-toggle span {
-    color: white;
-    transition: color 0.2s ease;
+#tri-state-toggle .tri-state-icon-img,
+#tri-state-toggle .tri-state-reticle {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    display: block;
+    transform: translate(-0.5px, 0.5px);
 }
 
-/* Hover state: next mode with black icon on white background */
+#tri-state-toggle .tri-state-icon-img {
+    object-fit: contain;
+}
+
+#tri-state-toggle .tri-state-reticle {
+    color: inherit;
+}
+
+#tri-state-toggle.hovering .tri-state-reticle {
+    color: black;
+}
+
+/* Hover: inverted icon (black on white) via PNG variant */
 #tri-state-toggle.hovering {
     background-color: white;
-    color: black;
     border-color: black;
-}
-
-#tri-state-toggle.hovering span {
-    color: black;
-}
-
-/* Mode-specific font sizing adjustments */
-#tri-state-toggle.following span,
-#tri-state-toggle.dragging span {
-    font-size: 20px;
-}
-
-#tri-state-toggle.following span {
-    position: relative;
-    top: -1px;
 }
 
 #stepping-indicator {

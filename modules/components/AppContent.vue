@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <div id="bulls-eye" ref="bullsEyeRef">+</div>
+    <div id="bulls-eye" ref="bullsEyeRef" :style="{ opacity: bullsEyeUiOpacity }">+</div>
     <div
       id="focal-point"
       ref="focalPointRef"
@@ -50,7 +50,7 @@
       <img
         v-show="focalPointIsDragging"
         class="focal-point-crosshair"
-        src="/static_content/icons/x-hairs/icons8-accuracy-32-whiter.png"
+        :src="focalCrosshairSrc"
         width="32"
         height="32"
         alt=""
@@ -81,6 +81,12 @@ import { useLayoutToggle } from '../composables/useLayoutToggle.mjs'
 import { useResizeHandle } from '../composables/useResizeHandle.mjs'
 import { useAppState } from '../composables/useAppState.ts'
 import { get_filterStr_from_z } from '../core/filters.mjs'
+import { updateContrastForBrightness } from '../composables/useColorPalette.mjs'
+import { reportError } from '../utils/errorReporting.mjs'
+import { listResumes } from '../api/resumeManagerApi.mjs'
+
+/** Dev / ?debugSkillContrast=1 — teardown in onUnmounted */
+let skillCardContrastGuardTeardown = null
 
 // Resume system initialization (to be migrated)
 import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrolling } from '../resume/resumeSystemInitializer.mjs'
@@ -236,13 +242,41 @@ const focalPointY = computed(() => store.focalPoint.y)
 // COMPUTED PROPERTIES
 // =============================================================================
 
+function getRuntimeBase() {
+  const envBase = (import.meta?.env?.BASE_URL || '/')
+  let base = envBase
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname || '/'
+    const parts = path.split('/').filter(Boolean)
+    const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase))
+    if (useSubpath) base = `/${parts[0]}/`
+  }
+  return base.endsWith('/') ? base : `${base}/`
+}
+function basePathJoin(relPath) {
+  const b = getRuntimeBase()
+  const p = relPath.startsWith('/') ? relPath.slice(1) : relPath
+  return `${b}${p}`
+}
+const focalCrosshairSrc = basePathJoin('static_content/icons/x-hairs/32/dragging-32-white.png')
+
+/** Opacity-only hide for scene UI: focal/bulls-eye stay in DOM and parallax still uses them (opacity 0).
+ *  Respects 3D settings focalPoint visibility; no longer hides during autoscroll. */
+const focalPointUiOpacity = computed(() => {
+  return appState.value?.['system-constants']?.rendering?.focalPointUiVisible === false ? 0 : 1
+})
+const bullsEyeUiOpacity = computed(() =>
+  appState.value?.['system-constants']?.rendering?.bullsEyeUiVisible === false ? 0 : 1
+)
+
 // Create dynamic focal point style from position
 const focalPointStyle = computed(() => ({
   left: `${focalPointX.value}px`,
   top: `${focalPointY.value}px`,
   transform: 'translate(-50%, -50%)',
   position: 'fixed',
-  visibility: (focalPointX.value > 0 && focalPointY.value > 0) ? 'visible' : 'hidden'
+  visibility: (focalPointX.value > 0 && focalPointY.value > 0) ? 'visible' : 'hidden',
+  opacity: focalPointUiOpacity.value
 }))
 
 // =============================================================================
@@ -503,6 +537,31 @@ async function handleResumeSelected(resumeId) {
   }
 }
 
+async function resolveStartupResumeId(persistedResumeId) {
+  if (!persistedResumeId || persistedResumeId === 'default') return null
+  try {
+    const resumes = await listResumes()
+    if (!Array.isArray(resumes) || resumes.length === 0) return null
+
+    const exact = resumes.find(r => r?.id === persistedResumeId)
+    if (exact?.id) return exact.id
+
+    const fallback = resumes[0]?.id ?? null
+    const err = new Error(`[AppContent] Persisted resume "${persistedResumeId}" is unavailable in this environment`)
+    reportError(
+      err,
+      '[AppContent] Startup resume validation failed',
+      fallback
+        ? `Using first available resume "${fallback}" and updating user-settings.currentResumeId`
+        : 'Clearing currentResumeId to default because no resumes are available'
+    )
+    return fallback
+  } catch (e) {
+    reportError(e, '[AppContent] Failed to validate startup resume id', 'Proceeding with persisted value and relying on startup fallback handling')
+    return persistedResumeId
+  }
+}
+
 // Re-apply depth filters to scene cards when 3D Settings change (rendering-changed)
 function handleRenderingChanged() {
   const plane = document.getElementById('scene-plane')
@@ -510,7 +569,11 @@ function handleRenderingChanged() {
   const cards = plane.querySelectorAll('.biz-card-div, .skill-card-div')
   cards.forEach((card) => {
     const z = parseFloat(card.getAttribute('data-sceneZ'))
-    if (!Number.isNaN(z)) card.style.filter = get_filterStr_from_z(z)
+    if (!Number.isNaN(z)) {
+      card.style.filter = get_filterStr_from_z(z)
+      // Recompute icon/text contrast whenever effective background changes via 3D filters.
+      updateContrastForBrightness(card)
+    }
   })
 }
 
@@ -563,7 +626,14 @@ onMounted(async () => {
     
     // PHASE 5: Resume system — load persisted resume, or show upload modal if none
     const persistedResumeId = appState.value?.['user-settings']?.currentResumeId
-    const startupResumeId = persistedResumeId && persistedResumeId !== 'default' ? persistedResumeId : null
+    const startupResumeId = await resolveStartupResumeId(persistedResumeId)
+    if ((startupResumeId || 'default') !== (persistedResumeId || 'default')) {
+      try {
+        await updateAppState({ 'user-settings': { currentResumeId: startupResumeId || 'default' } }, true)
+      } catch (e) {
+        reportError(e, '[AppContent] Failed to persist startup resume fallback', 'Continuing with in-memory fallback selection')
+      }
+    }
     if (!startupResumeId) {
       console.log('[AppContent] 📋 No persisted resume — showing upload modal')
       noJobsLoaded.value = true
@@ -649,6 +719,16 @@ onMounted(async () => {
 
     window.addEventListener('rendering-changed', handleRenderingChanged)
 
+    if (import.meta.env.DEV || new URLSearchParams(window.location.search).get('debugSkillContrast') === '1') {
+      try {
+        const { installSkillCardContrastGuard } = await import('../debug/skillCardContrastGuard.mjs')
+        skillCardContrastGuardTeardown = installSkillCardContrastGuard()
+        console.log('[AppContent] 🎯 Skill card contrast guard active (DEV or ?debugSkillContrast=1)')
+      } catch (e) {
+        reportError(e, '[AppContent] Skill card contrast guard failed to install', null)
+      }
+    }
+
     console.log('[AppContent] ✅ Vue 3 app initialization complete!')
     
   } catch (error) {
@@ -661,6 +741,10 @@ onMounted(async () => {
 onUnmounted(() => {
   console.log('[AppContent] 🧹 Cleaning up...')
   window.removeEventListener('rendering-changed', handleRenderingChanged)
+  if (typeof skillCardContrastGuardTeardown === 'function') {
+    skillCardContrastGuardTeardown()
+    skillCardContrastGuardTeardown = null
+  }
   console.log('[AppContent] ✅ Cleanup complete')
 })
 
@@ -751,6 +835,7 @@ watch(orientation, (newOrientation) => {
   visibility: visible !important;
   z-index: 10000;
   pointer-events: auto;
+  overflow: visible !important; /* focal-mode tooltip extends past 20px strip */
 }
 
 .resume-content {

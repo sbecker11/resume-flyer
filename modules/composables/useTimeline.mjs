@@ -27,6 +27,7 @@ function computeBoundsFromJobs(jobsData) {
     if (!earliestStartDate) return null;
     const timelineStartDate = new Date(earliestStartDate);
     timelineStartDate.setFullYear(timelineStartDate.getFullYear() - 1);
+    timelineStartDate.setMonth(timelineStartDate.getMonth() + 6); // trim 6 months off bottom
     const today = new Date();
     let latestEndDate = null;
     let hasCurrentDate = false;
@@ -45,6 +46,7 @@ function computeBoundsFromJobs(jobsData) {
     const referenceDate = hasCurrentDate ? today : (latestEndDate ?? today);
     const timelineEndDate = new Date(referenceDate);
     timelineEndDate.setFullYear(timelineEndDate.getFullYear() + 1);
+    timelineEndDate.setMonth(timelineEndDate.getMonth() - 12); // trim 12 months off top
     const dateToFractionalYear = (date) =>
         date.getFullYear() + date.getMonth() / 12 + date.getDate() / 365.25 / 12;
     const start = dateToFractionalYear(timelineStartDate);

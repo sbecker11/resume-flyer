@@ -1,17 +1,16 @@
 /**
- * resume-flyer-only helpers for palette/color logic that palette-utils-ts does not provide.
- * All color conversion and contrast logic comes from color-palette-utils-ts; this module
- * only adds luminance comparison, hex validation, and compatibility wrappers.
+ * resume-flyer-only helpers for palette/color logic on top of modules/utils/colorUtils.mjs
+ * (hex, LAB, contrast). This module adds luminance comparison, hex validation, and DOM helpers.
  */
-import { formatHexDisplay, hexToRgb, rgbToHex } from 'color-palette-utils-ts';
+import { formatHexDisplay, hexToRgb, rgbToHex } from '@/modules/utils/colorUtils.mjs';
 
-/** sRGB channel to linear (same as palette-utils-ts internal). */
+/** sRGB channel to linear (same as colorUtils internal luminance path). */
 function srgbToLinear(c) {
     return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
 /**
- * Relative luminance 0–1 for a hex color (matches palette-utils-ts logic for ordering).
+ * Relative luminance 0–1 for a hex color (matches colorUtils / sRGB luminance).
  * @param {string} hex
  * @returns {number}
  */

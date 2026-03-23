@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     include: ['modules/**/*.test.mjs', 'scripts/**/*.test.mjs'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/palette-utils-ts/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/color-palette-utils-ts/**'],
     globals: false,
     setupFiles: ['./vitest.setup.mjs'],
     coverage: {
@@ -21,7 +21,7 @@ export default defineConfig({
         '**/*.test.mjs',
         '**/*.d.ts',
         '**/dist/**',
-        '**/palette-utils-ts/**',
+        '**/color-palette-utils-ts/**',
         '**/modules/types/**',
         '**/index.ts',
         // Vue/DOM-heavy or integration-only (not unit-tested to 80%)
@@ -41,8 +41,10 @@ export default defineConfig({
         'modules/composables/useKeyboardNavigation.mjs',
         'modules/composables/useResumeItemsController.mjs',
         'modules/composables/useScenePlaneOptimized.mjs',
+        'modules/composables/useSceneAutoScroll.mjs',
         'modules/composables/useGlobalElementRegistry.mjs',
         'modules/composables/useJobsDependency.mjs',
+        'modules/debug/skillCardContrastGuard.mjs',
         'modules/core/selectionManager.mjs',
         'modules/scene/bizDetailsDivModule.mjs',
         'modules/core/abstracts/BaseComponent.mjs',

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Copy the color-palette-utils-ts package into repo root as palette-utils-ts/,
+ * Copy the color-palette-utils-ts package into repo root as color-palette-utils-ts/,
  * then npm install + npm run build there, and npm install at resume-flyer root
- * so file:./palette-utils-ts stays linked (see package.json + docs/PALETTE-UTILS-TS-MIGRATION-PLAN.md).
+ * so file:./color-palette-utils-ts stays linked (see package.json + docs/PALETTE-UTILS-TS-MIGRATION-PLAN.md).
  *
  * Default source (overridable): see DEFAULT_SOURCE below.
  *
  * Usage (prefer `node …`; for ./script, chmod +x first):
  *   node scripts/sync-color-palette-utils-ts.mjs                    # uses DEFAULT_SOURCE
- *   node scripts/sync-color-palette-utils-ts.mjs <SOURCE_DIR>       # copy FROM → ./palette-utils-ts
+ *   node scripts/sync-color-palette-utils-ts.mjs <SOURCE_DIR>       # copy FROM → ./color-palette-utils-ts
  *   PALETTE_UTILS_TS_SOURCE=<SOURCE_DIR> node scripts/sync-color-palette-utils-ts.mjs
  *   chmod +x scripts/sync-color-palette-utils-ts.mjs && ./scripts/sync-color-palette-utils-ts.mjs
  *   npm run sync-color-palette-utils-ts
@@ -27,7 +27,7 @@ const DEFAULT_SOURCE =
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const dest = path.join(root, 'palette-utils-ts');
+const dest = path.join(root, 'color-palette-utils-ts');
 
 const sourceArg =
     (process.argv[2] && String(process.argv[2]).trim()) ||
@@ -91,10 +91,10 @@ if (fs.existsSync(nm)) {
     fs.rmSync(nm, { recursive: true, force: true });
 }
 
-console.log(`${SCRIPT_NAME}: npm install in palette-utils-ts`);
+console.log(`${SCRIPT_NAME}: npm install in color-palette-utils-ts`);
 run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['install'], dest);
 
-console.log(`${SCRIPT_NAME}: npm run build in palette-utils-ts`);
+console.log(`${SCRIPT_NAME}: npm run build in color-palette-utils-ts`);
 run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], dest);
 
 console.log(`${SCRIPT_NAME}: npm install at repo root (refresh file: link)`);

@@ -1,6 +1,14 @@
 import { ref, watch, computed, getCurrentInstance } from 'vue';
 import { useAppState } from './useAppState.ts';
-import { parsePaletteJson, normalizePaletteColors, getHighContrastForBackground, getHighlightColor, formatHexDisplay, hexToRgb, rgbToHex } from 'color-palette-utils-ts';
+import {
+    parsePaletteJson,
+    normalizePaletteColors,
+    getHighContrastForBackground,
+    getHighlightColor,
+    formatHexDisplay,
+    hexToRgb,
+    rgbToHex
+} from '@/modules/utils/colorUtils.mjs';
 import { getPerceivedBrightness } from '@/modules/utils/paletteHelpers.mjs';
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
@@ -627,7 +635,7 @@ export async function applyPaletteToElement(element) {
         throw new Error(`Color palette not found for name: ${paletteName}`);
     }
 
-    // Calculate base colors (palette-utils-ts: LCH-based highlight, high-contrast text + icons from single call)
+    // Calculate base colors (colorUtils: LCH-based highlight, high-contrast text + icons from single call)
     const backgroundColor = formatHexDisplay(colorPalette[paletteColorIndex % colorPalette.length]) || colorPalette[paletteColorIndex % colorPalette.length];
     const normalContrast = getHighContrastForBackground(backgroundColor, { iconBase: ICON_BASE });
     const foregroundColor = normalContrast.textColor;

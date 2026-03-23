@@ -82,8 +82,9 @@ describe('core/renderingConfig', () => {
       expect(r.brightnessAtMaxZ).toBe(75);
     });
 
-    it('clamps blurAtMaxZ to at least 0', () => {
-      setFromAppState({ blurAtMaxZ: -1 });
+    it('clamps to limits when provided (e.g. blurAtMaxZ min 0)', () => {
+      const limits = { blurAtMaxZ: { min: 0, max: 5, step: 0.5 } };
+      setFromAppState({ blurAtMaxZ: -1 }, limits);
       const r = getRendering();
       expect(r.blurAtMaxZ).toBe(0);
     });
@@ -116,7 +117,7 @@ describe('core/renderingConfig', () => {
       expect(r.parallaxScaleAtMinZ).toBe(1.0);
     });
 
-    it('keeps 0 for saturationAtMaxZ and brightnessAtMaxZ', () => {
+    it('keeps values when no limits provided (no clamping)', () => {
       setFromAppState({ saturationAtMaxZ: 0, brightnessAtMaxZ: 0 });
       const r = getRendering();
       expect(r.saturationAtMaxZ).toBe(0);
@@ -127,6 +128,14 @@ describe('core/renderingConfig', () => {
       setFromAppState({ saturationAtMaxZ: 0.6 });
       const r = getRendering();
       expect(r.saturationAtMaxZ).toBe(60);
+    });
+
+    it('uses custom limits when provided (e.g. brightness 0 allowed)', () => {
+      const limits = { brightnessAtMaxZ: { min: 0, max: 100, step: 5 } };
+      setFromAppState({ saturationAtMaxZ: 0, brightnessAtMaxZ: 0 }, limits);
+      const r = getRendering();
+      expect(r.saturationAtMaxZ).toBe(0);
+      expect(r.brightnessAtMaxZ).toBe(0);
     });
   });
 });

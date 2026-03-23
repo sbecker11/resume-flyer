@@ -34,21 +34,6 @@ export interface SortRule {
   direction: 'asc' | 'desc';
 }
 
-/** Slider/input bounds for 3D Settings (Scene3DSettings / ColorPaletteSelector) */
-export interface RenderingLimitRange {
-  min: number;
-  max: number;
-  step: number;
-}
-
-export interface RenderingLimits {
-  blurAtMaxZ: RenderingLimitRange;
-  saturationAtMaxZ: RenderingLimitRange;
-  brightnessAtMaxZ: RenderingLimitRange;
-  parallaxScaleAtMinZ: RenderingLimitRange;
-  parallaxScaleAtMaxZ: RenderingLimitRange;
-}
-
 export interface AppState {
   version: string;
   lastUpdated: string;
@@ -76,7 +61,7 @@ export interface AppState {
     };
 
     theme: {
-      colorPalette: string; // filename only
+      colorPalette: string; // palette name key from S3 catalog (legacy: *.json)
     };
   };
 
@@ -152,23 +137,13 @@ export interface AppState {
     };
     visualEffects: {
       parallax: {
-        xExaggerationFactor: number;
-        yExaggerationFactor: number;
-      };
-      depthEffects: {
-        minBrightnessPercent: number;
-        blurScaleFactor: number;
-        filterMultipliers: {
-          brightness: { min: number; factor: number };
-          blur: { min: number; factor: number };
-          contrast: { min: number; factor: number };
-          saturate: { min: number; factor: number };
-        };
+        xExaggeration: number;
+        yExaggeration: number;
       };
     };
     theme: {
-      brightnessFactorSelected: number;
-      brightnessFactorHovered: number;
+      brightnessBoostSelected: number;
+      brightnessBoostHovered: number;
       borderSettings: {
         normal: BorderStyle;
         hovered: BorderStyle;
@@ -185,11 +160,17 @@ export interface AppState {
       parallaxScaleAtMinZ: number;   // at min scene Z (near); scene Z = distance-from-viewer, not z-index; 0–1.5 (default 1.0)
       parallaxScaleAtMaxZ: number;   // at max scene Z (far), 0–1.5 (default 1.0)
       saturationAtMaxZ: number;      // 0–100%; 100 = no change (default 100)
-      brightnessAtMaxZ: number;      // 75–100%; 100 = no z-based darkness (default 100)
+      brightnessAtMaxZ: number;      // 0–100%; 100 = no z-based darkness (default 100)
       blurAtMaxZ: number;            // 0–5 px at max Z; 0 = no z-based blur (default 0)
     };
-    /** Min/max/step for 3D Settings inputs; kept in state so validators and UIs stay aligned */
-    renderingLimits: RenderingLimits;
+    /** Min/max/step for 3D Settings sliders; edit in app_state.json for single source of truth */
+    renderingLimits?: {
+      blurAtMaxZ: { min: number; max: number; step: number };
+      saturationAtMaxZ: { min: number; max: number; step: number };
+      brightnessAtMaxZ: { min: number; max: number; step: number };
+      parallaxScaleAtMinZ: { min: number; max: number; step: number };
+      parallaxScaleAtMaxZ: { min: number; max: number; step: number };
+    };
   };
 }
 
@@ -253,6 +234,7 @@ export interface UseFocalPointReturn {
 
 export interface UseColorPaletteReturn {
   colorPalettes: Ref<Record<string, string[]>>;
+  imagePublicUrlByPaletteName: Ref<Record<string, string>>;
   orderedPaletteNames: Ref<string[]>;
   filenameToNameMap: Ref<Record<string, string>>;
   isLoading: Ref<boolean>;

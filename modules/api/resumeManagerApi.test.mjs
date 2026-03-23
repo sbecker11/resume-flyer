@@ -2,7 +2,16 @@
 // Comprehensive unit tests for resume manager API client
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { listResumes, uploadResume, getResumeData } from './resumeManagerApi.mjs';
+import {
+    listResumes,
+    uploadResume,
+    getResumeData,
+    deleteResume,
+    updateJobSkills,
+    renameSkill,
+    mergeSkill,
+    getResumeOtherSections
+} from './resumeManagerApi.mjs';
 
 describe('resumeManagerApi', () => {
     let fetchMock;
@@ -401,6 +410,186 @@ describe('resumeManagerApi', () => {
             });
 
             await expect(getResumeData('resume-123')).rejects.toThrow('Invalid JSON');
+        });
+    });
+
+    describe('deleteResume', () => {
+        it('calls DELETE and returns JSON on success', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ ok: true })
+            });
+            const out = await deleteResume('my-resume');
+            expect(out).toEqual({ ok: true });
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/my-resume', { method: 'DELETE' });
+        });
+
+        it('encodes resume id in path', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({})
+            });
+            await deleteResume('a/b');
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/a%2Fb', { method: 'DELETE' });
+        });
+
+        it('throws with server error message when not ok', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 403,
+                json: async () => ({ error: 'Cannot delete' })
+            });
+            await expect(deleteResume('x')).rejects.toThrow('Cannot delete');
+        });
+
+        it('throws status-only when JSON body fails', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: async () => {
+                    throw new SyntaxError('bad');
+                }
+            });
+            await expect(deleteResume('x')).rejects.toThrow('HTTP 500');
+        });
+    });
+
+    describe('updateJobSkills', () => {
+        it('PATCHes skills without newSkills when array empty', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ updated: true })
+            });
+            const r = await updateJobSkills('r1', 0, ['A', 'B']);
+            expect(r).toEqual({ updated: true });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/jobs/0/skills',
+                expect.objectContaining({
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skillIDs: ['A', 'B'] })
+                })
+            );
+        });
+
+        it('includes newSkills in body when provided', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({})
+            });
+            await updateJobSkills('r1', 2, ['X'], ['New Skill']);
+            const [, init] = fetchMock.mock.calls[0];
+            expect(JSON.parse(init.body)).toEqual({
+                skillIDs: ['X'],
+                newSkills: ['New Skill']
+            });
+        });
+
+        it('throws on HTTP error', async () => {
+            fetchMock.mockResolvedValue({ ok: false, status: 400 });
+            await expect(updateJobSkills('r', 0, [])).rejects.toThrow('HTTP 400');
+        });
+    });
+
+    describe('renameSkill', () => {
+        it('PATCHes rename and returns JSON', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ ok: true })
+            });
+            const r = await renameSkill('rid', 'Old', 'New');
+            expect(r).toEqual({ ok: true });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/rid/skills/rename',
+                expect.objectContaining({
+                    method: 'PATCH',
+                    body: JSON.stringify({ oldKey: 'Old', newName: 'New' })
+                })
+            );
+        });
+
+        it('throws with err.error when not ok', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 409,
+                json: async () => ({ error: 'Name taken' })
+            });
+            await expect(renameSkill('r', 'a', 'b')).rejects.toThrow('Name taken');
+        });
+
+        it('throws HTTP status when json fails', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: async () => {
+                    throw new Error('fail');
+                }
+            });
+            await expect(renameSkill('r', 'a', 'b')).rejects.toThrow('HTTP 500');
+        });
+    });
+
+    describe('mergeSkill', () => {
+        it('PATCHes merge and returns JSON', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ merged: true })
+            });
+            const r = await mergeSkill('rid', 'JS', 'JavaScript');
+            expect(r).toEqual({ merged: true });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/rid/skills/merge',
+                expect.objectContaining({
+                    body: JSON.stringify({ fromKey: 'JS', toKey: 'JavaScript' })
+                })
+            );
+        });
+
+        it('throws with err.error when not ok', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 400,
+                json: async () => ({ error: 'Invalid merge' })
+            });
+            await expect(mergeSkill('r', 'a', 'b')).rejects.toThrow('Invalid merge');
+        });
+
+        it('throws HTTP status when json fails', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 502,
+                json: async () => {
+                    throw new Error('x');
+                }
+            });
+            await expect(mergeSkill('r', 'a', 'b')).rejects.toThrow('HTTP 502');
+        });
+    });
+
+    describe('getResumeOtherSections', () => {
+        it('GETs other-sections and returns JSON', async () => {
+            const payload = { contact: {}, title: 'T' };
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => payload
+            });
+            const r = await getResumeOtherSections('resume-9');
+            expect(r).toEqual(payload);
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/resume-9/other-sections');
+        });
+
+        it('encodes resume id', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({})
+            });
+            await getResumeOtherSections('a c');
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/a%20c/other-sections');
+        });
+
+        it('throws on HTTP error', async () => {
+            fetchMock.mockResolvedValue({ ok: false, status: 404 });
+            await expect(getResumeOtherSections('missing')).rejects.toThrow('HTTP 404');
         });
     });
 

@@ -4,7 +4,7 @@ coverage/
 
 # Vite production build output
 dist/
-palette-utils-ts/coverage/
+color-palette-utils-ts/coverage/
 .coverage
 
 # macOS folder metadata (any directory)

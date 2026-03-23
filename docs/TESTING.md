@@ -3,22 +3,22 @@
 ## Running tests
 
 ```bash
-# All tests (app + palette-utils-ts)
+# All tests (app + color-palette-utils-ts)
 npm test
 
 # App tests in watch mode
 npm run test:watch
 
-# Coverage (app + palette-utils-ts)
+# Coverage (app + color-palette-utils-ts)
 npm run test:coverage
 ```
 
-To run only app tests or only palette tests: `npx vitest run --config vitest.config.js` or `cd palette-utils-ts && npm test` (and for coverage, add `--coverage` or `npm run test:coverage` in the palette dir).
+To run only app tests or only palette tests: `npx vitest run --config vitest.config.js` or `cd color-palette-utils-ts && npm test` (and for coverage, add `--coverage` or `npm run test:coverage` in the palette dir).
 
 Coverage reports:
 
 - **App:** `./coverage/` (open `coverage/index.html` in a browser for the full report)
-- **palette-utils-ts:** `palette-utils-ts/coverage/`
+- **color-palette-utils-ts:** `color-palette-utils-ts/coverage/`
 
 ## Coverage threshold: 80% line coverage per file
 

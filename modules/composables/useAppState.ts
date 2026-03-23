@@ -17,12 +17,95 @@ import { reportError } from '../utils/errorReporting.mjs'
 import type { AppState, UseAppStateReturn } from '../types/index'
 // @ts-ignore - Legacy module
 import { setFromAppState as setRenderingFromAppState } from '../core/renderingConfig.mjs'
+import { hasServer } from '../core/hasServer.mjs'
+
+function getRuntimeBase(): string {
+    const envBase = (import.meta as any)?.env?.BASE_URL || '/'
+    let base = envBase
+
+    if (typeof window !== 'undefined') {
+        const path = window.location.pathname || '/'
+        const parts = path.split('/').filter(Boolean)
+        // When envBase is '/', path.startsWith('/') is always true so we never override.
+        // If path has a first segment (e.g. /resume-flyer/), use it as base so subpath hosting works.
+        const useSubpath = parts.length > 0 && (envBase === '/' || !path.startsWith(envBase))
+        if (useSubpath) {
+            base = `/${parts[0]}/`
+        }
+    }
+
+    return base.endsWith('/') ? base : `${base}/`
+}
+
+function basePathJoin(relPath: string): string {
+    const b = getRuntimeBase()
+    const p = relPath.startsWith('/') ? relPath.slice(1) : relPath
+    return `${b}${p}`
+}
 
 // Singleton state - shared across all component instances
 const appState: Ref<AppState | null> = ref(null)
 const isLoading: Ref<boolean> = ref(false)
 const isLoaded: Ref<boolean> = ref(false)
 const loadError: Ref<Error | null> = ref(null)
+
+/** When false, state API is unavailable (e.g. static hosting); save only to localStorage and skip POST to avoid 405 in console. */
+let stateApiAvailable: boolean | null = null
+
+const STATE_API_UNAVAILABLE_KEY = 'resume-flyer/state_api_unavailable'
+const DEFAULT_STATE_PATH = 'app_state.default.json'
+
+const REQUIRED_RENDERING_LIMITS_KEYS = ['blurAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ'] as const
+
+function hasMinMaxStep(obj: unknown): obj is { min: number; max: number; step: number } {
+    return (
+        typeof obj === 'object' &&
+        obj !== null &&
+        typeof (obj as any).min === 'number' &&
+        typeof (obj as any).max === 'number' &&
+        typeof (obj as any).step === 'number'
+    )
+}
+
+/**
+ * Fast-fail if required state is missing. Required: system-constants.renderingLimits with each key having { min, max, step }.
+ * Call before accepting state from app_state.json / app_state.default.json.
+ */
+function validateRequiredState(state: AppState): void {
+    const limits = state?.['system-constants']?.renderingLimits
+    if (!limits || typeof limits !== 'object') {
+        const err = new Error('[AppState] Missing required system-constants.renderingLimits. Ensure public/app_state.default.json (and app_state.json when using server) includes renderingLimits with blurAtMaxZ, saturationAtMaxZ, brightnessAtMaxZ, parallaxScaleAtMinZ, parallaxScaleAtMaxZ (each with min, max, step).')
+        reportError(err, '[AppState] Invalid or incomplete state', 'Remedy: Fix app_state.default.json and reload.')
+        throw err
+    }
+    for (const key of REQUIRED_RENDERING_LIMITS_KEYS) {
+        if (!hasMinMaxStep(limits[key])) {
+            const err = new Error(`[AppState] Missing or invalid system-constants.renderingLimits.${key} (expected { min, max, step }). Ensure public/app_state.default.json is complete.`)
+            reportError(err, '[AppState] Invalid or incomplete state', 'Remedy: Fix app_state.default.json and reload.')
+            throw err
+        }
+    }
+}
+
+/**
+ * Load state from static app_state.default.json (e.g. on GitHub Pages when no server).
+ * Returns null if fetch or parse fails. Throws if file is loaded but missing required settings (fast-fail).
+ */
+async function loadStateFromDefaultFile(): Promise<AppState | null> {
+    try {
+        const url = basePathJoin(DEFAULT_STATE_PATH)
+        const response = await fetch(url)
+        if (!response.ok) return null
+        const raw = await response.json()
+        const migrated = migrateState(raw)
+        const state = deepMerge(getDefaultState(), migrated)
+        validateRequiredState(state)
+        return state
+    } catch (e) {
+        if (e instanceof Error && e.message.startsWith('[AppState]')) throw e
+        return null
+    }
+}
 
 // Single promise to prevent multiple simultaneous loads
 let loadPromise: Promise<AppState> | null = null
@@ -37,41 +120,9 @@ let isDragModeActive = false
 const AUTO_SAVE_INTERVAL = 5000 // 5 seconds
 const DEBOUNCE_TIMEOUT = 1000   // 1 second for immediate debouncing
 
-/** Matches Scene3DSettings / ColorPaletteSelector number input bounds */
-const DEFAULT_RENDERING_LIMITS = {
-    blurAtMaxZ: { min: 0, max: 5, step: 0.5 },
-    saturationAtMaxZ: { min: 0, max: 100, step: 5 },
-    brightnessAtMaxZ: { min: 75, max: 100, step: 5 },
-    parallaxScaleAtMinZ: { min: 0, max: 1.5, step: 0.05 },
-    parallaxScaleAtMaxZ: { min: 0, max: 1.5, step: 0.05 }
-} as const
-
-type RenderingLimitKey = keyof typeof DEFAULT_RENDERING_LIMITS
-
-function ensureRenderingLimitsOnSystemConstants(sc: Record<string, unknown> | undefined): void {
-    if (!sc) return
-    if (!sc.renderingLimits || typeof sc.renderingLimits !== 'object') {
-        sc.renderingLimits = { ...DEFAULT_RENDERING_LIMITS }
-        console.log('[AppState] Added missing system-constants.renderingLimits')
-        return
-    }
-    const rl = sc.renderingLimits as Record<string, { min?: unknown; max?: unknown; step?: unknown }>
-    for (const key of Object.keys(DEFAULT_RENDERING_LIMITS) as RenderingLimitKey[]) {
-        const cur = rl[key]
-        if (
-            !cur ||
-            typeof cur !== 'object' ||
-            typeof cur.min !== 'number' ||
-            typeof cur.max !== 'number' ||
-            typeof cur.step !== 'number'
-        ) {
-            rl[key] = { ...DEFAULT_RENDERING_LIMITS[key] }
-        }
-    }
-}
-
 /**
- * Gets the default state - preserving existing user/system separation
+ * Gets the default state - preserving existing user/system separation.
+ * renderingLimits come only from app_state.json / app_state.default.json (not from code).
  */
 function getDefaultState(): AppState {
     return {
@@ -94,7 +145,7 @@ function getDefaultState(): AppState {
                 sortRule: { field: 'startDate', direction: 'asc' }
             },
             theme: {
-                colorPalette: 'sweeps.json'
+                colorPalette: 'sweeps'
             }
         },
 
@@ -169,23 +220,13 @@ function getDefaultState(): AppState {
             },
             visualEffects: {
                 parallax: {
-                    xExaggerationFactor: 0.9,
-                    yExaggerationFactor: 1.0
-                },
-                depthEffects: {
-                    minBrightnessPercent: 15,
-                    blurScaleFactor: 2.0,
-                    filterMultipliers: {
-                        brightness: { min: 0.4, factor: 0.10 },
-                        blur: { min: 0, factor: 0.10 },
-                        contrast: { min: 0.75, factor: 0.010 },
-                        saturate: { min: 0.75, factor: 0.010 }
-                    }
+                    xExaggeration: 0.9,
+                    yExaggeration: 1.0
                 }
             },
             theme: {
-                brightnessFactorSelected: 2.0,
-                brightnessFactorHovered: 1.75,
+                brightnessBoostSelected: 2.0,
+                brightnessBoostHovered: 1.75,
                 /* Padding and border width identical across states so text does not shift */
                 borderSettings: {
                     normal: {
@@ -224,15 +265,11 @@ function getDefaultState(): AppState {
                 parallaxScaleAtMaxZ: 1.0,
                 saturationAtMaxZ: 100,
                 brightnessAtMaxZ: 100,
-                blurAtMaxZ: 0
-            },
-            renderingLimits: {
-                blurAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.blurAtMaxZ },
-                saturationAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.saturationAtMaxZ },
-                brightnessAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.brightnessAtMaxZ },
-                parallaxScaleAtMinZ: { ...DEFAULT_RENDERING_LIMITS.parallaxScaleAtMinZ },
-                parallaxScaleAtMaxZ: { ...DEFAULT_RENDERING_LIMITS.parallaxScaleAtMaxZ }
+                blurAtMaxZ: 0,
+                focalPointUiVisible: true,
+                bullsEyeUiVisible: true
             }
+            // renderingLimits: only from app_state.json / app_state.default.json (never from code)
         }
     };
 }
@@ -322,7 +359,7 @@ function migrateState(state: any): AppState {
                 lastVisitedJobNumber: state.lastVisitedJobNumber || null,
                 resume: state.resume || { sortRule: { field: 'startDate', direction: 'asc' } },
                 theme: {
-                    colorPalette: state.theme?.colorPalette || 'sweeps.json'
+                    colorPalette: state.theme?.colorPalette || 'sweeps'
                 }
             },
             "system-constants": state.constants || getDefaultState()["system-constants"]
@@ -362,7 +399,15 @@ function migrateState(state: any): AppState {
 
     // Ensure system-constants.rendering exists (parallax/depth constants; not user-editable)
     const sc = state['system-constants']
-    const renderingDefaults = { parallaxScaleAtMinZ: 1.0, parallaxScaleAtMaxZ: 1.0, saturationAtMaxZ: 100, brightnessAtMaxZ: 100, blurAtMaxZ: 0 }
+    const renderingDefaults = {
+        parallaxScaleAtMinZ: 1.0,
+        parallaxScaleAtMaxZ: 1.0,
+        saturationAtMaxZ: 100,
+        brightnessAtMaxZ: 100,
+        blurAtMaxZ: 0,
+        focalPointUiVisible: true,
+        bullsEyeUiVisible: true
+    }
     const fromUserSettings = state['user-settings']?.rendering
     if (sc) {
         if (!sc.rendering) {
@@ -381,11 +426,29 @@ function migrateState(state: any): AppState {
             if (r.brightnessAtMaxZ === undefined) r.brightnessAtMaxZ = renderingDefaults.brightnessAtMaxZ
             else if (r.brightnessAtMaxZ <= 1 && r.brightnessAtMaxZ > 0) r.brightnessAtMaxZ = Math.round(r.brightnessAtMaxZ * 100)
             if (r.blurAtMaxZ === undefined) r.blurAtMaxZ = renderingDefaults.blurAtMaxZ
+            if (r.focalPointUiVisible === undefined) r.focalPointUiVisible = renderingDefaults.focalPointUiVisible
+            if (r.bullsEyeUiVisible === undefined) r.bullsEyeUiVisible = renderingDefaults.bullsEyeUiVisible
             if (r.displacementAtMaxZ !== undefined) delete r.displacementAtMaxZ
             if (r.displacementAtMinZ !== undefined) delete r.displacementAtMinZ
         }
         if (state['user-settings']?.rendering) delete state['user-settings'].rendering
-        ensureRenderingLimitsOnSystemConstants(sc)
+        // renderingLimits: only from app_state.json / app_state.default.json (do not inject from code)
+        // Single system for depth: only system-constants.rendering (max Z). Strip removed depthEffects.
+        if (sc.visualEffects?.depthEffects !== undefined) {
+            delete sc.visualEffects.depthEffects
+            console.log('[AppState] Removed deprecated system-constants.visualEffects.depthEffects (use rendering + renderingLimits)')
+        }
+        // Rename Factor → non-Factor keys (computed, not manually adjustable)
+        const par = sc.visualEffects?.parallax
+        if (par) {
+            if (par.xExaggerationFactor !== undefined) { par.xExaggeration = par.xExaggerationFactor; delete par.xExaggerationFactor }
+            if (par.yExaggerationFactor !== undefined) { par.yExaggeration = par.yExaggerationFactor; delete par.yExaggerationFactor }
+        }
+        const theme = sc.theme
+        if (theme) {
+            if (theme.brightnessFactorSelected !== undefined) { theme.brightnessBoostSelected = theme.brightnessFactorSelected; delete theme.brightnessFactorSelected }
+            if (theme.brightnessFactorHovered !== undefined) { theme.brightnessBoostHovered = theme.brightnessFactorHovered; delete theme.brightnessFactorHovered }
+        }
     }
 
     return state
@@ -397,20 +460,59 @@ function migrateState(state: any): AppState {
 async function loadStateFromServer(): Promise<AppState> {
     const maxRetries = 5;
     const retryDelay = 1000; // 1 second
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+
+    const skipServer = typeof localStorage !== 'undefined' && localStorage.getItem(STATE_API_UNAVAILABLE_KEY)
+    if (hasServer() && !skipServer) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             console.log(`[AppState] Loading state from server (attempt ${attempt}/${maxRetries})...`);
-            const response = await fetch('/api/state')
+            const apiUrl = basePathJoin('api/state')
+            const response = await fetch(apiUrl)
             if (!response.ok) {
                 if (response.status === 404) {
-                    console.log("No saved state found on server, using default state.")
-                    return getDefaultState()
+                    stateApiAvailable = false
+                    try {
+                        localStorage.setItem(STATE_API_UNAVAILABLE_KEY, '1')
+                    } catch (_) {}
+                    console.log('[AppState] No saved state on server; using app_state.default.json or localStorage.')
+                    const fromDefault = await loadStateFromDefaultFile()
+                    if (fromDefault) {
+                        try {
+                            const raw = localStorage.getItem('resume-flyer/app_state')
+                            if (raw) {
+                                const saved = migrateState(JSON.parse(raw))
+                                const merged = deepMerge(fromDefault, {
+                                    ...saved,
+                                    'system-constants': fromDefault['system-constants']
+                                })
+                                validateRequiredState(merged)
+                                return merged
+                            }
+                        } catch (e) {
+                            if (e instanceof Error && e.message.startsWith('[AppState]')) throw e
+                        }
+                        return fromDefault
+                    }
+                    try {
+                        const raw = localStorage.getItem('resume-flyer/app_state')
+                        if (raw) {
+                            const state = deepMerge(getDefaultState(), migrateState(JSON.parse(raw)))
+                            validateRequiredState(state)
+                            return state
+                        }
+                    } catch (e) {
+                        if (e instanceof Error && e.message.startsWith('[AppState]')) throw e
+                        reportError(e, '[AppState] Failed to load localStorage state', 'Remedy: Ensure app_state.default.json is valid')
+                    }
+                    const err = new Error('[AppState] No valid state: server 404, app_state.default.json missing/failed/invalid, and no localStorage state. Ensure public/app_state.default.json exists with system-constants.renderingLimits.')
+                    reportError(err, '[AppState] Cannot load state', 'Remedy: Add or fix public/app_state.default.json and reload.')
+                    throw err
                 } else {
                     throw new Error(`Server responded with status: ${response.status}`)
                 }
             }
         
+            stateApiAvailable = true
             const rawState = await response.json()
             console.log("✅ Loaded raw state from server:", rawState)
             
@@ -419,39 +521,20 @@ async function loadStateFromServer(): Promise<AppState> {
             
             // Merge with defaults to ensure all keys exist
             const finalState = deepMerge(getDefaultState(), migratedState)
-            
+            validateRequiredState(finalState)
+
             // If saved state was missing system-constants.rendering or renderingLimits, persist merged state so app_state.json gets the new keys
-            const r = rawState['system-constants']?.rendering
-            const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ'] as const
+            const scRaw = rawState['system-constants']
+            const r = scRaw?.rendering
+            const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ', 'focalPointUiVisible', 'bullsEyeUiVisible'] as const
             const hadMissingRendering = !r || renderingKeys.some(k => r[k] === undefined)
-            const rl = rawState['system-constants']?.renderingLimits
-            const limitKeys = ['blurAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ'] as const
-            const hadMissingRenderingLimits =
-                !rl ||
-                typeof rl !== 'object' ||
-                limitKeys.some(k => {
-                    const v = (rl as Record<string, { min?: unknown; max?: unknown; step?: unknown }>)[k]
-                    return (
-                        !v ||
-                        typeof v !== 'object' ||
-                        typeof v.min !== 'number' ||
-                        typeof v.max !== 'number' ||
-                        typeof v.step !== 'number'
-                    )
-                })
+            const hadMissingRenderingLimits = !scRaw?.renderingLimits
             if (hadMissingRendering || hadMissingRenderingLimits) {
                 try {
                     await saveStateToServer(finalState)
-                    const added: string[] = []
-                    if (hadMissingRendering) added.push('rendering')
-                    if (hadMissingRenderingLimits) added.push('renderingLimits')
-                    console.log('[AppState] Persisted state so app_state.json includes system-constants.' + added.join(' and '))
+                    console.log('[AppState] Persisted state so app_state.json includes system-constants.rendering / renderingLimits')
                 } catch (e) {
-                    reportError(
-                        e,
-                        '[AppState] Failed to persist state after adding rendering/renderingLimits defaults',
-                        'app_state.json will update on next normal save'
-                    )
+                    reportError(e, '[AppState] Failed to persist state after adding rendering defaults', 'app_state.json will update on next normal save')
                 }
             }
 
@@ -466,20 +549,63 @@ async function loadStateFromServer(): Promise<AppState> {
             if (attempt === maxRetries) throw error
             await new Promise(resolve => setTimeout(resolve, retryDelay))
         }
+        }
+        // This should never be reached due to the loop logic above
+        throw new Error('[AppState] loadStateFromServer: unreachable')
+    } else {
+        stateApiAvailable = false
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem(STATE_API_UNAVAILABLE_KEY, '1')
+          } catch (_) {}
+        }
+        // Fetch deployed default first so system-constants (e.g. renderingLimits) always match the build
+        const fromDefault = await loadStateFromDefaultFile()
+        if (fromDefault) {
+            try {
+                const raw = localStorage.getItem('resume-flyer/app_state')
+                if (raw) {
+                    const saved = migrateState(JSON.parse(raw))
+                    // Merge saved user state on top of default; default wins for system-constants (e.g. renderingLimits)
+                    const merged = deepMerge(fromDefault, {
+                        ...saved,
+                        'system-constants': fromDefault['system-constants']
+                    })
+                    validateRequiredState(merged)
+                    return merged
+                }
+            } catch (e) {
+                if (e instanceof Error && e.message.startsWith('[AppState]')) throw e
+            }
+            return fromDefault
+        }
+        try {
+            const raw = localStorage.getItem('resume-flyer/app_state')
+            if (raw) {
+                const state = deepMerge(getDefaultState(), migrateState(JSON.parse(raw)))
+                validateRequiredState(state)
+                return state
+            }
+        } catch (e) {
+            if (e instanceof Error && e.message.startsWith('[AppState]')) throw e
+            reportError(e, '[AppState] Failed to load localStorage state', 'Remedy: Ensure app_state.default.json is valid')
+        }
+        const err = new Error('[AppState] No valid state: no server, app_state.default.json missing/failed/invalid, and no localStorage state. Ensure public/app_state.default.json exists with system-constants.renderingLimits.')
+        reportError(err, '[AppState] Cannot load state', 'Remedy: Add or fix public/app_state.default.json and reload.')
+        throw err
     }
-    
-    // This should never be reached due to the loop logic above
-    throw new Error('[AppState] loadStateFromServer: unreachable')
 }
 
 /**
- * Save application state to server
+ * Save application state to server (or localStorage when no server)
  */
 async function saveStateToServer(state: AppState): Promise<void> {
     try {
         state.lastUpdated = new Date().toISOString()
+        if (hasServer() && stateApiAvailable !== false) {
         console.log('[AppState] 💾 Saving state to server - currentResumeId:', state['user-settings']?.currentResumeId)
-        const response = await fetch('/api/state', {
+        const apiUrl = basePathJoin('api/state')
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -487,12 +613,39 @@ async function saveStateToServer(state: AppState): Promise<void> {
             body: JSON.stringify(state),
         })
         if (!response.ok) {
+            if (response.status === 404 || response.status === 405) {
+                stateApiAvailable = false
+                try {
+                    localStorage.setItem(STATE_API_UNAVAILABLE_KEY, '1')
+                } catch (_) {}
+            }
+            // GitHub Pages / static hosting: no API (404/405). Persist to localStorage and continue without logging an error.
+            const isStaticHosting = response.status === 404 || response.status === 405
+            try {
+                localStorage.setItem('resume-flyer/app_state', JSON.stringify(state))
+                if (isStaticHosting) {
+                    console.log('[AppState] State saved to localStorage (no server API on static hosting)')
+                } else {
+                    reportError(new Error(`Server returned ${response.status}: ${response.statusText}`), '[AppState] Failed to save state to server', 'Remedy: Saved AppState to localStorage instead')
+                }
+                return
+            } catch (e) {
+                reportError(e, '[AppState] Failed to save AppState to localStorage', 'Remedy: Disabling auto-save to avoid spam')
+            }
             throw new Error(`Server returned ${response.status}: ${response.statusText}`)
         }
         console.log('[AppState] ✅ State saved to server successfully')
+        } else {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('resume-flyer/app_state', JSON.stringify(state))
+                if (!hasServer()) console.log('[AppState] State saved to localStorage (static host, no server)')
+            }
+            return
+        }
     } catch (error) {
-        reportError(error, '[AppState] Failed to save state to server', '')
-        throw error
+        reportError(error, '[AppState] Failed to save state to server', 'Remedy: Auto-save will be disabled for this session')
+        // For static hosting, do not rethrow here; callers (auto-save) should not crash the app.
+        return
     }
 }
 
@@ -525,7 +678,7 @@ export function useAppState(): UseAppStateReturn {
                 appState.value = state
                 isLoaded.value = true
                 isLoading.value = false
-                setRenderingFromAppState(state['system-constants']?.rendering)
+                setRenderingFromAppState(state['system-constants']?.rendering, state['system-constants']?.renderingLimits)
                 
                 // Dispatch event for backward compatibility
                 window.dispatchEvent(new CustomEvent('app-state-loaded', {
@@ -575,8 +728,8 @@ export function useAppState(): UseAppStateReturn {
                     await saveAppState()
                     hasPendingUpdates = false
                 } catch (error) {
-                    reportError(error, '[AppState] Auto-save failed', '')
-                    throw error
+                    reportError(error, '[AppState] Auto-save failed', 'Remedy: Stopping auto-save to avoid repeated errors')
+                    stopAutoSave()
                 }
             }
         }, AUTO_SAVE_INTERVAL)

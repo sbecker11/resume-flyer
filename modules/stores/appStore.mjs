@@ -69,6 +69,11 @@ export const appStore = reactive({
     scrollPosition: 0,
     visibleRange: { start: 0, end: 10 },
     isScrolling: false
+  },
+
+  // Scene view autoscroll: focal point hidden while active
+  sceneView: {
+    isAutoscrolling: false
   }
 })
 

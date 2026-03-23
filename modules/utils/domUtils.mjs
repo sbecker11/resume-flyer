@@ -1,7 +1,7 @@
 // modules/utils/domUtils.mjs
 
 import * as utils from './utils.mjs';
-import { getHighContrastMono } from 'color-palette-utils-ts';
+import { getHighContrastMono } from '@/modules/utils/colorUtils.mjs';
 import { get_RGB_from_Hex, isHexColor, isHexColorString } from './paletteHelpers.mjs';
 
 export { get_RGB_from_Hex, isHexColorString };
