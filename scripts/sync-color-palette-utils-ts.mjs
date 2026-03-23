@@ -23,7 +23,7 @@ const SCRIPT_NAME = 'sync-color-palette-utils-ts';
 
 /** Default package folder to copy from when no argv / PALETTE_UTILS_TS_SOURCE */
 const DEFAULT_SOURCE =
-    '/Users/sbecker11/workspace-color-palette-maker/color-palette-maker-react/color-palette-utils-ts';
+    '/Users/sbecker11/workspace-color-palette/color-palette-maker/color-palette-utils-ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');

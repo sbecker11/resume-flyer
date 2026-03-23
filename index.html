@@ -9,7 +9,7 @@
   <meta http-equiv="X-UA-Compatible"
         content="ie=edge"/>
 
-  <title>resume-flyer</title>
+  <title>Resume Flyer (local)</title>
   <!-- Base-relative so GitHub Pages (VITE_BASE /repo/) resolves correctly; avoids /favicon.ico 404 at site root -->
   <link rel="icon" type="image/x-icon" href="./favicon.ico" />
 
@@ -38,6 +38,15 @@
     }
    </script>
   
+  <script>
+    (function setRuntimeTitle() {
+      const host = window.location.hostname || '';
+      document.title = host.endsWith('github.io')
+        ? 'Resume Flyer (@githubpages)'
+        : 'Resume Flyer (local)';
+    })();
+  </script>
+
   <script type="module" src="/main.ts"></script>
 
 
