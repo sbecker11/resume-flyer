@@ -1,2 +1,2 @@
 # Resume parser package (schema, validator, parse/render CLIs). See resume-parser package docs.
-resume-parser @ git+https://github.com/sbecker11/resume-parser.git@v1.0.0
+resume-parser @ git+https://github.com/sbecker11/resume-parser.git@v1.1.0
