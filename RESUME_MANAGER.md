@@ -41,12 +41,12 @@ The Resume Manager provides:
 2. Server saves to uploads/ directory
 3. Validates file type and size (10MB max)
 4. Creates output directory: parsed_resumes/resume-{timestamp}/
-5. Calls the **resume-parser** Python package (`python3 -m …`; default module in `modules/config/defaultResumeParserModule.mjs`, overridable with `RESUME_PARSER_MODULE`)
-6. Parser generates (typical layout):
-   - jobs.json (job history)
-   - skills.json (skills list)
-   - categories.json (skill categories)
-   - other-sections.json (additional content)
+5. Calls Python parser: resume_to_flyer.py
+6. Parser generates:
+   - jobs.mjs (job history)
+   - skills.mjs (skills list)
+   - categories.mjs (skill categories)
+   - other-sections.mjs (additional content)
    - resume.html (formatted output)
 7. Server generates meta.json with metadata
 8. Returns success response to client
@@ -123,7 +123,10 @@ const data = await getResumeData(resumeId)
 
 ## Python Parser Requirements
 
-Parsing is done by the **[resume-parser](https://github.com/sbecker11/resume-parser)** package (install with its `requirements.txt`). The server runs `python3 -m <module>`; the default module path is **`modules/config/defaultResumeParserModule.mjs`** (or set **`RESUME_PARSER_MODULE`** in the environment). Clone **resume-parser** next to this repo or on your `PYTHONPATH` per that project’s README.
+The system expects a Python parser script at one of these locations:
+- `{project_root}/resume_to_flyer.py`
+- `{project_root}/../resume-parser/resume_to_flyer.py`
+- `{project_root}/scripts/resume_to_flyer.py`
 
 ### Parser Interface
 
@@ -257,8 +260,8 @@ resume-flyer/
 │       └── meta.json
 └── uploads/                            # Temporary upload directory
 
-../resume-parser/                       # Python parser (EXTERNAL; see its README)
-└── (package layout per resume-parser)
+../resume-parser/                       # Python parser (EXTERNAL)
+└── resume_to_flyer.py                 # Parser script
 ```
 
 ## Security Considerations
@@ -309,18 +312,21 @@ resume-flyer/
 
 ### "Parser not found" Error
 
-**Problem**: Server can’t run the resume-parser Python module (wrong path, missing venv, or package not installed).
+**Problem**: Server can't locate resume_to_flyer.py
 
 **Solutions**:
 1. Clone **resume-parser** and install its dependencies:
    ```bash
-   cd /path/to/parent
+   cd /Users/sbecker11/workspace-resume/
    git clone git@github.com:sbecker11/resume-parser
    cd resume-parser
    # follow README: pip install -r requirements.txt (or equivalent)
    ```
 
-2. Ensure `python3` can import the module (see **`modules/config/defaultResumeParserModule.mjs`** or set **`RESUME_PARSER_MODULE`**).
+2. Or create symlink:
+   ```bash
+   ln -s /path/to/resume-parser/resume_to_flyer.py /path/to/resume-flyer/
+   ```
 
 ### Upload Fails with "Processing Error"
 
@@ -328,7 +334,7 @@ resume-flyer/
 
 **Debug Steps**:
 1. Check server console for parser stderr output
-2. Manually run the same command the server uses: `python3 -m <module> test.docx output/` (module from **`RESUME_PARSER_MODULE`** or the default config file above)
+2. Manually run parser: `python3 resume_to_flyer.py test.docx output/`
 3. Verify Python dependencies are installed
 4. Check .docx file format validity
 

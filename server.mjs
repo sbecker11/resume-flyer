@@ -590,6 +590,7 @@ app.delete('/api/resumes/:id', async (req, res) => {
 // GET /api/resumes: List all parsed resumes with metadata
 app.get('/api/resumes', async (req, res) => {
     try {
+        await fs.mkdir(PARSED_RESUMES_DIR, { recursive: true });
         const entries = await fs.readdir(PARSED_RESUMES_DIR, { withFileTypes: true });
         const resumeFolders = entries.filter(entry => entry.isDirectory());
 
@@ -643,7 +644,7 @@ app.get('/api/resumes', async (req, res) => {
 
         res.json(resumes);
     } catch (error) {
-        console.error('Error listing resumes:', error);
+        console.error('Error listing resumes:', error?.code || error?.message, error);
         res.status(500).json({ error: 'Failed to list resumes.' });
     }
 });
@@ -760,7 +761,7 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
         }
 
         // Invoke resume-parser package (pip install -r requirements.txt). Module override via RESUME_PARSER_MODULE.
-        const parserModule = process.env.RESUME_PARSER_MODULE || DEFAULT_RESUME_PARSER_PYTHON_MODULE;
+        const parserModule = process.env.RESUME_PARSER_MODULE || 'resume_parser.resume_to_flyer';
         const pythonCommand = 'python3';
         const cleanEnv = {};
         for (const [key, value] of Object.entries(process.env)) {
@@ -860,17 +861,66 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
     }
 });
 
-// GET /api/palette-catalog — in-memory copy of S3 NDJSON (validated). Warmed on server startup.
-// Send X-Palette-Catalog-Refresh: 1 to refetch S3 (e.g. browser hard reload).
-app.get('/api/palette-catalog', async (req, res) => {
-    const wantsRefresh = req.get('x-palette-catalog-refresh') === '1';
-    try {
-        if (wantsRefresh || !hasPaletteCatalogCache()) {
-            await refreshPaletteCatalogCache();
+/** Sorted list of palette filenames under static_content/colorPalettes (shared by manifest + catalog routes). */
+async function getPaletteFilenameList() {
+    const allEntries = await fs.readdir(PALETTE_DIR_PATH);
+    const jsonFiles = allEntries.filter(entry => entry.endsWith('.json'));
+    jsonFiles.sort((a, b) => {
+        const regex = /^(\d+)-/;
+        const matchA = a.match(regex);
+        const matchB = b.match(regex);
+        const numA = matchA ? parseInt(matchA[1], 10) : -1;
+        const numB = matchB ? parseInt(matchB[1], 10) : -1;
+        if (numA !== -1 && numB !== -1) return numA - numB;
+        if (numA !== -1) return -1;
+        if (numB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+    return jsonFiles;
+}
+
+/**
+ * Palette catalog for clients that validate with paletteCatalogValidate (version 2 bundle).
+ * Each entry includes filename (for theme.colorPalette), name, colors, optional backgroundSwatchIndex.
+ */
+async function getPaletteCatalogBundleV2() {
+    const jsonFiles = await getPaletteFilenameList();
+    const palettes = [];
+    for (const filename of jsonFiles) {
+        const filePath = path.join(PALETTE_DIR_PATH, filename);
+        try {
+            const raw = await fs.readFile(filePath, 'utf-8');
+            const data = JSON.parse(raw);
+            if (!data || typeof data !== 'object' || typeof data.name !== 'string' || !Array.isArray(data.colors)) {
+                console.warn(`[server] Skipping invalid palette JSON (need name + colors[]): ${filename}`);
+                continue;
+            }
+            const entry = {
+                key: filename,
+                filename,
+                name: data.name,
+                colors: data.colors
+            };
+            if (data.backgroundSwatchIndex != null) {
+                entry.backgroundSwatchIndex = data.backgroundSwatchIndex;
+            }
+            palettes.push(entry);
+        } catch (e) {
+            console.warn(`[server] Could not read palette ${filename}:`, e.message);
         }
-        const bundle = getCachedPaletteCatalogBundle();
-        res.set('Cache-Control', 'private, no-store');
-        res.json(bundle);
+    }
+    if (palettes.length === 0) {
+        const err = new Error(`No valid palettes under ${PALETTE_DIR_PATH}`);
+        err.code = 'ENOENT';
+        throw err;
+    }
+    return { version: 2, palettes };
+}
+
+// GET /api/palette-manifest: Provides a sorted list of color palettes
+app.get('/api/palette-manifest', async (req, res) => {
+    try {
+        res.json(await getPaletteFilenameList());
     } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         console.error('[palette-catalog] GET /api/palette-catalog failed:', msg);
@@ -879,6 +929,16 @@ app.get('/api/palette-catalog', async (req, res) => {
             message: msg,
             hint: 'S3 fetch/parse/validate failed — see server console for PALETTE S3 FAILED banner',
         });
+    }
+});
+
+// GET /api/palette-catalog: version-2 bundle { version: 2, palettes: [...] } for S3-style catalog clients
+app.get('/api/palette-catalog', async (req, res) => {
+    try {
+        res.json(await getPaletteCatalogBundleV2());
+    } catch (error) {
+        const status = error.code === 'ENOENT' ? 404 : 500;
+        res.status(status).json({ error: 'Failed to build palette catalog.', details: error.message });
     }
 });
 

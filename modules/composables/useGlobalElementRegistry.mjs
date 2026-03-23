@@ -1,7 +1,7 @@
 // modules/composables/useGlobalElementRegistry.mjs
 // Enhanced global element registry to replace all document.getElementById() calls
 
-import { ref, shallowRef, readonly, computed, triggerRef, provide, inject } from 'vue'
+import { ref, shallowRef, readonly, computed, triggerRef, provide, inject, getCurrentInstance } from 'vue'
 
 // Registry keys for provide/inject
 const GLOBAL_ELEMENT_REGISTRY_KEY = Symbol('GlobalElementRegistry')
@@ -281,16 +281,18 @@ export function provideGlobalElementRegistry() {
 
 // Injector function for dependency injection (now uses global instance as fallback)
 export function injectGlobalElementRegistry() {
-  // First try Vue's inject system
-  const registry = inject(GLOBAL_ELEMENT_REGISTRY_KEY, null)
-  if (registry) {
-    return registry
+  // inject() only valid during synchronous setup (or sync composable calls from setup).
+  // Async callbacks (e.g. after await in onMounted) have no current instance — use window registry.
+  if (getCurrentInstance()) {
+    const registry = inject(GLOBAL_ELEMENT_REGISTRY_KEY, null)
+    if (registry) {
+      return registry
+    }
   }
-  
-  // Fallback to global window instance (eliminates timing issues)
+
   if (typeof window !== 'undefined' && window.globalElementRegistry) {
     return window.globalElementRegistry
   }
-  
+
   throw new Error('[GlobalElementRegistry] Registry not available! Ensure main.ts creates global registry.')
 }

@@ -7,7 +7,7 @@
 2. **LLM Agent** - Parse resume into structured sections
 3. **Data Transformation** - Convert parsed data to existing job format
 4. **Preview & Edit** - Allow users to review and modify parsed data
-5. **Integration** - Seamlessly integrate with existing scene / card visualization
+5. **Integration** - Seamlessly integrate with existing resume visualization
 
 ### Implementation Plan
 

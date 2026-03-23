@@ -5,6 +5,8 @@
 import { linearInterp } from '../utils/mathUtils.mjs';
 import { getRendering } from './renderingConfig.mjs';
 
+// Filter constants (resume-flyer–aligned: Z 1 = far, Z 14 = close)
+export const MIN_BRIGHTNESS_PERCENT = 75; // Match resume-flyer
 export const CARD_MIN_Z = 1;
 export const CARD_MAX_Z = 14;
 

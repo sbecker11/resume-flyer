@@ -153,11 +153,11 @@
       }
     },
     "rendering": {
-      "parallaxScaleAtMinZ": 1,
-      "parallaxScaleAtMaxZ": 1,
-      "saturationAtMaxZ": 100,
-      "brightnessAtMaxZ": 100,
+      "parallaxScaleAtMaxZ": 0.9,
+      "saturationAtMaxZ": 1,
+      "brightnessAtMaxZ": 1,
       "blurAtMaxZ": 0,
+      "parallaxScaleAtMinZ": 1,
       "focalPointUiVisible": true,
       "bullsEyeUiVisible": true
     },

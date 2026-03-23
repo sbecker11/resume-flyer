@@ -19,9 +19,7 @@ Use this for continuity when starting a new session. Full session history and ar
   All rDivs (originals and resume-list clones) are deleteable. Originals get the close handler in `ResumeItemsController.createBizResumeDiv`. Clones get it re-attached in `ResumeListScrollContainer._attachRDivCloseHandler` (because `cloneNode(true)` does not copy event listeners). Remove persists via `ResumeListController.removedJobNumbers`; `ensureJobInListing` / `scrollToElementId` re-add when needed.
 
 - **Resume list**  
-  Single list: job rDivs + appended skill card copies. Scroll by DOM id: `scrollToElementId('resume-' + jobNumber)`. List position/length shown in debug row. High-contrast text uses local `modules/utils/resumeFlyerPaletteColors.mjs` (LAB L* threshold) and `paletteHelpers.mjs`.
-
-- **color-palette-utils-ts** — Vendored **read-only**; **update from source** with **`npm run sync:color-palette-utils-ts`** (`package.json`). App loads palettes **only from S3** (configured in `.env`); **no fallbacks** — missing URL, fetch error, bad NDJSON, or invalid hex → fast-fail (`useColorPalette.mjs`). Color math: **`resumeFlyerPaletteColors.mjs`**. See `color-palette-utils-ts/README-ts.md`.
+  Single list: job rDivs + appended skill card copies. Scroll by DOM id: `scrollToElementId('resume-' + jobNumber)`. List position/length shown in debug row. High-contrast text/icons use LAB-based rules in `modules/utils/colorUtils.mjs` (see `LAB_LIGHT_THRESHOLD`); readonly vendor catalog is `color-palette-utils-ts/` only.
 
 ## Conventions
 

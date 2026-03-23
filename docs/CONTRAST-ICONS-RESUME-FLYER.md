@@ -1,8 +1,8 @@
-# Contrast icons – reference stack vs resume-flyer
+# Contrast Icons – How resume-flyer Uses Them
 
-Resume-flyer uses the same contrast icon concept as an earlier **postcard-stack** visualization. This doc summarizes how that stack used url/back/img icons so we can mirror the pattern.
+resume-flyer uses the same contrast icon concept as **resume-flyer**. This doc summarizes how resume-flyer uses url/back/img icons so we can mirror that pattern.
 
-## In the reference stack
+## In resume-flyer
 
 ### Icon types and assets
 
@@ -41,7 +41,7 @@ Resume-flyer uses the same contrast icon concept as an earlier **postcard-stack*
 
 ## In resume-flyer (palette-utils + useColorPalette)
 
-- We use **resume-flyer** `getHighContrastForBackground(hex, { iconBase })` from `modules/utils/resumeFlyerPaletteColors.mjs` (icons: black PNGs + CSS invert when variant is white):
+- We use **`modules/utils/colorUtils.mjs`** `getIconSetForBackgroundColor(hex, { iconBase })` (or `getContrastIconSet`); the readonly **color-palette-utils-ts** package is catalog-only (S3 fetch).
   - Returns **one set of paths** (black PNGs only): `url`, `back`, `img`.
   - Returns **variant:** `'black'` | `'white'` (same rule as text: `getHighContrastMono` — white on dark, black on light). The icon set always matches the high-contrast text color for the given background.
 - **Transparent background:** The icon set is always displayed with a transparent background; `.url-icon`, `.back-icon`, `.img-icon` have `background: transparent` in CSS so icons never show an opaque background.
@@ -68,4 +68,4 @@ Url/back/img icons can appear **inside card description content** (scene biz car
 2. Give each icon one of the classes **`url-icon`**, **`back-icon`**, or **`img-icon`** so the stylesheet can apply **`filter: invert(1)`** when the card’s variant for that state is `'white'` (white on dark background).
 3. When the card’s state changes (normal ↔ hovered ↔ selected), either re-set each icon’s `src` from the card’s corresponding `data-icon-set-*` / `data-icon-set-hovered-*` / `data-icon-set-selected-*` attributes, or rely on CSS: the card keeps the same data attributes and CSS vars, and the **variant** selectors (e.g. `[data-icon-set-variant="white"] .url-icon`) apply invert automatically for the active state.
 
-So: same **rule** as the reference stack (white on dark, black on light); we use **one asset + invert** instead of two assets.
+So: same **rule** as resume-flyer (white on dark, black on light); we use **one asset + invert** instead of two assets.

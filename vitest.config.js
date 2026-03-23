@@ -44,6 +44,7 @@ export default defineConfig({
         'modules/composables/useSceneAutoScroll.mjs',
         'modules/composables/useGlobalElementRegistry.mjs',
         'modules/composables/useJobsDependency.mjs',
+        'modules/debug/skillCardContrastGuard.mjs',
         'modules/core/selectionManager.mjs',
         'modules/scene/bizDetailsDivModule.mjs',
         'modules/core/abstracts/BaseComponent.mjs',

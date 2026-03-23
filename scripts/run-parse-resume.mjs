@@ -19,7 +19,7 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const PARSED_RESUMES_DIR = process.env.PARSED_RESUMES_DIR || path.join(PROJECT_ROOT, 'parsed_resumes');
 
 /** Python module to run (resume-parser package). Override with RESUME_PARSER_MODULE if the package uses a different entry point. */
-const PARSER_MODULE = process.env.RESUME_PARSER_MODULE || DEFAULT_RESUME_PARSER_PYTHON_MODULE;
+const PARSER_MODULE = process.env.RESUME_PARSER_MODULE || 'resume_parser.resume_to_flyer';
 const TIMEOUT_MS = 120_000;
 
 /** Env var names that should not be inherited so the parser uses its own .env. */
@@ -56,7 +56,7 @@ Options:
 
 Environment:
   PARSED_RESUMES_DIR  Default output parent (default: ./parsed_resumes).
-  RESUME_PARSER_MODULE  Python -m module (default: see modules/config/defaultResumeParserModule.mjs). Install package: pip install -r requirements.txt
+  RESUME_PARSER_MODULE  Python -m module (default: resume_parser.resume_to_flyer). Install package: pip install -r requirements.txt
 
 Example:
   npm run parse-resume -- --docx ~/Documents/resume.docx --id my-resume

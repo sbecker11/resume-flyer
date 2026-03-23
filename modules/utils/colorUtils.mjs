@@ -1,16 +1,14 @@
 /**
- * Resume-flyer local color utilities (formerly from palette-utils-ts).
- * S3-only catalog fetch (no fallbacks) lives in useColorPalette; color-palette-utils-ts is vendor/readonly (see README-ts.md).
- *
- * Ported for parity: LAB L* contrast, LCH highlights, hex normalize.
+ * Local hex / LAB-LCH / contrast / exported-palette JSON helpers for resume-flyer.
+ * Kept here so the readonly vendor package in `color-palette-utils-ts/` stays catalog-only (S3 NDJSON).
  */
 
 const DEFAULT_HIGHLIGHT_PERCENT = 135;
 const NEARLY_WHITE_L_THRESHOLD = 75;
-/** L* >= this → light background (black text); below → dark (white text). */
+/** L* >= this → black text/icons; below → white */
 const LAB_LIGHT_THRESHOLD = 50;
 
-/** Format hex for display: always 7 chars (#rrggbb), lowercase. Expands #rgb to #rrggbb. */
+/** @param {string | null | undefined} hex */
 export function formatHexDisplay(hex) {
     if (!hex || typeof hex !== 'string') return '';
     const h = hex.trim().toLowerCase();
@@ -20,18 +18,19 @@ export function formatHexDisplay(hex) {
     return h.startsWith('#') ? h : `#${h}`;
 }
 
+/** @param {number} r @param {number} g @param {number} b */
 export function rgbToHex(r, g, b) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-/** Parse hex color to { r, g, b } (0-255). Returns null if invalid. */
+/** @param {string} hex @returns {{ r: number, g: number, b: number } | null} */
 export function hexToRgb(hex) {
     const h = formatHexDisplay(hex);
     if (!h || !/^#[0-9a-f]{6}$/.test(h)) return null;
     return {
         r: parseInt(h.slice(1, 3), 16),
         g: parseInt(h.slice(3, 5), 16),
-        b: parseInt(h.slice(5, 7), 16),
+        b: parseInt(h.slice(5, 7), 16)
     };
 }
 
@@ -50,7 +49,7 @@ function rgbToXyz(r, g, b) {
     return {
         x: 0.4124564 * R + 0.3575761 * G + 0.1804375 * B,
         y: 0.2126729 * R + 0.7151522 * G + 0.072175 * B,
-        z: 0.0193339 * R + 0.119192 * G + 0.9503041 * B,
+        z: 0.0193339 * R + 0.119192 * G + 0.9503041 * B
     };
 }
 function xyzToRgb(x, y, z) {
@@ -60,7 +59,7 @@ function xyzToRgb(x, y, z) {
     return {
         r: Math.round(Math.min(255, Math.max(0, linearToSrgb(R) * 255))),
         g: Math.round(Math.min(255, Math.max(0, linearToSrgb(G) * 255))),
-        b: Math.round(Math.min(255, Math.max(0, linearToSrgb(B) * 255))),
+        b: Math.round(Math.min(255, Math.max(0, linearToSrgb(B) * 255)))
     };
 }
 
@@ -79,7 +78,7 @@ function xyzToLab(x, y, z) {
     return {
         L: 116 * fy - 16,
         a: 500 * (f(x / xn) - fy),
-        b: 200 * (fy - f(z / zn)),
+        b: 200 * (fy - f(z / zn))
     };
 }
 function labToXyz(L, a, b) {
@@ -88,7 +87,7 @@ function labToXyz(L, a, b) {
     return {
         x: xn * invF(y + a / 500),
         y: yn * invF(y),
-        z: zn * invF(y - b / 200),
+        z: zn * invF(y - b / 200)
     };
 }
 function rgbToLab(r, g, b) {
@@ -117,18 +116,7 @@ function getLightnessLab(hex) {
     return lab.L;
 }
 
-/** Parse computed rgb/rgba string to hex. e.g. "rgb(0, 0, 77)" or "rgba(0, 0, 77, 1)". */
-export function parseRgbStringToHex(rgbStr) {
-    if (!rgbStr || typeof rgbStr !== 'string') return null;
-    const m = rgbStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-    if (!m) return null;
-    const r = Math.min(255, Math.max(0, parseInt(m[1], 10)));
-    const g = Math.min(255, Math.max(0, parseInt(m[2], 10)));
-    const b = Math.min(255, Math.max(0, parseInt(m[3], 10)));
-    return rgbToHex(r, g, b);
-}
-
-/** Black or white hex for best contrast on background (LAB L*). */
+/** @param {string} hex */
 export function getHighContrastMono(hex) {
     const L = getLightnessLab(hex);
     return L >= LAB_LIGHT_THRESHOLD ? '#000000' : '#ffffff';
@@ -137,7 +125,6 @@ export function getHighContrastMono(hex) {
 /**
  * @param {string} backgroundColorHex
  * @param {{ iconBase?: string }} [options]
- * @returns {{ textColor: '#000000' | '#ffffff', iconSet: { url: string, back: string, img: string, variant: 'black' | 'white' } }}
  */
 export function getHighContrastForBackground(backgroundColorHex, options = {}) {
     const L = getLightnessLab(backgroundColorHex);
@@ -148,9 +135,17 @@ export function getHighContrastForBackground(backgroundColorHex, options = {}) {
         url: `${iconBase}/icons8-url-16-black.png`,
         back: `${iconBase}/icons8-back-16-black.png`,
         img: `${iconBase}/icons8-img-16-black.png`,
-        variant,
+        variant
     };
     return { textColor, iconSet };
+}
+
+export function getIconSetForBackgroundColor(backgroundColorHex, options = {}) {
+    return getHighContrastForBackground(backgroundColorHex, options).iconSet;
+}
+
+export function getContrastIconSet(hex, options = {}) {
+    return getIconSetForBackgroundColor(hex, options);
 }
 
 /**
@@ -177,7 +172,32 @@ export function getHighlightColor(hex, options = {}) {
     return rgbToHex(out.r, out.g, out.b);
 }
 
-/** Normalize palette colors to #rrggbb lowercase. Mutates and returns the same array. */
+/** @param {unknown} value */
+export function isExportedPalette(value) {
+    if (!value || typeof value !== 'object') return false;
+    const o = value;
+    if (typeof o.name !== 'string') return false;
+    if (!Array.isArray(o.colors)) return false;
+    if (!o.colors.every((c) => typeof c === 'string')) return false;
+    if (o.backgroundSwatchIndex !== undefined && (typeof o.backgroundSwatchIndex !== 'number' || o.backgroundSwatchIndex < 0)) {
+        return false;
+    }
+    return true;
+}
+
+/** @param {string} jsonString */
+export function parsePaletteJson(jsonString) {
+    let parsed;
+    try {
+        parsed = JSON.parse(jsonString);
+    } catch {
+        return null;
+    }
+    if (!isExportedPalette(parsed)) return null;
+    return parsed;
+}
+
+/** @param {string[]} colors */
 export function normalizePaletteColors(colors) {
     for (let i = 0; i < colors.length; i++) {
         const normalized = formatHexDisplay(colors[i]);

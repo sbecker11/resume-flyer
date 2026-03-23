@@ -1,9 +1,9 @@
 /**
- * Card geometry constants (ported from legacy postcard-stack prototype)
+ * Card geometry constants (ported from resume-flyer)
  * Used for bizcard and skill card layout in the scene.
  */
 
-// Bizcard dimensions (px) - from legacy constants
+// Bizcard dimensions (px) - from resume-flyer constants.ts
 export const BIZCARD_WIDTH = 200;
 export const BIZCARD_INDENT = 29;
 export const MIN_BIZCARD_HEIGHT = 200;
@@ -12,13 +12,13 @@ export const BIZCARD_HZ_CENTER_OFFSET_MAX = 60;
 /** Random variation in biz card width (px). Width = BIZCARD_WIDTH + uniform(-this, +this), clamped to [BIZCARD_WIDTH - this, BIZCARD_WIDTH + this]. */
 export const BIZCARD_WIDTH_VARIANCE = 24;
 
-// Skill card dimensions and positioning - from legacy card layout
+// Skill card dimensions and positioning - from resume-flyer card.ts
 export const MEAN_CARD_WIDTH = 100;
 export const MEAN_CARD_HEIGHT = 75;
 export const MAX_CARD_POSITION_OFFSET = 120;
 export const CARD_BORDER_WIDTH = 3;
 
-// Skill card one-time reposition (legacy repositionAllCardsToWeightedAverages)
+// Skill card one-time reposition (resume-flyer repositionAllCardsToWeightedAverages)
 export const SKILL_REPOSITION_EDGE_VARIANCE = 60;
 export const SKILL_REPOSITION_MIN_DISTANCE = 150;
 export const SKILL_REPOSITION_STRENGTH = 0.5;

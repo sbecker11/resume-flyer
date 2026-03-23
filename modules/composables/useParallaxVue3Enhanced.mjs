@@ -18,9 +18,10 @@ import { logger } from '../utils/logger.mjs'
 const PARALLAX_X_EXAGGERATION = 0.9
 const PARALLAX_Y_EXAGGERATION = 1.0
 const CLONE_Z_SCALE = 0
-const PARALLAX_Z_MIN = zUtils.PARALLAX_SCENE_Z_MIN
-const PARALLAX_Z_MAX = zUtils.PARALLAX_SCENE_Z_MAX
-const PARALLAX_Z_RANGE = zUtils.PARALLAX_SCENE_Z_RANGE
+// zUtils: master uses PARALLAX_SCENE_Z_*; this branch exports FLYER_PARALLAX_Z_* (same 1–14 range).
+const PARALLAX_Z_MIN = zUtils.FLYER_PARALLAX_Z_MIN
+const PARALLAX_Z_MAX = zUtils.FLYER_PARALLAX_Z_MAX
+const PARALLAX_Z_RANGE = zUtils.FLYER_PARALLAX_Z_RANGE
 // Base z-scale (built-in ramp): near = 0.9, far = 0; matches legacy MAX_Z_SCALE behavior.
 const BASE_Z_SCALE_AT_NEAR = 0.9
 const BASE_Z_SCALE_AT_FAR = 0

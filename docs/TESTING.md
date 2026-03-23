@@ -9,7 +9,7 @@ npm test
 # App tests in watch mode
 npm run test:watch
 
-# Coverage (app + palette-utils-ts)
+# Coverage (app + color-palette-utils-ts)
 npm run test:coverage
 ```
 
@@ -47,7 +47,7 @@ Unit tests exist for modules that can run in Node without a browser or Vue:
 
 - **Source of truth:** Schema docs, schema definitions, and parser CLIs live in the **resume-parser** package. The schema is versioned (e.g. `contracts/parsed-resume-format-v1.0.json`); the validator is at `contracts/validate_parsed_resume.py`. This repo may retain unit tests for parsed-resume format; **future resume-parser package updates may require updates to local tests and code**.
 - **Unit:** `parseMjsExport` parses `.mjs` content in resume-parser format (`export const jobs = [...];`, `export const skills = {...};`). `enrichedJobs` is tested with parser-style job shape (index, role, employer, start, end, Description) and edge cases (null Description, empty url, dedup brackets).
-- **Integration:** `resumeParserCompat.integration.test.mjs` checks that the pipeline (parseMjsExport + enrichJobsWithSkills) consumes parser output correctly. When `parsed_resumes` has a default resume (first non-_local- folder per index), tests read and parse jobs.json/skills.json to ensure compatibility with real parser output. resume-parser has its own unit tests; these tests ensure resume-flyer stays compatible with the format it produces.
+- **Integration:** `resumeParserCompat.integration.test.mjs` checks that the pipeline (parseMjsExport + enrichJobsWithSkills) consumes parser output correctly. When `static_content/jobs/jobs.mjs` and `static_content/skills/skills.mjs` exist, tests read and parse them to ensure compatibility with real parser output. resume-parser has its own unit tests; these tests ensure resume-flyer stays compatible with the format it produces.
 
 ## Reaching 100% line coverage
 

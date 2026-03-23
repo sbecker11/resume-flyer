@@ -306,7 +306,7 @@ function selectPrevious() {
   }
 }
 
-// Resume-view skill card: one card with back links to referencing biz cards and total years (sum of months rounded up)
+// Resume-view skill card (resume-flyer): one card with back links to referencing biz cards and total years (sum of months rounded up)
 const selectedCardSnapshot = ref(null);
 /** When true, the skill card is removed from the resume listing container (hidden) until selection changes. */
 const resumeSkillCardDismissed = ref(false);
@@ -771,17 +771,7 @@ function onResumeSkillCardClick(event) {
 <template>
     <div id="resume-content">
         <div id="resume-content-header">
-            <p
-              class="intro about-trigger"
-              role="button"
-              tabindex="0"
-              aria-label="About resume-flyer"
-              @click="openAboutModal"
-              @keydown.enter.prevent="openAboutModal"
-              @keydown.space.prevent="openAboutModal"
-            >
-              Welcome to your resume-flyer!
-            </p>
+            <p class="intro">Welcome to your resume-flyer!</p>
             <!-- Resume Selector + Print Button Row -->
             <div class="resume-selector-row">
                 <div class="resume-selector" ref="resumeSelectorRef">

@@ -213,7 +213,7 @@ body .biz-resume-div.selected a,
     filter: none !important;
     z-index: 99;
 }
-/* Contrast icons (url/back/img): palette-utils uses black PNGs only; when variant is white, invert so icon is white on dark. See docs/CONTRAST-ICONS-RESUME-FLYER.md. */
+/* Contrast icons (url/back/img): palette-utils uses black PNGs only; when variant is white, invert so icon is white on dark. See docs/CONTRAST-ICONS-resume-flyer.md. */
 .biz-card-div.clone[data-icon-set-selected-variant="white"] .url-icon,
 .biz-card-div.clone[data-icon-set-selected-variant="white"] .back-icon,
 .biz-card-div.clone[data-icon-set-selected-variant="white"] .img-icon {
@@ -295,7 +295,7 @@ body .biz-resume-div.selected a,
 .skill-card-div.clone[data-icon-set-selected-variant="white"] .img-icon {
     filter: invert(1);
 }
-/* Match legacy postcard-stack .tag-link (skill title): bold, underlined */
+/* Match resume-flyer .tag-link (skill title): bold, underlined */
 .skill-card-div .skill-card-label {
     display: inline-block;
     max-width: 100%;

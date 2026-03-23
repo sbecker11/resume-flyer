@@ -2,6 +2,9 @@ node_modules/
 dist/
 .env
 coverage/
+
+# Vite production build output
+dist/
 color-palette-utils-ts/coverage/
 .coverage
 

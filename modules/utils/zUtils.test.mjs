@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   ALL_CARDS_Z_INDEX_MIN,
   ALL_CARDS_Z_INDEX_MAX,
-  SCENE_PARALLAX_FAR_Z,
-  SCENE_CARD_STACK_BIZ_MIN,
-  SCENE_CARD_STACK_BIZ_MAX,
-  SCENE_CARD_STACK_SKILL_MIN,
-  SCENE_CARD_STACK_SKILL_MAX,
+  FLYER_Z_MAX,
+  FLYER_BIZCARD_Z_INDEX_MIN,
+  FLYER_BIZCARD_Z_INDEX_MAX,
+  FLYER_SKILL_Z_INDEX_MIN,
+  FLYER_SKILL_Z_INDEX_MAX,
   Z_from_z_index,
   z_index_from_Z,
   z_from_z_index,
@@ -85,8 +85,8 @@ describe('zUtils', () => {
 
   describe('Z = maxZ - z_index mapping', () => {
     it('Z_from_z_index gives distance (higher z_index = lower Z)', () => {
-      expect(Z_from_z_index(1)).toBe(SCENE_PARALLAX_FAR_Z - 1);
-      expect(Z_from_z_index(SCENE_PARALLAX_FAR_Z)).toBe(0);
+      expect(Z_from_z_index(1)).toBe(FLYER_Z_MAX - 1);
+      expect(Z_from_z_index(FLYER_Z_MAX)).toBe(0);
     });
     it('z_index_from_Z round-trips with Z_from_z_index', () => {
       expect(z_index_from_Z(Z_from_z_index(5))).toBe(5);
@@ -95,10 +95,10 @@ describe('zUtils', () => {
 
   describe('bizCard vs skillCard z_index invariant', () => {
     it('biz z_index max is less than skill z_index min so skill cards render above biz cards', () => {
-      expect(SCENE_CARD_STACK_BIZ_MAX).toBeLessThan(SCENE_CARD_STACK_SKILL_MIN);
+      expect(FLYER_BIZCARD_Z_INDEX_MAX).toBeLessThan(FLYER_SKILL_Z_INDEX_MIN);
     });
     it('biz and skill z_index ranges do not overlap', () => {
-      expect(SCENE_CARD_STACK_BIZ_MAX).toBeLessThan(SCENE_CARD_STACK_SKILL_MIN);
+      expect(FLYER_BIZCARD_Z_INDEX_MAX).toBeLessThan(FLYER_SKILL_Z_INDEX_MIN);
     });
   });
 });

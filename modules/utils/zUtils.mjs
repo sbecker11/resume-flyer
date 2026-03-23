@@ -33,41 +33,43 @@ export const BIZCARD_Z_MIN = 10; // 30; == Z_MAX .. Z_MAX-numLevels = 25
 
 export const ALL_CARDS_Z_MIN = 10;
 
-// Scene depth / stacking (legacy postcard-stack prototype: z = distance to viewer → z = MAX_Z - zindex).
-// Here: Z = distance from viewer; Z = SCENE_PARALLAX_FAR_Z - z_index (higher z_index = closer = lower Z).
+// resume-flyer (see sibling repo resume-flyer/main.mjs):
+//   "z is distance to viewer" → z = MAX_Z - zindex, zindex = MAX_Z - z.
+// Here: Z = distance from viewer; Z = FLYER_Z_MAX - z_index (higher z_index = closer = lower Z).
 //
 // Coordinate correspondence:
 //   At view plane (closest to viewer): z-index has MAX values, Z has MIN values.
 //   At scene origin (farthest):       z-index has MIN values, Z has MAX values.
 //
 // - z_index: CSS stacking order (1–3 biz, 4–13 skill); higher = in front.
-// - scene Z (stored on cards): Z = SCENE_PARALLAX_FAR_Z - z_index; range 1–14. No scene div should ever have negative scene Z.
-export const SCENE_PARALLAX_FAR_Z = 14;                    // far plane; Z = SCENE_PARALLAX_FAR_Z - z_index (original stack used 15)
-export const SCENE_CARD_STACK_BIZ_MIN = 1;       // biz cards z_index 1–3 (back)
-export const SCENE_CARD_STACK_BIZ_MAX = 3;
-export const SCENE_CARD_STACK_SKILL_MIN = 4;         // skill cards z_index 4–13 (front)
-export const SCENE_CARD_STACK_SKILL_MAX = 13;
-export const PARALLAX_SCENE_Z_MIN = 1;
-export const PARALLAX_SCENE_Z_MAX = 14;
-export const PARALLAX_SCENE_Z_RANGE = PARALLAX_SCENE_Z_MAX - PARALLAX_SCENE_Z_MIN;
+// - scene Z (stored on cards): Z = FLYER_Z_MAX - z_index; range 1–14. No scene div should ever have negative scene Z.
+export const FLYER_Z_MAX = 14;                    // far plane; Z = FLYER_Z_MAX - z_index (original used 15)
+export const FLYER_BIZCARD_Z_INDEX_MIN = 1;       // biz cards z_index 1–3 (back)
+export const FLYER_BIZCARD_Z_INDEX_MAX = 3;
+export const FLYER_SKILL_Z_INDEX_MIN = 4;         // skill cards z_index 4–13 (front)
+export const FLYER_SKILL_Z_INDEX_MAX = 13;
+export const FLYER_PARALLAX_Z_MIN = 1;
+export const FLYER_PARALLAX_Z_MAX = 14;
+export const FLYER_PARALLAX_Z_RANGE = FLYER_PARALLAX_Z_MAX - FLYER_PARALLAX_Z_MIN;
 
 /** Z (distance from viewer) from CSS z_index. Higher z_index = closer = lower Z. */
 export function Z_from_z_index(z_index) {
-  return SCENE_PARALLAX_FAR_Z - z_index;
+  return FLYER_Z_MAX - z_index;
 }
 
 /** z_index from Z (distance). Used when we have Z and need stacking. */
 export function z_index_from_Z(Z) {
-  return SCENE_PARALLAX_FAR_Z - Z;
+  return FLYER_Z_MAX - Z;
 }
 
 // Invariant: biz z_index (1–3) < skill z_index (4–13) so skill cards render above biz cards
-if (SCENE_CARD_STACK_BIZ_MAX >= SCENE_CARD_STACK_SKILL_MIN) {
+if (FLYER_BIZCARD_Z_INDEX_MAX >= FLYER_SKILL_Z_INDEX_MIN) {
   throw new Error(`zUtils: biz z_index must be < skill z_index`);
 }
 // Selected clone scene Z: large positive = “closest to viewer” (same range as cards, 1–14). Clones are not subject to motion parallax; they keep the same transform as at creation.
 // Invariant: all scene clones (biz-card and skill-card) use this as their data-sceneZ.
-export const SELECTED_CLONE_SCENE_Z = PARALLAX_SCENE_Z_MAX; // 14
+export const FLYER_SELECTED_CLONE_Z = FLYER_PARALLAX_Z_MAX; // 14
+export const SELECTED_CLONE_SCENE_Z = FLYER_SELECTED_CLONE_Z;
 
 export const SUM_Z = ALL_CARDS_Z_INDEX_MAX + ALL_CARDS_Z_MIN;
 export const Z_SUM = ALL_CARDS_Z_MAX + ALL_CARDS_Z_INDEX_MIN;
