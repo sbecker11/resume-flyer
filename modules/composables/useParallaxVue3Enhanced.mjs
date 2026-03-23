@@ -51,7 +51,13 @@ export function useParallaxEnhanced() {
   const isInitialized = ref(false)
   const lastRenderTime = ref(0)
   const renderCount = ref(0)
-  const previousDisplacements = ref({ dh: null, dv: null, bullsEyeCenterXSceneView: null })
+  const previousDisplacements = ref({
+    dh: null,
+    dv: null,
+    bullsEyeCenterXSceneView: null,
+    /** Cards that receive parallax (valid data-sceneZ, not clone/hasClone). When this count changes, re-apply even if dh/dv unchanged. */
+    applicableCardCount: null
+  })
   const previousSceneViewTopLeft = ref({ left: null, top: null })
   let rafScheduled = false
 
@@ -150,16 +156,31 @@ export function useParallaxEnhanced() {
 
     // DEBUG tracking disabled for performance (was causing sluggish hover motion)
 
+    const bizCardDivs = Array.from(plane.querySelectorAll('.biz-card-div'))
+    const skillCardDivs = Array.from(plane.querySelectorAll('.skill-card-div'))
+
+    let applicableCardCount = 0
+    for (const div of bizCardDivs) {
+      if (hasClone(div) || isClone(div)) continue
+      const sceneZ = parseFloat(div.getAttribute('data-sceneZ'))
+      if (!isNaN(sceneZ) && sceneZ >= PARALLAX_Z_MIN && sceneZ <= PARALLAX_Z_MAX) applicableCardCount++
+    }
+    for (const div of skillCardDivs) {
+      if (hasClone(div) || isClone(div)) continue
+      const sceneZ = parseFloat(div.getAttribute('data-sceneZ'))
+      if (!isNaN(sceneZ) && sceneZ >= PARALLAX_Z_MIN && sceneZ <= PARALLAX_Z_MAX) applicableCardCount++
+    }
+
     const prev = previousDisplacements.value
-    const shouldSkipUpdate = prev.dh === dh && prev.dv === dv && prev.bullsEyeCenterXSceneView === bullsEyeCenterXSceneView
+    const shouldSkipUpdate =
+      prev.dh === dh &&
+      prev.dv === dv &&
+      prev.bullsEyeCenterXSceneView === bullsEyeCenterXSceneView &&
+      prev.applicableCardCount === applicableCardCount
 
     if (shouldSkipUpdate) {
       return
     }
-
-    // Always query from the plane so every card gets the transform (no stale registry cache).
-    const bizCardDivs = Array.from(plane.querySelectorAll('.biz-card-div'))
-    const skillCardDivs = Array.from(plane.querySelectorAll('.skill-card-div'))
 
     for (const div of bizCardDivs) {
       applyParallaxToCardDiv(div, bullsEyeCenterXSceneView, dh, dv)
@@ -167,7 +188,7 @@ export function useParallaxEnhanced() {
     for (const div of skillCardDivs) {
       applyParallaxToCardDiv(div, bullsEyeCenterXSceneView, dh, dv)
     }
-    previousDisplacements.value = { dh, dv, bullsEyeCenterXSceneView, focal }
+    previousDisplacements.value = { dh, dv, bullsEyeCenterXSceneView, focal, applicableCardCount }
   }
 
   // Enhanced render function: apply parallax transforms directly
@@ -197,12 +218,20 @@ export function useParallaxEnhanced() {
     renderAllCDivs()
   }
 
+  /** Cards gain data-sceneZ after scene-plane exists; double rAF runs after layout so parallax isn’t skipped as “unchanged” with 0 applicable cards. */
+  const handleScenePlaneReady = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => renderAllCDivs())
+    })
+  }
+
   // Setup event listeners
   const setupEventListeners = () => {
     window.addEventListener('focal-point-changed', handleFocalPointChanged)
     window.addEventListener('bulls-eye-moved', handleBullsEyeMoved)
     window.addEventListener('scene-width-changed', renderAllCDivs)
     window.addEventListener('resize', renderAllCDivs)
+    window.addEventListener('scene-plane-ready', handleScenePlaneReady)
   }
 
   const removeEventListeners = () => {
@@ -210,6 +239,7 @@ export function useParallaxEnhanced() {
     window.removeEventListener('bulls-eye-moved', handleBullsEyeMoved)
     window.removeEventListener('scene-width-changed', renderAllCDivs)
     window.removeEventListener('resize', renderAllCDivs)
+    window.removeEventListener('scene-plane-ready', handleScenePlaneReady)
   }
   
   // Service availability checks

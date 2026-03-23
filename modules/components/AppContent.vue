@@ -714,10 +714,14 @@ onMounted(async () => {
     // PHASE 7: Global event handlers (now handled by Vue 3 composables)
     console.log('[AppContent] 🎹 Keyboard navigation handled by Vue 3 composable')
     
-    // PHASE 8: Render scene view on initial load / hard refresh (parallax and layout)
+    // PHASE 8: Render scene view on initial load / hard refresh (parallax and layout).
+    // Second rAF: biz-cards often receive data-sceneZ after first frame; without it parallax can skip as “no change” until focal moves.
     requestAnimationFrame(() => {
       renderAllCDivs()
-      console.log('[AppContent] 🖼️ Scene view render triggered (initial load / refresh)')
+      requestAnimationFrame(() => {
+        renderAllCDivs()
+        console.log('[AppContent] 🖼️ Scene view render triggered (initial load / refresh)')
+      })
     })
 
     window.addEventListener('rendering-changed', handleRenderingChanged)
