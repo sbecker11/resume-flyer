@@ -13,12 +13,11 @@
 - **resume-selector** — Choose which resume to view when you have multiple resumes; switch between them from the header dropdown.
 - **resume-management** — Manage parsed resumes from the UI: list, select, delete, and open the upload flow.
 - **color-palette-selection** — Pick the active color theme from the palette dropdown in the resume header; applies to business/skill cards, timeline, badges, and related UI.
-- **palette-image-source-preview** — When the current palette has a source image, use the 🖼️ control next to the palette dropdown to open a modal and preview that image full size.
-- **resume-details-editor** — Modal to edit resume-level and job-level data across tabs: **Meta**, **Other sections**, **Resume jobs**, and **Job skills**.
+- **palette-image-source-preview** — When the current palette has a source image, use the 🖼️ control next to the palette dropdown to open a modal and preview the source image that was sampled to create the color swatches.
+- **resume-details-editor** — Modal to edit resume-level and job-level data across tabs: **Meta**, **Other sections**, **Education**, **Resume jobs**, and **Job skills**.
 - **job-details-editor** — Edit each job’s employer, title, dates, and description from the resume-details-editor Jobs tab.
 - **job-skills-selector** — Assign or change skills per job (JobSkillEditor); skills are merged with parser-extracted job-skills and shown on the resume list.
 - **resume-print** — Build a printable HTML resume from the current in-memory data and open it in a new tab (Print button in the resume header).
-- **static-hosting patch export** — On static hosting (no backend API), save actions from the details editor download JSON patch files for manual application.
 
 #### Additional features
 
@@ -28,6 +27,7 @@ Additional capabilities you may use alongside the items above include:
 - **header lifecycle controls** — The resume selector menu includes quick actions for **Upload Resume...** and **Manage Resumes...**.
 - **details/print gating** — **Details** and **Print** appear only when the current resume is not `default`, preventing edits/print actions against static fallback content.
 - **print fallback path** — Print first builds HTML from live in-memory data; if that fails, it falls back to opening `/api/resumes/:id/html`.
+- **static-hosting patch export** — On static hosting (no backend API), save actions from the details editor download JSON patch files for manual application.
 - **focal point modalities** — Tri-state focal point control: **locked** (pinned to the bulls-eye), **following** (tracks aim), and **dragging** (manual placement); drives parallax and how the scene responds to pointer position.
 - **3D depth rendering** — Tune **blur**, **saturation**, and **brightness** at maximum scene depth (far Z), plus parallax scale near/far, from **3D Settings** in the color-palette menu—so cards read clearly while keeping depth cues.
 - **attention highlighting** — Hover and selection state coordinates the resume list, timeline, badges, and 3D cards so the item in focus is easy to spot across views.
