@@ -10,7 +10,7 @@ describe('core/hasServer', () => {
 
   it('returns true when origin is not github.io', async () => {
     Object.defineProperty(window, 'location', {
-      value: { origin: 'http://127.0.0.1:5173' },
+      value: { origin: 'http://127.0.0.1:5173', host: '127.0.0.1:5173' },
       configurable: true,
       writable: true,
     });
@@ -21,7 +21,17 @@ describe('core/hasServer', () => {
 
   it('returns false when origin is github.io', async () => {
     Object.defineProperty(window, 'location', {
-      value: { origin: 'https://user.github.io' },
+      value: { origin: 'https://user.github.io', host: 'user.github.io' },
+      configurable: true,
+      writable: true,
+    });
+    const { hasServer } = await import('./hasServer.mjs');
+    expect(hasServer()).toBe(false);
+  });
+
+  it('returns false when host is github.io but origin is missing', async () => {
+    Object.defineProperty(window, 'location', {
+      value: { host: 'user.github.io' },
       configurable: true,
       writable: true,
     });
