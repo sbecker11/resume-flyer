@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
   <Transition name="modal">
-    <div v-if="isOpen" class="modal-overlay" @click.self="handleClose">
+    <div v-if="isOpen" class="modal-overlay">
       <div class="modal-container">
         <!-- Header -->
         <div class="modal-header">
@@ -28,16 +28,29 @@
                 class="file-input"
                 id="resume-file-input"
               />
-              <label for="resume-file-input" class="file-label">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-                <span class="file-label-text">
-                  {{ selectedFile ? selectedFile.name : 'Click to select .docx or .pdf file' }}
-                </span>
-              </label>
+
+              <!-- When uploading, show only the active source + Cancel -->
+              <div v-if="uploading" class="active-upload-row">
+                <div class="active-upload-label">
+                  <span v-if="selectedFile">{{ selectedFile.name }}</span>
+                  <span v-else>{{ resumeUrl }}</span>
+                </div>
+                <button @click="handleClose" class="cancel-button active-cancel">Cancel</button>
+              </div>
+
+              <div v-else>
+                <div class="upload-header">
+                  <label for="resume-file-input" class="file-label">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span class="file-label-text">
+                      {{ selectedFile ? selectedFile.name : 'Click to select .docx or .pdf file' }}
+                    </span>
+                  </label>
+                </div>
 
               <!-- OR Divider -->
               <div class="divider">
@@ -55,34 +68,37 @@
                 />
                 <small class="url-hint">Paste a direct link to a .docx or .pdf file</small>
               </div>
+              </div>
 
               <!-- Upload Controls (always visible) -->
-              <div class="upload-controls">
+              <div v-if="!uploading" class="upload-controls">
                 <input
-                  v-if="selectedFile || resumeUrl"
+                  v-if="!uploading && (selectedFile || resumeUrl)"
                   v-model="displayName"
                   type="text"
                   placeholder="Display name (optional)"
                   class="display-name-input"
                 />
                 <div class="upload-actions">
-                  <div v-if="uploading" class="spinner"></div>
-                  <button @click="handleClose" class="cancel-button">Cancel</button>
                   <button
+                    v-if="!uploading"
                     @click="handleUpload"
-                    :disabled="uploading || (!selectedFile && !resumeUrl)"
                     class="upload-button"
                   >
-                    {{ uploading ? 'Processing...' : (selectedFile ? 'Upload & Parse' : 'Fetch & Parse') }}
+                    {{ selectedFile ? 'Upload & Parse' : 'Fetch & Parse' }}
                   </button>
                 </div>
               </div>
 
-              <div v-if="uploading" class="progress-container">
-                <div class="progress-bar">
-                  <div class="progress-fill" :style="{ width: `${uploadProgress}%` }"></div>
-                </div>
-                <p class="progress-text">{{ uploadProgress }}% - {{ uploadStatus }}</p>
+              <div v-if="uploading || parserOutput" class="parser-output-container">
+                <textarea
+                  class="parser-output"
+                  v-model="parserOutput"
+                  readonly
+                  rows="12"
+                  spellcheck="false"
+                  ref="parserTextareaRef"
+                ></textarea>
               </div>
 
               <div v-if="uploadError" class="error-message">
@@ -103,8 +119,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { uploadResume } from '../api/resumeManagerApi.mjs'
+import { nextTick, ref } from 'vue'
+import { uploadResumeWithParserStream } from '../api/resumeManagerApi.mjs'
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true }
@@ -120,7 +136,10 @@ const uploading = ref(false)
 const uploadProgress = ref(0)
 const uploadStatus = ref('')
 const uploadError = ref(null)
+const parserOutput = ref('')
 const fileInput = ref(null)
+const parserTextareaRef = ref(null)
+let uploadAbortController = null
 
 async function handleFileSelect(event) {
   const file = event.target.files[0]
@@ -171,20 +190,25 @@ async function handleUpload() {
   uploadProgress.value = 0
   uploadStatus.value = selectedFile.value ? 'Uploading file...' : 'Fetching resume...'
   uploadError.value = null
+  parserOutput.value = ''
 
   try {
-    const result = await uploadResume(
-      selectedFile.value || resumeUrl.value, // Pass file or URL
-      displayName.value || null,
-      (progress) => {
-        uploadProgress.value = progress
-        if (progress < 100) {
-          uploadStatus.value = selectedFile.value ? 'Uploading file...' : 'Downloading resume...'
-        } else {
-          uploadStatus.value = 'Processing resume...'
-        }
+    const controller = new AbortController()
+    uploadAbortController = controller
+
+    const result = await uploadResumeWithParserStream(selectedFile.value || resumeUrl.value, displayName.value || null, {
+      signal: controller.signal,
+      onStatus: (status) => {
+        uploadStatus.value = status
+      },
+      onOutput: (line) => {
+        parserOutput.value += `${line}\n`
+        nextTick(() => {
+          const el = parserTextareaRef.value
+          if (el) el.scrollTop = el.scrollHeight
+        })
       }
-    )
+    })
 
     uploadStatus.value = 'Resume parsed successfully!'
     uploadProgress.value = 100
@@ -207,6 +231,7 @@ async function handleUpload() {
     }, 2000)
 
   } catch (error) {
+    if (error?.name === 'AbortError') return
     uploadError.value = error.message
     uploadStatus.value = ''
     console.error('Upload failed:', error)
@@ -216,17 +241,25 @@ async function handleUpload() {
 }
 
 function handleResumeSelect(resume) {
-  emit('resume-selected', resume.id)
+  const id = resume?.resumeId || resume?.id
+  if (!id) return
+  emit('resume-selected', id)
 }
 
 function handleClose() {
   // Reset upload state when closing
+  if (uploadAbortController) {
+    try { uploadAbortController.abort() } catch {}
+  }
+  uploadAbortController = null
   selectedFile.value = null
   resumeUrl.value = ''
   displayName.value = ''
   uploadError.value = null
+  parserOutput.value = ''
   uploadProgress.value = 0
   uploadStatus.value = ''
+  uploading.value = false
   if (fileInput.value) {
     fileInput.value.value = ''
   }
@@ -260,6 +293,7 @@ function handleClose() {
   max-height: 85vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   font-family: sans-serif; /* Match scene/resume view fonts */
 }
@@ -269,7 +303,7 @@ function handleClose() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 32px;
+  padding: 16px 24px;
   border-bottom: 1px solid #333;
 }
 
@@ -295,14 +329,14 @@ function handleClose() {
 
 /* Content */
 .modal-content {
-  padding: 32px;
-  overflow-y: auto;
+  padding: 22px;
+  overflow-y: hidden; /* avoid page scrolling; textarea handles its own scrolling */
   flex: 1;
 }
 
 /* Sections */
 section {
-  margin-bottom: 32px;
+  margin-bottom: 16px;
 }
 
 section:last-child {
@@ -321,7 +355,7 @@ section h3 {
   background: #2a2a2a;
   border: 2px dashed #444;
   border-radius: 8px;
-  padding: 32px;
+  padding: 20px;
   text-align: center;
   transition: border-color 0.2s;
 }
@@ -349,6 +383,64 @@ section h3 {
   transition: background 0.2s;
 }
 
+.upload-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.upload-header .file-label {
+  width: auto;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 16px 14px;
+}
+
+.upload-header .file-label svg {
+  flex-shrink: 0;
+}
+
+.header-cancel {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  align-self: center;
+}
+
+.active-upload-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 14px;
+  background: #1f2937;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.active-upload-label {
+  flex: 1;
+  min-width: 0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-cancel {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
 .file-label:hover {
   background: #1d4ed8;
   color: #fff;
@@ -366,7 +458,7 @@ section h3 {
 .divider {
   display: flex;
   align-items: center;
-  margin: 24px 0;
+  margin: 16px 0;
   color: #666;
 }
 
@@ -391,13 +483,13 @@ section h3 {
   gap: 6px;
   background: #2563eb;
   border-radius: 6px;
-  padding: 20px 16px;
+  padding: 16px 14px;
   box-sizing: border-box;
 }
 
 .url-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 14px;
   background: #1e1e2e;
   border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 6px;
@@ -422,7 +514,7 @@ section h3 {
 }
 
 .upload-controls {
-  margin-top: 20px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -432,6 +524,7 @@ section h3 {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .cancel-button {
@@ -486,7 +579,7 @@ section h3 {
 }
 
 .progress-container {
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 .progress-bar {
@@ -508,6 +601,28 @@ section h3 {
   color: #999;
   font-size: 13px;
   margin: 0;
+}
+
+.parser-output-container {
+  margin-top: 8px;
+}
+
+.parser-output {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #ddd;
+  background: #121212;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 12px;
+  resize: none; /* Do not allow manual resize */
+  overflow-y: auto;
+  overflow-x: hidden;
+  line-height: 1.1;
+  min-height: 13.5em; /* ~12 lines */
+  max-height: 320px;
 }
 
 /* Library Section */
@@ -545,6 +660,7 @@ section h3 {
   width: 22px;
   height: 22px;
   border-width: 2px;
+  align-self: center;
 }
 
 @keyframes spin {

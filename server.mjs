@@ -1,5 +1,6 @@
 import express from 'express';
 import fs from 'fs/promises'; // Use promises for async/await
+import fsSync from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
@@ -11,6 +12,7 @@ import fetch from 'node-fetch';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
+import { reportError } from './modules/utils/errorReporting.mjs';
 import {
     refreshPaletteCatalogCache,
     getCachedPaletteCatalogBundle,
@@ -19,7 +21,10 @@ import {
     primePaletteCatalogCacheFromBundle,
 } from './modules/utils/paletteCatalogServerCache.mjs';
 import { resolvePaletteCatalogS3UrlFromRecord } from './modules/utils/paletteCatalogS3Url.mjs';
-import { DEFAULT_RESUME_PARSER_PYTHON_MODULE } from './modules/config/defaultResumeParserModule.mjs';
+import {
+    RESUME_PARSER_PYTHON_MODULE_UNSET_ENV,
+    RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV,
+} from './modules/config/defaultResumeParserModule.mjs';
 // Load .env from project root (see docs/REPLICATE-PORTS-CONFIG.md)
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
@@ -31,13 +36,73 @@ const CSS_FILE_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'css', 'palet
 const STATE_FILE_PATH = path.resolve(PROJECT_ROOT, 'app_state.json');
 const STATE_DEFAULT_PATH = path.resolve(PROJECT_ROOT, 'public', 'app_state.default.json');
 /** Overridable via process.env.PARSED_RESUMES_DIR for integration tests */
-const PARSED_RESUMES_DIR = process.env.PARSED_RESUMES_DIR || path.resolve(PROJECT_ROOT, 'parsed_resumes');
+const PARSED_RESUMES_DIR = process.env.PARSED_RESUMES_DIR
+    ? (path.isAbsolute(process.env.PARSED_RESUMES_DIR)
+        ? process.env.PARSED_RESUMES_DIR
+        : path.resolve(PROJECT_ROOT, process.env.PARSED_RESUMES_DIR))
+    : path.resolve(PROJECT_ROOT, 'parsed_resumes');
 const SYNC_LOGS_DIR = path.resolve(PROJECT_ROOT, 'sync-logs');
 const SYNC_LOGS_INDEX_FILE = path.resolve(SYNC_LOGS_DIR, 'index.json');
 const EVENT_DATA_DIR = path.resolve(PROJECT_ROOT, 'event-data');
 const ANALYSIS_REPORTS_DIR = path.resolve(PROJECT_ROOT, 'analysis-reports');
 
 const app = express();
+
+/**
+ * Active resume-parser child processes (explicitly terminated on Ctrl-C / shutdown).
+ * Only long-running resume parsing spawns are tracked.
+ */
+const ACTIVE_RESUME_PARSER_CHILDREN = new Set();
+
+function trackResumeParserChild(child, label = 'resume-parser') {
+    if (!child) return;
+    ACTIVE_RESUME_PARSER_CHILDREN.add(child);
+
+    const untrack = () => {
+        try { ACTIVE_RESUME_PARSER_CHILDREN.delete(child); } catch { /* ignore */ }
+    };
+    child.once('exit', untrack);
+    child.once('close', untrack);
+
+    try {
+        console.log(`[${label}] Spawned pid=${child.pid}`);
+    } catch {
+        /* ignore */
+    }
+}
+
+function killActiveResumeParserChildren(signal = 'SIGTERM') {
+    const children = Array.from(ACTIVE_RESUME_PARSER_CHILDREN);
+    if (!children.length) return;
+
+    console.log(`Remedy: Killing ${children.length} active resume-parser process(es) with ${signal}`);
+
+    for (const child of children) {
+        try {
+            if (!child.killed) child.kill(signal);
+        } catch (e) {
+            reportError(e, '[Shutdown] Failed to kill resume-parser child process');
+        }
+    }
+}
+
+// Ensure Ctrl-C (SIGINT) kills active parser processes.
+process.on('SIGINT', () => {
+    killActiveResumeParserChildren('SIGTERM');
+    setTimeout(() => {
+        killActiveResumeParserChildren('SIGKILL');
+        process.exit(0);
+    }, 800);
+});
+
+// Ensure external stop/kill (SIGTERM) kills active parser processes.
+process.on('SIGTERM', () => {
+    killActiveResumeParserChildren('SIGTERM');
+    setTimeout(() => {
+        killActiveResumeParserChildren('SIGKILL');
+        process.exit(0);
+    }, 800);
+});
 
 // --- Middleware ---
 // Enable CORS for all origins (adjust for production if needed)
@@ -797,8 +862,17 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
         }
 
         // Invoke resume-parser package (pip install -r requirements.txt). Module override via RESUME_PARSER_MODULE.
-        const parserModule = process.env.RESUME_PARSER_MODULE || 'resume_parser.resume_to_flyer';
-        const pythonCommand = 'python3';
+        const parserModule = process.env.RESUME_PARSER_MODULE || RESUME_PARSER_PYTHON_MODULE_UNSET_ENV;
+        const resumeParserProjectPath = process.env.RESUME_PARSER_PROJECT_PATH
+            ? path.resolve(PROJECT_ROOT, process.env.RESUME_PARSER_PROJECT_PATH)
+            : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
+        const defaultResumeParserPythonBin = path.join(resumeParserProjectPath, 'venv', 'bin', 'python3');
+        const pythonBinCandidates = [
+            defaultResumeParserPythonBin,
+            'python3',
+            'python3.11',
+            'python',
+        ].filter((value, idx, arr) => Boolean(value) && arr.indexOf(value) === idx);
         const cleanEnv = {};
         for (const [key, value] of Object.entries(process.env)) {
             if (!key.includes('API')) {
@@ -806,44 +880,83 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
             }
         }
 
-        console.log(`   Using parser: python -m ${parserModule}`);
+        async function runParserWithPythonBin(pythonBin) {
+            console.log(`   Using parser: ${pythonBin} -m ${parserModule}`);
 
-        const pythonProcess = spawn(pythonCommand, [
-            '-m',
-            parserModule,
-            targetPath,
-            '-o',
-            outputDir
-        ], {
-            env: cleanEnv,
-        });
+            const commandHeader = [
+                '=== resume-parser ===',
+                `Command: ${pythonBin} -m ${parserModule} "${targetPath}" -o "${outputDir}"`,
+                `Cwd: ${resumeParserProjectPath}`,
+                `Input: ${targetPath}`,
+                `Output: ${outputDir}`,
+                '-----------------------',
+            ].join('\n');
+            const pythonProcess = spawn(pythonBin, [
+                '-u',
+                '-m',
+                parserModule,
+                targetPath,
+                '-o',
+                outputDir
+            ], {
+                env: cleanEnv,
+                cwd: resumeParserProjectPath,
+            });
+            trackResumeParserChild(pythonProcess, 'resume-parser');
 
-        let stdout = '';
-        let stderr = '';
+            let stdout = '';
+            let stderr = '';
+            pythonProcess.stdout.on('data', (data) => {
+                const t = data.toString();
+                stdout += t;
+                console.log(`[Parser stdout]: ${t.trim()}`);
+            });
+            pythonProcess.stderr.on('data', (data) => {
+                stderr += data.toString();
+                console.error(`[Parser stderr]: ${data.toString().trim()}`);
+            });
 
-        pythonProcess.stdout.on('data', (data) => {
-            stdout += data.toString();
-            console.log(`[Parser stdout]: ${data.toString().trim()}`);
-        });
+            await new Promise((resolve, reject) => {
+                pythonProcess.on('close', (code) => {
+                    const combinedOutput = `${commandHeader}\n${stdout}${stderr}`;
+                    if (code === 0) {
+                        resolve(combinedOutput);
+                        return;
+                    }
+                    const err = new Error(`Parser exited with code ${code}. Error: ${stderr}`);
+                    err.parserOutput = combinedOutput;
+                    reject(err);
+                });
 
-        pythonProcess.stderr.on('data', (data) => {
-            stderr += data.toString();
-            console.error(`[Parser stderr]: ${data.toString().trim()}`);
-        });
+                pythonProcess.on('error', (error) => {
+                    reject(new Error(`Failed to run parser with ${pythonBin}: ${error.message}`));
+                });
+            });
+        }
 
-        await new Promise((resolve, reject) => {
-            pythonProcess.on('close', (code) => {
-                if (code === 0) {
-                    resolve();
-                } else {
-                    reject(new Error(`Parser exited with code ${code}. Error: ${stderr}`));
+        let parserRunError = null;
+        let parserOutput = '';
+        for (const pythonBin of pythonBinCandidates) {
+            try {
+                parserOutput = await runParserWithPythonBin(pythonBin);
+                parserRunError = null;
+                break;
+            } catch (error) {
+                parserRunError = error;
+                parserOutput = error?.parserOutput || parserOutput;
+                const details = String(error?.message || error);
+                const isModuleNotFound = details.includes('ModuleNotFoundError') && details.includes('resume_parser');
+                if (isModuleNotFound) {
+                    console.error(`[ResumeUpload] Parser module missing with ${pythonBin}:`, details);
+                    console.log(`Remedy: retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
+                    continue;
                 }
-            });
-
-            pythonProcess.on('error', (error) => {
-                reject(new Error(`Failed to run parser: ${error.message}`));
-            });
-        });
+                throw error;
+            }
+        }
+        if (parserRunError) {
+            throw parserRunError;
+        }
 
         // Generate meta.json
         const metadata = {
@@ -875,11 +988,12 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
             displayName: displayName,
             jobCount: jobs.length,
             skillCount: Object.keys(skills).length,
-            metadata: metadata
+            metadata: metadata,
+            parserOutput
         });
 
     } catch (error) {
-        console.error('❌ Resume upload failed:', error);
+        reportError(error, '[ResumeUpload] Failed to process resume upload');
 
         // Clean up uploaded file if it exists
         if (req.file && req.file.path) {
@@ -892,8 +1006,200 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
 
         res.status(500).json({
             error: 'Failed to process resume upload',
-            details: error.message
+            details: error.message,
+            parserOutput: error?.parserOutput || ''
         });
+    }
+});
+
+// POST /api/resumes/upload-stream: stream resume-parser stdout/stderr line-by-line to client.
+app.post('/api/resumes/upload-stream', upload.single('resume'), async (req, res) => {
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+    let child = null;
+    let outputFilePath = null;
+    let tailTimer = null;
+    let lastLen = 0;
+    let remainder = '';
+
+    const sendEvent = (eventType, payload) => {
+        if (res.writableEnded) return;
+        const safe = String(payload).replace(/\r/g, '');
+        res.write(`event: ${eventType}\n`);
+        res.write(`data: ${safe}\n\n`);
+    };
+
+    const sendOutputLine = (line) => {
+        // Ensure no embedded newlines so SSE doesn't break.
+        const cleaned = String(line).replace(/\r?\n/g, '');
+        sendEvent('output', cleaned);
+    };
+
+    const sendStatus = (status) => sendEvent('status', status);
+
+    const tailOnce = async (flushRemainder = false) => {
+        if (!outputFilePath) return;
+        const text = await fs.readFile(outputFilePath, 'utf-8').catch(() => '');
+        if (text.length <= lastLen) return;
+        const newText = text.slice(lastLen);
+        lastLen = text.length;
+
+        remainder += newText;
+        const parts = remainder.split(/\r?\n/);
+        remainder = parts.pop() || '';
+
+        for (const line of parts) {
+            if (line) sendOutputLine(line);
+        }
+        if (flushRemainder && remainder) {
+            sendOutputLine(remainder);
+            remainder = '';
+        }
+    };
+
+    req.on('close', () => {
+        try {
+            if (child) child.kill('SIGTERM');
+        } catch {
+            /* ignore */
+        }
+    });
+
+    try {
+        sendStatus('Preparing resume upload...');
+
+        let uploadedFile = req.file;
+        let originalFilename = null;
+        let fileSize = 0;
+        let tempFilePath = null;
+
+        // Check if URL is provided instead of file
+        if (!uploadedFile && req.body.resumeUrl) {
+            const resumeUrl = req.body.resumeUrl;
+            sendStatus('Downloading resume...');
+
+            const response = await fetch(resumeUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            // Extract filename from Content-Disposition header when possible
+            const contentDisposition = response.headers.get('content-disposition');
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch) originalFilename = filenameMatch[1].replace(/['"]/g, '');
+            }
+            if (!originalFilename) {
+                originalFilename = path.basename(new URL(resumeUrl).pathname) || 'resume.pdf';
+            }
+
+            originalFilename = sanitizeFilename(originalFilename);
+            if (!originalFilename.endsWith('.docx') && !originalFilename.endsWith('.pdf')) {
+                const contentType = response.headers.get('content-type');
+                originalFilename += contentType?.includes('pdf') ? '.pdf' : '.docx';
+            }
+
+            const buffer = Buffer.from(await response.arrayBuffer());
+            fileSize = buffer.length;
+            tempFilePath = path.join(PARSED_RESUMES_DIR, `temp-${Date.now()}-${originalFilename}`);
+            await fs.writeFile(tempFilePath, buffer);
+
+            uploadedFile = { originalname: originalFilename, path: tempFilePath, size: fileSize };
+        }
+
+        if (!uploadedFile) {
+            throw new Error('No file uploaded or URL provided');
+        }
+
+        const displayName = req.body.displayName || path.basename(uploadedFile.originalname, path.extname(uploadedFile.originalname));
+        const resumeId = await generateUniqueResumeId(displayName);
+        const outputDir = path.join(PARSED_RESUMES_DIR, resumeId);
+        await fs.mkdir(outputDir, { recursive: true });
+
+        sendStatus(`Staging resume: ${uploadedFile.originalname}`);
+
+        // Move uploaded file into outputDir
+        const targetPath = path.join(outputDir, sanitizeFilename(uploadedFile.originalname));
+        await fs.rename(uploadedFile.path, targetPath);
+
+        // Invoke resume-parser (stream stdout/stderr to file)
+        const parserModule = process.env.RESUME_PARSER_MODULE || RESUME_PARSER_PYTHON_MODULE_UNSET_ENV;
+        const resumeParserProjectPath = process.env.RESUME_PARSER_PROJECT_PATH
+            ? path.resolve(PROJECT_ROOT, process.env.RESUME_PARSER_PROJECT_PATH)
+            : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
+        const pythonBin = path.join(resumeParserProjectPath, 'venv', 'bin', 'python3');
+
+        const cleanEnv = {};
+        for (const [key, value] of Object.entries(process.env)) {
+            if (!key.includes('API')) cleanEnv[key] = value;
+        }
+
+        const commandHeader = [
+            '=== resume-parser ===',
+            `Command: ${pythonBin} -m ${parserModule} "${targetPath}" -o "${outputDir}"`,
+            `Cwd: ${resumeParserProjectPath}`,
+            `Input: ${targetPath}`,
+            `Output: ${outputDir}`,
+            '-----------------------',
+        ].join('\n');
+
+        outputFilePath = path.join(outputDir, 'parser-output.log');
+        const outStream = fsSync.createWriteStream(outputFilePath, { flags: 'w' });
+        outStream.write(commandHeader + '\n');
+
+        sendStatus('Processing resume...');
+
+        child = spawn(pythonBin, ['-u', '-m', parserModule, targetPath, '-o', outputDir], {
+            env: cleanEnv,
+            cwd: resumeParserProjectPath,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        trackResumeParserChild(child, 'resume-parser-stream');
+
+        // Write stdout/stderr to the same file (combined)
+        child.stdout.pipe(outStream);
+        child.stderr.pipe(outStream);
+
+        tailTimer = setInterval(() => {
+            tailOnce(false).catch(() => {});
+        }, 160);
+
+        await new Promise((resolve, reject) => {
+            child.on('close', (code) => {
+                resolve(code);
+            });
+            child.on('error', reject);
+        });
+
+        clearInterval(tailTimer);
+        await tailOnce(true);
+        outStream.end();
+
+        // If parser wrote no json, treat as failure
+        const jobsPath = path.join(outputDir, 'jobs.json');
+        const skillsPath = path.join(outputDir, 'skills.json');
+        const categoriesPath = path.join(outputDir, 'categories.json');
+        const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
+        const metadata = { id: resumeId, displayName, createdAt: new Date().toISOString() };
+        sendEvent('done', JSON.stringify({
+            success: true,
+            resumeId,
+            displayName,
+            jobCount: jobs.length,
+            skillCount: Object.keys(skills).length,
+            metadata,
+        }));
+        res.end();
+    } catch (e) {
+        try { if (tailTimer) clearInterval(tailTimer); } catch {}
+        try { await tailOnce(true); } catch {}
+        sendEvent('error', JSON.stringify({ message: e instanceof Error ? e.message : String(e) }));
+        res.end();
     }
 });
 
@@ -976,7 +1282,7 @@ function paletteFilenamesFromCachedBundle(bundle) {
     return jsonFiles;
 }
 
-/** Log once: fallback runs on every palette API hit when local dir is absent — avoid spamming the terminal. */
+/** Log once: serve from in-memory catalog when the local palette dir is absent — avoid spamming the terminal. */
 let loggedMissingLocalPaletteDirNotice = false;
 function logMissingLocalPaletteDirOnce() {
     if (loggedMissingLocalPaletteDirNotice) return;
@@ -2649,24 +2955,80 @@ const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve
 if (isMain) {
     (async () => {
         try {
-            if (resolvePaletteCatalogS3UrlFromRecord(process.env)) {
-                await refreshPaletteCatalogCache();
-            } else {
-                console.warn(
-                    '[palette-catalog] Startup: S3 palette catalog URL not set — priming cache from static_content/colorPalettes (local dev)'
+            // Fail-fast validation: resume-parser runtime must be present before we do any warmup.
+            const resumeParserProjectPath = process.env.RESUME_PARSER_PROJECT_PATH
+                ? path.resolve(PROJECT_ROOT, process.env.RESUME_PARSER_PROJECT_PATH)
+                : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
+            const pythonBin = path.join(resumeParserProjectPath, 'venv', 'bin', 'python3');
+
+            // Validate parsed resumes directory early so later endpoints don't fail unexpectedly.
+            await fs.mkdir(PARSED_RESUMES_DIR, { recursive: true });
+
+            await fs.access(resumeParserProjectPath);
+            await fs.access(pythonBin);
+
+            // Validate the module can be imported from that interpreter.
+            await new Promise((resolve, reject) => {
+                const child = spawn(pythonBin, ['-c', 'import resume_parser'], {
+                    stdio: ['ignore', 'pipe', 'pipe'],
+                    env: process.env,
+                    cwd: resumeParserProjectPath,
+                });
+                let stderr = '';
+                child.stderr.on('data', (d) => { stderr += d.toString(); });
+                const t = setTimeout(() => {
+                    try { child.kill('SIGTERM'); } catch {}
+                    reject(new Error('resume_parser import timed out'));
+                }, 10_000);
+                child.on('close', (code) => {
+                    clearTimeout(t);
+                    if (code === 0) resolve();
+                    else reject(new Error(`resume_parser import failed (code ${code}): ${stderr}`));
+                });
+                child.on('error', (err) => reject(err));
+            });
+
+            const s3Url = resolvePaletteCatalogS3UrlFromRecord(process.env);
+            if (!s3Url) {
+                throw new Error(
+                    'S3 palette catalog URL not configured (S3_COLOR_PALETTES_JSON_URL or S3_IMAGES_BUCKET + AWS_REGION/S3_REGION + S3_PALETTES_JSONL_KEY)'
                 );
-                const localBundle = await getPaletteCatalogBundleV2();
-                primePaletteCatalogCacheFromBundle(localBundle, 'local:static_content/colorPalettes');
+            }
+
+            // Internet timing issues: retry transient fetch failures.
+            const maxAttempts = 3;
+            const retryBaseMs = 800;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    await refreshPaletteCatalogCache();
+                    break;
+                } catch (e) {
+                    const message = e instanceof Error ? e.message : String(e);
+                    const isRetriable =
+                        /ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/i.test(message) ||
+                        /S3 catalog HTTP 5\d\d/i.test(message);
+
+                    if (!isRetriable || attempt === maxAttempts) throw e;
+
+                    reportError(
+                        e,
+                        '[palette-catalog] S3 fetch transient failure',
+                        `Retrying palette catalog fetch (attempt ${attempt + 1}/${maxAttempts}) in ${retryBaseMs * attempt}ms`
+                    );
+
+                    await new Promise((r) => setTimeout(r, retryBaseMs * attempt));
+                }
             }
             const bundle = getCachedPaletteCatalogBundle();
             console.log(
                 `[palette-catalog] Startup: catalog ready (${getLastPaletteCatalogSourceUrl()}) — ${bundle.palettes.length} palette(s)`
             );
         } catch (e) {
-            console.error(
-                '[palette-catalog] Startup: catalog warm failed — exiting (fast-fail). Fix S3/.env or local palettes under static_content/colorPalettes.'
+            reportError(
+                e,
+                '[ResumeFlyer] Startup fast-fail',
+                'Verify resume-parser project/venv and palette catalog env (S3_COLOR_PALETTES_JSON_URL or S3_* values).'
             );
-            if (e instanceof Error && e.stack) console.error(e.stack);
             process.exit(1);
         }
         startServer(START_PORT);

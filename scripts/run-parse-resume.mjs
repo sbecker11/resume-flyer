@@ -12,14 +12,22 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { DEFAULT_RESUME_PARSER_PYTHON_MODULE } from '../modules/config/defaultResumeParserModule.mjs';
+import {
+  RESUME_PARSER_PYTHON_MODULE_UNSET_ENV,
+  RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV,
+} from '../modules/config/defaultResumeParserModule.mjs';
+import { reportError } from '../modules/utils/errorReporting.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const PARSED_RESUMES_DIR = process.env.PARSED_RESUMES_DIR || path.join(PROJECT_ROOT, 'parsed_resumes');
 
 /** Python module to run (resume-parser package). Override with RESUME_PARSER_MODULE if the package uses a different entry point. */
-const PARSER_MODULE = process.env.RESUME_PARSER_MODULE || 'resume_parser.resume_to_flyer';
+const PARSER_MODULE = process.env.RESUME_PARSER_MODULE || RESUME_PARSER_PYTHON_MODULE_UNSET_ENV;
+const RESUME_PARSER_PROJECT_PATH = process.env.RESUME_PARSER_PROJECT_PATH
+  ? path.resolve(PROJECT_ROOT, process.env.RESUME_PARSER_PROJECT_PATH)
+  : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
+const RESUME_PARSER_PYTHON_BIN = path.join(RESUME_PARSER_PROJECT_PATH, 'venv', 'bin', 'python3');
 const TIMEOUT_MS = 120_000;
 
 /** Env var names that should not be inherited so the parser uses its own .env. */
@@ -56,7 +64,8 @@ Options:
 
 Environment:
   PARSED_RESUMES_DIR  Default output parent (default: ./parsed_resumes).
-  RESUME_PARSER_MODULE  Python -m module (default: resume_parser.resume_to_flyer). Install package: pip install -r requirements.txt
+  RESUME_PARSER_PROJECT_PATH  Path to resume-parser project (default: ../resume-parser).
+  RESUME_PARSER_MODULE  Python -m module (default: resume_parser.resume_to_json). Install package: pip install -r requirements.txt
 
 Example:
   npm run parse-resume -- --docx ~/Documents/resume.docx --id my-resume
@@ -141,13 +150,36 @@ async function main() {
 
   await fs.mkdir(outDir, { recursive: true });
 
-  const pythonBin = 'python3';
+  // Fail-fast: verify that the configured python can import resume_parser before parsing anything.
+  await fs.access(RESUME_PARSER_PYTHON_BIN);
+  await new Promise((resolve, reject) => {
+    const child = spawn(RESUME_PARSER_PYTHON_BIN, ['-c', 'import resume_parser'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: getParserEnv(),
+      cwd: RESUME_PARSER_PROJECT_PATH,
+    });
+    let stderr = '';
+    child.stderr.on('data', (d) => { stderr += d.toString(); });
+    const t = setTimeout(() => {
+      try { child.kill('SIGTERM'); } catch {}
+      reject(new Error('resume_parser import timed out'));
+    }, 10_000);
+    child.on('close', (code) => {
+      clearTimeout(t);
+      if (code === 0) resolve();
+      else reject(new Error(`resume_parser import failed (code ${code}): ${stderr}`));
+    });
+    child.on('error', (err) => reject(err));
+  });
+
+  const pythonBin = RESUME_PARSER_PYTHON_BIN;
   const args = ['-m', PARSER_MODULE, docx, '-o', outDir];
 
   return new Promise((resolve, reject) => {
     const child = spawn(pythonBin, args, {
       stdio: ['ignore', 'inherit', 'inherit'],
       env: getParserEnv(),
+      cwd: RESUME_PARSER_PROJECT_PATH,
     });
     const t = setTimeout(() => {
       child.kill('SIGTERM');
@@ -178,7 +210,7 @@ async function main() {
 const isMain = process.argv[1]?.includes('run-parse-resume');
 if (isMain) {
   main().catch((err) => {
-    console.error(err.message || err);
+    reportError(err, '[run-parse-resume] Parser run failed');
     process.exit(1);
   });
 }

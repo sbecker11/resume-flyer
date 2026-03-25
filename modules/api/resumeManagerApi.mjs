@@ -168,9 +168,13 @@ export async function uploadResume(fileOrUrl, displayName = null, onProgress = n
                             if (error.details) {
                                 errorMessage += `\n\nDetails: ${error.details}`;
                             }
-                            reject(new Error(errorMessage));
+                            const err = new Error(errorMessage);
+                            err.parserOutput = error?.parserOutput || '';
+                            reject(err);
                         } catch (e) {
-                            reject(new Error(`Upload failed with status ${xhr.status}`));
+                            const err = new Error(`Upload failed with status ${xhr.status}`);
+                            err.parserOutput = '';
+                            reject(err);
                         }
                     }
                 });
@@ -196,6 +200,129 @@ export async function uploadResume(fileOrUrl, displayName = null, onProgress = n
     } else {
         throw new Error('Upload is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
     }
+}
+
+/**
+ * Upload a resume and stream resume-parser stdout/stderr line-by-line over the same HTTP response.
+ * @param {File|string} fileOrUrl
+ * @param {string|null} displayName
+ * @param {{ onOutput?: (line:string)=>void, onStatus?: (status:string)=>void, signal?: AbortSignal }} [opts]
+ * @returns {Promise<Object>} Result payload from server (includes `id` for UI selection).
+ */
+export async function uploadResumeWithParserStream(fileOrUrl, displayName = null, opts = {}) {
+    if (!hasServer()) {
+        throw new Error('Upload is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
+    }
+
+    const { onOutput, onStatus, signal } = opts || {};
+
+    if (!fileOrUrl) throw new Error('No file or URL provided');
+
+    const formData = new FormData();
+    if (typeof fileOrUrl === 'string') {
+        if (!fileOrUrl.startsWith('http://') && !fileOrUrl.startsWith('https://')) {
+            throw new Error('Invalid URL: must start with http:// or https://');
+        }
+        formData.append('resumeUrl', fileOrUrl);
+    } else {
+        const isDocx = fileOrUrl.name.endsWith('.docx');
+        const isPdf = fileOrUrl.name.endsWith('.pdf');
+        if (!isDocx && !isPdf) {
+            throw new Error('Only .docx and .pdf files are supported');
+        }
+        formData.append('resume', fileOrUrl);
+    }
+    if (displayName) formData.append('displayName', displayName);
+
+    const url = basePathJoin('api/resumes/upload-stream');
+    const resp = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        signal
+    });
+
+    if (!resp.ok) {
+        const body = await resp.text().catch(() => '');
+        throw new Error(`Upload stream failed: HTTP ${resp.status} ${resp.statusText}${body ? ` — ${body}` : ''}`);
+    }
+
+    if (!resp.body) {
+        throw new Error('Upload stream has no body');
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    function dispatchEvent(eventType, dataStr) {
+        if (eventType === 'output') {
+            if (typeof onOutput === 'function') onOutput(dataStr);
+            return;
+        }
+        if (eventType === 'status') {
+            if (typeof onStatus === 'function') onStatus(dataStr);
+            return;
+        }
+        if (eventType === 'done') {
+            return { type: 'done', payload: JSON.parse(dataStr) };
+        }
+        if (eventType === 'error') {
+            return { type: 'error', payload: JSON.parse(dataStr) };
+        }
+        // ignore unknown
+        return null;
+    }
+
+    return new Promise(async (resolve, reject) => {
+        let doneResolved = false;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            // SSE events are separated by blank line: \n\n
+            let idx;
+            while ((idx = buffer.indexOf('\n\n')) !== -1) {
+                const rawEvent = buffer.slice(0, idx);
+                buffer = buffer.slice(idx + 2);
+                const lines = rawEvent.split('\n');
+
+                let eventType = 'message';
+                const dataLines = [];
+                for (const line of lines) {
+                    const trimmed = line.trimEnd();
+                    if (!trimmed) continue;
+                    if (trimmed.startsWith('event:')) {
+                        eventType = trimmed.slice('event:'.length).trim();
+                    } else if (trimmed.startsWith('data:')) {
+                        dataLines.push(trimmed.slice('data:'.length).trimStart());
+                    }
+                }
+
+                const dataStr = dataLines.join('\n');
+                const result = dispatchEvent(eventType, dataStr);
+                if (!result) continue;
+
+                if (result.type === 'done' && !doneResolved) {
+                    doneResolved = true;
+                    resolve(result.payload);
+                    try { reader.cancel(); } catch {}
+                    return;
+                }
+                if (result.type === 'error' && !doneResolved) {
+                    doneResolved = true;
+                    reject(new Error(result.payload?.message || 'Parser stream error'));
+                    try { reader.cancel(); } catch {}
+                    return;
+                }
+            }
+        }
+
+        if (!doneResolved) {
+            reject(new Error('Upload stream ended unexpectedly without done event'));
+        }
+    });
 }
 
 /**

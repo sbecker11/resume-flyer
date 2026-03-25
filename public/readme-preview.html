@@ -26,11 +26,6 @@
       margin: 0 auto;
       padding: 20px 18px 48px;
     }
-    .header {
-      margin-bottom: 14px;
-      color: var(--muted);
-      font-size: 13px;
-    }
     .doc {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -64,11 +59,48 @@
       color: #ff9f9f;
       white-space: pre-wrap;
     }
+    .doc-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    /* Match .biz-resume-div .r-div-close (ResumeContainer.vue) */
+    .doc-top-row .r-div-close {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      font-size: 18px;
+      line-height: 1;
+      color: #c00;
+      background: #fff;
+      border: 1px solid #c00;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+    .doc-top-row .r-div-close:hover {
+      color: #f00;
+      border-color: #f00;
+      background: rgba(255, 255, 255, 0.9);
+    }
+    .doc-top-row .r-div-close:focus {
+      outline: 2px solid var(--link);
+      outline-offset: 2px;
+    }
+    .doc-top-row > h1 {
+      margin: 0;
+      margin-right: auto;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="header">README preview (standalone)</div>
     <article id="doc" class="doc">Loading README…</article>
   </div>
 
@@ -83,9 +115,52 @@
       if (!response.ok) throw new Error(`Failed to load README: ${response.status}`);
       const md = await response.text();
       target.innerHTML = marked.parse(md);
+      mountCloseButtonInTopRow();
     } catch (error) {
       target.innerHTML = `<div class="error">Unable to load README preview.\n\n${String(error)}</div>`;
+      mountCloseButtonInTopRow();
     }
+
+    function closeReadmePreview() {
+      window.close();
+    }
+
+    function createCloseButton() {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'r-div-close';
+      button.id = 'readme-close-btn';
+      button.setAttribute('aria-label', 'Close README preview tab');
+      button.title = 'Closes this tab when opened from the app (About -> Open README preview)';
+      button.textContent = '×';
+      button.addEventListener('click', closeReadmePreview);
+      return button;
+    }
+
+    function mountCloseButtonInTopRow() {
+      if (!target) return;
+      const firstHeading = target.querySelector('h1');
+      const existingRow = target.querySelector('.doc-top-row');
+      if (existingRow) return;
+
+      const topRow = document.createElement('div');
+      topRow.className = 'doc-top-row';
+      const button = createCloseButton();
+
+      if (firstHeading && firstHeading.parentElement === target) {
+        target.insertBefore(topRow, firstHeading);
+        topRow.appendChild(firstHeading);
+        topRow.appendChild(button);
+        return;
+      }
+
+      target.insertBefore(topRow, target.firstChild);
+      topRow.appendChild(button);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeReadmePreview();
+    });
   </script>
 </body>
 </html>

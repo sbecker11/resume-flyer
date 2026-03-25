@@ -772,7 +772,19 @@ function onResumeSkillCardClick(event) {
 <template>
     <div id="resume-content">
         <div id="resume-content-header">
-            <p class="intro">Welcome to your resume-flyer!</p>
+            <div class="hero-row">
+                <p class="intro">
+                    resume-flyer
+                </p>
+                <button
+                    type="button"
+                    class="about-pill-btn"
+                    aria-label="Open about dialog"
+                    @click="openAboutModal"
+                >
+                    about
+                </button>
+            </div>
             <!-- Resume Selector + Print Button Row -->
             <div class="resume-selector-row">
                 <div class="resume-selector" ref="resumeSelectorRef">
@@ -1026,23 +1038,45 @@ function onResumeSkillCardClick(event) {
     background-color: var(--grey-dark);
     color: white;
     padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     flex-shrink: 0; /* Fits children */
 }
-#resume-content-header > p {
-    margin-block-start: 0.5em;
-    margin-block-end: 0.5em;
-}
 
-#resume-content-header .intro.about-trigger {
+#resume-content-header .hero-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+#resume-content-header .hero-row .intro {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+#resume-content-header .about-pill-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 2px 10px;
+    min-height: 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 400;
     cursor: pointer;
-    user-select: none;
-    text-decoration: underline;
-    text-underline-offset: 3px;
+    white-space: nowrap;
 }
-#resume-content-header .intro.about-trigger:hover {
-    opacity: 0.95;
+#resume-content-header .about-pill-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.4);
 }
-#resume-content-header .intro.about-trigger:focus {
+#resume-content-header .about-pill-btn:focus {
     outline: 2px solid rgba(255, 255, 255, 0.85);
     outline-offset: 2px;
 }
@@ -1179,7 +1213,6 @@ function onResumeSkillCardClick(event) {
 #resume-divs-controls {
     display: flex;
     gap: 5px;
-    margin-top: 10px;
     width: 100%;
     position: relative; /* Needed for z-index to apply */
     z-index: 100; /* High z-index to ensure it's on top of other elements */
@@ -1223,7 +1256,6 @@ function onResumeSkillCardClick(event) {
     display: flex;
     gap: 8px;
     align-items: center;
-    padding: 5px 0;
     width: 100%;
 }
 
@@ -1319,7 +1351,6 @@ function onResumeSkillCardClick(event) {
 #resume-divs-sorting-container {
     position: relative;
     display: flex;
-    padding: 5px 0;
     width: 100%;
 }
 
