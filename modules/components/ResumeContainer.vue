@@ -93,7 +93,6 @@ function openUploadModal() {
 
 function openManageModal() {
   closeDropdown();
-  if (!canUpload) return;
   isManageModalOpen.value = true;
 }
 
@@ -116,6 +115,7 @@ function handleResumeSelectedFromManage(resumeId) {
 
 function handleOpenUploadFromManage() {
   isManageModalOpen.value = false;
+  if (!canUpload) return;
   isUploadModalOpen.value = true;
 }
 
@@ -835,8 +835,7 @@ function onResumeSkillCardClick(event) {
                         </div>
                         <div
                             class="resume-selector-item upload-option"
-                            :class="{ disabled: !canUpload }"
-                            @click.stop="canUpload && openManageModal()"
+                            @click.stop="openManageModal()"
                         >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 20h9" />
