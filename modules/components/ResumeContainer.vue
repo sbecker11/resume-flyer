@@ -12,6 +12,7 @@ import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
+import { hasServer } from '@/modules/core/hasServer.mjs';
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -52,6 +53,7 @@ const isDropdownOpen = ref(false);
 const isUploadModalOpen = ref(false);
 const isManageModalOpen = ref(false);
 const resumeSelectorRef = ref(null);
+const canUpload = hasServer();
 
 async function fetchResumeList() {
   try {
@@ -85,11 +87,13 @@ function isCurrentResume(resumeId) {
 
 function openUploadModal() {
   closeDropdown();
+  if (!canUpload) return;
   isUploadModalOpen.value = true;
 }
 
 function openManageModal() {
   closeDropdown();
+  if (!canUpload) return;
   isManageModalOpen.value = true;
 }
 
@@ -146,10 +150,10 @@ watch(() => props.noJobsLoaded, async (val) => {
     if (existing.length > 0) {
       isManageModalOpen.value = true;
     } else {
-      openUploadModal();
+      if (canUpload) openUploadModal();
     }
   } catch {
-    openUploadModal();
+    if (canUpload) openUploadModal();
   }
 }, { immediate: true });
 
@@ -817,7 +821,11 @@ function onResumeSkillCardClick(event) {
                             </svg>
                         </div>
                         <div class="resume-selector-divider"></div>
-                        <div class="resume-selector-item upload-option" @click.stop="openUploadModal">
+                        <div
+                            class="resume-selector-item upload-option"
+                            :class="{ disabled: !canUpload }"
+                            @click.stop="canUpload && openUploadModal()"
+                        >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                 <polyline points="17 8 12 3 7 8" />
@@ -825,7 +833,11 @@ function onResumeSkillCardClick(event) {
                             </svg>
                             <span>Upload Resume…</span>
                         </div>
-                        <div class="resume-selector-item upload-option" @click.stop="openManageModal">
+                        <div
+                            class="resume-selector-item upload-option"
+                            :class="{ disabled: !canUpload }"
+                            @click.stop="canUpload && openManageModal()"
+                        >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 20h9" />
                                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
@@ -1431,6 +1443,12 @@ function onResumeSkillCardClick(event) {
     font-size: 13px;
     color: rgba(255, 255, 255, 0.85);
     transition: background 0.1s ease;
+}
+
+.resume-selector-item.disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    pointer-events: none; /* keep fully non-interactive */
 }
 
 .resume-selector-item:hover {
