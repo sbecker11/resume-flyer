@@ -35,7 +35,7 @@
               placeholder="Add a new skill…"
               @keydown.enter="addNewSkill"
             />
-            <button type="button" class="rde-btn add" :disabled="!newSkillNameTrimmed" @click="addNewSkill">
+            <button type="button" class="rde-btn add" :disabled="!canEdit || !newSkillNameTrimmed" @click="addNewSkill">
               Add
             </button>
           </div>
@@ -50,7 +50,7 @@
               <option value="" disabled>Into link</option>
               <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
-            <button type="button" class="rde-btn merge" :disabled="!canMerge" title="Replace the first skill with the second everywhere" @click="mergeSkills">
+            <button type="button" class="rde-btn merge" :disabled="!canEdit || !canMerge" title="Replace the first skill with the second everywhere" @click="mergeSkills">
               Merge
             </button>
           </div>
@@ -90,7 +90,7 @@
                     @keydown.enter="saveEditSkill"
                     @keydown.escape="cancelEditSkill"
                   />
-                  <button type="button" class="rde-btn edit-save" @click="saveEditSkill">Save</button>
+                  <button type="button" class="rde-btn edit-save" :disabled="!canEdit" @click="saveEditSkill">Save</button>
                   <button type="button" class="rde-btn edit-cancel" @click="cancelEditSkill">Cancel</button>
                 </template>
                 <template v-else>
@@ -110,7 +110,7 @@
           <button
             type="button"
             class="rde-btn save"
-            :disabled="saving"
+            :disabled="saving || !canEdit"
             @click="saveForCurrentJob"
           >
             {{ saving ? 'Saving…' : 'Save skills for this job' }}
@@ -125,6 +125,9 @@
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { updateJobSkills, renameSkill, mergeSkill } from '@/modules/api/resumeManagerApi.mjs';
+import { hasServer } from '@/modules/core/hasServer.mjs';
+
+const canEdit = hasServer();
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -271,6 +274,7 @@ function toggle(id) {
 }
 
 function addNewSkill() {
+  if (!canEdit) return
   const name = newSkillNameTrimmed.value;
   if (!name) return;
   newSkillName.value = '';
@@ -305,6 +309,7 @@ function cancelEditSkill() {
 }
 
 async function saveEditSkill() {
+  if (!canEdit) return
   const oldKey = editingSkillId.value;
   const newName = (editingSkillName.value || '').trim();
   if (!oldKey || !newName) {
@@ -344,6 +349,7 @@ async function saveEditSkill() {
 }
 
 async function mergeSkills() {
+  if (!canEdit) return
   const from = mergeFromKey.value;
   const to = mergeToKey.value;
   if (!from || !to || from === to || !props.resumeId || props.resumeId === 'default') return;
@@ -372,6 +378,7 @@ async function mergeSkills() {
 }
 
 async function saveForCurrentJob() {
+  if (!canEdit) return
   const idx = selectedJobIndex.value;
   if (idx == null || !props.resumeId || props.resumeId === 'default') return;
   saving.value = true;

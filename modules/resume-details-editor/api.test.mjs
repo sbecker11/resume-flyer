@@ -11,6 +11,8 @@ import {
     updateResumeMeta,
     getResumeOtherSections,
     updateResumeOtherSections,
+    getResumeEducation,
+    updateResumeEducation,
     getResumeData,
     updateResumeCategories,
     updateJob
@@ -141,6 +143,52 @@ describe('resume-details-editor api', () => {
                     body: JSON.stringify(payload)
                 })
             );
+        });
+    });
+
+    describe('getResumeEducation', () => {
+        it('fetches education on success', async () => {
+            const edu = { e1: { degree: 'BS', institution: 'X' } };
+            fetchMock.mockResolvedValue(okJson(edu));
+            const result = await getResumeEducation('r1');
+            expect(result).toEqual(edu);
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/r1/education', expect.any(Object));
+        });
+
+        it('falls back to static education.json when API returns 404', async () => {
+            const edu = { e1: { degree: 'BS', institution: 'X' } };
+            fetchMock
+                .mockResolvedValueOnce(errJson(404, 'not found'))
+                .mockResolvedValueOnce(okJson(edu));
+            const result = await getResumeEducation('r1');
+            expect(result).toEqual(edu);
+        });
+
+        it('throws on non-404 errors', async () => {
+            fetchMock.mockResolvedValue(errJson(500, 'Server error'));
+            await expect(getResumeEducation('r1')).rejects.toThrow('Server error');
+        });
+    });
+
+    describe('updateResumeEducation', () => {
+        it('PATCHes education updates', async () => {
+            const payload = { e1: { degree: 'MS' } };
+            const updated = { ok: true };
+            fetchMock.mockResolvedValue(okJson(updated));
+            const result = await updateResumeEducation('r1', payload);
+            expect(result).toEqual(updated);
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/education',
+                expect.objectContaining({
+                    method: 'PATCH',
+                    body: JSON.stringify(payload)
+                })
+            );
+        });
+
+        it('downloads patch and rethrows when API fails', async () => {
+            fetchMock.mockResolvedValue(errJson(500, 'Server error'));
+            await expect(updateResumeEducation('r1', { e1: { degree: 'MS' } })).rejects.toThrow('Server error');
         });
     });
 
@@ -303,6 +351,19 @@ describe('resume-details-editor api', () => {
             await expect(getResumeData('default')).rejects.toThrow('not available on static hosting');
         });
 
+        it('getResumeEducation returns static data', async () => {
+            const edu = { e1: { degree: 'BS', institution: 'X' } };
+            fetchMock.mockResolvedValue(okJson(edu));
+            const result = await getResumeEducation('r1');
+            expect(result).toEqual(edu);
+        });
+
+        it('getResumeEducation returns {} when static fetch fails', async () => {
+            fetchMock.mockResolvedValue(errJson(404, 'not found'));
+            const result = await getResumeEducation('r1');
+            expect(result).toEqual({});
+        });
+
         it('updateResumeMeta throws and downloads patch', async () => {
             await expect(updateResumeMeta('r1', { displayName: 'X' })).rejects.toThrow('not available on static hosting');
         });
@@ -317,6 +378,10 @@ describe('resume-details-editor api', () => {
 
         it('updateResumeCategories throws and downloads patch', async () => {
             await expect(updateResumeCategories('r1', { cat1: { name: 'C', skillIDs: [] } })).rejects.toThrow('not available on static hosting');
+        });
+
+        it('updateResumeEducation throws and downloads patch', async () => {
+            await expect(updateResumeEducation('r1', { e1: { degree: 'MS' } })).rejects.toThrow('not available on static hosting');
         });
     });
 });

@@ -61,7 +61,7 @@
 
         <div class="rde-footer">
           <button type="button" class="rde-btn cancel" @click="cancel">Cancel</button>
-          <button type="button" class="rde-btn save" @click="save" :disabled="saving">
+          <button type="button" class="rde-btn save" @click="save" :disabled="saving || !canEdit">
             {{ saving ? 'Saving…' : 'Save' }}
           </button>
         </div>
@@ -78,6 +78,7 @@
 
 <script setup>
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
+import { hasServer } from '@/modules/core/hasServer.mjs';
 import MetaTab from './tabs/MetaTab.vue';
 import OtherSectionsTab from './tabs/OtherSectionsTab.vue';
 import EducationTab from './tabs/EducationTab.vue';
@@ -116,6 +117,7 @@ const meta = shallowRef({});
 const otherSections = shallowRef({});
 const education = shallowRef({});
 const saving = ref(false);
+const canEdit = hasServer();
 
 // Pending edits (only save what changed)
 const pendingMeta = shallowRef(null);
@@ -329,6 +331,7 @@ function cancel() {
 }
 
 async function save() {
+  if (!canEdit) return
   if (!props.resumeId || props.resumeId === 'default') return;
   saving.value = true;
   try {

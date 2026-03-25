@@ -75,7 +75,7 @@
           </div>
         </section>
         <section class="rde-section rde-job-actions">
-          <button type="button" class="rde-btn save" :disabled="saving" @click="saveCurrentJob">
+          <button type="button" class="rde-btn save" :disabled="saving || !canEdit" @click="saveCurrentJob">
             {{ saving ? 'Saving…' : 'Save job' }}
           </button>
           <button type="button" class="rde-btn skills" @click="openSkillsForCurrentJob">
@@ -90,6 +90,9 @@
 <script setup>
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
+import { hasServer } from '@/modules/core/hasServer.mjs';
+
+const canEdit = hasServer();
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -226,6 +229,7 @@ function jobOptionLabel(job, i) {
 }
 
 async function saveCurrentJob() {
+  if (!canEdit) return
   const idx = selectedJobIndex.value;
   if (idx == null || !props.resumeId || props.resumeId === 'default') return;
   saving.value = true;

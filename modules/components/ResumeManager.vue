@@ -29,6 +29,11 @@
                 id="resume-file-input"
               />
 
+              <p v-if="!canUpload" class="static-upload-note">
+                Upload & parsing require the backend (run with `npm run dev`).
+                Static hosting can only display already-parsed resumes.
+              </p>
+
               <!-- When uploading, show only the active source + Cancel -->
               <div v-if="uploading" class="active-upload-row">
                 <div class="active-upload-label">
@@ -84,6 +89,7 @@
                     v-if="!uploading"
                     @click="handleUpload"
                     class="upload-button"
+                    :disabled="!canUpload"
                   >
                     {{ selectedFile ? 'Upload & Parse' : 'Fetch & Parse' }}
                   </button>
@@ -121,6 +127,7 @@
 <script setup>
 import { nextTick, ref } from 'vue'
 import { uploadResumeWithParserStream } from '../api/resumeManagerApi.mjs'
+import { hasServer } from '@/modules/core/hasServer.mjs'
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true }
@@ -140,6 +147,7 @@ const parserOutput = ref('')
 const fileInput = ref(null)
 const parserTextareaRef = ref(null)
 let uploadAbortController = null
+const canUpload = hasServer()
 
 async function handleFileSelect(event) {
   const file = event.target.files[0]
@@ -155,7 +163,9 @@ async function handleFileSelect(event) {
     resumeUrl.value = '' // Clear URL when file is selected
     displayName.value = file.name.replace(/\.(docx|pdf)$/, '')
     uploadError.value = null
-    await handleUpload()
+    // On GitHub Pages (static hosting) there is no backend to process uploads.
+    // Avoid auto-failing as soon as the user selects a file.
+    if (canUpload) await handleUpload()
   }
 }
 
@@ -576,6 +586,17 @@ section h3 {
 .upload-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.static-upload-note {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #444;
+  border-radius: 10px;
+  color: #bdbdbd;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .progress-container {

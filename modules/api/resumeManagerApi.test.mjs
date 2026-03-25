@@ -5,12 +5,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
     listResumes,
     uploadResume,
+    uploadResumeWithParserStream,
     getResumeData,
     deleteResume,
     updateJobSkills,
     renameSkill,
     mergeSkill,
-    getResumeOtherSections
+    getResumeOtherSections,
+    getResumeEducation
 } from './resumeManagerApi.mjs';
 
 describe('resumeManagerApi', () => {
@@ -611,7 +613,7 @@ describe('resumeManagerApi', () => {
             });
             const r = await getResumeOtherSections('resume-9');
             expect(r).toEqual(payload);
-            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/resume-9/other-sections');
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/resume-9/other-sections', {});
         });
 
         it('encodes resume id', async () => {
@@ -620,12 +622,113 @@ describe('resumeManagerApi', () => {
                 json: async () => ({})
             });
             await getResumeOtherSections('a c');
-            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/a%20c/other-sections');
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/a%20c/other-sections', {});
         });
 
         it('throws on HTTP error', async () => {
             fetchMock.mockResolvedValue({ ok: false, status: 404 });
-            await expect(getResumeOtherSections('missing')).rejects.toThrow('HTTP 404');
+            await expect(getResumeOtherSections('missing')).resolves.toEqual({});
+        });
+    });
+
+    describe('uploadResumeWithParserStream', () => {
+        it('streams SSE events and resolves on done', async () => {
+            const onOutput = vi.fn();
+            const onStatus = vi.fn();
+
+            const encoder = new TextEncoder();
+            // SSE events must end with a blank line (\n\n) for the parser to process them.
+            const sse =
+                'event: status\n' +
+                'data: Preparing...\n\n' +
+                'event: output\n' +
+                'data: === resume-parser ===\n\n' +
+                'event: output\n' +
+                'data: Extracting text...\n\n' +
+                'event: done\n' +
+                'data: {"success":true,"resumeId":"r1","displayName":"R1","jobCount":1,"skillCount":0,"metadata":{}}\n\n';
+
+            let idx = 0;
+            const reader = {
+                read: vi.fn(async () => {
+                    if (idx++ === 0) return { value: encoder.encode(sse), done: false };
+                    return { value: undefined, done: true };
+                }),
+                cancel: vi.fn()
+            };
+
+            fetchMock.mockResolvedValue({
+                ok: true,
+                body: {
+                    getReader: () => reader
+                }
+            });
+
+            const result = await uploadResumeWithParserStream('https://example.com/r.pdf', 'R1', { onOutput, onStatus });
+            expect(result).toEqual({
+                success: true,
+                resumeId: 'r1',
+                displayName: 'R1',
+                jobCount: 1,
+                skillCount: 0,
+                metadata: {}
+            });
+
+            expect(onStatus).toHaveBeenCalledWith('Preparing...');
+            expect(onOutput).toHaveBeenCalledWith('=== resume-parser ===');
+            expect(onOutput).toHaveBeenCalledWith('Extracting text...');
+        });
+
+        it('rejects on error event', async () => {
+            const encoder = new TextEncoder();
+            const sse = 'event: error\n' + 'data: {"message":"Boom"}\n\n';
+
+            let sseRead = 0;
+            const reader = {
+                read: vi.fn(async () => {
+                    if (sseRead++ > 0) return { value: undefined, done: true };
+                    return { value: encoder.encode(sse), done: false };
+                }),
+                cancel: vi.fn()
+            };
+
+            fetchMock.mockResolvedValue({
+                ok: true,
+                body: { getReader: () => reader }
+            });
+
+            await expect(
+                uploadResumeWithParserStream('https://example.com/r.pdf', 'R1')
+            ).rejects.toThrow('Boom');
+        });
+    });
+
+    describe('getResumeEducation', () => {
+        it('fetches education from API when hasServer is true', async () => {
+            const edu = { e1: { degree: 'BS', institution: 'X' } };
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => edu
+            });
+            const result = await getResumeEducation('resume-1');
+            expect(result).toEqual(edu);
+        });
+
+        it('falls back to static education.json when API fails', async () => {
+            const edu = { e1: { degree: 'BS', institution: 'X' } };
+            fetchMock
+                .mockResolvedValueOnce({
+                    ok: false,
+                    status: 404,
+                    statusText: 'Not Found',
+                    text: async () => ''
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => edu
+                });
+            const result = await getResumeEducation('resume-1');
+            expect(result).toEqual(edu);
         });
     });
 
@@ -663,29 +766,65 @@ describe('resumeManagerApi', () => {
     });
 
     describe('when hasServer() is false (static host)', () => {
-        beforeEach(() => {
-            vi.mocked(hasServer).mockReturnValue(false);
+        let listResumesStatic;
+        let uploadResumeStatic;
+        let uploadResumeWithParserStreamStatic;
+        let getResumeDataStatic;
+        let deleteResumeStatic;
+        let updateJobSkillsStatic;
+        let renameSkillStatic;
+        let mergeSkillStatic;
+        let getResumeOtherSectionsStatic;
+        let getResumeEducationStatic;
+
+        beforeEach(async () => {
+            vi.resetModules();
+
+            // Simulate GitHub Pages / static hosting.
+            Object.defineProperty(window, 'location', {
+                value: { origin: 'https://user.github.io' },
+                configurable: true,
+                writable: true
+            });
+
+            const api = await import('./resumeManagerApi.mjs');
+            listResumesStatic = api.listResumes;
+            uploadResumeStatic = api.uploadResume;
+            uploadResumeWithParserStreamStatic = api.uploadResumeWithParserStream;
+            getResumeDataStatic = api.getResumeData;
+            deleteResumeStatic = api.deleteResume;
+            updateJobSkillsStatic = api.updateJobSkills;
+            renameSkillStatic = api.renameSkill;
+            mergeSkillStatic = api.mergeSkill;
+            getResumeOtherSectionsStatic = api.getResumeOtherSections;
+            getResumeEducationStatic = api.getResumeEducation;
         });
 
         it('listResumes fetches static index and returns resumes', async () => {
             const idx = [{ id: 'r1', displayName: 'R1' }];
             fetchMock.mockResolvedValue({ ok: true, json: async () => idx });
-            const result = await listResumes();
+            const result = await listResumesStatic();
             expect(result).toEqual(idx);
             expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('parsed_resumes/index.json'), expect.any(Object));
         });
 
         it('listResumes throws when static index fails', async () => {
             fetchMock.mockRejectedValue(new Error('Net error'));
-            await expect(listResumes()).rejects.toThrow('Net error');
+            await expect(listResumesStatic()).rejects.toThrow('Net error');
         });
 
         it('deleteResume throws', async () => {
-            await expect(deleteResume('r1')).rejects.toThrow('not available on static hosting');
+            await expect(deleteResumeStatic('r1')).rejects.toThrow('not available on static hosting');
         });
 
         it('uploadResume throws', async () => {
-            await expect(uploadResume('https://example.com/r.pdf')).rejects.toThrow('not available on static hosting');
+            await expect(uploadResumeStatic('https://example.com/r.pdf')).rejects.toThrow('not available on static hosting');
+        });
+
+        it('uploadResumeWithParserStream throws', async () => {
+            await expect(
+                uploadResumeWithParserStreamStatic('https://example.com/r.pdf', 'R1')
+            ).rejects.toThrow('Upload is not available on static hosting');
         });
 
         it('getResumeData returns static data for non-default resume', async () => {
@@ -696,31 +835,44 @@ describe('resumeManagerApi', () => {
                 .mockResolvedValueOnce({ ok: true, json: async () => jobs })
                 .mockResolvedValueOnce({ ok: true, json: async () => skills })
                 .mockResolvedValueOnce({ ok: true, json: async () => categories });
-            const result = await getResumeData('resume-1');
+            const result = await getResumeDataStatic('resume-1');
             expect(result).toEqual({ jobs, skills, categories });
         });
 
         it('getResumeData throws for default resume on static host', async () => {
-            await expect(getResumeData('default')).rejects.toThrow('Default resume is not available on static hosting');
+            await expect(getResumeDataStatic('default')).rejects.toThrow('Default resume is not available on static hosting');
         });
 
         it('getResumeOtherSections fetches static JSON', async () => {
             const sections = { summary: 'Hi', contact: {} };
             fetchMock.mockResolvedValue({ ok: true, json: async () => sections });
-            const result = await getResumeOtherSections('r1');
+            const result = await getResumeOtherSectionsStatic('r1');
             expect(result).toEqual(sections);
         });
 
+        it('getResumeEducation fetches static JSON', async () => {
+            const edu = { e1: { degree: 'BS', institution: 'X' } };
+            fetchMock.mockResolvedValue({ ok: true, json: async () => edu });
+            const result = await getResumeEducationStatic('r1');
+            expect(result).toEqual(edu);
+        });
+
+        it('getResumeEducation returns {} when static education.json fetch fails', async () => {
+            fetchMock.mockResolvedValue({ ok: false, status: 404 });
+            const result = await getResumeEducationStatic('r1');
+            expect(result).toEqual({});
+        });
+
         it('updateJobSkills throws', async () => {
-            await expect(updateJobSkills('r1', 0, ['s1'])).rejects.toThrow('not available on static hosting');
+            await expect(updateJobSkillsStatic('r1', 0, ['s1'])).rejects.toThrow('not available on static hosting');
         });
 
         it('renameSkill throws', async () => {
-            await expect(renameSkill('r1', 'old', 'New')).rejects.toThrow('not available on static hosting');
+            await expect(renameSkillStatic('r1', 'old', 'New')).rejects.toThrow('not available on static hosting');
         });
 
         it('mergeSkill throws', async () => {
-            await expect(mergeSkill('r1', 'A', 'B')).rejects.toThrow('not available on static hosting');
+            await expect(mergeSkillStatic('r1', 'A', 'B')).rejects.toThrow('not available on static hosting');
         });
     });
 });

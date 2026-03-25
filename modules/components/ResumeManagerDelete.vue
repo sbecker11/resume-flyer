@@ -55,6 +55,7 @@
                   @click.stop="pendingDeletes.has(r.id) ? toggleDelete(r.id) : requestDelete(r.id)"
                   :aria-label="pendingDeletes.has(r.id) ? 'Undo delete' : 'Mark for deletion'"
                   :title="pendingDeletes.has(r.id) ? 'Undo' : 'Delete'"
+                  :disabled="!canDelete"
                 >
                   <svg v-if="!pendingDeletes.has(r.id)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6" />
@@ -101,7 +102,7 @@
             <div v-if="saving" class="footer-spinner"></div>
             <button
               class="btn-save"
-              :disabled="!hasChanges || saving"
+              :disabled="!canDelete || !hasChanges || saving"
               @click="save"
             >
               {{ saving ? 'Saving…' : 'Save' }}
@@ -118,6 +119,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { listResumes, deleteResume } from '../api/resumeManagerApi.mjs'
+import { hasServer } from '@/modules/core/hasServer.mjs'
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
@@ -133,6 +135,7 @@ const pendingDeletes = ref(new Set())
 const selectedId = ref(null)
 const saving = ref(false)
 const confirmDeleteId = ref(null)
+const canDelete = hasServer()
 
 const confirmDeleteName = computed(() => {
   if (!confirmDeleteId.value) return ''
@@ -172,10 +175,12 @@ function openResume(id) {
 }
 
 function requestDelete(id) {
+  if (!canDelete) return
   confirmDeleteId.value = id
 }
 
 async function confirmAndDelete() {
+  if (!canDelete) return
   const id = confirmDeleteId.value
   if (!id) return
   confirmDeleteId.value = null
@@ -208,6 +213,7 @@ function toggleDelete(id) {
 }
 
 async function save() {
+  if (!canDelete) return
   if (!hasChanges.value) return
   saving.value = true
   const deleted = []

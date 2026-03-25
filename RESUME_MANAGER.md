@@ -11,6 +11,12 @@ The Resume Manager provides:
 - **Progress Tracking**: Real-time upload and parsing progress indicators
 - **Error Handling**: User-friendly error messages and recovery
 
+## GitHub Pages (static hosting)
+When running without the backend (GitHub Pages):
+- Upload & parsing is disabled (no `/api` endpoints are available).
+- Resume editing and permanent delete/save actions are disabled.
+- The UI can still browse already-parsed resumes from `parsed_resumes/*` (and `parsed_resumes/index.json`).
+
 ## Architecture
 
 ### Backend (server.mjs)
