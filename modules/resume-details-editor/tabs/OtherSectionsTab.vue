@@ -2,62 +2,83 @@
   <div class="rde-tab-content rde-other-sections">
     <!-- 1. Summary -->
     <section class="rde-section">
-      <h3 class="rde-section-title">Summary</h3>
-      <label class="rde-sr-only" for="rde-other-summary">Professional summary</label>
+      <label class="rde-top-label" for="rde-other-summary">Resume Summary</label>
       <textarea id="rde-other-summary" name="summary" v-model="local.summary" class="rde-textarea" rows="4" placeholder="Professional summary…"></textarea>
     </section>
 
     <!-- 2. Title -->
     <section class="rde-section">
-      <h3 class="rde-section-title">Title</h3>
-      <label class="rde-sr-only" for="rde-other-title">Job title</label>
+      <label class="rde-top-label" for="rde-other-title">Resume Title</label>
       <input id="rde-other-title" name="title" v-model="local.title" type="text" class="rde-input" placeholder="e.g. Senior Software Engineer" />
     </section>
 
     <!-- 3. Contact -->
     <section class="rde-section">
-      <h3 class="rde-section-title">Contact</h3>
       <ContactFields v-model="local.contact" />
     </section>
 
-    <!-- 4. Certifications -->
+    <!-- 4. Websites -->
     <section class="rde-section">
-      <h3 class="rde-section-title">Certifications</h3>
-      <p class="rde-hint">Name, optional hyperlink, optional description</p>
-      <CertificationItem
-        v-for="(cert, i) in local.certifications"
-        :key="i"
-        :model-value="cert"
-        @update:model-value="(v) => updateCert(i, v)"
-        @remove="removeCert(i)"
-      />
-      <button type="button" class="rde-btn-add" @click="addCert">+ Add certification</button>
-    </section>
-
-    <!-- 5. Websites -->
-    <section class="rde-section">
-      <h3 class="rde-section-title">Websites</h3>
-      <p class="rde-hint">Label, hyperlink, optional description</p>
+      <div class="rde-top-label">Other websites</div>
+      <div class="rde-website-subhead">
+        <span class="rde-website-subhead-col">Label</span>
+        <span class="rde-website-subhead-col">hyperlink</span>
+        <span class="rde-website-subhead-col">description</span>
+        <span class="rde-website-remove-spacer" aria-hidden="true"></span>
+      </div>
       <WebsiteItem
         v-for="(web, i) in local.websites"
         :key="i"
         :model-value="web"
+        :should-focus="i === websiteFocusIndex"
+        :focus-token="websiteFocusToken"
         @update:model-value="(v) => updateWebsite(i, v)"
         @remove="removeWebsite(i)"
+        @entry-blur="autosaveFromEntryBlur"
       />
       <button type="button" class="rde-btn-add" @click="addWebsite">+ Add website</button>
     </section>
 
+    <!-- 5. Certifications -->
+    <section class="rde-section">
+      <div class="rde-top-label">Certifications</div>
+      <div class="rde-website-subhead rde-cert-subhead">
+        <span class="rde-website-subhead-col">Name</span>
+        <span class="rde-website-subhead-col">hyperlink</span>
+        <span class="rde-website-subhead-col">description</span>
+        <span class="rde-website-remove-spacer" aria-hidden="true"></span>
+      </div>
+      <CertificationItem
+        v-for="(cert, i) in local.certifications"
+        :key="i"
+        :model-value="cert"
+        :should-focus="i === certFocusIndex"
+        :focus-token="certFocusToken"
+        @update:model-value="(v) => updateCert(i, v)"
+        @remove="removeCert(i)"
+        @entry-blur="autosaveFromEntryBlur"
+      />
+      <button type="button" class="rde-btn-add" @click="addCert">+ Add certification</button>
+    </section>
+
     <!-- 6. Other sections -->
     <section class="rde-section">
-      <h3 class="rde-section-title">Other sections</h3>
-      <p class="rde-hint">Title, optional subtitle, optional description</p>
+      <div class="rde-top-label">Other sections</div>
+      <div class="rde-website-subhead rde-other-sections-subhead">
+        <span class="rde-website-subhead-col">Title</span>
+        <span class="rde-website-subhead-col">subtitle</span>
+        <span class="rde-website-subhead-col">description</span>
+        <span class="rde-website-remove-spacer" aria-hidden="true"></span>
+      </div>
       <OtherSectionItem
         v-for="(sec, i) in local.custom_sections"
         :key="i"
         :model-value="sec"
+        :should-focus="i === otherSectionFocusIndex"
+        :focus-token="otherSectionFocusToken"
         @update:model-value="(v) => updateOtherSection(i, v)"
         @remove="removeOtherSection(i)"
+        @entry-blur="autosaveFromEntryBlur"
       />
       <button type="button" class="rde-btn-add" @click="addOtherSection">+ Add section</button>
     </section>
@@ -76,7 +97,14 @@ const props = defineProps({
   data: { type: Object, default: () => ({}) }
 });
 
-const emit = defineEmits(['update:data']);
+const emit = defineEmits(['update:data', 'autosave']);
+
+const certFocusIndex = ref(null);
+const certFocusToken = ref(0);
+const websiteFocusIndex = ref(null);
+const websiteFocusToken = ref(0);
+const otherSectionFocusIndex = ref(null);
+const otherSectionFocusToken = ref(0);
 
 function mergeDefaults(data) {
   const d = { ...DEFAULT_OTHER_SECTIONS };
@@ -121,6 +149,8 @@ function updateCert(i, v) {
 }
 function addCert() {
   local.value.certifications.push({ name: '', url: '', description: '' });
+  certFocusIndex.value = local.value.certifications.length - 1;
+  certFocusToken.value++;
 }
 function removeCert(i) {
   local.value.certifications.splice(i, 1);
@@ -130,6 +160,8 @@ function updateWebsite(i, v) {
 }
 function addWebsite() {
   local.value.websites.push({ label: '', url: '', description: '' });
+  websiteFocusIndex.value = local.value.websites.length - 1;
+  websiteFocusToken.value++;
 }
 function removeWebsite(i) {
   local.value.websites.splice(i, 1);
@@ -139,9 +171,17 @@ function updateOtherSection(i, v) {
 }
 function addOtherSection() {
   local.value.custom_sections.push({ title: '', subtitle: '', description: '' });
+  otherSectionFocusIndex.value = local.value.custom_sections.length - 1;
+  otherSectionFocusToken.value++;
 }
 function removeOtherSection(i) {
   local.value.custom_sections.splice(i, 1);
+}
+
+function autosaveFromEntryBlur() {
+  // Clone so parent autosave sees a stable snapshot even if more edits happen.
+  const snapshot = JSON.parse(JSON.stringify(local.value));
+  emit('autosave', snapshot);
 }
 </script>
 
@@ -149,8 +189,50 @@ function removeOtherSection(i) {
 .rde-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .rde-tab-content { padding: 12px 16px; max-height: 60vh; overflow-y: auto; }
 .rde-section { margin-bottom: 20px; }
-.rde-section-title { font-size: 0.8rem; font-weight: 600; color: #fff; margin: 0 0 8px; }
-.rde-hint { font-size: 0.7rem; color: rgba(255,255,255,0.4); margin: -4px 0 8px; }
+/* Legacy: keep field label styling consistent if anything still uses rde-label */
+.rde-other-sections .rde-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
+
+/* Top-level labels (Resume Summary/Title/etc) */
+.rde-other-sections .rde-top-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
+.rde-hint { font-size: 0.7rem; color: rgba(255,255,255,0.4); margin: 0 0 8px; }
+.rde-website-subhead {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.7rem;
+}
+.rde-website-subhead-col {
+  flex: 1;
+  min-width: 80px;
+  text-align: left;
+}
+.rde-cert-subhead .rde-website-subhead-col {
+  /* keep same widths as WebsiteItem */
+}
+.rde-other-sections-subhead .rde-website-subhead-col {
+  /* keep same widths as OtherSectionItem */
+}
+.rde-website-remove-spacer {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+}
 .rde-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; box-sizing: border-box; }
 .rde-input:focus { outline: none; border-color: rgba(74,158,255,0.6); }
 .rde-textarea { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; resize: vertical; box-sizing: border-box; font-family: inherit; }

@@ -113,6 +113,14 @@ function handleResumeSelectedFromManage(resumeId) {
   }
 }
 
+function handleResumeReparsedFromManage(resumeId) {
+  if (resumeId) {
+    // Force AppContent to reinitialize the resume system, even if reparse targets
+    // the currently-selected resume.
+    emit('resume-selected', resumeId);
+  }
+}
+
 function handleOpenUploadFromManage() {
   isManageModalOpen.value = false;
   if (!canUpload) return;
@@ -445,6 +453,11 @@ async function handleDetailsSaved(payload) {
     } catch (err) {
       console.warn('[ResumeContainer] handleDetailsSaved fetchResumeList failed:', err);
     }
+  }
+  if (payload?.reparsed === true) {
+    // Force AppContent to reload the currently-selected resume data in-place.
+    emit('resume-selected', props.currentResumeId);
+    return;
   }
   if (payload == null || payload.jobIndex == null) return;
   const { jobIndex, skillIDs } = payload;
@@ -885,6 +898,7 @@ function onResumeSkillCardClick(event) {
                 @close="isManageModalOpen = false"
                 @deleted="handleResumesDeleted"
                 @selected="handleResumeSelectedFromManage"
+                @reparsed="handleResumeReparsedFromManage"
                 @open-upload="handleOpenUploadFromManage"
             />
             <!-- Color Palette Row -->

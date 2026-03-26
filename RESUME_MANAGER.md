@@ -15,7 +15,7 @@ The Resume Manager provides:
 When running without the backend (GitHub Pages):
 - Upload & parsing is disabled (no `/api` endpoints are available).
 - Resume editing and permanent delete/save actions are disabled.
-- The UI can still browse already-parsed resumes from `parsed_resumes/*` (and `parsed_resumes/index.json`).
+- The UI can still browse already-parsed resumes from `parsed_resumes/*` (and `parsed_resumes/non-local-resumes.json`).
 
 ## Architecture
 

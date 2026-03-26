@@ -1,6 +1,18 @@
 <template>
-  <div class="rde-row">
-    <input v-model="local.label" type="text" name="websiteLabel" class="rde-input" placeholder="Label" aria-label="Website label" />
+  <div
+    ref="rootRef"
+    class="rde-row"
+    @focusout="onFocusOut"
+  >
+    <input
+      ref="labelInputRef"
+      v-model="local.label"
+      type="text"
+      name="websiteLabel"
+      class="rde-input"
+      placeholder="Label"
+      aria-label="Website label"
+    />
     <input v-model="local.url" type="url" name="websiteUrl" class="rde-input" placeholder="URL" aria-label="Website URL" />
     <input v-model="local.description" type="text" name="websiteDescription" class="rde-input" placeholder="Description (optional)" aria-label="Website description" />
     <button type="button" class="rde-btn-remove" title="Remove" aria-label="Remove website" @click="emit('remove')">×</button>
@@ -8,15 +20,22 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 
 const props = defineProps({
-  modelValue: { type: Object, default: () => ({ label: '', url: '', description: '' }) }
+  modelValue: { type: Object, default: () => ({ label: '', url: '', description: '' }) },
+  /** Incremented when a new entry is added; used to focus the newest entry exactly once. */
+  focusToken: { type: Number, default: 0 },
+  /** True only for the row that should be focused for the current focusToken. */
+  shouldFocus: { type: Boolean, default: false }
 });
 
-const emit = defineEmits(['update:modelValue', 'remove']);
+const emit = defineEmits(['update:modelValue', 'remove', 'entry-blur']);
 
 const local = ref({ label: props.modelValue?.label ?? '', url: props.modelValue?.url ?? '', description: props.modelValue?.description ?? '' });
+
+const rootRef = ref(null);
+const labelInputRef = ref(null);
 
 watch(() => props.modelValue, (v) => {
   local.value = { label: v?.label ?? '', url: v?.url ?? '', description: v?.description ?? '' };
@@ -25,6 +44,22 @@ watch(() => props.modelValue, (v) => {
 watch(local, (l) => {
   emit('update:modelValue', { ...l });
 }, { deep: true });
+
+watch(
+  () => props.focusToken,
+  async (t) => {
+    if (!t || !props.shouldFocus) return;
+    await nextTick();
+    const el = labelInputRef.value;
+    if (el && typeof el.focus === 'function') el.focus();
+  }
+);
+
+function onFocusOut(e) {
+  // Autosave whenever any field in the row loses focus (even if focus moves to another field in the same row).
+  if (!rootRef.value) return;
+  emit('entry-blur');
+}
 </script>
 
 <style scoped>

@@ -1,0 +1,38 @@
+{
+  "contact": {
+    "name": "Yahoo Senior Engineer",
+    "email": "shawn.becker@spexture.com",
+    "phone": "(857) 891-0896",
+    "location": "Lehi, UT",
+    "linkedin": "linkedin.com/in/shawnbecker",
+    "website": "github.com/sbecker11"
+  },
+  "title": "Senior Machine Learning Engineer",
+  "summary": "MIT PhD in Computer Vision & Computer Graphics with 20+ years building production ML systems for search, content ranking, and recommendation at scale. Three patents in NLP-based recommendation systems using vector embeddings, with hands-on expertise across computer vision, LLMs, generative AI, and RAG pipelines — deployed for Fortune 500 clients on AWS.",
+  "certifications": [],
+  "websites": [
+    {
+      "label": "Certifications",
+      "url": "https://linkedin.com/in/shawnbecker/details/certifications/"
+    },
+    {
+      "label": "Patents",
+      "url": "https://patents.justia.com/inventor/shawn-c-becker"
+    },
+    {
+      "label": "Publications",
+      "url": "https://independent.academia.edu/shawnbecker"
+    },
+    {
+      "label": "Portfolio",
+      "url": "https://sbecker11.github.io/flock-of-postcards"
+    }
+  ],
+  "custom_sections": [
+    {
+      "title": "CERTIFICATIONS, PUBLICATIONS & PATENTS",
+      "content": "Certifications: linkedin.com/in/shawnbecker/details/certifications/\n\nPatents: patents.justia.com/inventor/shawn-c-becker\n\nPublications: independent.academia.edu/shawnbecker\n\nPortfolio: sbecker11.github.io/flock-of-postcards"
+    }
+  ],
+  "skills": []
+}

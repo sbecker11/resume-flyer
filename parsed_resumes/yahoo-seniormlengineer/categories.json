@@ -1,0 +1,166 @@
+{
+  "tool": {
+    "name": "Tool",
+    "skillIDs": [
+      "adobe",
+      "dockerized",
+      "kubernetes",
+      "github-actions",
+      "pytest",
+      "jupyter",
+      "quicksight",
+      "dbt",
+      "airflow",
+      "cyberark-pam",
+      "tls",
+      "mtls",
+      "jenkins",
+      "setuptools",
+      "artifactory",
+      "pypi",
+      "sonarqube",
+      "xray",
+      "terraform",
+      "segment-cdp",
+      "salesforce",
+      "google-ads",
+      "youtube",
+      "openbsd",
+      "udp",
+      "tcp"
+    ]
+  },
+  "cloud": {
+    "name": "Cloud",
+    "skillIDs": [
+      "aws",
+      "aws-glue",
+      "aws-aurora",
+      "aws-sagemaker",
+      "quicksight",
+      "aws-redshift",
+      "glue",
+      "s3",
+      "lambda",
+      "amazon-glue",
+      "redshift",
+      "google-bigquery",
+      "snowflake",
+      "api-gateway",
+      "kinesis",
+      "emr"
+    ]
+  },
+  "data-science": {
+    "name": "Data Science",
+    "skillIDs": [
+      "rag",
+      "claude",
+      "openai",
+      "mistral",
+      "llama",
+      "dall-e-3",
+      "k-means",
+      "ciede2000",
+      "aws-glue",
+      "pyspark",
+      "cnn",
+      "pytorch",
+      "aws-sagemaker",
+      "jupyter",
+      "pandas",
+      "numpy",
+      "scikit-learn",
+      "keras",
+      "quicksight",
+      "plotly",
+      "dbt",
+      "glue",
+      "amazon-glue",
+      "parquet",
+      "emr",
+      "nlp",
+      "bayesian"
+    ]
+  },
+  "library": {
+    "name": "Library",
+    "skillIDs": [
+      "langchain",
+      "opencv",
+      "pyspark",
+      "pytorch",
+      "pandas",
+      "numpy",
+      "scikit-learn",
+      "keras",
+      "plotly"
+    ]
+  },
+  "frontend": {
+    "name": "Frontend",
+    "skillIDs": [
+      "react-19"
+    ]
+  },
+  "framework": {
+    "name": "Framework",
+    "skillIDs": [
+      "react-19",
+      "django"
+    ]
+  },
+  "programming-language": {
+    "name": "Programming Language",
+    "skillIDs": [
+      "python",
+      "javascript",
+      "c"
+    ]
+  },
+  "devops": {
+    "name": "DevOps",
+    "skillIDs": [
+      "dockerized",
+      "ci-cd",
+      "kubernetes",
+      "github-actions",
+      "airflow",
+      "jenkins",
+      "artifactory",
+      "sonarqube",
+      "terraform"
+    ]
+  },
+  "methodology": {
+    "name": "Methodology",
+    "skillIDs": [
+      "ci-cd",
+      "seo",
+      "hipaa",
+      "gdpr"
+    ]
+  },
+  "backend": {
+    "name": "Backend",
+    "skillIDs": [
+      "django",
+      "rest-apis",
+      "restful-apis",
+      "lambda",
+      "api-gateway"
+    ]
+  },
+  "database": {
+    "name": "Database",
+    "skillIDs": [
+      "postgresql",
+      "aws-aurora",
+      "sql",
+      "aws-redshift",
+      "redshift",
+      "google-bigquery",
+      "snowflake"
+    ]
+  }
+}

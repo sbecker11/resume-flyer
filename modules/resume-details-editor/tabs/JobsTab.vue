@@ -4,16 +4,16 @@
     <p v-else-if="!jobsLoaded && resumeId && resumeId !== 'default'" class="rde-loading">Loading jobs…</p>
     <template v-else>
       <section class="rde-section">
-        <h3 class="rde-section-title">Job</h3>
         <label for="rde-jobs-job-select" class="rde-label rde-sr-only">Select job</label>
         <select
           id="rde-jobs-job-select"
           name="rde-jobs-job"
-          v-model="selectedJobIndex"
+          v-model="jobIndexLocal"
           class="rde-select"
           :disabled="jobsList.length === 0"
+          @change="emit('update:selectedJobIndex', jobIndexLocal)"
         >
-          <option value="" disabled>Select a job…</option>
+          <option value="" disabled>jobs</option>
           <option
             v-for="(job, i) in jobsList"
             :key="i"
@@ -27,37 +27,86 @@
         <section class="rde-section rde-job-fields">
           <div class="rde-field">
             <label class="rde-label" for="rde-jobs-employer">Employer</label>
-            <input id="rde-jobs-employer" name="employer" ref="employerInputRef" v-model="local.employer" type="text" class="rde-input" placeholder="Employer name" autocomplete="organization" />
+            <input
+              id="rde-jobs-employer"
+              name="employer"
+              ref="employerInputRef"
+              v-model="local.employer"
+              type="text"
+              class="rde-input"
+              placeholder="Employer name"
+              autocomplete="organization"
+              @blur="onJobFieldBlur"
+            />
           </div>
           <div class="rde-field">
             <label class="rde-label" for="rde-jobs-title">Title</label>
-            <input id="rde-jobs-title" name="title" v-model="local.title" type="text" class="rde-input" placeholder="Job title" autocomplete="organization-title" />
+            <input
+              id="rde-jobs-title"
+              name="title"
+              v-model="local.title"
+              type="text"
+              class="rde-input"
+              placeholder="Job title"
+              autocomplete="organization-title"
+              @blur="onJobFieldBlur"
+            />
           </div>
           <div class="rde-field rde-date-row">
             <div class="rde-date-field">
-              <label class="rde-label" for="rde-jobs-start-year">Start (YY/MM)</label>
+              <label class="rde-label" for="rde-jobs-start-yy">Start</label>
               <div class="rde-date-inputs">
-                <select id="rde-jobs-start-year" name="startYear" v-model="local.startYear" class="rde-select rde-date-select">
-                  <option value="">—</option>
-                  <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-                </select>
-                <select id="rde-jobs-start-month" name="startMonth" v-model="local.startMonth" class="rde-select rde-date-select">
-                  <option value="">—</option>
-                  <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
-                </select>
+                <input
+                  id="rde-jobs-start-yy"
+                  name="startYYYY"
+                  v-model="local.startYYYY"
+                  class="rde-input rde-date-input"
+                  inputmode="numeric"
+                  maxlength="4"
+                  pattern="\\d{0,4}"
+                  placeholder="YYYY"
+                  @input="onFourDigitInput('startYYYY')"
+                  @blur="onJobFieldBlur"
+                />
+                <input
+                  id="rde-jobs-start-mm"
+                  name="startMM"
+                  v-model="local.startMM"
+                  class="rde-input rde-date-input"
+                  inputmode="numeric"
+                  maxlength="2"
+                  pattern="\\d{0,2}"
+                  placeholder="MM"
+                  @input="onTwoDigitInput('startMM')"
+                  @blur="onJobFieldBlur"
+                />
               </div>
             </div>
             <div class="rde-date-field">
-              <label class="rde-label" for="rde-jobs-end-year">End (YY/MM)</label>
-              <div class="rde-date-inputs">
-                <select id="rde-jobs-end-year" name="endYear" v-model="local.endYear" class="rde-select rde-date-select">
-                  <option value="">—</option>
-                  <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-                </select>
-                <select id="rde-jobs-end-month" name="endMonth" v-model="local.endMonth" class="rde-select rde-date-select">
-                  <option value="">—</option>
-                  <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
-                </select>
+              <label class="rde-label" for="rde-jobs-end-yy">End</label>
+              <div class="rde-date-inputs" ref="endDateGroupRef" @focusout="onEndGroupFocusOut">
+                <input
+                  id="rde-jobs-end-yy"
+                  name="endYYYY"
+                  v-model="local.endYYYY"
+                  class="rde-input rde-date-input"
+                  inputmode="numeric"
+                  maxlength="4"
+                  pattern="\\d{0,4}"
+                  placeholder="YYYY"
+                  @input="onFourDigitInput('endYYYY')"
+                />
+                <input
+                  id="rde-jobs-end-mm"
+                  name="endMM"
+                  v-model="local.endMM"
+                  class="rde-input rde-date-input"
+                  inputmode="numeric"
+                  maxlength="2"
+                  pattern="\\d{0,2}"
+                  placeholder="MM"
+                  @input="onTwoDigitInput('endMM')"
+                />
               </div>
             </div>
           </div>
@@ -71,14 +120,12 @@
               class="rde-textarea rde-description"
               placeholder="Job description…"
               rows="8"
+              @blur="onJobFieldBlur"
             />
           </div>
         </section>
         <section class="rde-section rde-job-actions">
-          <button type="button" class="rde-btn save" :disabled="saving || !canEdit" @click="saveCurrentJob">
-            {{ saving ? 'Saving…' : 'Save job' }}
-          </button>
-          <button type="button" class="rde-btn skills" @click="openSkillsForCurrentJob">
+          <button type="button" class="rde-btn skills" :disabled="saving" @click="openSkillsForCurrentJob">
             Skills
           </button>
         </section>
@@ -96,22 +143,25 @@ const canEdit = hasServer();
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
-  /** When opening to this tab, preselect this job index (0-based). */
-  initialJobIndex: { type: Number, default: null },
+  /** When ResumeDetailsEditor re-parses, it bumps this value to force reload. */
+  reloadNonce: { type: Number, default: 0 },
+  /** Shared 0-based job index (synced with Job skills tab). */
+  selectedJobIndex: { type: Number, default: null },
   /** After job is selected, focus this field ('employer' | 'description'). */
   initialFocusField: { type: String, default: null }
 });
 
-const emit = defineEmits(['saved', 'open-skills-for-job']);
+const emit = defineEmits(['saved', 'open-skills-for-job', 'update:selectedJobIndex']);
 
 const employerInputRef = ref(null);
 const descriptionInputRef = ref(null);
+const endDateGroupRef = ref(null);
 const jobs = shallowRef([]);
 const jobsLoaded = ref(false);
 const loadError = ref('');
-const selectedJobIndex = ref(null);
+const jobIndexLocal = ref(null);
 const saving = ref(false);
-const local = ref({ employer: '', title: '', startYear: '', startMonth: '', endYear: '', endMonth: '', Description: '' });
+const local = ref({ employer: '', title: '', startYYYY: '', startMM: '', endYYYY: '', endMM: '', Description: '' });
 
 function jobsArray(data) {
   if (!data) return [];
@@ -122,22 +172,47 @@ function jobsArray(data) {
 
 const jobsList = computed(() => jobs.value);
 
-const yearOptions = computed(() => {
-  const current = new Date().getFullYear();
-  const out = [];
-  for (let y = current; y >= current - 80; y--) out.push(y);
-  return out;
-});
+function toTwoDigits(value) {
+  const s = String(value ?? '').replace(/\D/g, '').slice(0, 2);
+  return s;
+}
+
+function toFourDigits(value) {
+  return String(value ?? '').replace(/\D/g, '').slice(0, 4);
+}
+
+function normalizeYearOrBlank(value, { minYear = 1900, maxYear = new Date().getFullYear() } = {}) {
+  const yyyy = toFourDigits(value);
+  if (!yyyy) return '';
+  if (yyyy.length !== 4) return null;
+  const n = Number(yyyy);
+  if (!Number.isFinite(n) || n < minYear || n > maxYear) return null;
+  return String(n);
+}
+
+function normalizeMonthOrBlank(value) {
+  const mm = toTwoDigits(value);
+  if (!mm) return '';
+  const n = Number(mm);
+  if (!Number.isFinite(n) || n < 1 || n > 12) return null;
+  return String(n).padStart(2, '0');
+}
+
+function ymScore(yyyy, mm) {
+  const y = Number(yyyy);
+  const m = mm ? Number(mm) : 0;
+  return y + (m / 12);
+}
 
 let selectedJobWatchCount = 0;
 let focusWatchCount = 0;
-watch(() => props.resumeId, (id) => {
+watch(() => [props.resumeId, props.reloadNonce], ([id]) => {
   selectedJobWatchCount = 0;
   focusWatchCount = 0;
   jobsLoaded.value = false;
   loadError.value = '';
   jobs.value = [];
-  selectedJobIndex.value = null;
+  jobIndexLocal.value = null;
   if (!id || id === 'default') return;
   // Defer fetch to macrotask; then assign selection in a second macrotask to avoid one big reactive burst.
   setTimeout(async () => {
@@ -146,12 +221,16 @@ watch(() => props.resumeId, (id) => {
       const arr = jobsArray(data.jobs);
       if (arr.length > 500) console.warn('[RDE] JobsTab large jobs array', arr.length);
       jobs.value = arr;
-      const idx = props.initialJobIndex != null && props.initialJobIndex >= 0 && props.initialJobIndex < arr.length
-        ? Number(props.initialJobIndex)
-        : (arr.length ? 0 : null);
+      let idx = null;
+      if (props.selectedJobIndex != null && props.selectedJobIndex >= 0 && props.selectedJobIndex < arr.length) {
+        idx = Number(props.selectedJobIndex);
+      } else if (arr.length) {
+        idx = 0;
+      }
       jobsLoaded.value = true;
       setTimeout(() => {
-        selectedJobIndex.value = idx;
+        jobIndexLocal.value = idx;
+        if (idx != null) emit('update:selectedJobIndex', idx);
       }, 0);
     } catch (err) {
       console.error('[JobsTab] load failed:', err);
@@ -161,14 +240,30 @@ watch(() => props.resumeId, (id) => {
   }, 0);
 }, { immediate: true });
 
+// When parent shared index updates (e.g. user picked a job on Job skills tab), mirror it here.
+watch(
+  () => props.selectedJobIndex,
+  (v) => {
+    if (!jobsLoaded.value || jobs.value.length === 0) return;
+    if (v == null || v < 0 || v >= jobs.value.length) return;
+    if (jobIndexLocal.value !== v) jobIndexLocal.value = v;
+  }
+);
+
 // Keep selection in sync when jobs are empty (e.g. select can emit "" with no options).
-watch([() => jobs.value.length, selectedJobIndex], ([len, idx]) => {
-  if (len === 0 && selectedJobIndex.value != null) selectedJobIndex.value = null;
-  if (len > 0 && (idx === '' || (typeof idx !== 'number' && idx != null))) selectedJobIndex.value = 0;
+watch([() => jobs.value.length, jobIndexLocal], ([len, idx]) => {
+  if (len === 0 && jobIndexLocal.value != null) {
+    jobIndexLocal.value = null;
+    emit('update:selectedJobIndex', null);
+  }
+  if (len > 0 && (idx === '' || (typeof idx !== 'number' && idx != null))) {
+    jobIndexLocal.value = 0;
+    emit('update:selectedJobIndex', 0);
+  }
 });
 
 const selectedJob = computed(() => {
-  const idx = selectedJobIndex.value;
+  const idx = jobIndexLocal.value;
   if (idx == null || idx < 0 || idx >= jobs.value.length) return null;
   return jobs.value[idx];
 });
@@ -183,12 +278,31 @@ function parseYearMonth(str) {
 }
 
 function toStartEnd(l) {
-  const start = (l.startYear && l.startMonth)
-    ? `${l.startYear}-${String(l.startMonth).padStart(2, '0')}`
-    : (l.startYear || '');
-  const end = (l.endYear && l.endMonth)
-    ? `${l.endYear}-${String(l.endMonth).padStart(2, '0')}`
-    : (l.endYear || '');
+  const startYYYY = normalizeYearOrBlank(l.startYYYY, { minYear: 1900 });
+  const endMin = startYYYY && startYYYY !== null ? Number(startYYYY) : 1900;
+  const endYYYY = normalizeYearOrBlank(l.endYYYY, { minYear: endMin });
+  const startMM = normalizeMonthOrBlank(l.startMM);
+  const endMM = normalizeMonthOrBlank(l.endMM);
+
+  if (startMM === null) throw new Error('Start month must be between 1 and 12');
+  if (endMM === null) throw new Error('End month must be between 1 and 12');
+  if (startYYYY === null) throw new Error('Start year must be between 1900 and the current year');
+  if (endYYYY === null) throw new Error('End year must be between start year and the current year');
+
+  if (startYYYY && endYYYY) {
+    const startScore = ymScore(startYYYY, startMM || '');
+    const endScore = ymScore(endYYYY, endMM || '');
+    if (endScore < startScore) {
+      throw new Error('End date must be on or after start date');
+    }
+  }
+
+  const start = (startYYYY && startMM)
+    ? `${startYYYY}-${startMM}`
+    : (startYYYY || '');
+  const end = (endYYYY && endMM)
+    ? `${endYYYY}-${endMM}`
+    : (endYYYY || '');
   return { start, end };
 }
 
@@ -202,13 +316,21 @@ watch(selectedJob, (job) => {
   local.value = {
     employer: job.employer ?? job.Employer ?? job.label ?? '',
     title: job.title ?? job.role ?? job.Role ?? '',
-    startYear: start.year,
-    startMonth: start.month,
-    endYear: end.year,
-    endMonth: end.month,
+    startYYYY: toFourDigits(start.year),
+    startMM: toTwoDigits(start.month),
+    endYYYY: toFourDigits(end.year),
+    endMM: toTwoDigits(end.month),
     Description: job.Description ?? job.description ?? ''
   };
 }, { immediate: true });
+
+function onFourDigitInput(field) {
+  local.value[field] = toFourDigits(local.value[field]);
+}
+
+function onTwoDigitInput(field) {
+  local.value[field] = toTwoDigits(local.value[field]);
+}
 
 // Only run focus after jobs have loaded and we have a selected job (avoids empty-dropdown path).
 watch(() => [jobsLoaded.value, props.initialFocusField, selectedJob.value], ([loaded, focusField, job]) => {
@@ -224,14 +346,16 @@ watch(() => [jobsLoaded.value, props.initialFocusField, selectedJob.value], ([lo
 function jobOptionLabel(job, i) {
   const title = job?.title ?? job?.role ?? job?.Role ?? '';
   const employer = job?.employer ?? job?.Employer ?? job?.label ?? '';
-  const parts = [title, employer].filter(Boolean);
-  return parts.length ? `${i + 1}. ${parts.join(' — ')}` : `Job ${i + 1}`;
+  const parts = [employer, title].filter(Boolean);
+  return parts.length ? parts.join(' -- ') : `Job ${i + 1}`;
 }
 
+/** @returns {Promise<boolean>} true if saved or nothing to save; false if save failed */
 async function saveCurrentJob() {
-  if (!canEdit) return
-  const idx = selectedJobIndex.value;
-  if (idx == null || !props.resumeId || props.resumeId === 'default') return;
+  if (!canEdit) return true;
+  const idx = jobIndexLocal.value;
+  if (idx == null || !props.resumeId || props.resumeId === 'default') return true;
+  if (saving.value) return true;
   saving.value = true;
   try {
     const { start, end } = toStartEnd(local.value);
@@ -246,22 +370,90 @@ async function saveCurrentJob() {
     const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
     jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
     emit('saved');
+    return true;
   } catch (err) {
     console.error('[JobsTab] save failed:', err);
     alert('Failed to save job: ' + err.message);
+    return false;
   } finally {
     saving.value = false;
   }
 }
 
-function openSkillsForCurrentJob() {
-  const idx = selectedJobIndex.value;
+function onJobFieldBlur() {
+  // Normalize/validate dates before autosaving.
+  try {
+    const startMM = normalizeMonthOrBlank(local.value.startMM);
+    if (startMM === null) throw new Error('Start month must be between 1 and 12');
+    local.value.startMM = startMM || '';
+
+    const startYYYY = normalizeYearOrBlank(local.value.startYYYY, { minYear: 1900 });
+    if (startYYYY === null) throw new Error('Start year must be between 1900 and the current year');
+    local.value.startYYYY = startYYYY || '';
+  } catch (e) {
+    alert(e instanceof Error ? e.message : String(e));
+    // Remedy: clear invalid date parts so subsequent blur can save.
+    if (String(e?.message || '').includes('Start month')) local.value.startMM = '';
+    if (String(e?.message || '').includes('Start year')) local.value.startYYYY = '';
+    return;
+  }
+  // Fire-and-forget: blur should persist the current job without requiring an explicit Save click.
+  void saveCurrentJob();
+}
+
+function validateAndNormalizeEndDate() {
+  const startYYYY = normalizeYearOrBlank(local.value.startYYYY, { minYear: 1900 });
+  if (startYYYY === null) throw new Error('Start year must be between 1900 and the current year');
+
+  const endMin = startYYYY ? Number(startYYYY) : 1900;
+  const endYYYY = normalizeYearOrBlank(local.value.endYYYY, { minYear: endMin });
+  const endMM = normalizeMonthOrBlank(local.value.endMM);
+
+  if (endYYYY === null) throw new Error('End year must be between start year and the current year');
+  if (endMM === null) throw new Error('End month must be between 1 and 12');
+
+  local.value.endYYYY = endYYYY || '';
+  local.value.endMM = endMM || '';
+
+  if (local.value.startYYYY && local.value.endYYYY) {
+    const startScore = ymScore(local.value.startYYYY, local.value.startMM || '');
+    const endScore = ymScore(local.value.endYYYY, local.value.endMM || '');
+    if (endScore < startScore) throw new Error('End date must be on or after start date');
+  }
+}
+
+function onEndGroupFocusOut(e) {
+  const root = endDateGroupRef.value;
+  const next = e?.relatedTarget || null;
+  if (root && next && root.contains(next)) return; // focus moved within end group
+  try {
+    validateAndNormalizeEndDate();
+  } catch (err) {
+    alert(err instanceof Error ? err.message : String(err));
+    // Remedy: clear invalid end date parts
+    local.value.endYYYY = '';
+    local.value.endMM = '';
+    return;
+  }
+  void saveCurrentJob();
+}
+
+async function openSkillsForCurrentJob() {
+  const idx = jobIndexLocal.value;
   if (idx == null) return;
+  // Auto-save job before switching to Skills.
+  if (canEdit) {
+    const ok = await saveCurrentJob();
+    if (!ok) return;
+  }
   emit('open-skills-for-job', idx);
 }
+
+defineExpose({ saveCurrentJob });
 </script>
 
 <style scoped>
+.rde-tab-content.rde-jobs { padding: 12px 16px; }
 .rde-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .rde-jobs .rde-section-title { font-size: 0.8rem; font-weight: 600; color: #fff; margin: 0 0 8px; }
 .rde-error { color: #e88; padding: 8px 0; }
@@ -277,7 +469,8 @@ function openSkillsForCurrentJob() {
   box-sizing: border-box;
 }
 .rde-job-fields .rde-field { margin-bottom: 12px; }
-.rde-job-fields .rde-label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+.rde-job-fields { margin-top: 14px; }
+.rde-job-fields .rde-label { display: block; font-size: 0.7rem; text-transform: none; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
 .rde-job-fields .rde-input,
 .rde-job-fields .rde-textarea {
   width: 100%;
@@ -295,9 +488,6 @@ function openSkillsForCurrentJob() {
 .rde-date-inputs { display: flex; gap: 6px; }
 .rde-date-select { flex: 1; min-width: 0; }
 .rde-job-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); }
-.rde-job-actions .rde-btn.save { background: #4a9eff; color: #fff; border: none; padding: 6px 18px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; }
-.rde-job-actions .rde-btn.save:hover:not(:disabled) { background: #6ab0ff; }
-.rde-job-actions .rde-btn.save:disabled { opacity: 0.5; cursor: default; }
 .rde-job-actions .rde-btn.skills { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); padding: 6px 18px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; }
 .rde-job-actions .rde-btn.skills:hover { background: rgba(255,255,255,0.08); color: #fff; }
 </style>

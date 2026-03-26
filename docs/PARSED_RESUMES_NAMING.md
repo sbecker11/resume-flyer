@@ -23,7 +23,7 @@ So we use `_local-` as a simple contract:
 ### Implementation notes in this repo
 
 - **Git ignore**: `.gitignore` is configured to ignore `parsed_resumes/` by default and selectively allow the publishable dataset(s).
-- **Indexing**: the static build can generate/ship `parsed_resumes/index.json` to enumerate publishable datasets.
+- **Indexing**: the static build can generate/ship `parsed_resumes/non-local-resumes.json` to enumerate publishable datasets.
 - **Editing**:
   - Local dev with the Node server can persist edits via `/api/resumes/...` back into `parsed_resumes/<id>/*.json`.
   - Static hosting cannot write files; save operations should fall back to a user-visible remedy (e.g. downloading a patch JSON).

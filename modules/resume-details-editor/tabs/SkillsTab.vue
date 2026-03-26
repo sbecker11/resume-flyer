@@ -3,16 +3,16 @@
     <p v-if="loadError" class="rde-error">{{ loadError }}</p>
     <template v-else>
       <section class="rde-section">
-        <h3 class="rde-section-title">Job</h3>
         <label for="rde-skills-job-select" class="rde-sr-only">Select job</label>
         <select
           id="rde-skills-job-select"
           name="rde-skills-job"
-          v-model="selectedJobIndex"
+          v-model="jobIndexLocal"
           class="rde-select"
           :disabled="jobs.length === 0"
+          @change="emit('update:selectedJobIndex', jobIndexLocal)"
         >
-          <option value="" disabled>Select a job…</option>
+          <option value="" disabled>jobs</option>
           <option
             v-for="(job, i) in jobs"
             :key="i"
@@ -64,7 +64,7 @@
               type="text"
               placeholder="Filter skills…"
             />
-            <span class="rde-count">{{ checkedCount }} selected</span>
+            <span class="rde-count">{{ checkedCount }} selected out of {{ totalCount }} total</span>
           </div>
           <div class="rde-skill-grid">
             <div
@@ -77,48 +77,72 @@
                 <input
                   type="checkbox"
                   :checked="selected.has(skill.id)"
-                  @change="toggle(skill.id)"
+                  :disabled="skillEditModalOpen"
+                  @change="toggleAndAutosave(skill.id)"
                 />
-                <template v-if="editingSkillId === skill.id">
-                  <input
-                    ref="editSkillInputRef"
-                    v-model="editingSkillName"
-                    type="text"
-                    name="editSkillName"
-                    class="rde-input rde-skill-edit-input"
-                    :aria-label="`Edit ${skill.name}`"
-                    @keydown.enter="saveEditSkill"
-                    @keydown.escape="cancelEditSkill"
-                  />
-                  <button type="button" class="rde-btn edit-save" :disabled="!canEdit" @click="saveEditSkill">Save</button>
-                  <button type="button" class="rde-btn edit-cancel" @click="cancelEditSkill">Cancel</button>
-                </template>
-                <template v-else>
-                  <span>{{ skill.name }}</span>
-                  <button
-                    type="button"
-                    class="rde-skill-edit-btn"
-                    aria-label="Edit skill name"
-                    @click.stop="startEditSkill(skill)"
-                  >
-                    &#9998;
-                  </button>
-                </template>
+                <button
+                  type="button"
+                  class="rde-skill-edit-btn"
+                  aria-label="Edit skill name"
+                  @click.stop="startEditSkill(skill)"
+                >
+                  &#9998;
+                </button>
+                <span>{{ skill.name }}</span>
               </label>
             </div>
           </div>
-          <button
-            type="button"
-            class="rde-btn save"
-            :disabled="saving || !canEdit"
-            @click="saveForCurrentJob"
-          >
-            {{ saving ? 'Saving…' : 'Save skills for this job' }}
-          </button>
         </section>
       </template>
     </template>
   </div>
+
+  <Teleport to="body">
+    <div
+      v-if="skillEditModalOpen"
+      class="rde-skill-edit-overlay"
+      @click.self="cancelEditSkill"
+    >
+      <div
+        class="rde-skill-edit-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit skill"
+        @keydown.esc="cancelEditSkill"
+      >
+        <div class="rde-skill-edit-title">Edit skill</div>
+        <div class="rde-skill-edit-input-row">
+          <input
+            ref="editSkillInputRef"
+            v-model="editingSkillName"
+            type="text"
+            class="rde-input rde-skill-edit-input"
+            :aria-label="`Edit ${editingSkillId}`"
+            @keydown.enter="saveEditSkill"
+          />
+        </div>
+        <div class="rde-skill-edit-actions-row">
+          <button
+            ref="editCancelBtnRef"
+            type="button"
+            class="rde-btn edit-cancel"
+            @click="cancelEditSkill"
+          >
+            Cancel
+          </button>
+          <button
+            ref="editSaveBtnRef"
+            type="button"
+            class="rde-btn edit-save"
+            :disabled="!canEdit"
+            @click="saveEditSkill"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -131,16 +155,19 @@ const canEdit = hasServer();
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
-  initialJobIndex: { type: Number, default: null }
+  /** When ResumeDetailsEditor re-parses, it bumps this value to force reload. */
+  reloadNonce: { type: Number, default: 0 },
+  /** Shared 0-based job index (synced with Resume jobs tab). */
+  selectedJobIndex: { type: Number, default: null }
 });
 
-const emit = defineEmits(['saved']);
+const emit = defineEmits(['saved', 'update:selectedJobIndex']);
 
 const jobs = shallowRef([]);
 const skills = shallowRef({});
 const initialSkillKeys = ref(new Set());
 const loadError = ref('');
-const selectedJobIndex = ref(null);
+const jobIndexLocal = ref(null);
 const search = ref('');
 const newSkillName = ref('');
 const saving = ref(false);
@@ -148,6 +175,9 @@ const selected = ref(new Set());
 const editingSkillId = ref(null);
 const editingSkillName = ref('');
 const editSkillInputRef = ref(null);
+const editSaveBtnRef = ref(null);
+const editCancelBtnRef = ref(null);
+const skillEditModalOpen = ref(false);
 const mergeFromKey = ref('');
 const mergeToKey = ref('');
 
@@ -201,11 +231,11 @@ function getSelectedSkillIdsForJob(job, skillsMap) {
   return fromIds;
 }
 
-watch(() => [props.resumeId, props.initialJobIndex], async ([id, initialIdx]) => {
+watch(() => [props.resumeId, props.reloadNonce], async ([id]) => {
   loadError.value = '';
   jobs.value = [];
   skills.value = {};
-  selectedJobIndex.value = null;
+  jobIndexLocal.value = null;
   selected.value = new Set();
   search.value = '';
   editingSkillId.value = null;
@@ -218,10 +248,14 @@ watch(() => [props.resumeId, props.initialJobIndex], async ([id, initialIdx]) =>
     jobs.value = jobsArray(data.jobs);
     skills.value = data.skills || {};
     initialSkillKeys.value = new Set(Object.keys(skills.value));
-    const idx = initialIdx != null && initialIdx >= 0 && initialIdx < jobs.value.length
-      ? initialIdx
-      : (jobs.value.length ? 0 : null);
-    selectedJobIndex.value = idx;
+    let idx = null;
+    if (props.selectedJobIndex != null && props.selectedJobIndex >= 0 && props.selectedJobIndex < jobs.value.length) {
+      idx = Number(props.selectedJobIndex);
+    } else if (jobs.value.length) {
+      idx = 0;
+    }
+    jobIndexLocal.value = idx;
+    if (idx != null) emit('update:selectedJobIndex', idx);
     if (idx != null && jobs.value[idx]) {
       selected.value = getSelectedSkillIdsForJob(jobs.value[idx], skills.value);
     }
@@ -231,7 +265,16 @@ watch(() => [props.resumeId, props.initialJobIndex], async ([id, initialIdx]) =>
   }
 }, { immediate: true });
 
-watch(selectedJobIndex, (idx) => {
+watch(
+  () => props.selectedJobIndex,
+  (v) => {
+    if (!jobs.value.length) return;
+    if (v == null || v < 0 || v >= jobs.value.length) return;
+    if (jobIndexLocal.value !== v) jobIndexLocal.value = v;
+  }
+);
+
+watch(jobIndexLocal, (idx) => {
   if (idx == null || !jobs.value[idx]) {
     selected.value = new Set();
     return;
@@ -240,16 +283,16 @@ watch(selectedJobIndex, (idx) => {
 });
 
 const selectedJob = computed(() => {
-  const idx = selectedJobIndex.value;
+  const idx = jobIndexLocal.value;
   if (idx == null || idx < 0 || idx >= jobs.value.length) return null;
   return jobs.value[idx];
 });
 
 function jobLabel(job, i) {
-  const role = job?.role ?? job?.Role ?? '';
-  const employer = job?.employer ?? job?.Employer ?? '';
-  const part = [role, employer].filter(Boolean).join(' — ');
-  return part ? `${i + 1}. ${part}` : `Job ${i + 1}`;
+  const title = job?.title ?? job?.role ?? job?.Role ?? '';
+  const employer = job?.employer ?? job?.Employer ?? job?.label ?? '';
+  const parts = [employer, title].filter(Boolean);
+  return parts.length ? parts.join(' -- ') : `Job ${i + 1}`;
 }
 
 const sortedSkills = computed(() => {
@@ -265,6 +308,7 @@ const filteredSkills = computed(() => {
 });
 
 const checkedCount = computed(() => selected.value.size);
+const totalCount = computed(() => sortedSkills.value.length);
 
 function toggle(id) {
   const s = new Set(selected.value);
@@ -272,6 +316,14 @@ function toggle(id) {
   else s.add(id);
   selected.value = s;
 }
+
+async function toggleAndAutosave(id) {
+  if (!canEdit) return;
+  toggle(id);
+  await saveForCurrentJob();
+}
+
+function onEditSkillNameFocusOut() {}
 
 function addNewSkill() {
   if (!canEdit) return
@@ -294,6 +346,7 @@ function addNewSkill() {
 }
 
 function startEditSkill(skill) {
+  if (!canEdit) return;
   editingSkillId.value = skill.id;
   editingSkillName.value = skill.name;
   nextTick(() => {
@@ -301,11 +354,13 @@ function startEditSkill(skill) {
     const el = Array.isArray(refVal) ? refVal.find(Boolean) : refVal;
     if (el && typeof el.focus === 'function') el.focus();
   });
+  skillEditModalOpen.value = true;
 }
 
 function cancelEditSkill() {
   editingSkillId.value = null;
   editingSkillName.value = '';
+  skillEditModalOpen.value = false;
 }
 
 async function saveEditSkill() {
@@ -339,6 +394,7 @@ async function saveEditSkill() {
     initialSkillKeys.value = new Set(Object.keys(skills.value));
     editingSkillId.value = null;
     editingSkillName.value = '';
+    skillEditModalOpen.value = false;
     emit('saved', { skillRenamed: true });
   } catch (err) {
     console.error('[SkillsTab] rename skill failed:', err);
@@ -377,10 +433,11 @@ async function mergeSkills() {
   }
 }
 
+/** @returns {Promise<boolean>} true if saved or nothing to save; false if save failed */
 async function saveForCurrentJob() {
-  if (!canEdit) return
-  const idx = selectedJobIndex.value;
-  if (idx == null || !props.resumeId || props.resumeId === 'default') return;
+  if (!canEdit) return true;
+  const idx = jobIndexLocal.value;
+  if (idx == null || !props.resumeId || props.resumeId === 'default') return true;
   saving.value = true;
   try {
     const skillIDs = [...selected.value];
@@ -395,26 +452,45 @@ async function saveForCurrentJob() {
     initialSkillKeys.value = new Set(Object.keys(skills.value));
     selected.value = getSelectedSkillIdsForJob(jobs.value[idx], skills.value);
     emit('saved', { jobIndex: idx, skillIDs });
+    return true;
   } catch (err) {
     console.error('[SkillsTab] save failed:', err);
     alert('Failed to save skills: ' + err.message);
+    return false;
   } finally {
     saving.value = false;
   }
 }
+
+defineExpose({ saveForCurrentJob });
 </script>
 
 <style scoped>
 .rde-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .rde-tab-content.rde-skills {
-  --rde-skills-gap: 10px;
+  --rde-skills-gap: 12px;
+  padding: 12px 16px;
 }
 .rde-skills .rde-section {
+  margin-bottom: var(--rde-skills-gap);
+}
+.rde-skills .rde-section:first-child {
   margin-bottom: var(--rde-skills-gap);
 }
 .rde-skills .rde-section:last-child { margin-bottom: 0; }
 .rde-skills .rde-section-title { font-size: 0.8rem; font-weight: 600; color: #fff; margin: 0 0 var(--rde-skills-gap); }
 .rde-error { color: #e88; padding: var(--rde-skills-gap) 0; }
+.rde-input {
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+.rde-input:focus { outline: none; border-color: rgba(74,158,255,0.6); }
 .rde-select {
   width: 100%;
   background: rgba(255,255,255,0.07);
@@ -500,11 +576,22 @@ async function saveForCurrentJob() {
   cursor: pointer;
 }
 .rde-skill-item input[type="checkbox"] { accent-color: #4a9eff; cursor: pointer; flex-shrink: 0; }
-.rde-skill-edit-input {
+.rde-skill-edit-wrap {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rde-skill-edit-input {
   min-width: 0;
   padding: 4px 8px;
   font-size: 0.9rem;
+}
+.rde-skill-edit-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 .rde-skill-edit-btn {
   flex-shrink: 0;
@@ -528,15 +615,41 @@ async function saveForCurrentJob() {
 .rde-btn.edit-save:hover { background: #6ab0ff; }
 .rde-btn.edit-cancel { background: transparent; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.3); }
 .rde-btn.edit-cancel:hover { background: rgba(255,255,255,0.08); }
-.rde-skills .rde-btn.save {
-  background: #4a9eff;
-  color: #fff;
-  border: none;
-  padding: 6px 18px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  cursor: pointer;
+
+/* Skill rename modal (pencil icon) */
+.rde-skill-edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 21000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  box-sizing: border-box;
 }
-.rde-skills .rde-btn.save:hover:not(:disabled) { background: #6ab0ff; }
-.rde-skills .rde-btn.save:disabled { opacity: 0.5; cursor: default; }
+.rde-skill-edit-modal {
+  width: 300px;
+  max-width: 100%;
+  background: #1e1e1e;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  color: #e0e0e0;
+  box-sizing: border-box;
+  padding: 16px;
+}
+.rde-skill-edit-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 10px;
+}
+.rde-skill-edit-input-row {
+  margin-bottom: 10px;
+}
+.rde-skill-edit-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 </style>

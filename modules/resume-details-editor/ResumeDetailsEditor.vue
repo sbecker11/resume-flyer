@@ -21,7 +21,8 @@
             type="button"
             class="rde-tab"
             :class="{ active: activeTab === t.id }"
-            @click="activeTab = t.id"
+            :disabled="saving || reparsing || otherSectionsAutosaving || fieldAutosaving"
+            @click="selectTab(t.id)"
           >
             {{ t.label }}
           </button>
@@ -32,35 +33,64 @@
             v-if="activeTab === 'meta'"
             :meta="meta"
             @update:meta="onMetaUpdate"
+            @autosave="onMetaAutosave"
           />
           <OtherSectionsTab
             v-if="activeTab === 'other-sections'"
             :data="otherSections"
             @update:data="onOtherSectionsUpdate"
+            @autosave="onOtherSectionsAutosave"
           />
           <EducationTab
             v-if="activeTab === 'education'"
             :data="education"
             @update:data="onEducationUpdate"
+            @autosave="onEducationAutosave"
           />
           <JobsTab
             v-if="activeTab === 'resume-jobs'"
+            ref="jobsTabRef"
             :resume-id="resumeId"
-            :initial-job-index="initialJobIndex ?? null"
+            :reload-nonce="reloadNonce"
+            :selected-job-index="sharedJobIndex"
             :initial-focus-field="initialFocusField"
+            @update:selected-job-index="sharedJobIndex = $event"
             @saved="onJobsSaved"
             @open-skills-for-job="openSkillsForJob"
           />
           <SkillsTab
             v-if="activeTab === 'job-skills'"
+            ref="skillsTabRef"
             :resume-id="resumeId"
-            :initial-job-index="skillsPreselectJobIndex !== null ? skillsPreselectJobIndex : (initialJobIndex ?? null)"
+            :reload-nonce="reloadNonce"
+            :selected-job-index="sharedJobIndex"
+            @update:selected-job-index="sharedJobIndex = $event"
             @saved="onSkillsSaved"
           />
         </div>
 
+        <div v-if="reparsing || reparseOutput" class="rde-parser-output-wrap">
+          <textarea
+            class="rde-parser-output"
+            v-model="reparseOutput"
+            readonly
+            rows="10"
+            spellcheck="false"
+            ref="reparseTextareaRef"
+          ></textarea>
+        </div>
+
         <div class="rde-footer">
           <button type="button" class="rde-btn cancel" @click="cancel">Cancel</button>
+          <button
+            type="button"
+            class="rde-btn reparse"
+            @click="reparse"
+            :disabled="saving || reparsing || !canEdit || !canReparse"
+            title="Delete derived files in this resume folder and re-run the parser (keeps only the original .docx/.pdf)"
+          >
+            {{ reparsing ? 'Reparsing…' : 'Reparse…' }}
+          </button>
           <button type="button" class="rde-btn save" @click="save" :disabled="saving || !canEdit">
             {{ saving ? 'Saving…' : 'Save' }}
           </button>
@@ -85,6 +115,8 @@ import EducationTab from './tabs/EducationTab.vue';
 import JobsTab from './tabs/JobsTab.vue';
 import SkillsTab from './tabs/SkillsTab.vue';
 import * as api from './api.mjs';
+import { reparseResumeWithParserStream } from '@/modules/api/resumeManagerApi.mjs';
+import { reportError } from '@/modules/utils/errorReporting.mjs';
 
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 240;
@@ -111,13 +143,23 @@ const tabs = [
 ];
 
 const activeTab = ref('meta');
-/** When user clicks "Skills" in Jobs tab, we switch to Skills tab with this job index. */
-const skillsPreselectJobIndex = ref(null);
+/** Shared 0-based job index for Resume jobs + Job skills tabs (kept in sync when switching tabs). */
+const sharedJobIndex = ref(null);
 const meta = shallowRef({});
 const otherSections = shallowRef({});
 const education = shallowRef({});
 const saving = ref(false);
+const reparsing = ref(false);
 const canEdit = hasServer();
+const reloadNonce = ref(0);
+
+const jobsTabRef = ref(null);
+const skillsTabRef = ref(null);
+const otherSectionsAutosaving = ref(false);
+const fieldAutosaving = ref(false);
+const reparseOutput = ref('');
+const reparseTextareaRef = ref(null);
+let reparseAbortController = null;
 
 // Pending edits (only save what changed)
 const pendingMeta = shallowRef(null);
@@ -278,7 +320,9 @@ watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
   if (!open || !id || id === 'default') return;
   const tab = props.initialTab && tabs.some(t => t.id === props.initialTab) ? props.initialTab : 'meta';
   activeTab.value = tab;
-  skillsPreselectJobIndex.value = null;
+  sharedJobIndex.value = props.initialJobIndex != null && props.initialJobIndex >= 0
+    ? Number(props.initialJobIndex)
+    : null;
   dragOffset.value = { x: 0, y: 0 };
   const v = getViewportMaxSize();
   modalWidth.value = Math.max(MIN_WIDTH, Math.min(720, Math.floor(v.w * 0.92)));
@@ -287,6 +331,8 @@ watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
   pendingMeta.value = null;
   pendingOtherSections.value = null;
   pendingEducation.value = null;
+  reparseOutput.value = '';
+  reloadNonce.value++;
   setTimeout(async () => {
     try {
       const [metaRes, otherRes, educationRes] = await Promise.all([
@@ -303,14 +349,151 @@ watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
   }, 0);
 }, { immediate: true });
 
+const canReparse = computed(() => {
+  return Boolean(props.resumeId && props.resumeId !== 'default');
+});
+
 function onMetaUpdate(updates) {
   pendingMeta.value = updates;
 }
+
+async function onMetaAutosave() {
+  if (!canEdit) return;
+  if (!props.resumeId || props.resumeId === 'default') return;
+  if (fieldAutosaving.value) return;
+  if (!pendingMeta.value) return;
+
+  fieldAutosaving.value = true;
+  try {
+    const id = props.resumeId;
+    const u = pendingMeta.value;
+    await api.updateResumeMeta(id, u);
+    meta.value = { ...meta.value, ...u };
+    pendingMeta.value = null;
+    emit('saved', { metaSaved: true });
+  } catch (err) {
+    reportError(err, '[ResumeDetailsEditor] autosave meta failed', '');
+    alert('Failed to autosave meta: ' + (err instanceof Error ? err.message : String(err)));
+  } finally {
+    fieldAutosaving.value = false;
+  }
+}
+
 function onOtherSectionsUpdate(data) {
+  if (otherSectionsAutosaving.value) return;
   pendingOtherSections.value = data;
+}
+
+async function onOtherSectionsAutosave(snapshot) {
+  if (!canEdit) return;
+  if (!props.resumeId || props.resumeId === 'default') return;
+  if (otherSectionsAutosaving.value) return;
+  if (!snapshot || typeof snapshot !== 'object') return;
+
+  otherSectionsAutosaving.value = true;
+  try {
+    const id = props.resumeId;
+    await api.updateResumeOtherSections(id, snapshot);
+    otherSections.value = snapshot;
+    pendingOtherSections.value = null;
+    // Do not use `metaSaved` so the resume list doesn't unnecessarily refetch.
+    emit('saved', { otherSectionsSaved: true });
+  } catch (err) {
+    reportError(err, '[ResumeDetailsEditor] autosave other sections failed', '');
+    alert('Failed to autosave other sections: ' + (err instanceof Error ? err.message : String(err)));
+  } finally {
+    otherSectionsAutosaving.value = false;
+  }
 }
 function onEducationUpdate(data) {
   pendingEducation.value = data;
+}
+
+async function onEducationAutosave() {
+  if (!canEdit) return;
+  if (!props.resumeId || props.resumeId === 'default') return;
+  if (fieldAutosaving.value) return;
+  if (pendingEducation.value === null) return;
+
+  fieldAutosaving.value = true;
+  try {
+    const id = props.resumeId;
+    const data = pendingEducation.value;
+    await api.updateResumeEducation(id, data);
+    education.value = typeof data === 'object' && data !== null ? { ...data } : data;
+    pendingEducation.value = null;
+    emit('saved', { educationSaved: true });
+  } catch (err) {
+    reportError(err, '[ResumeDetailsEditor] autosave education failed', '');
+    alert('Failed to autosave education: ' + (err instanceof Error ? err.message : String(err)));
+  } finally {
+    fieldAutosaving.value = false;
+  }
+}
+
+/**
+ * Persist edits for the tab that is currently visible before switching away.
+ * @returns {Promise<boolean>} false if a job/skills save failed (caller should not change tab)
+ */
+async function flushCurrentTabBeforeLeave() {
+  const id = props.resumeId;
+  if (!id || id === 'default') return true;
+  const tab = activeTab.value;
+
+  if (tab === 'meta' && pendingMeta.value) {
+    const u = pendingMeta.value;
+    await api.updateResumeMeta(id, u);
+    pendingMeta.value = null;
+    meta.value = { ...meta.value, ...u };
+    emit('saved', { metaSaved: true });
+  }
+  if (tab === 'other-sections' && pendingOtherSections.value !== null) {
+    const data = pendingOtherSections.value;
+    await api.updateResumeOtherSections(id, data);
+    pendingOtherSections.value = null;
+    otherSections.value = typeof data === 'object' && data !== null ? { ...data } : data;
+    emit('saved', { metaSaved: true });
+  }
+  if (tab === 'education' && pendingEducation.value !== null) {
+    const data = pendingEducation.value;
+    await api.updateResumeEducation(id, data);
+    pendingEducation.value = null;
+    education.value = typeof data === 'object' && data !== null ? { ...data } : data;
+    emit('saved', { metaSaved: true });
+  }
+  if (tab === 'resume-jobs' && jobsTabRef.value?.saveCurrentJob) {
+    const ok = await jobsTabRef.value.saveCurrentJob();
+    if (ok === false) return false;
+  }
+  if (tab === 'job-skills' && skillsTabRef.value?.saveForCurrentJob) {
+    const ok = await skillsTabRef.value.saveForCurrentJob();
+    if (ok === false) return false;
+  }
+  return true;
+}
+
+async function selectTab(nextId) {
+  if (nextId === activeTab.value) return;
+  if (!tabs.some(t => t.id === nextId)) return;
+  if (!props.isOpen || !props.resumeId || props.resumeId === 'default') {
+    activeTab.value = nextId;
+    return;
+  }
+  if (!canEdit) {
+    activeTab.value = nextId;
+    return;
+  }
+  saving.value = true;
+  try {
+    const ok = await flushCurrentTabBeforeLeave();
+    if (!ok) return;
+    activeTab.value = nextId;
+  } catch (err) {
+    reportError(err, '[ResumeDetailsEditor] flush before tab switch', '');
+    alert('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
+  } finally {
+    saving.value = false;
+  }
 }
 
 function onJobsSaved() {
@@ -318,7 +501,7 @@ function onJobsSaved() {
 }
 
 function openSkillsForJob(jobIndex) {
-  skillsPreselectJobIndex.value = jobIndex;
+  sharedJobIndex.value = jobIndex;
   activeTab.value = 'job-skills';
 }
 
@@ -327,7 +510,70 @@ function onSkillsSaved(payload) {
 }
 
 function cancel() {
+  if (reparseAbortController) {
+    try { reparseAbortController.abort(); } catch {}
+  }
+  reparseAbortController = null;
   emit('close');
+}
+
+async function reparse() {
+  if (!canEdit) return;
+  if (!props.resumeId || props.resumeId === 'default') return;
+  reparsing.value = true;
+  reparseOutput.value = '';
+  let reparseSucceeded = false;
+  try {
+    const controller = new AbortController();
+    reparseAbortController = controller;
+
+    await reparseResumeWithParserStream(props.resumeId, {
+      signal: controller.signal,
+      onStatus: (status) => {
+        reparseOutput.value += `${status}\n`;
+        nextTick(() => {
+          const el = reparseTextareaRef.value;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      },
+      onOutput: (line) => {
+        reparseOutput.value += `${line}\n`;
+        nextTick(() => {
+          const el = reparseTextareaRef.value;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      }
+    });
+
+    reparseOutput.value += 'Resume parsed successfully!\n';
+    // Reload data in this modal so user sees the new parsed outputs.
+    const id = props.resumeId;
+    const [metaRes, otherRes, educationRes] = await Promise.all([
+      api.getResumeMeta(id).catch(() => ({})),
+      api.getResumeOtherSections(id).catch(() => ({})),
+      api.getResumeEducation(id).catch(() => ({}))
+    ]);
+    meta.value = typeof metaRes === 'object' && metaRes !== null ? { ...metaRes } : metaRes;
+    otherSections.value = typeof otherRes === 'object' && otherRes !== null ? { ...otherRes } : otherRes;
+    education.value = typeof educationRes === 'object' && educationRes !== null ? { ...educationRes } : {};
+    pendingMeta.value = null;
+    pendingOtherSections.value = null;
+    pendingEducation.value = null;
+    reloadNonce.value++;
+    emit('saved', { reparsed: true });
+    reparseSucceeded = true;
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      reparseOutput.value = '';
+      return;
+    }
+    console.error('[ResumeDetailsEditor] reparse failed:', err);
+    alert('Failed to reparse: ' + err.message);
+  } finally {
+    reparsing.value = false;
+    reparseAbortController = null;
+    if (reparseSucceeded) reparseOutput.value = '';
+  }
 }
 
 async function save() {
@@ -336,6 +582,15 @@ async function save() {
   saving.value = true;
   try {
     const id = props.resumeId;
+
+    // Autosave tab-specific changes (no per-tab save buttons).
+    if (activeTab.value === 'resume-jobs' && jobsTabRef.value?.saveCurrentJob) {
+      await jobsTabRef.value.saveCurrentJob();
+    }
+    if (activeTab.value === 'job-skills' && skillsTabRef.value?.saveForCurrentJob) {
+      await skillsTabRef.value.saveForCurrentJob();
+    }
+
     if (pendingMeta.value) {
       await api.updateResumeMeta(id, pendingMeta.value);
     }
@@ -461,6 +716,26 @@ async function save() {
   padding: 16px var(--rde-inner-padding-x);
   box-sizing: border-box;
 }
+.rde-parser-output-wrap {
+  padding: 0 var(--rde-inner-padding-x) 10px;
+}
+.rde-parser-output {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #ddd;
+  background: #121212;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  resize: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  line-height: 1.1;
+  min-height: 11em;
+  max-height: 220px;
+}
 .rde-footer {
   display: flex;
   justify-content: flex-end;
@@ -481,7 +756,28 @@ async function save() {
   color: rgba(255,255,255,0.6);
 }
 .rde-btn.cancel:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.rde-btn.reparse {
+  background: transparent;
+  border-color: rgba(46, 204, 113, 0.45);
+  color: rgba(46, 204, 113, 0.9);
+}
+.rde-btn.reparse:hover:not(:disabled) {
+  border-color: rgba(46, 204, 113, 0.75);
+  color: #2ecc71;
+}
+.rde-btn.reparse:disabled { opacity: 0.5; cursor: default; }
 .rde-btn.save { background: #4a9eff; color: #fff; }
 .rde-btn.save:hover:not(:disabled) { background: #6ab0ff; }
 .rde-btn.save:disabled { opacity: 0.5; cursor: default; }
+</style>
+
+<style>
+.rde-top-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: none;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
 </style>

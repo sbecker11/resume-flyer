@@ -1,0 +1,26 @@
+{
+  "0": {
+    "index": 0,
+    "degree": "PhD, Media Arts & Sciences — Computer Vision / Video Coding / Computer Graphics",
+    "institution": "Massachusetts Institute of Technology 1997",
+    "start": "1997-01-01",
+    "end": "",
+    "description": ""
+  },
+  "1": {
+    "index": 1,
+    "degree": "MS, Computer Science — Medical Imaging / Computer Graphics",
+    "institution": "Brigham Young University 1990",
+    "start": "1990-01-01",
+    "end": "",
+    "description": ""
+  },
+  "2": {
+    "index": 2,
+    "degree": "BS, Design Engineering Technology — CAD / CAE / CAM",
+    "institution": "Brigham Young University 1987",
+    "start": "1987-01-01",
+    "end": "",
+    "description": "CERTIFICATIONS, PUBLICATIONS & PATENTS"
+  }
+}

@@ -70,7 +70,7 @@ export function useJobsDependency() {
     }
 
     const apiUrl = basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/data`)
-    const indexPath = basePathJoin('parsed_resumes/index.json')
+    const indexPath = basePathJoin('parsed_resumes/non-local-resumes.json')
     const getStaticUrls = (id) => ({
       jobs: basePathJoin(`parsed_resumes/${encodeURIComponent(id)}/jobs.json`),
       skills: basePathJoin(`parsed_resumes/${encodeURIComponent(id)}/skills.json`),
@@ -81,7 +81,7 @@ export function useJobsDependency() {
       if (!idxRes.ok) throw new Error(`Resume index not found: ${indexPath}`)
       const index = await idxRes.json()
       const id = index.defaultResumeId
-      if (!id) throw new Error('No default resume in parsed_resumes (index.json has no defaultResumeId).')
+      if (!id) throw new Error('No default resume in parsed_resumes (non-local-resumes.json has no defaultResumeId).')
       return id
     }
     const getStaticPayload = async (id) => {

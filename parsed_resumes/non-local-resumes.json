@@ -1,0 +1,38 @@
+{
+  "resumes": [
+    {
+      "id": "yahoo-seniormlengineer",
+      "displayName": "Shawn Becker",
+      "fileName": "Yahoo_SeniorMLEngineer.docx",
+      "createdAt": "2026-03-25T13:04:04.000Z",
+      "jobCount": 9,
+      "skillCount": 80
+    },
+    {
+      "id": "shawn-becker-full-stack-developer-ai-ml-engineer",
+      "displayName": "SHAWN BECKER",
+      "fileName": "",
+      "createdAt": "2026-03-25T15:42:08.430Z",
+      "jobCount": 11,
+      "skillCount": 154
+    },
+    {
+      "id": "yahoo-engineer",
+      "displayName": "Yahoo Senior Engineer",
+      "fileName": "Yahoo-Engineer.docx",
+      "createdAt": "2026-03-25T13:03:14.000Z",
+      "jobCount": 2,
+      "skillCount": 11
+    },
+    {
+      "id": "zapier-candidate-resume",
+      "displayName": "Zapier",
+      "fileName": "",
+      "createdAt": "2026-03-25T19:43:12.935Z",
+      "jobCount": 2,
+      "skillCount": 17
+    }
+  ],
+  "defaultResumeId": "yahoo-seniormlengineer",
+  "generatedAt": "2026-03-26T04:06:15.931Z"
+}

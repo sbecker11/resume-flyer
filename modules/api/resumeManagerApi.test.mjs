@@ -8,6 +8,8 @@ import {
     uploadResumeWithParserStream,
     getResumeData,
     deleteResume,
+    reparseResume,
+    reparseResumeWithParserStream,
     updateJobSkills,
     renameSkill,
     mergeSkill,
@@ -492,6 +494,95 @@ describe('resumeManagerApi', () => {
         });
     });
 
+    describe('reparseResume', () => {
+        it('calls POST /api/resumes/:id/reparse and returns JSON on success', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ success: true, resumeId: 'r1' })
+            });
+
+            const out = await reparseResume('r1');
+            expect(out).toEqual({ success: true, resumeId: 'r1' });
+
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/reparse',
+                expect.objectContaining({
+                    method: 'POST'
+                })
+            );
+        });
+
+        it('throws server error message when not ok', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: async () => ({ error: 'Boom' })
+            });
+            await expect(reparseResume('r1')).rejects.toThrow('Boom');
+        });
+
+        it('throws status-only when JSON body fails', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: async () => {
+                    throw new SyntaxError('bad');
+                }
+            });
+            await expect(reparseResume('r1')).rejects.toThrow('HTTP 500');
+        });
+    });
+
+    describe('reparseResumeWithParserStream', () => {
+        it('streams output/status and resolves done payload', async () => {
+            const encoder = new TextEncoder();
+            const sse =
+                'event: status\n' +
+                'data: Deleting derived files...\n\n' +
+                'event: output\n' +
+                'data: hello\n\n' +
+                'event: done\n' +
+                'data: {"success":true,"resumeId":"r1"}\n\n';
+
+            let sseRead = 0;
+            const reader = {
+                read: vi.fn(async () => {
+                    if (sseRead++ > 0) return { value: undefined, done: true };
+                    return { value: encoder.encode(sse), done: false };
+                }),
+                cancel: vi.fn()
+            };
+
+            fetchMock.mockResolvedValue({
+                ok: true,
+                body: { getReader: () => reader }
+            });
+
+            const onStatus = vi.fn();
+            const onOutput = vi.fn();
+            const out = await reparseResumeWithParserStream('r1', { onStatus, onOutput });
+            expect(out).toEqual({ success: true, resumeId: 'r1' });
+            expect(onStatus).toHaveBeenCalledWith('Deleting derived files...');
+            expect(onOutput).toHaveBeenCalledWith('hello');
+        });
+
+        it('rejects on error event', async () => {
+            const encoder = new TextEncoder();
+            const sse = 'event: error\n' + 'data: {"message":"Boom"}\n\n';
+
+            let sseRead = 0;
+            const reader = {
+                read: vi.fn(async () => {
+                    if (sseRead++ > 0) return { value: undefined, done: true };
+                    return { value: encoder.encode(sse), done: false };
+                }),
+                cancel: vi.fn()
+            };
+            fetchMock.mockResolvedValue({ ok: true, body: { getReader: () => reader } });
+            await expect(reparseResumeWithParserStream('r1')).rejects.toThrow('Boom');
+        });
+    });
+
     describe('updateJobSkills', () => {
         it('PATCHes skills without newSkills when array empty', async () => {
             fetchMock.mockResolvedValue({
@@ -805,7 +896,7 @@ describe('resumeManagerApi', () => {
             fetchMock.mockResolvedValue({ ok: true, json: async () => idx });
             const result = await listResumesStatic();
             expect(result).toEqual(idx);
-            expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('parsed_resumes/index.json'), expect.any(Object));
+            expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('parsed_resumes/non-local-resumes.json'), expect.any(Object));
         });
 
         it('listResumes throws when static index fails', async () => {

@@ -34,7 +34,7 @@ How **app state** and **.env** behave in each environment:
 
 Summary: **Local** uses `.env` and `app_state.json` (with `public/app_state.default.json` as fallback for state). **GitHub Pages** uses only what’s in the build: `app_state.default.json` from `public/` for initial state, and workflow `env` for build-time config (e.g. `VITE_BASE`).
 
-When `user-settings.currentResumeId` points to a resume that is not present in the current environment (for example, a local-only resume id while running on GitHub Pages), startup falls back to the first available resume from `parsed_resumes/index.json` and persists that fallback id when save succeeds.
+When `user-settings.currentResumeId` points to a resume that is not present in the current environment (for example, a local-only resume id while running on GitHub Pages), startup falls back to the first available resume from `parsed_resumes/non-local-resumes.json` and persists that fallback id when save succeeds.
 
 On GitHub Pages (static hosting), the UI disables backend-only actions:
 uploads/parse and permanent resume delete/save are not available. The app can only display already-parsed resumes from `parsed_resumes/*` (and can download JSON patch files for manual offline application in the resume editor).

@@ -90,14 +90,30 @@
         </div>
 
         <div class="modal-footer">
-          <button class="btn-upload" @click="openUpload">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            Upload New…
-          </button>
+          <div class="footer-left">
+            <button class="btn-upload" :disabled="!canDelete" @click="openUpload">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Upload New…
+            </button>
+            <button
+              class="btn-upload btn-reparse"
+              :disabled="!canReparse"
+              @click="reparseSelected"
+              :title="canReparse ? 'Reparse selected resume folder' : 'Select a resume folder to enable reparse'"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="21 2 21 8 15 8" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <polyline points="3 22 3 16 9 16" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+              {{ reparsing ? 'Reparsing…' : 'Reparse…' }}
+            </button>
+          </div>
           <div class="footer-right">
             <div v-if="saving" class="footer-spinner"></div>
             <button
@@ -118,7 +134,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { listResumes, deleteResume } from '../api/resumeManagerApi.mjs'
+import { listResumes, deleteResume, reparseResume } from '../api/resumeManagerApi.mjs'
 import { hasServer } from '@/modules/core/hasServer.mjs'
 
 const props = defineProps({
@@ -126,7 +142,7 @@ const props = defineProps({
   currentResumeId: { type: String, default: 'default' },
 })
 
-const emit = defineEmits(['close', 'deleted', 'selected', 'open-upload'])
+const emit = defineEmits(['close', 'deleted', 'selected', 'open-upload', 'reparsed'])
 
 const resumes = ref([])
 const loading = ref(false)
@@ -134,6 +150,7 @@ const loadError = ref(null)
 const pendingDeletes = ref(new Set())
 const selectedId = ref(null)
 const saving = ref(false)
+const reparsing = ref(false)
 const confirmDeleteId = ref(null)
 const canDelete = hasServer()
 
@@ -146,6 +163,15 @@ const confirmDeleteName = computed(() => {
 const hasChanges = computed(() => {
   const selectionChanged = selectedId.value && selectedId.value !== props.currentResumeId && !pendingDeletes.value.has(selectedId.value)
   return pendingDeletes.value.size > 0 || selectionChanged
+})
+
+const canReparse = computed(() => {
+  const id = selectedId.value
+  if (!canDelete) return false
+  if (!id || id === 'default') return false
+  if (saving.value || reparsing.value) return false
+  if (pendingDeletes.value.has(id)) return false
+  return true
 })
 
 watch(() => props.isOpen, async (open) => {
@@ -248,7 +274,26 @@ function cancel() {
 }
 
 function openUpload() {
+  if (!canDelete) return;
   emit('open-upload')
+}
+
+async function reparseSelected() {
+  if (!canReparse.value) return
+  const id = selectedId.value
+  if (!id) return
+
+  reparsing.value = true
+  loadError.value = null
+  try {
+    await reparseResume(id)
+    resumes.value = await listResumes()
+    emit('reparsed', id)
+  } catch (err) {
+    loadError.value = `Reparse failed: ${err.message}`
+  } finally {
+    reparsing.value = false
+  }
 }
 </script>
 
@@ -436,6 +481,14 @@ function openUpload() {
   transition: all 0.15s;
 }
 .delete-toggle:hover { border-color: #dc3545; color: #dc3545; }
+.delete-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.delete-toggle:disabled:hover {
+  border-color: #555;
+  color: #999;
+}
 .delete-toggle.active { border-color: #3498db; color: #3498db; }
 
 .pending-warning {
@@ -452,6 +505,12 @@ function openUpload() {
   gap: 8px;
   padding: 16px 24px;
   border-top: 1px solid #333;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .footer-right {
@@ -484,6 +543,16 @@ function openUpload() {
   transition: all 0.15s;
 }
 .btn-upload:hover { border-color: #3498db; color: #3498db; }
+
+.btn-reparse:hover { border-color: #2ecc71; color: #2ecc71; }
+.btn-upload:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-upload:disabled:hover {
+  border-color: #555;
+  color: #ccc;
+}
 
 .btn-cancel {
   padding: 8px 20px;

@@ -1,0 +1,22 @@
+=== resume-parser ===
+Command: /Users/sbecker11/workspace-resume/resume-parser/venv/bin/python3 -m resume_parser.resume_to_json "/Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/Yahoo_SeniorMLEngineer.docx" -o "/Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer"
+Cwd: /Users/sbecker11/workspace-resume/resume-parser
+Input: /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/Yahoo_SeniorMLEngineer.docx
+Output: /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer
+-----------------------
+Output directory: /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer
+Extracting text...
+Extracted 6110 characters
+Parsing jobs with LLM (anthropic)...
+Parsed 9 jobs
+Parsing resume sections (contact, summary, certifications, skills, other)...
+Extracted 74 skills from descriptions
+Enriching skills with LLM...
+Categorizing skills with LLM...
+Suggesting skill merges...
+Copied /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/Yahoo_SeniorMLEngineer.docx
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/jobs.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/skills.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/categories.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/other-sections.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/yahoo-seniormlengineer/meta.json

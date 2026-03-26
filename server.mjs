@@ -243,6 +243,43 @@ app.post('/api/state', async (req, res) => {
 // Note: GitHub Pages cannot write back to these files; writes still require the API.
 app.use('/parsed_resumes', express.static(PARSED_RESUMES_DIR));
 
+const NON_LOCAL_RESUMES_INDEX_FILENAME = 'non-local-resumes.json';
+const GENERATE_PARSED_RESUMES_INDEX_SCRIPT_PATH = path.join(PROJECT_ROOT, 'scripts', 'generate-parsed-resumes-index.mjs');
+
+async function regenerateNonLocalResumesIndex(reason) {
+    try {
+        console.log(`Remedy: Regenerating ${NON_LOCAL_RESUMES_INDEX_FILENAME} (${reason})`);
+
+        await new Promise((resolve, reject) => {
+            const child = spawn(process.execPath, [GENERATE_PARSED_RESUMES_INDEX_SCRIPT_PATH], {
+                cwd: PROJECT_ROOT,
+                env: {
+                    ...process.env,
+                    PARSED_RESUMES_DIR: PARSED_RESUMES_DIR
+                },
+                stdio: ['ignore', 'pipe', 'pipe']
+            });
+
+            let stdout = '';
+            let stderr = '';
+            child.stdout.on('data', (d) => { stdout += d.toString(); });
+            child.stderr.on('data', (d) => { stderr += d.toString(); });
+
+            child.on('close', (code) => {
+                if (code === 0) resolve();
+                else reject(new Error(`generate-parsed-resumes-index exited with code ${code}${stderr ? `: ${stderr}` : ''}\n${stdout ? `STDOUT:\n${stdout}` : ''}`));
+            });
+            child.on('error', (err) => reject(err));
+        });
+    } catch (e) {
+        reportError(
+            e,
+            '[ResumeIndex] Failed to regenerate non-local-resumes.json',
+            'Continuing without updating static resume index (static listing may be stale until next successful generation)'
+        );
+    }
+}
+
 /** First non-_local- resume folder in parsed_resumes (by displayName, matching generate-parsed-resumes-index). */
 async function getDefaultResumeId() {
     const entries = await fs.readdir(PARSED_RESUMES_DIR, { withFileTypes: true });
@@ -569,6 +606,12 @@ app.patch('/api/resumes/:id/meta', async (req, res) => {
         if (displayName !== undefined) meta.displayName = displayName;
         if (fileName !== undefined) meta.fileName = fileName;
         await atomicWriteWithLock(metaPath, JSON.stringify(meta, null, 2));
+
+        // displayName affects static index ordering/default resume selection,
+        // but regenerate on any rename-related meta update to keep static listing in sync.
+        if (displayName !== undefined || fileName !== undefined) {
+            await regenerateNonLocalResumesIndex(`resume renamed (meta update) [${id}]`);
+        }
         res.json(meta);
     } catch (err) {
         console.error('[PATCH meta]', err);
@@ -681,10 +724,388 @@ app.delete('/api/resumes/:id', async (req, res) => {
     try {
         await fs.rm(dir, { recursive: true, force: true });
         console.log(`[DELETE resume] Removed: ${dir}`);
+
+        await regenerateNonLocalResumesIndex(`resume deleted (${id})`);
+
         res.json({ ok: true });
     } catch (err) {
         console.error('[DELETE resume]', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/resumes/:id/reparse: Delete derived files in the resume folder,
+// keep only the original .docx/.pdf, and re-run resume-parser into the same folder.
+app.post('/api/resumes/:id/reparse', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') {
+        return res.status(400).json({ error: 'Invalid resume id.' });
+    }
+
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const metaPath = path.join(dir, 'meta.json');
+
+    try {
+        // Validate folder exists
+        await fs.access(dir);
+
+        // Load existing meta to preserve displayName/originalFilename where possible.
+        let existingMeta = {};
+        try {
+            const content = await fs.readFile(metaPath, 'utf-8');
+            existingMeta = JSON.parse(content) || {};
+        } catch {
+            /* meta may be missing; we'll derive from the document file */
+        }
+
+        // Find the original resume document file in this folder.
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        const docLikeFiles = entries.filter(ent =>
+            ent.isFile() && (ent.name.toLowerCase().endsWith('.docx') || ent.name.toLowerCase().endsWith('.pdf'))
+        );
+
+        if (docLikeFiles.length === 0) {
+            return res.status(404).json({
+                error: 'Original .docx/.pdf not found for this resume folder.',
+                resumeId: id
+            });
+        }
+
+        const preferredBaseName = existingMeta?.originalFilename
+            ? path.basename(String(existingMeta.originalFilename))
+            : null;
+        const keepEntry = (preferredBaseName
+            ? docLikeFiles.find(e => e.name === preferredBaseName)
+            : null) || docLikeFiles[0];
+
+        const keepDocPath = path.join(dir, keepEntry.name);
+
+        // Delete everything except the original docx/pdf file.
+        // This intentionally removes meta/jobs/skills/html/etc so we always rebuild from source.
+        for (const ent of entries) {
+            if (ent.name === keepEntry.name) continue;
+            const target = path.join(dir, ent.name);
+            await fs.rm(target, { recursive: true, force: true });
+        }
+
+        // Re-run resume-parser into the same output directory.
+        const parserModule = process.env.RESUME_PARSER_MODULE || RESUME_PARSER_PYTHON_MODULE_UNSET_ENV;
+        const resumeParserProjectPath = process.env.RESUME_PARSER_PROJECT_PATH
+            ? path.resolve(PROJECT_ROOT, process.env.RESUME_PARSER_PROJECT_PATH)
+            : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
+
+        const defaultResumeParserPythonBin = path.join(resumeParserProjectPath, 'venv', 'bin', 'python3');
+        const pythonBinCandidates = [
+            defaultResumeParserPythonBin,
+            'python3',
+            'python3.11',
+            'python',
+        ].filter((value, idx, arr) => Boolean(value) && arr.indexOf(value) === idx);
+
+        const cleanEnv = {};
+        for (const [key, value] of Object.entries(process.env)) {
+            if (!key.includes('API')) cleanEnv[key] = value;
+        }
+
+        async function runParserWithPythonBin(pythonBin) {
+            const commandHeader = [
+                '=== resume-parser ===',
+                `Command: ${pythonBin} -m ${parserModule} "${keepDocPath}" -o "${dir}"`,
+                `Cwd: ${resumeParserProjectPath}`,
+                `Input: ${keepDocPath}`,
+                `Output: ${dir}`,
+                '-----------------------',
+            ].join('\n');
+
+            const pythonProcess = spawn(pythonBin, [
+                '-u',
+                '-m',
+                parserModule,
+                keepDocPath,
+                '-o',
+                dir
+            ], {
+                env: cleanEnv,
+                cwd: resumeParserProjectPath
+            });
+
+            trackResumeParserChild(pythonProcess, 'resume-parser-reparse');
+
+            let stdout = '';
+            let stderr = '';
+            pythonProcess.stdout.on('data', (data) => {
+                const t = data.toString();
+                stdout += t;
+                console.log(`[Parser stdout]: ${t.trim()}`);
+            });
+            pythonProcess.stderr.on('data', (data) => {
+                const t = data.toString();
+                stderr += t;
+                console.error(`[Parser stderr]: ${t.trim()}`);
+            });
+
+            await new Promise((resolve, reject) => {
+                pythonProcess.on('close', (code) => {
+                    const combinedOutput = `${commandHeader}\n${stdout}${stderr}`;
+                    if (code === 0) return resolve(combinedOutput);
+                    const err = new Error(`Parser exited with code ${code}. Error: ${stderr}`);
+                    err.parserOutput = combinedOutput;
+                    reject(err);
+                });
+                pythonProcess.on('error', (error) => {
+                    reject(new Error(`Failed to run parser with ${pythonBin}: ${error.message}`));
+                });
+            });
+        }
+
+        let parserRunError = null;
+        for (const pythonBin of pythonBinCandidates) {
+            try {
+                await runParserWithPythonBin(pythonBin);
+                parserRunError = null;
+                break;
+            } catch (error) {
+                parserRunError = error;
+                const details = String(error?.message || error);
+                const isModuleNotFound = details.includes('ModuleNotFoundError') && details.includes('resume_parser');
+                if (isModuleNotFound) {
+                    console.error(`[ResumeReparse] Parser module missing with ${pythonBin}:`, details);
+                    console.log(`Remedy: retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
+                    continue;
+                }
+                throw error;
+            }
+        }
+        if (parserRunError) throw parserRunError;
+
+        // Recreate meta.json (it was deleted as part of the reparse).
+        const metadata = {
+            id,
+            displayName: existingMeta?.displayName || existingMeta?.name || id,
+            originalFilename: keepEntry.name,
+            sourceUrl: existingMeta?.sourceUrl || null,
+            sourceType: existingMeta?.sourceType || (existingMeta?.sourceUrl ? 'url' : 'upload'),
+            createdAt: new Date().toISOString(),
+            uploadedBy: existingMeta?.uploadedBy || 'user',
+            fileSize: (await fs.stat(keepDocPath)).size
+        };
+        await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
+
+        // Read and normalize parsed outputs so we can return counts.
+        const jobsPath = path.join(dir, 'jobs.json');
+        const skillsPath = path.join(dir, 'skills.json');
+        const categoriesPath = path.join(dir, 'categories.json');
+        const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
+        await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
+
+        res.json({
+            success: true,
+            resumeId: id,
+            displayName: metadata.displayName,
+            jobCount: jobs.length,
+            skillCount: Object.keys(skills).length,
+            metadata
+        });
+    } catch (error) {
+        reportError(error, '[ResumeReparse] Failed to reparse resume folder', 'No remedy: request fails and client should retry');
+        res.status(500).json({
+            error: 'Failed to reparse resume',
+            details: error?.message || String(error)
+        });
+    }
+});
+
+// POST /api/resumes/:id/reparse-stream: SSE stream resume-parser output for reparse.
+app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') {
+        res.status(400).json({ error: 'Invalid resume id.' });
+        return;
+    }
+
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+    let child = null;
+    let outputFilePath = null;
+    let tailTimer = null;
+    let lastLen = 0;
+    let remainder = '';
+
+    const sendEvent = (eventType, payload) => {
+        if (res.writableEnded) return;
+        const safe = String(payload).replace(/\r/g, '');
+        res.write(`event: ${eventType}\n`);
+        res.write(`data: ${safe}\n\n`);
+    };
+    const sendOutputLine = (line) => {
+        const cleaned = String(line).replace(/\r?\n/g, '');
+        sendEvent('output', cleaned);
+    };
+    const sendStatus = (status) => sendEvent('status', status);
+
+    const tailOnce = async (flushRemainder = false) => {
+        if (!outputFilePath) return;
+        const text = await fs.readFile(outputFilePath, 'utf-8').catch(() => '');
+        if (text.length <= lastLen) return;
+        const newText = text.slice(lastLen);
+        lastLen = text.length;
+
+        remainder += newText;
+        const parts = remainder.split(/\r?\n/);
+        remainder = parts.pop() || '';
+
+        for (const line of parts) {
+            if (line) sendOutputLine(line);
+        }
+        if (flushRemainder && remainder) {
+            sendOutputLine(remainder);
+            remainder = '';
+        }
+    };
+
+    req.on('close', () => {
+        try {
+            if (child) child.kill('SIGTERM');
+        } catch {
+            /* ignore */
+        }
+    });
+
+    try {
+        const dir = path.join(PARSED_RESUMES_DIR, id);
+        const metaPath = path.join(dir, 'meta.json');
+
+        sendStatus(`Preparing reparse for ${id}...`);
+
+        await fs.access(dir);
+
+        // Load existing meta to preserve displayName/originalFilename where possible.
+        let existingMeta = {};
+        try {
+            const content = await fs.readFile(metaPath, 'utf-8');
+            existingMeta = JSON.parse(content) || {};
+        } catch {
+            /* meta may be missing */
+        }
+
+        // Find the original resume document file in this folder.
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        const docLikeFiles = entries.filter(ent =>
+            ent.isFile() && (ent.name.toLowerCase().endsWith('.docx') || ent.name.toLowerCase().endsWith('.pdf'))
+        );
+        if (docLikeFiles.length === 0) {
+            sendEvent('error', JSON.stringify({ message: 'Original .docx/.pdf not found for this resume folder.' }));
+            res.end();
+            return;
+        }
+
+        const preferredBaseName = existingMeta?.originalFilename
+            ? path.basename(String(existingMeta.originalFilename))
+            : null;
+        const keepEntry = (preferredBaseName
+            ? docLikeFiles.find(e => e.name === preferredBaseName)
+            : null) || docLikeFiles[0];
+        const keepDocPath = path.join(dir, keepEntry.name);
+
+        sendStatus('Deleting derived files...');
+
+        for (const ent of entries) {
+            if (ent.name === keepEntry.name) continue;
+            const target = path.join(dir, ent.name);
+            await fs.rm(target, { recursive: true, force: true });
+        }
+
+        // Prepare parser output log and stream it.
+        outputFilePath = path.join(dir, 'parser-output.log');
+        const outStream = fsSync.createWriteStream(outputFilePath, { flags: 'w' });
+
+        const parserModule = process.env.RESUME_PARSER_MODULE || RESUME_PARSER_PYTHON_MODULE_UNSET_ENV;
+        const resumeParserProjectPath = process.env.RESUME_PARSER_PROJECT_PATH
+            ? path.resolve(PROJECT_ROOT, process.env.RESUME_PARSER_PROJECT_PATH)
+            : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
+        const pythonBin = path.join(resumeParserProjectPath, 'venv', 'bin', 'python3');
+
+        const cleanEnv = {};
+        for (const [key, value] of Object.entries(process.env)) {
+            if (!key.includes('API')) cleanEnv[key] = value;
+        }
+
+        const commandHeader = [
+            '=== resume-parser ===',
+            `Command: ${pythonBin} -m ${parserModule} "${keepDocPath}" -o "${dir}"`,
+            `Cwd: ${resumeParserProjectPath}`,
+            `Input: ${keepDocPath}`,
+            `Output: ${dir}`,
+            '-----------------------',
+        ].join('\n');
+        outStream.write(commandHeader + '\n');
+
+        sendStatus('Processing resume...');
+
+        child = spawn(pythonBin, ['-u', '-m', parserModule, keepDocPath, '-o', dir], {
+            env: cleanEnv,
+            cwd: resumeParserProjectPath,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        trackResumeParserChild(child, 'resume-parser-reparse-stream');
+
+        child.stdout.pipe(outStream);
+        child.stderr.pipe(outStream);
+
+        tailTimer = setInterval(() => {
+            tailOnce(false).catch(() => {});
+        }, 160);
+
+        await new Promise((resolve, reject) => {
+            child.on('close', (code) => resolve(code));
+            child.on('error', reject);
+        });
+
+        clearInterval(tailTimer);
+        await tailOnce(true);
+        outStream.end();
+
+        // Ensure parser wrote expected output.
+        const jobsPath = path.join(dir, 'jobs.json');
+        const skillsPath = path.join(dir, 'skills.json');
+        const categoriesPath = path.join(dir, 'categories.json');
+        const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
+        // Recreate meta.json (it was deleted as part of the reparse).
+        const metadata = {
+            id,
+            displayName: existingMeta?.displayName || existingMeta?.name || id,
+            originalFilename: keepEntry.name,
+            sourceUrl: existingMeta?.sourceUrl || null,
+            sourceType: existingMeta?.sourceType || (existingMeta?.sourceUrl ? 'url' : 'upload'),
+            createdAt: new Date().toISOString(),
+            uploadedBy: existingMeta?.uploadedBy || 'user',
+            fileSize: (await fs.stat(keepDocPath)).size
+        };
+        await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
+
+        await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
+
+        sendEvent('done', JSON.stringify({
+            success: true,
+            resumeId: id,
+            displayName: metadata.displayName,
+            jobCount: jobs.length,
+            skillCount: Object.keys(skills).length,
+            metadata
+        }));
+        res.end();
+    } catch (e) {
+        try { if (tailTimer) clearInterval(tailTimer); } catch {}
+        try { await tailOnce(true); } catch {}
+        reportError(e, '[ResumeReparseStream] Failed to reparse with stream');
+        sendEvent('error', JSON.stringify({ message: e instanceof Error ? e.message : String(e) }));
+        res.end();
     }
 });
 
@@ -982,6 +1403,8 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
 
         const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
 
+        await regenerateNonLocalResumesIndex(`resume created (${resumeId})`);
+
         res.json({
             success: true,
             resumeId: resumeId,
@@ -1194,6 +1617,9 @@ app.post('/api/resumes/upload-stream', upload.single('resume'), async (req, res)
             skillCount: Object.keys(skills).length,
             metadata,
         }));
+
+        await regenerateNonLocalResumesIndex(`resume created via upload-stream (${resumeId})`);
+
         res.end();
     } catch (e) {
         try { if (tailTimer) clearInterval(tailTimer); } catch {}

@@ -1,0 +1,916 @@
+{
+  "adobe": {
+    "name": "Adobe",
+    "url": "https://adobe.com",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "fannie-mae": {
+    "name": "Fannie Mae",
+    "url": "https://fanniemae.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "warner-bros-games": {
+    "name": "Warner Bros Games",
+    "url": "https://wbgames.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "angel-studios": {
+    "name": "Angel Studios",
+    "url": "https://angel.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "the-cigna-group": {
+    "name": "The Cigna Group",
+    "url": "https://cigna.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "nuskin": {
+    "name": "NuSkin",
+    "url": "https://nuskin.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "aws": {
+    "name": "AWS",
+    "url": "https://aws.amazon.com",
+    "img": "",
+    "categoryIDs": [
+      "cloud"
+    ],
+    "jobIDs": [
+      0,
+      5,
+      6
+    ]
+  },
+  "rag": {
+    "name": "RAG",
+    "url": "https://arxiv.org/abs/2005.11401",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "langchain": {
+    "name": "LangChain",
+    "url": "https://langchain.com",
+    "img": "",
+    "categoryIDs": [
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "claude": {
+    "name": "Claude",
+    "url": "https://claude.ai",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "openai": {
+    "name": "OpenAI",
+    "url": "https://openai.com",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "mistral": {
+    "name": "Mistral",
+    "url": "https://mistral.ai",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "llama": {
+    "name": "Llama",
+    "url": "https://llama.meta.com",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "dall-e-3": {
+    "name": "DALL-E 3",
+    "url": "https://openai.com/dall-e-3",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "react-19": {
+    "name": "React 19",
+    "url": "https://react.dev",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "python": {
+    "name": "Python",
+    "url": "https://python.org",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      0,
+      1,
+      5
+    ]
+  },
+  "opencv": {
+    "name": "OpenCV",
+    "url": "https://opencv.org",
+    "img": "",
+    "categoryIDs": [
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "k-means": {
+    "name": "K-means",
+    "url": "https://scikit-learn.org/stable/modules/clustering.html#k-means",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0,
+      7
+    ]
+  },
+  "ciede2000": {
+    "name": "CIEDE2000",
+    "url": "https://en.wikipedia.org/wiki/Color_difference#CIEDE2000",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "dockerized": {
+    "name": "Dockerized",
+    "url": "https://docker.com",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "ci-cd": {
+    "name": "CI/CD",
+    "url": "https://about.gitlab.com/topics/ci-cd",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "methodology"
+    ],
+    "jobIDs": [
+      0,
+      4
+    ]
+  },
+  "kubernetes": {
+    "name": "Kubernetes",
+    "url": "https://kubernetes.io",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "javascript": {
+    "name": "JavaScript",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "aws-glue": {
+    "name": "AWS Glue",
+    "url": "https://aws.amazon.com/glue",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "pyspark": {
+    "name": "PySpark",
+    "url": "https://spark.apache.org/docs/latest/api/python",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      0,
+      6
+    ]
+  },
+  "github-actions": {
+    "name": "GitHub Actions",
+    "url": "https://github.com/features/actions",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "django": {
+    "name": "Django",
+    "url": "https://djangoproject.com",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "framework"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "rest-apis": {
+    "name": "REST APIs",
+    "url": "https://restfulapi.net",
+    "img": "",
+    "categoryIDs": [
+      "backend"
+    ],
+    "jobIDs": [
+      1,
+      5
+    ]
+  },
+  "postgresql": {
+    "name": "PostgreSQL",
+    "url": "https://postgresql.org",
+    "img": "",
+    "categoryIDs": [
+      "database"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "aws-aurora": {
+    "name": "AWS Aurora",
+    "url": "https://aws.amazon.com/rds/aurora",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "database"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "seo": {
+    "name": "SEO",
+    "url": "https://developers.google.com/search/docs",
+    "img": "",
+    "categoryIDs": [
+      "methodology"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "pytest": {
+    "name": "PyTest",
+    "url": "https://pytest.org",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "cnn": {
+    "name": "CNN",
+    "url": "https://cs231n.github.io/convolutional-networks",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "pytorch": {
+    "name": "PyTorch",
+    "url": "https://pytorch.org",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "aws-sagemaker": {
+    "name": "AWS SageMaker",
+    "url": "https://aws.amazon.com/sagemaker",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "jupyter": {
+    "name": "Jupyter",
+    "url": "https://jupyter.org",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "pandas": {
+    "name": "Pandas",
+    "url": "https://pandas.pydata.org",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "numpy": {
+    "name": "NumPy",
+    "url": "https://numpy.org",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "scikit-learn": {
+    "name": "Scikit-Learn",
+    "url": "https://scikit-learn.org",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "keras": {
+    "name": "Keras",
+    "url": "https://keras.io",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "quicksight": {
+    "name": "QuickSight",
+    "url": "https://aws.amazon.com/quicksight",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "tool",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "plotly": {
+    "name": "Plotly",
+    "url": "https://plotly.com",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "restful-apis": {
+    "name": "RESTful APIs",
+    "url": "https://restfulapi.net",
+    "img": "",
+    "categoryIDs": [
+      "backend"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "dbt": {
+    "name": "dbt",
+    "url": "https://getdbt.com",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "data-science"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "sql": {
+    "name": "SQL",
+    "url": "https://sql.org",
+    "img": "",
+    "categoryIDs": [
+      "database"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "aws-redshift": {
+    "name": "AWS Redshift",
+    "url": "https://aws.amazon.com/redshift",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "database"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "glue": {
+    "name": "Glue",
+    "url": "https://aws.amazon.com/glue",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-science"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "airflow": {
+    "name": "Airflow",
+    "url": "https://airflow.apache.org",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "devops"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "s3": {
+    "name": "S3",
+    "url": "https://aws.amazon.com/s3",
+    "img": "",
+    "categoryIDs": [
+      "cloud"
+    ],
+    "jobIDs": [
+      3,
+      6
+    ]
+  },
+  "lambda": {
+    "name": "Lambda",
+    "url": "https://aws.amazon.com/lambda",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "backend"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "amazon-glue": {
+    "name": "Amazon Glue",
+    "url": "https://aws.amazon.com/glue",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-science"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "redshift": {
+    "name": "Redshift",
+    "url": "https://aws.amazon.com/redshift",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "database"
+    ],
+    "jobIDs": [
+      3,
+      6
+    ]
+  },
+  "cyberark-pam": {
+    "name": "CyberArk PAM",
+    "url": "https://cyberark.com",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "tls": {
+    "name": "TLS",
+    "url": "https://tools.ietf.org/html/rfc8446",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "mtls": {
+    "name": "mTLS",
+    "url": "https://tools.ietf.org/html/rfc8446",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "jenkins": {
+    "name": "Jenkins",
+    "url": "https://jenkins.io",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "setuptools": {
+    "name": "SetupTools",
+    "url": "https://setuptools.pypa.io",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "artifactory": {
+    "name": "Artifactory",
+    "url": "https://jfrog.com/artifactory",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "devops"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "pypi": {
+    "name": "PyPI",
+    "url": "https://pypi.org",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "sonarqube": {
+    "name": "SonarQube",
+    "url": "https://sonarqube.org",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "devops"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "xray": {
+    "name": "Xray",
+    "url": "https://jfrog.com/xray",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "terraform": {
+    "name": "Terraform",
+    "url": "https://terraform.io",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "segment-cdp": {
+    "name": "Segment CDP",
+    "url": "https://segment.com",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "salesforce": {
+    "name": "Salesforce",
+    "url": "https://salesforce.com",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "google-ads": {
+    "name": "Google Ads",
+    "url": "https://ads.google.com",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "youtube": {
+    "name": "YouTube",
+    "url": "https://youtube.com",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "google-bigquery": {
+    "name": "Google BigQuery",
+    "url": "https://cloud.google.com/bigquery",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "database"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "snowflake": {
+    "name": "Snowflake",
+    "url": "https://snowflake.com",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "database"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "api-gateway": {
+    "name": "API Gateway",
+    "url": "https://aws.amazon.com/api-gateway",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "backend"
+    ],
+    "jobIDs": [
+      6
+    ]
+  },
+  "kinesis": {
+    "name": "Kinesis",
+    "url": "https://aws.amazon.com/kinesis",
+    "img": "",
+    "categoryIDs": [
+      "cloud"
+    ],
+    "jobIDs": [
+      6
+    ]
+  },
+  "parquet": {
+    "name": "Parquet",
+    "url": "https://parquet.apache.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      6
+    ]
+  },
+  "emr": {
+    "name": "EMR",
+    "url": "https://aws.amazon.com/emr",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-science"
+    ],
+    "jobIDs": [
+      6
+    ]
+  },
+  "hipaa": {
+    "name": "HIPAA",
+    "url": "https://hhs.gov/hipaa",
+    "img": "",
+    "categoryIDs": [
+      "methodology"
+    ],
+    "jobIDs": [
+      6
+    ]
+  },
+  "gdpr": {
+    "name": "GDPR",
+    "url": "https://gdpr.eu",
+    "img": "",
+    "categoryIDs": [
+      "methodology"
+    ],
+    "jobIDs": [
+      6
+    ]
+  },
+  "nlp": {
+    "name": "NLP",
+    "url": "https://nltk.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      7
+    ]
+  },
+  "bayesian": {
+    "name": "Bayesian",
+    "url": "https://en.wikipedia.org/wiki/Bayesian_statistics",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      7
+    ]
+  },
+  "c": {
+    "name": "C++",
+    "url": "https://isocpp.org",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      8
+    ]
+  },
+  "openbsd": {
+    "name": "OpenBSD",
+    "url": "https://openbsd.org",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      8
+    ]
+  },
+  "udp": {
+    "name": "UDP",
+    "url": "https://tools.ietf.org/html/rfc768",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      8
+    ]
+  },
+  "tcp": {
+    "name": "TCP",
+    "url": "https://tools.ietf.org/html/rfc793",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      8
+    ]
+  }
+}

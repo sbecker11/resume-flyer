@@ -1,7 +1,7 @@
 <template>
   <div class="rde-tab-content">
     <div class="rde-field">
-      <label class="rde-label" for="rde-meta-display-name">Display name</label>
+      <label class="rde-top-label" for="rde-meta-display-name">Resume Display name</label>
       <input
         id="rde-meta-display-name"
         name="displayName"
@@ -10,10 +10,11 @@
         class="rde-input"
         placeholder="e.g. Shawn Becker 2025"
         autocomplete="name"
+        @blur="requestAutosave"
       />
     </div>
     <div class="rde-field">
-      <label class="rde-label" for="rde-meta-file-name">File name</label>
+      <label class="rde-top-label" for="rde-meta-file-name">Resume File name</label>
       <input
         id="rde-meta-file-name"
         name="fileName"
@@ -21,14 +22,15 @@
         type="text"
         class="rde-input"
         placeholder="e.g. resume.docx"
+        @blur="requestAutosave"
       />
     </div>
     <div v-if="meta.id" class="rde-readonly">
-      <span class="rde-label">ID</span>
+      <span class="rde-top-label">Resume ID</span>
       <span class="rde-value">{{ meta.id }}</span>
     </div>
     <div v-if="meta.createdAt" class="rde-readonly">
-      <span class="rde-label">Created</span>
+      <span class="rde-top-label">Resume Created</span>
       <span class="rde-value">{{ formatDate(meta.createdAt) }}</span>
     </div>
   </div>
@@ -41,7 +43,7 @@ const props = defineProps({
   meta: { type: Object, default: () => ({}) }
 });
 
-const emit = defineEmits(['update:meta']);
+const emit = defineEmits(['update:meta', 'autosave']);
 
 const local = ref({
   displayName: props.meta.displayName ?? '',
@@ -57,6 +59,10 @@ watch(local, (l) => {
   emit('update:meta', { displayName: l.displayName, fileName: l.fileName });
 }, { deep: true });
 
+function requestAutosave() {
+  emit('autosave');
+}
+
 function formatDate(iso) {
   if (!iso) return '';
   try {
@@ -70,7 +76,7 @@ function formatDate(iso) {
 <style scoped>
 .rde-tab-content { padding: 12px 16px; }
 .rde-field { margin-bottom: 12px; }
-.rde-label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+.rde-label { display: block; font-size: 0.7rem; text-transform: none; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
 .rde-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; box-sizing: border-box; }
 .rde-input:focus { outline: none; border-color: rgba(74,158,255,0.6); }
 .rde-readonly { margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.4); }

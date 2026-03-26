@@ -1,0 +1,79 @@
+{
+  "tool": {
+    "name": "Tool",
+    "skillIDs": [
+      "autodesk"
+    ]
+  },
+  "technology": {
+    "name": "Technology",
+    "skillIDs": [
+      "3d"
+    ]
+  },
+  "management": {
+    "name": "Management",
+    "skillIDs": [
+      "engineering-leadership",
+      "team-building-mentorship",
+      "technical-strategy-roadmap-ownership"
+    ]
+  },
+  "data-science": {
+    "name": "Data Science",
+    "skillIDs": [
+      "personalization-recommendation-systems",
+      "experimentation-a-b-testing",
+      "ml-model-integration",
+      "vector-embeddings-semantic-search",
+      "llms-rag"
+    ]
+  },
+  "backend": {
+    "name": "Backend",
+    "skillIDs": [
+      "personalization-recommendation-systems",
+      "ml-model-integration",
+      "vector-embeddings-semantic-search",
+      "llms-rag",
+      "full-stack-development-typescript",
+      "full-stack-development-python",
+      "full-stack-development-java",
+      "full-stack-development-node-js"
+    ]
+  },
+  "methodology": {
+    "name": "Methodology",
+    "skillIDs": [
+      "experimentation-a-b-testing"
+    ]
+  },
+  "programming-language": {
+    "name": "Programming Language",
+    "skillIDs": [
+      "full-stack-development-typescript",
+      "full-stack-development-python",
+      "full-stack-development-java"
+    ]
+  },
+  "frontend": {
+    "name": "Frontend",
+    "skillIDs": [
+      "full-stack-development-typescript",
+      "full-stack-development-react"
+    ]
+  },
+  "framework": {
+    "name": "Framework",
+    "skillIDs": [
+      "full-stack-development-react",
+      "full-stack-development-node-js"
+    ]
+  },
+  "cloud": {
+    "name": "Cloud",
+    "skillIDs": [
+      "aws"
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "cloud": {
+    "name": "Cloud",
+    "skillIDs": [
+      "aws",
+      "aws-glue"
+    ]
+  },
+  "programming-language": {
+    "name": "Programming Language",
+    "skillIDs": [
+      "javascript",
+      "c"
+    ]
+  },
+  "tool": {
+    "name": "Tool",
+    "skillIDs": [
+      "3d",
+      "github-actions",
+      "openbsd",
+      "udp",
+      "tcp"
+    ]
+  },
+  "data-science": {
+    "name": "Data Science",
+    "skillIDs": [
+      "aws-glue",
+      "pyspark"
+    ]
+  },
+  "framework": {
+    "name": "Framework",
+    "skillIDs": [
+      "pyspark"
+    ]
+  },
+  "devops": {
+    "name": "DevOps",
+    "skillIDs": [
+      "github-actions",
+      "ci-cd"
+    ]
+  },
+  "methodology": {
+    "name": "Methodology",
+    "skillIDs": [
+      "ci-cd"
+    ]
+  }
+}

@@ -38,7 +38,7 @@ async function fetchJsonOrThrow(url, options = {}) {
 }
 
 async function fetchStaticResumesIndex() {
-    return fetchJsonOrThrow(basePathJoin('parsed_resumes/index.json'));
+    return fetchJsonOrThrow(basePathJoin('parsed_resumes/non-local-resumes.json'));
 }
 
 async function fetchStaticResumeData(resumeId) {
@@ -98,6 +98,131 @@ export async function deleteResume(resumeId) {
     } else {
         throw new Error('Delete is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
     }
+}
+
+/**
+ * Totally re-parse an existing resume folder.
+ * Server will delete all derived files in the folder except the original .docx/.pdf document,
+ * then re-run resume-parser into the same folder.
+ * @param {string} resumeId
+ */
+export async function reparseResume(resumeId) {
+    if (hasServer()) {
+        if (!resumeId) throw new Error('No resume id provided');
+        const response = await fetch(basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/reparse`), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    } else {
+        throw new Error('Reparse is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
+    }
+}
+
+/**
+ * Reparse an existing resume folder with SSE output streaming.
+ * @param {string} resumeId
+ * @param {{ onOutput?: (line:string)=>void, onStatus?: (status:string)=>void, signal?: AbortSignal }} [opts]
+ * @returns {Promise<Object>} Result payload from server
+ */
+export async function reparseResumeWithParserStream(resumeId, opts = {}) {
+    if (!hasServer()) {
+        throw new Error('Reparse is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
+    }
+    if (!resumeId) throw new Error('No resume id provided');
+
+    const { onOutput, onStatus, signal } = opts || {};
+    const url = basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/reparse-stream`);
+
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        signal
+    });
+
+    if (!resp.ok) {
+        const body = await resp.text().catch(() => '');
+        throw new Error(`Reparse stream failed: HTTP ${resp.status} ${resp.statusText}${body ? ` — ${body}` : ''}`);
+    }
+    if (!resp.body) throw new Error('Reparse stream has no body');
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    function dispatchEvent(eventType, dataStr) {
+        if (eventType === 'output') {
+            if (typeof onOutput === 'function') onOutput(dataStr);
+            return;
+        }
+        if (eventType === 'status') {
+            if (typeof onStatus === 'function') onStatus(dataStr);
+            return;
+        }
+        if (eventType === 'done') {
+            return { type: 'done', payload: JSON.parse(dataStr) };
+        }
+        if (eventType === 'error') {
+            return { type: 'error', payload: JSON.parse(dataStr) };
+        }
+        return null;
+    }
+
+    return new Promise(async (resolve, reject) => {
+        let doneResolved = false;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            let idx;
+            while ((idx = buffer.indexOf('\n\n')) !== -1) {
+                const rawEvent = buffer.slice(0, idx);
+                buffer = buffer.slice(idx + 2);
+                const lines = rawEvent.split('\n');
+
+                let eventType = 'message';
+                const dataLines = [];
+                for (const line of lines) {
+                    const trimmed = line.trimEnd();
+                    if (!trimmed) continue;
+                    if (trimmed.startsWith('event:')) {
+                        eventType = trimmed.slice('event:'.length).trim();
+                    } else if (trimmed.startsWith('data:')) {
+                        dataLines.push(trimmed.slice('data:'.length).trimStart());
+                    }
+                }
+
+                const dataStr = dataLines.join('\n');
+                const result = dispatchEvent(eventType, dataStr);
+                if (!result) continue;
+
+                if (result.type === 'done' && !doneResolved) {
+                    doneResolved = true;
+                    resolve(result.payload);
+                    try { reader.cancel(); } catch {}
+                    return;
+                }
+                if (result.type === 'error' && !doneResolved) {
+                    doneResolved = true;
+                    reject(new Error(result.payload?.message || 'Parser stream error'));
+                    try { reader.cancel(); } catch {}
+                    return;
+                }
+            }
+        }
+
+        if (!doneResolved) {
+            reject(new Error('Reparse stream ended unexpectedly without done event'));
+        }
+    });
 }
 
 /**

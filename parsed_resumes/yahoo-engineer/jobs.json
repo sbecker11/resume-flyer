@@ -1,0 +1,43 @@
+{
+  "0": {
+    "index": 0,
+    "role": "Senior ML Engineer & AI Architect",
+    "employer": "Spexture / Technical Consulting",
+    "start": "Nov 2019",
+    "end": "CURRENT_DATE",
+    "z-index": 1,
+    "css name": "darkforest",
+    "css RGB": "#116611",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "Designed and deployed production ML systems for Fortune 500 clients including Adobe, Fannie Mae, Warner Bros Games, Angel Studios, The Cigna Group, and NuSkin — architecting AI/ML pipelines on [AWS]. • Developed \"Flock of Postcards\" sbecker11.github.io/flock-of-postcards: data-driven [JavaScript] visualization featuring [3D] motion parallax and depth-of-field effects; 310 commits across 11 iterative versions. • [AWS Glue] and [PySpark] for data cleansing, lineage tracking, and governance; [GitHub Actions] for automated [CI/CD] pipelines.",
+    "skillIDs": [
+      "aws",
+      "javascript",
+      "3d",
+      "aws-glue",
+      "pyspark",
+      "github-actions",
+      "ci-cd"
+    ]
+  },
+  "1": {
+    "index": 1,
+    "role": "Technical Lead & Co-Founder",
+    "employer": "Sierra Vista Group",
+    "start": "Nov 2002",
+    "end": "Feb 2011",
+    "z-index": 2,
+    "css name": "darkcyan",
+    "css RGB": "#0069AC",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "Founded boutique consulting firm; clients included Coca-Cola Corp. Europe, AMI, Medical Services Corp., and Intrusic Cyber Security. • At Intrusic Corp: architected a double-buffered [C++]/[OpenBSD] system for real-time analysis of live [UDP]/[TCP] packet streams, feeding a network intrusion detection system — directly contributing to securing government cybersecurity contracts.",
+    "skillIDs": [
+      "c",
+      "openbsd",
+      "udp",
+      "tcp"
+    ]
+  }
+}

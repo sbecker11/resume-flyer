@@ -1,0 +1,36 @@
+{
+  "0": {
+    "index": 0,
+    "role": "Co-Founder & Engineering Lead",
+    "employer": "Sierra Vista Group",
+    "start": "2003",
+    "end": "2011",
+    "z-index": 1,
+    "css name": "darkforest",
+    "css RGB": "#116611",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "Founded and led the engineering organization for a software consulting firm; hired, mentored, and managed a team of engineers across multiple concurrent client engagements. • Defined technical strategy, set architectural standards, and owned delivery across the full stack — balancing engineering quality with client business objectives. • Built and scaled self-serve tooling and platform infrastructure used across multiple internal product lines. • Pipeline improvements drove a 75% improvement in patient quality-of-service metrics.",
+    "skillIDs": []
+  },
+  "1": {
+    "index": 1,
+    "role": "Co-Founder & CTO",
+    "employer": "HomePortfolio",
+    "start": "1996",
+    "end": "2002",
+    "z-index": 2,
+    "css name": "darkcyan",
+    "css RGB": "#0069AC",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "Co-founded and served as CTO of a home design e-commerce platform; led all technology decisions from founding through growth, managing engineering teams across frontend, backend, and data infrastructure. • Platform was adopted by [Autodesk] for 'Picture This Kitchen' and by the U.S. Satellite Reconnaissance Office; built foundational [3D] structure-from-images technology derived from MIT dissertation research.",
+    "skillIDs": [
+      "autodesk",
+      "3d",
+      "Autodesk",
+      "3D",
+      "water boarding"
+    ]
+  }
+}

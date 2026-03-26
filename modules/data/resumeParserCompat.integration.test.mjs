@@ -75,7 +75,7 @@ describe('resume-parser compatibility (integration)', () => {
 
   describe('parsed_resumes format (when default available)', () => {
     const parsedDir = path.join(PROJECT_ROOT, 'parsed_resumes');
-    const indexPath = path.join(parsedDir, 'index.json');
+    const indexPath = path.join(parsedDir, 'non-local-resumes.json');
 
     it('reads and parses default parsed_resumes jobs.json and skills.json when present', async () => {
       let index, jobsContent, skillsContent;

@@ -1,0 +1,167 @@
+{
+  "autodesk": {
+    "name": "Autodesk",
+    "url": "https://www.autodesk.com",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "3d": {
+    "name": "3D",
+    "url": "https://www.khronos.org",
+    "img": "",
+    "categoryIDs": [
+      "technology"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "engineering-leadership": {
+    "name": "Engineering Leadership",
+    "url": "https://www.engineeringleadership.org",
+    "img": "",
+    "categoryIDs": [
+      "management"
+    ],
+    "jobIDs": []
+  },
+  "personalization-recommendation-systems": {
+    "name": "Personalization & Recommendation Systems",
+    "url": "https://recsys.acm.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "experimentation-a-b-testing": {
+    "name": "Experimentation & A/B Testing",
+    "url": "https://experimentationhub.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "methodology"
+    ],
+    "jobIDs": []
+  },
+  "ml-model-integration": {
+    "name": "ML Model Integration",
+    "url": "https://mlops.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "vector-embeddings-semantic-search": {
+    "name": "Vector Embeddings & Semantic Search",
+    "url": "https://www.opensearch.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "llms-rag": {
+    "name": "LLMs & RAG",
+    "url": "https://huggingface.co",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "full-stack-development-typescript": {
+    "name": "Full-Stack Development TypeScript",
+    "url": "https://www.typescriptlang.org",
+    "img": "",
+    "categoryIDs": [
+      "programming-language",
+      "frontend",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "full-stack-development-python": {
+    "name": "Full-Stack Development Python",
+    "url": "https://www.python.org",
+    "img": "",
+    "categoryIDs": [
+      "programming-language",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "full-stack-development-java": {
+    "name": "Full-Stack Development Java",
+    "url": "https://www.oracle.com/java",
+    "img": "",
+    "categoryIDs": [
+      "programming-language",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "full-stack-development-react": {
+    "name": "Full-Stack Development React",
+    "url": "https://reactjs.org",
+    "img": "",
+    "categoryIDs": [
+      "framework",
+      "frontend"
+    ],
+    "jobIDs": []
+  },
+  "full-stack-development-node-js": {
+    "name": "Full-Stack Development Node.js",
+    "url": "https://nodejs.org",
+    "img": "",
+    "categoryIDs": [
+      "framework",
+      "backend"
+    ],
+    "jobIDs": []
+  },
+  "aws": {
+    "name": "AWS",
+    "url": "https://aws.amazon.com",
+    "img": "",
+    "categoryIDs": [
+      "cloud"
+    ],
+    "jobIDs": []
+  },
+  "team-building-mentorship": {
+    "name": "Team Building & Mentorship",
+    "url": "https://www.ccl.org",
+    "img": "",
+    "categoryIDs": [
+      "management"
+    ],
+    "jobIDs": []
+  },
+  "technical-strategy-roadmap-ownership": {
+    "name": "Technical Strategy & Roadmap Ownership",
+    "url": "https://www.productplan.com",
+    "img": "",
+    "categoryIDs": [
+      "management"
+    ],
+    "jobIDs": []
+  },
+  "water boarding": {
+    "name": "water boarding",
+    "jobIDs": [
+      1
+    ]
+  }
+}

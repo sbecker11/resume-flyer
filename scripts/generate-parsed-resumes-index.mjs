@@ -20,7 +20,7 @@ async function readJson(p) {
 
 async function main() {
   // In CI / GitHub Pages builds, parsed_resumes/ may not exist (it can be local-only).
-  // In that case, create it and emit an empty index.json so the static site still builds.
+  // In that case, create it and emit an empty non-local-resumes.json so the static site still builds.
   if (!(await exists(parsedResumesDir))) {
     await fs.mkdir(parsedResumesDir, { recursive: true });
   }
@@ -86,7 +86,7 @@ async function main() {
   resumes.sort((a, b) => String(a.displayName).localeCompare(String(b.displayName)));
   const defaultResumeId = resumes.length > 0 ? resumes[0].id : null;
   const out = { resumes, defaultResumeId, generatedAt: new Date().toISOString() };
-  const outPath = path.join(parsedResumesDir, 'index.json');
+  const outPath = path.join(parsedResumesDir, 'non-local-resumes.json');
   await fs.writeFile(outPath, JSON.stringify(out, null, 2) + '\n', 'utf8');
   console.log(`[generate-parsed-resumes-index] Wrote ${resumes.length} resumes to ${outPath}`);
 }

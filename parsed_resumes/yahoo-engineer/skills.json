@@ -1,0 +1,127 @@
+{
+  "aws": {
+    "name": "AWS",
+    "url": "https://aws.amazon.com",
+    "img": "",
+    "categoryIDs": [
+      "cloud"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "javascript": {
+    "name": "JavaScript",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "3d": {
+    "name": "3D",
+    "url": "https://www.khronos.org/opengl",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "aws-glue": {
+    "name": "AWS Glue",
+    "url": "https://aws.amazon.com/glue",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "pyspark": {
+    "name": "PySpark",
+    "url": "https://spark.apache.org/docs/latest/api/python",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "github-actions": {
+    "name": "GitHub Actions",
+    "url": "https://github.com/features/actions",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "ci-cd": {
+    "name": "CI/CD",
+    "url": "https://about.gitlab.com/topics/ci-cd",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "methodology"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "c": {
+    "name": "C++",
+    "url": "https://isocpp.org",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "openbsd": {
+    "name": "OpenBSD",
+    "url": "https://www.openbsd.org",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "udp": {
+    "name": "UDP",
+    "url": "https://www.rfc-editor.org/rfc/rfc768.html",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "tcp": {
+    "name": "TCP",
+    "url": "https://www.rfc-editor.org/rfc/rfc793.html",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  }
+}

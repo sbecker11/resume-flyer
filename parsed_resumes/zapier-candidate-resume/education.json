@@ -1,0 +1,26 @@
+{
+  "0": {
+    "index": 0,
+    "degree": "PhD, Computer Vision / Computer Graphics",
+    "institution": "MIT",
+    "start": "1990",
+    "end": "1997",
+    "description": "Dissertation: 3D structure-from-images — prior art for 3D Gaussian Splatting (predating Zwicker et al. 2001). Research adopted by Autodesk and the U.S. Satellite Reconnaissance Office."
+  },
+  "1": {
+    "index": 1,
+    "degree": "MS, Computer Science",
+    "institution": "Brigham Young University",
+    "start": "",
+    "end": "",
+    "description": ""
+  },
+  "2": {
+    "index": 2,
+    "degree": "BS, Industrial Engineering",
+    "institution": "Brigham Young University",
+    "start": "",
+    "end": "",
+    "description": ""
+  }
+}

@@ -1,0 +1,23 @@
+=== resume-parser ===
+Command: /Users/sbecker11/workspace-resume/resume-parser/venv/bin/python3 -m resume_parser.resume_to_json "/Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/Zapier_Candidate_Resume.docx" -o "/Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume"
+Cwd: /Users/sbecker11/workspace-resume/resume-parser
+Input: /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/Zapier_Candidate_Resume.docx
+Output: /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume
+-----------------------
+Output directory: /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume
+Extracting text...
+Extracted 3248 characters
+Parsing jobs with LLM (anthropic)...
+Parsed 4 jobs
+Parsing resume sections (contact, summary, certifications, skills, other)...
+Extracted 2 skills from descriptions
+Enriching skills with LLM...
+Categorizing skills with LLM...
+Suggesting skill merges...
+Copied /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/Zapier_Candidate_Resume.docx
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/jobs.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/education.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/skills.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/categories.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/other-sections.json
+Wrote /Users/sbecker11/workspace-resume/resume-flyer/parsed_resumes/zapier-candidate-resume/meta.json

@@ -1,0 +1,68 @@
+{
+  "summary": "Engineering leader and technical co-founder with a PhD in Computer Vision from MIT and 20+ years building production AI/ML systems and platform infrastructure. Proven record leading engineering teams from 0→1 and scaling them through growth — as CTO at HomePortfolio, co-founder at Sierra Vista Group, and consulting technical lead for Fortune 500 clients including Adobe, Warner Bros. Games, and Angel Studios. Deep hands-on expertise in personalization systems, recommendation engines, vector embeddings, NLP, and ML model integration. Comfortable owning technical strategy, partnering with Product and Data, and staying close to the code.",
+  "title": "Zapiers",
+  "contact": {
+    "name": "Zapier Candidate",
+    "email": "shawn.becker@spexture.com",
+    "phone": "",
+    "location": "Lehi, UT",
+    "linkedin": "linkedin.com/in/shawnbecker",
+    "website": ""
+  },
+  "certifications": [
+    {
+      "name": "AWS Solutions Architect Associate (SAA-C03, in progress)",
+      "url": "",
+      "description": "AWS"
+    },
+    {
+      "name": "Certified ScrumMaster",
+      "url": "",
+      "description": ""
+    },
+    {
+      "name": "Stanford/Coursera Supervised Machine Learning",
+      "url": "",
+      "description": "Stanford/Coursera 2022"
+    }
+  ],
+  "websites": [
+    {
+      "label": "github",
+      "url": "https://github.com/sbecker11",
+      "description": ""
+    },
+    {
+      "label": "resume-flyer",
+      "url": "https://sbecker11.github.io/resume-flyer",
+      "description": ""
+    },
+    {
+      "label": "resume-parser",
+      "url": "https://github.com/sbecker11/resume-parser-node",
+      "description": ""
+    }
+  ],
+  "custom_sections": [
+    {
+      "title": "SELECTED PORTFOLIO PROJECTS",
+      "subtitle": "",
+      "description": ""
+    },
+    {
+      "title": "project 1",
+      "subtitle": "",
+      "description": ""
+    },
+    {
+      "title": "project 2",
+      "subtitle": "",
+      "description": ""
+    },
+    {
+      "title": "project 3",
+      "subtitle": "",
+      "description": ""
+    }
+  ]
+}
