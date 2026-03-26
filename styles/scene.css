@@ -101,7 +101,7 @@ body .biz-resume-div,
     font-size: 12px;
     cursor: pointer;
     pointer-events: auto;
-    font-family: Arial, sans-serif !important;
+    font-family: Arial, sans-serif;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -228,7 +228,7 @@ body .biz-resume-div.selected a,
     cursor: pointer;
     pointer-events: auto;
     z-index: 10; /* Base above biz cards (JS sets 4–9) */
-    font-family: "Roboto", sans-serif;
+    font-family: Arial, sans-serif;
     font-weight: normal;
     font-size: 14px;
     padding: var(--data-normal-padding);

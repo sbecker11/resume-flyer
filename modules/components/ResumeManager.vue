@@ -305,7 +305,7 @@ function handleClose() {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  font-family: sans-serif; /* Match scene/resume view fonts */
+  font-family: Arial, sans-serif; /* Match scene/resume view fonts */
 }
 
 /* Header */
@@ -796,7 +796,7 @@ section h3 {
   margin: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-family: 'Courier New', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 13px;
   line-height: 1.4;
 }

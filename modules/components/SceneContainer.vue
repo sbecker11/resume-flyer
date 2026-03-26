@@ -359,7 +359,7 @@ defineExpose({
 
 .biz-card-div {
   position: absolute;
-  font-family: var(--scene-font-family, 'Inter', sans-serif);
+  font-family: Arial, sans-serif;
   font-size: 12px;
   width: 180px;
   /* height: 200px; - REMOVED: Height now set dynamically based on job duration */
@@ -381,18 +381,18 @@ defineExpose({
 .biz-details-employer {
   font-weight: bold;
   margin-bottom: 5px;
-  font-family: var(--scene-font-family, 'Inter', sans-serif);
+  font-family: Arial, sans-serif;
 }
 
 .biz-details-role {
   margin-bottom: 5px;
-  font-family: var(--scene-font-family, 'Inter', sans-serif);
+  font-family: Arial, sans-serif;
 }
 
 .biz-details-dates {
   font-size: 0.9em;
   color: #666;
-  font-family: var(--scene-font-family, 'Inter', sans-serif);
+  font-family: Arial, sans-serif;
 }
 
 /* =============================================================================
@@ -406,7 +406,7 @@ defineExpose({
   color: white;
   padding: 6px 10px;
   border-radius: 6px;
-  font-family: sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 14px;
   font-weight: 600;
   pointer-events: none;

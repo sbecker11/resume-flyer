@@ -498,17 +498,7 @@ function handleResizeHandleClick(event: MouseEvent): void {
     color: #f2f2f2;
     border: 1px solid #777;
     border-radius: 6px;
-    font-family: var(
-        --scene-font-family,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        'Segoe UI',
-        Roboto,
-        'Helvetica Neue',
-        Arial,
-        sans-serif
-    );
+    font-family: Arial, sans-serif;
     font-size: 13px;
     font-weight: 500;
     line-height: 1.45;
@@ -586,7 +576,7 @@ function handleResizeHandleClick(event: MouseEvent): void {
 #layout-toggle {
     font-size: 16px;
     font-weight: bold;
-    font-family: monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     line-height: 1;
     transition: all 0.2s ease;
 }

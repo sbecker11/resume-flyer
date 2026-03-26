@@ -319,7 +319,7 @@ async function reparseSelected() {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  font-family: sans-serif;
+  font-family: Arial, sans-serif;
 }
 
 .modal-header {
@@ -448,7 +448,7 @@ async function reparseSelected() {
 .resume-id {
   color: #666;
   font-size: 11px;
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .resume-row-actions {

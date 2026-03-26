@@ -637,7 +637,7 @@ async function save() {
   overflow: auto;
   color: #e0e0e0;
   font-size: 0.85rem;
-  font-family: var(--scene-font-family, 'Inter'), sans-serif;
+  font-family: Arial, sans-serif;
   box-sizing: border-box;
 }
 

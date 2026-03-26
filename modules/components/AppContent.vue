@@ -911,7 +911,7 @@ watch(orientation, (newOrientation) => {
   bottom: 9px;
   background: transparent;
   padding: 6px 10px;
-  font-family: sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 14px;
   font-weight: 600;
   pointer-events: none;
@@ -926,7 +926,7 @@ watch(orientation, (newOrientation) => {
 .viewer-label,
 .resume-viewer-label,
 .scene-viewer-label {
-  font-family: sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -954,7 +954,7 @@ watch(orientation, (newOrientation) => {
   background: transparent;
   padding: 6px 10px;
   border-radius: 6px;
-  font-family: sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 14px;
   font-weight: 600;
   pointer-events: none;

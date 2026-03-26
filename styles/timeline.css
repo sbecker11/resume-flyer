@@ -16,7 +16,7 @@
   
   .year-div, .year-div-right, .year-div-left {
     position: absolute;
-    font-family: "Roboto", sans-serif;
+    font-family: Arial, sans-serif;
     font-weight: bold;
     color: rgba(68, 68, 68, 0.4); /* Much more transparent */
     border-bottom : 1px solid rgba(68, 68, 68, 0.3); /* Much more transparent */
@@ -38,7 +38,7 @@
   
   .month-tick, .month-tick-left, .month-tick-right {
     position: absolute;
-    font-family: "Roboto", sans-serif;
+    font-family: Arial, sans-serif;
     font-size: 10px;
     color: rgba(102, 102, 102, 0.3); /* Much more transparent */
     border-bottom: 1px solid rgba(102, 102, 102, 0.2); /* Much more transparent */

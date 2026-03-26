@@ -1056,7 +1056,7 @@ function onResumeSkillCardClick(event) {
     gap: 5px;
     overflow: hidden;
     background-color: var(--grey-darkest);
-    font-family: sans-serif;
+    font-family: Arial, sans-serif;
 }
 
 #resume-content-header {
@@ -1124,7 +1124,7 @@ function onResumeSkillCardClick(event) {
     overflow: auto;
     background-color: var(--grey-darkest);
     color: white;
-    font-family: sans-serif;
+    font-family: Arial, sans-serif;
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
@@ -1150,7 +1150,7 @@ function onResumeSkillCardClick(event) {
     justify-content: center;
     z-index: 1;
     cursor: pointer;
-    font-family: inherit;
+    font-family: Arial, sans-serif;
 }
 .about-modal-close:hover {
     color: #f00;
@@ -1159,7 +1159,7 @@ function onResumeSkillCardClick(event) {
 }
 
 .about-modal-body {
-    font-family: sans-serif;
+    font-family: Arial, sans-serif;
     font-size: 14px;
     line-height: 1.6;
 }
@@ -1171,7 +1171,7 @@ function onResumeSkillCardClick(event) {
     text-decoration: underline;
     text-underline-offset: 2px;
     font-size: 13px;
-    font-family: inherit;
+    font-family: Arial, sans-serif;
 }
 .about-readme-link:hover {
     color: #c5e4ff;
@@ -1357,7 +1357,7 @@ function onResumeSkillCardClick(event) {
     align-items: center;
     justify-content: center;
     z-index: 1;
-    font-family: inherit;
+    font-family: Arial, sans-serif;
 }
 .palette-image-modal-close:hover {
     color: #f00;

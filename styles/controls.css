@@ -27,7 +27,7 @@
 #scene-visible-percentage {
   color: white !important;
   font-size: 10px !important;
-  font-family: monospace !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   text-align: center !important;
   margin-top: 5px !important;
   cursor: pointer !important;

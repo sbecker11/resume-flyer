@@ -635,6 +635,7 @@ defineExpose({ saveForCurrentJob });
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 8px;
   color: #e0e0e0;
+  font-family: Arial, sans-serif;
   box-sizing: border-box;
   padding: 16px;
 }

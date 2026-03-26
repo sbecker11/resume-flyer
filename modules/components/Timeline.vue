@@ -94,7 +94,7 @@ console.log('[Timeline] Component initialized with Vue composables - timelineHei
 .year-label {
   fill: rgba(255, 255, 255, 0.2); /* Very transparent */
   font-size: 48px;
-  font-family: 'Arial', sans-serif;
+  font-family: Arial, sans-serif;
   font-weight: bold;
   dominant-baseline: middle; /* Vertically center the text on the y-coordinate */
 }
@@ -111,7 +111,7 @@ console.log('[Timeline] Component initialized with Vue composables - timelineHei
 .month-label {
   fill: rgba(255, 255, 255, 0.2); /* Much more transparent */
   font-size: 8px;
-  font-family: 'Arial', sans-serif;
+  font-family: Arial, sans-serif;
   dominant-baseline: middle;
   list-style: none !important; /* Remove any list styling */
   list-style-type: none !important;

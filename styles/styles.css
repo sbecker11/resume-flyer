@@ -13,7 +13,7 @@ reference for the #main-container to occupy the full height of the viewPort.
   --grey-dark-7: #777777;
   --grey-dark-8: #888888;
   --grey-medium: #999999;
-  --scene-font-family: 'Inter', sans-serif;
+  --scene-font-family: Arial, sans-serif;
   --scene-font-weight: 400;
   --crosshair-cursor: url('../static_content/icons/x-hairs/32/dragging-32-white.png') 16 16, crosshair;
 }
@@ -46,7 +46,7 @@ regardless of the window size.
   margin: 0;
   padding: 0;
   overflow: visible;
-  font-family: "Roboto", sans-serif;
+  font-family: Arial, sans-serif;
   background-color: red;
 }
 
@@ -115,7 +115,7 @@ overflow and ensures consistent sizing.
 #debugsceneContainerElement,
 #debugTheSelectedCardDivIdElement {
   display: block;
-  font-family: Roboto, sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 12px;
 }
 .intro, .user, .footnote{

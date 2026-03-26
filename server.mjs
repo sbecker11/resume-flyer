@@ -3044,7 +3044,7 @@ function generateViolationsHTML(scanResults, report) {
     <title>Dependency Violations Report</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: Arial, sans-serif;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
@@ -3079,7 +3079,7 @@ function generateViolationsHTML(scanResults, report) {
         }
         .file-path {
             color: #6c757d;
-            font-family: monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 0.9em;
             margin-top: 5px;
         }
@@ -3122,7 +3122,7 @@ function generateViolationsHTML(scanResults, report) {
             border: 1px solid #e9ecef;
             border-radius: 4px;
             padding: 2px 6px;
-            font-family: monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 0.9em;
         }
         .stats {

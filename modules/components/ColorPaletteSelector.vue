@@ -301,7 +301,7 @@ onUnmounted(() => {
 }
 
 .modal-3d {
-  font-family: var(--scene-font-family, 'Inter', sans-serif);
+  font-family: Arial, sans-serif;
   background: rgba(30, 30, 30, 0.98);
   border: 1px solid #555;
   border-radius: 8px;

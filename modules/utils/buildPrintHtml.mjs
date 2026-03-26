@@ -199,7 +199,7 @@ export function buildPrintHtml(jobs, skills, categories, otherSections, educatio
   <style>
     :root { --text: #222; --muted: #555; --line: #ddd; --bg: #fff; }
     * { box-sizing: border-box; }
-    body { font-family: Georgia, 'Times New Roman', serif; color: var(--text); background: var(--bg); max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.4; }
+    body { font-family: Arial, sans-serif; color: var(--text); background: var(--bg); max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.4; }
     @media print { body { padding: 1rem; } }
     h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.25rem 0; }
     .title { font-size: 1rem; color: var(--muted); margin-bottom: 1rem; }
