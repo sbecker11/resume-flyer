@@ -122,6 +122,11 @@ body .biz-resume-div,
     display: block;
     white-space: normal;
 }
+
+.biz-card-div .biz-card-skill-title:focus-visible {
+    outline: 2px solid var(--data-link-color, #2563eb);
+    outline-offset: 2px;
+}
 /* Links: use palette-derived link color so they are visible on current card background (normal/hovered/selected). !important overrides inline color on injected links. */
 .biz-card-div a,
 .biz-resume-div a,

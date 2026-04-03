@@ -41,7 +41,7 @@ export const getMonthDates = (year, month) => {
  */
 export const getIsoDateString = (date) => date.toISOString().slice(0, 10);
 /**
- * Parse date string in YYYY-MM or YYYY-MM-DD format
+ * Parse date string in YYYY-MM, YYYY-MM-DD, YYYY, "Present", or month-name forms (e.g. "Mar 2025").
  * @param {string} dateStr - Date string
  * @returns {Date} - Date object
  */
@@ -69,6 +69,33 @@ export function parseFlexibleDateString(dateStr) {
     if (match) {
         const [, year, month] = match;
         return new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, 1));
+    }
+
+    // Month + year (trimmedDateStr is lowercased). Abbrevs: jan feb mar apr may jun jul aug sep oct nov dec;
+    // also sept, full names, and optional period after month (e.g. "Jan. 2025").
+    const monthNameToIndex = {
+        jan: 0, january: 0,
+        feb: 1, february: 1,
+        mar: 2, march: 2,
+        apr: 3, april: 3,
+        may: 4,
+        jun: 5, june: 5,
+        jul: 6, july: 6,
+        aug: 7, august: 7,
+        sep: 8, sept: 8, september: 8,
+        oct: 9, october: 9,
+        nov: 10, november: 10,
+        dec: 11, december: 11
+    };
+    match = trimmedDateStr.match(/^([a-z]+)\.?[\s-]+(\d{4})$/);
+    if (match) {
+        const [, monthWordRaw, yearStr] = match;
+        const monthWord = monthWordRaw.replace(/\.$/, '');
+        const monthIndex = monthNameToIndex[monthWord];
+        const yearNum = parseInt(yearStr, 10);
+        if (monthIndex !== undefined && yearNum >= 1000 && yearNum <= 9999) {
+            return new Date(Date.UTC(yearNum, monthIndex, 1));
+        }
     }
 
     // Try YYYY
@@ -592,6 +619,16 @@ export function test_dateUtils() {
     assertEqual(d3.getUTCFullYear(), 2024, "YYYY year failed");
     assertEqual(d3.getUTCMonth(), 0, "YYYY month should be 0 (Jan)");
     assertEqual(d3.getUTCDate(), 1, "YYYY day should be 1");
+
+    // Test case 3b: Month name + year (resume-style; 3-letter abbrs jan/feb/mar/…/dec)
+    let d3b = parseFlexibleDateString("Mar 2025");
+    assertEqual(d3b.getUTCFullYear(), 2025, "Mar 2025 year failed");
+    assertEqual(d3b.getUTCMonth(), 2, "Mar 2025 month should be 2 (March)");
+    assertEqual(d3b.getUTCDate(), 1, "Mar 2025 day should be 1");
+    let d3c = parseFlexibleDateString("Sep 2019");
+    assertEqual(d3c.getUTCMonth(), 8, "Sep 2019 → September");
+    let d3d = parseFlexibleDateString("Jan. 2024");
+    assertEqual(d3d.getUTCMonth(), 0, "Jan. 2024 with period");
 
     // Test case 4: "Present"
     let d4 = parseFlexibleDateString("Present");

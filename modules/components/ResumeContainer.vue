@@ -390,7 +390,6 @@ function goToJob(jobNumber) {
 const isDetailsEditorOpen = ref(false);
 const detailsEditorInitialTab = ref('meta');
 const detailsEditorInitialJobIndex = ref(null);
-const detailsEditorInitialFocusField = ref(null);
 
 // --- About modal (hero phrase) ---
 const isAboutModalOpen = ref(false);
@@ -418,10 +417,9 @@ function handleGlobalKeyDown(e) {
   if (e?.key === 'Escape') closeAboutModal();
 }
 
-function openDetailsModal(tab = 'meta', jobIndex = null, focusField = null) {
+function openDetailsModal(tab = 'meta', jobIndex = null) {
   detailsEditorInitialTab.value = tab;
   detailsEditorInitialJobIndex.value = jobIndex;
-  detailsEditorInitialFocusField.value = focusField ?? null;
   isDetailsEditorOpen.value = true;
 }
 
@@ -438,10 +436,10 @@ async function handleEditJobSkills(e) {
 }
 
 function handleOpenResumeDetails(e) {
-  const { tab, jobIndex, focusField } = e.detail || {};
+  const { tab, jobIndex } = e.detail || {};
   if (!tab || jobIndex == null) return;
   // Defer to macrotask so click/mouseleave/Vue flush finish first; avoids lock before "Loading jobs".
-  setTimeout(() => openDetailsModal(tab, jobIndex, focusField), 0);
+  setTimeout(() => openDetailsModal(tab, jobIndex), 0);
 }
 
 async function handleDetailsSaved(payload) {
@@ -805,21 +803,25 @@ function onResumeSkillCardClick(event) {
             <!-- Resume Selector + Print Button Row -->
             <div class="resume-selector-row">
                 <div class="resume-selector" ref="resumeSelectorRef">
-                    <div
+                    <button
+                        type="button"
                         class="resume-selector-trigger"
                         :class="{ open: isDropdownOpen }"
                         @click.stop="toggleDropdown"
                         :title="currentResumeDisplay"
+                        :aria-expanded="isDropdownOpen"
+                        aria-haspopup="listbox"
+                        :aria-label="`Resume: ${currentResumeDisplay}`"
                     >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" flex-shrink="0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" flex-shrink="0" aria-hidden="true">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                             <polyline points="14 2 14 8 20 8" />
                         </svg>
                         <span class="selector-name">{{ currentResumeDisplay }}</span>
-                        <svg class="chevron" :class="{ up: isDropdownOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <svg class="chevron" :class="{ up: isDropdownOpen }" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                             <polyline points="6 9 12 15 18 9" />
                         </svg>
-                    </div>
+                    </button>
                     <div v-if="isDropdownOpen" class="resume-selector-menu" :style="dropdownMenuStyle">
                         <div
                             v-for="resume in resumeList"
@@ -1009,7 +1011,6 @@ function onResumeSkillCardClick(event) {
             :is-open="isDetailsEditorOpen"
             :initial-tab="detailsEditorInitialTab"
             :initial-job-index="detailsEditorInitialJobIndex"
-            :initial-focus-field="detailsEditorInitialFocusField"
             @close="isDetailsEditorOpen = false"
             @saved="handleDetailsSaved"
         />
@@ -1398,18 +1399,30 @@ function onResumeSkillCardClick(event) {
     display: flex;
     align-items: center;
     gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
     padding: 8px 10px;
     background: linear-gradient(135deg, #2a5298 0%, #1e3a70 100%);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     cursor: pointer;
+    font: inherit;
     font-weight: bold;
     font-size: 13px;
+    text-align: left;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     user-select: none;
     transition: background 0.15s ease;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.resume-selector-trigger:focus-visible {
+    outline: 2px solid rgba(120, 190, 255, 0.95);
+    outline-offset: 2px;
 }
 
 .resume-selector-trigger:hover,
@@ -2063,5 +2076,11 @@ function onResumeSkillCardClick(event) {
 .biz-card-skill-title[data-skill-name]:hover {
     font-weight: bold;
     font-style: italic;
+}
+
+.biz-card-skill-title[data-skill-card-id]:focus-visible,
+.biz-card-skill-title[data-skill-name]:focus-visible {
+    outline: 2px solid var(--data-link-color, #2563eb);
+    outline-offset: 2px;
 }
 </style> 

@@ -276,7 +276,7 @@ export function useCardsController() {
                             container.innerHTML = skillIds.map(skillCardId => {
                                 const el = document.getElementById(skillCardId)
                                 const title = el ? (el.getAttribute('data-skill-name') || skillCardId) : skillCardId
-                                return `<span class="biz-card-skill-title" data-skill-card-id="${escapeHtml(skillCardId)}">${escapeHtml(title)}</span>`
+                                return `<span class="biz-card-skill-title"${skillTitleFocusAttrs(title)} data-skill-card-id="${escapeHtml(skillCardId)}">${escapeHtml(title)}</span>`
                             }).join(' • ')
                         }
                     }
@@ -289,6 +289,12 @@ export function useCardsController() {
                     const skillName = span.getAttribute('data-skill-name')
                     const skillCardId = skillCardIdsBySkillName[skillName]
                     if (skillCardId) span.setAttribute('data-skill-card-id', skillCardId)
+                    span.setAttribute('tabindex', '0')
+                    span.setAttribute('role', 'link')
+                    if (!span.getAttribute('aria-label')) {
+                        const t = (span.textContent || '').trim()
+                        if (t) span.setAttribute('aria-label', `View skill: ${t}`)
+                    }
                 })
 
                 // Yearly grid lines removed per user request
@@ -696,6 +702,14 @@ export function useCardsController() {
             }
             selectionManager.selectCard({ type: 'biz', jobNumber }, 'CardsController.cardClick')
         })
+        card.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            const skillTitleEl = event.target.closest('.biz-card-skill-title')
+            if (!skillTitleEl || !card.contains(skillTitleEl)) return
+            event.stopPropagation()
+            if (event.key === ' ') event.preventDefault()
+            selectSkillCardById(skillTitleEl.getAttribute('data-skill-card-id'), 'CardsController.bizCardSkillTitleKeydown')
+        })
         
         // Add hover handlers for synchronization with rDivs
         card.addEventListener('mouseenter', () => {
@@ -829,6 +843,11 @@ export function useCardsController() {
         const div = document.createElement('div')
         div.textContent = text
         return div.innerHTML
+    }
+
+    /** tabindex/role/aria so cDiv Technologies & skills phrases are in Tab order (per cDiv focus list). */
+    function skillTitleFocusAttrs(displayLabel) {
+        return ` tabindex="0" role="link" aria-label="View skill: ${escapeHtml(String(displayLabel ?? ''))}"`
     }
 
     const skillCardWidth = MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH
@@ -1710,6 +1729,15 @@ export function useCardsController() {
             }
             selectionManager.selectCard({ type: 'biz', jobNumber }, 'CardsController.cloneClick')
         })
+        clone.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            const skillTitleEl = event.target.closest('.biz-card-skill-title')
+            if (!skillTitleEl || !clone.contains(skillTitleEl)) return
+            if (!selectionManager) return
+            event.stopPropagation()
+            if (event.key === ' ') event.preventDefault()
+            selectSkillCardById(skillTitleEl.getAttribute('data-skill-card-id'), 'CardsController.cloneSkillTitleKeydown')
+        })
 
         // Apply color palette to clone
         try {
@@ -1961,7 +1989,7 @@ export function useCardsController() {
                     container.innerHTML = skillCardIds.map(skillCardId => {
                         const el = document.getElementById(skillCardId)
                         const title = el ? (el.getAttribute('data-skill-name') || skillCardId) : skillCardId
-                        return `<span class="biz-card-skill-title" data-skill-card-id="${skillCardId}">${title}</span>`
+                        return `<span class="biz-card-skill-title"${skillTitleFocusAttrs(title)} data-skill-card-id="${escapeHtml(skillCardId)}">${escapeHtml(title)}</span>`
                     }).join(' • ')
                 }
             }

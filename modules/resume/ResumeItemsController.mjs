@@ -8,6 +8,15 @@ import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // import { initializationManager } from '../core/initializationManager.mjs'; // IM framework no longer used
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 // No longer directly manipulating other managers
+
+/** HTML attributes so .biz-card-skill-title participates in Tab order (per rDiv focus list). */
+function skillTitleFocusAttrsForDisplayName(displayName) {
+    const esc = String(displayName)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;');
+    return ` tabindex="0" role="link" aria-label="View skill: ${esc}"`;
+}
 // import { bizCardDivManager } from './bizCardDivManager.mjs';
 // import * as scenePlane from './scenePlane.mjs';
 // import { resumeManager } from '../resume/resumeManager.mjs';
@@ -349,7 +358,7 @@ class ResumeItemsController {
             const skillSpans = Object.entries(jobData['job-skills']).map(([skillKey, displayName]) => {
                 const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillKey}"]`);
                 const idAttr = skillCardEl ? ` data-skill-card-id="${skillCardEl.id}"` : '';
-                return `<span class="biz-card-skill-title" data-skill-name="${skillKey}"${idAttr}>${displayName}</span>`;
+                return `<span class="biz-card-skill-title"${skillTitleFocusAttrsForDisplayName(displayName)} data-skill-name="${skillKey}"${idAttr}>${displayName}</span>`;
             }).join(' • ');
             skillsList.innerHTML = '<span class="bullet">•</span><span class="skills-text">' + skillSpans + '</span>';
 
@@ -432,7 +441,8 @@ class ResumeItemsController {
                 trimmed = trimmed.replace(skillRegex, (match, leading, matchedTerm) => {
                     const lower = String(matchedTerm).toLowerCase();
                     const canonicalSkillKey = termKeyByLower.get(lower) || matchedTerm;
-                    return `${leading}<span class="biz-card-skill-title" data-skill-name="${escapeHtml(canonicalSkillKey)}">${escapeHtml(matchedTerm)}</span>`;
+                    const attrs = skillTitleFocusAttrsForDisplayName(matchedTerm);
+                    return `${leading}<span class="biz-card-skill-title"${attrs} data-skill-name="${escapeHtml(canonicalSkillKey)}">${escapeHtml(matchedTerm)}</span>`;
                 });
                 
                 const bulletPoint = document.createElement('div');
@@ -491,7 +501,7 @@ class ResumeItemsController {
         const skillSpans = Object.entries(jobSkills).map(([skillKey, displayName]) => {
             const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillKey}"]`);
             const idAttr = skillCardEl ? ` data-skill-card-id="${skillCardEl.id}"` : '';
-            return `<span class="biz-card-skill-title" data-skill-name="${skillKey}"${idAttr}>${displayName}</span>`;
+            return `<span class="biz-card-skill-title"${skillTitleFocusAttrsForDisplayName(displayName)} data-skill-name="${skillKey}"${idAttr}>${displayName}</span>`;
         }).join(' • ');
         skillsList.innerHTML = '<span class="bullet">•</span><span class="skills-text">' + skillSpans + '</span>';
     }
@@ -523,8 +533,67 @@ class ResumeItemsController {
     _setupMouseListeners(bizResumeDiv) {
         if (!bizResumeDiv) return;
         bizResumeDiv.addEventListener('click', (e) => this.handleBizResumeDivClickEvent(bizResumeDiv, e));
+        bizResumeDiv.addEventListener('keydown', (e) => this.handleBizResumeDivKeydownEvent(bizResumeDiv, e));
         bizResumeDiv.addEventListener('mouseenter', () => this.handleMouseEnterEvent(bizResumeDiv));
         bizResumeDiv.addEventListener('mouseleave', () => this.handleMouseLeaveEvent(bizResumeDiv));
+    }
+
+    /**
+     * Activate skill selection from a .biz-card-skill-title (click or Enter/Space when focused).
+     * @param {HTMLElement} bizResumeDiv
+     * @param {HTMLElement} skillTitleEl
+     */
+    activateSkillTitleOnRDiv(bizResumeDiv, skillTitleEl) {
+        if (!bizResumeDiv || !skillTitleEl) return;
+        let skillCardId = skillTitleEl.getAttribute('data-skill-card-id');
+        if (!skillCardId) {
+            const skillName = skillTitleEl.getAttribute('data-skill-name');
+            if (skillName) {
+                try {
+                    const esc = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(skillName) : String(skillName).replace(/"/g, '\\"');
+                    const exact = document.querySelector(`.skill-card-div[data-skill-name="${esc}"]`);
+                    skillCardId = exact?.id || null;
+                } catch (_) {}
+
+                if (!skillCardId) {
+                    const normalize = (s) => String(s)
+                        .toLowerCase()
+                        .replace(/[\u2010-\u2015]/g, '-')
+                        .replace(/[^a-z0-9]+/g, '')
+                        .trim();
+                    const targetNorm = normalize(skillName);
+                    const all = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]'));
+                    const found = all.find(el => normalize(el.getAttribute('data-skill-name')) === targetNorm);
+                    skillCardId = found?.id || null;
+                }
+
+                if (!skillCardId) {
+                    console.warn('[ResumeItemsController] Skill activate: could not resolve skillCardId', {
+                        jobNumber: bizResumeDiv?.getAttribute?.('data-job-number'),
+                        skillName
+                    });
+                }
+            }
+        }
+        if (!skillCardId) return;
+        const sel = selectionManager.selectedCard;
+        if (sel?.type === 'skill' && sel.skillCardId === skillCardId) {
+            selectionManager.clearSelection('ResumeItemsController.skillTitleActivate');
+        } else {
+            selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeItemsController.skillTitleActivate');
+            const sceneEl = document.getElementById(skillCardId);
+            if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        }
+    }
+
+    handleBizResumeDivKeydownEvent(bizResumeDiv, event) {
+        if (!bizResumeDiv || !event) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const skillTitleEl = event.target?.closest?.('.biz-card-skill-title');
+        if (!skillTitleEl || !bizResumeDiv.contains(skillTitleEl)) return;
+        if (event.key === ' ') event.preventDefault();
+        event.stopPropagation();
+        this.activateSkillTitleOnRDiv(bizResumeDiv, skillTitleEl);
     }
 
     handleBizResumeDivClickEvent(bizResumeDiv, event) {
@@ -534,48 +603,7 @@ class ResumeItemsController {
         const skillTitleEl = event?.target?.closest('.biz-card-skill-title');
         if (skillTitleEl) {
             event.stopPropagation();
-            let skillCardId = skillTitleEl.getAttribute('data-skill-card-id');
-            if (!skillCardId) {
-                const skillName = skillTitleEl.getAttribute('data-skill-name');
-                // Resolve lazily so clicks work even before CardsController stamps data-skill-card-id.
-                if (skillName) {
-                    // 1) Exact match first (fast path)
-                    try {
-                        const esc = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(skillName) : String(skillName).replace(/"/g, '\\"')
-                        const exact = document.querySelector(`.skill-card-div[data-skill-name="${esc}"]`);
-                        skillCardId = exact?.id || null;
-                    } catch (_) {}
-
-                    // 2) Normalized match (fixes case/whitespace/dash mismatches like "K-means" vs "K – means")
-                    if (!skillCardId) {
-                        const normalize = (s) => String(s)
-                            .toLowerCase()
-                            .replace(/[\u2010-\u2015]/g, '-') // normalize hyphen variants
-                            .replace(/[^a-z0-9]+/g, '') // drop punctuation/spacing
-                            .trim();
-                        const targetNorm = normalize(skillName);
-                        const all = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]'));
-                        const found = all.find(el => normalize(el.getAttribute('data-skill-name')) === targetNorm);
-                        skillCardId = found?.id || null;
-                    }
-
-                    if (!skillCardId) {
-                        console.warn('[ResumeItemsController] Skill click: could not resolve skillCardId', {
-                            jobNumber: bizResumeDiv?.getAttribute?.('data-job-number'),
-                            skillName
-                        });
-                    }
-                }
-            }
-            if (!skillCardId) return;
-            const sel = selectionManager.selectedCard;
-            if (sel?.type === 'skill' && sel.skillCardId === skillCardId) {
-                selectionManager.clearSelection('ResumeItemsController.skillTitleClick');
-            } else {
-                selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeItemsController.skillTitleClick');
-                const sceneEl = document.getElementById(skillCardId);
-                if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
-            }
+            this.activateSkillTitleOnRDiv(bizResumeDiv, skillTitleEl);
             return;
         }
 

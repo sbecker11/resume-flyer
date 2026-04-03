@@ -5,6 +5,7 @@
         ref="modalRef"
         class="rde-modal"
         :style="modalStyle"
+        @keydown="onModalTabNavigate"
       >
         <div
           class="rde-header rde-drag-handle"
@@ -14,12 +15,16 @@
           <div class="rde-subtitle">{{ resumeId }}</div>
         </div>
 
-        <div class="rde-tabs">
+        <div class="rde-tabs" role="tablist" aria-label="Resume details sections">
           <button
             v-for="t in tabs"
             :key="t.id"
             type="button"
             class="rde-tab"
+            role="tab"
+            tabindex="-1"
+            :aria-selected="activeTab === t.id"
+            :data-rde-tab-id="t.id"
             :class="{ active: activeTab === t.id }"
             :disabled="saving || reparsing || otherSectionsAutosaving || fieldAutosaving"
             @click="selectTab(t.id)"
@@ -53,10 +58,10 @@
             :resume-id="resumeId"
             :reload-nonce="reloadNonce"
             :selected-job-index="sharedJobIndex"
-            :initial-focus-field="initialFocusField"
             @update:selected-job-index="sharedJobIndex = $event"
             @saved="onJobsSaved"
             @open-skills-for-job="openSkillsForJob"
+            @content-ready="onResumeJobsOrSkillsPanelReady"
           />
           <SkillsTab
             v-if="activeTab === 'job-skills'"
@@ -66,6 +71,7 @@
             :selected-job-index="sharedJobIndex"
             @update:selected-job-index="sharedJobIndex = $event"
             @saved="onSkillsSaved"
+            @content-ready="onResumeJobsOrSkillsPanelReady"
           />
         </div>
 
@@ -128,8 +134,6 @@ const props = defineProps({
   initialTab: { type: String, default: 'meta' },
   /** When opening on Job skills tab, preselect this job index (0-based). */
   initialJobIndex: { type: Number, default: null },
-  /** When opening on Resume jobs tab, focus this field after selecting the job ('employer' | 'description'). */
-  initialFocusField: { type: String, default: null }
 });
 
 const emit = defineEmits(['close', 'saved']);
@@ -214,6 +218,327 @@ const modalStyle = computed(() => ({
   height: `${modalHeight.value}px`,
   transform: `translate(calc(-50% + ${dragOffset.value.x}px), calc(-50% + ${dragOffset.value.y}px))`
 }));
+
+function isRdeModalFocusable(el) {
+  if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+  if (el.hasAttribute('disabled')) return false;
+  if (el.getAttribute('tabindex') === '-1') return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' && el.type === 'hidden') return false;
+  if (!['BUTTON', 'INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return false;
+  const s = getComputedStyle(el);
+  if (s.visibility === 'hidden' || s.display === 'none') return false;
+  const r = el.getBoundingClientRect();
+  if (r.width <= 0 && r.height <= 0) return false;
+  return true;
+}
+
+/**
+ * Focusables in tree/document order under `root` (matches reading order when markup follows layout).
+ */
+function walkFocusablesInDocumentOrder(root) {
+  if (!root) return [];
+  const list = [];
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_ELEMENT,
+    {
+      acceptNode(node) {
+        if (node.nodeType !== Node.ELEMENT_NODE) return NodeFilter.FILTER_SKIP;
+        const tag = node.tagName;
+        if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(tag)) {
+          if (isRdeModalFocusable(node)) return NodeFilter.FILTER_ACCEPT;
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_SKIP;
+      }
+    }
+  );
+  let n = walker.nextNode();
+  while (n) {
+    list.push(n);
+    n = walker.nextNode();
+  }
+  return list;
+}
+
+/**
+ * Content + footer: DOM order in .rde-body, then parser output (if shown), then footer (through Save).
+ * Section tab buttons use tabindex=-1. Tab from Save switches section and focuses the next panel’s first
+ * field. Last panel’s Save wraps to Meta’s first field. See onModalTabNavigate.
+ */
+function collectContentFocusablesReadingOrder(modalEl) {
+  const parts = [];
+  const body = modalEl.querySelector('.rde-body');
+  if (body) parts.push(...walkFocusablesInDocumentOrder(body));
+  const parserWrap = modalEl.querySelector('.rde-parser-output-wrap');
+  if (parserWrap) parts.push(...walkFocusablesInDocumentOrder(parserWrap));
+  const footer = modalEl.querySelector('.rde-footer');
+  if (footer) parts.push(...walkFocusablesInDocumentOrder(footer));
+  return parts;
+}
+
+function isTabStripButton(el) {
+  return Boolean(el?.classList?.contains('rde-tab') && el.closest?.('.rde-tabs'));
+}
+
+function isInsideRdeSkillGrid(el) {
+  return Boolean(el?.closest?.('.rde-skill-grid'));
+}
+
+function focusLastContentFocusable(modalEl) {
+  const list = collectContentFocusablesReadingOrder(modalEl);
+  if (!list.length) return;
+  const last = list[list.length - 1];
+  try {
+    last.focus({ preventScroll: false });
+  } catch {
+    last.focus();
+  }
+}
+
+function onModalTabNavigate(e) {
+  if (e.key !== 'Tab' || !props.isOpen) return;
+  const modal = modalRef.value;
+  if (!modal?.contains(document.activeElement)) return;
+
+  const active = document.activeElement;
+  // Job skills / skill grid: SkillsTab may handle Tab (letter-cycle). Otherwise native Tab within grid;
+  // from the last grid focusable, forward Tab must reach footer (browser order can skip it).
+  if (activeTab.value === 'job-skills' && isInsideRdeSkillGrid(active) && !isTabStripButton(active)) {
+    const grid = active.closest('.rde-skill-grid');
+    if (grid && modal.contains(grid)) {
+      const gridFocusables = walkFocusablesInDocumentOrder(grid);
+      if (gridFocusables.length) {
+        if (e.shiftKey && gridFocusables[0] === active) {
+          e.preventDefault();
+          const fullList = collectContentFocusablesReadingOrder(modal);
+          const gi = fullList.indexOf(active);
+          if (gi > 0) {
+            try {
+              fullList[gi - 1].focus({ preventScroll: false });
+            } catch {
+              fullList[gi - 1].focus();
+            }
+          }
+          return;
+        }
+        if (!e.shiftKey && gridFocusables[gridFocusables.length - 1] === active) {
+          e.preventDefault();
+          const footer = modal.querySelector('.rde-footer');
+          const footerList = footer ? walkFocusablesInDocumentOrder(footer) : [];
+          if (footerList.length) {
+            try {
+              footerList[0].focus({ preventScroll: false });
+            } catch {
+              footerList[0].focus();
+            }
+          }
+          return;
+        }
+      }
+    }
+    return;
+  }
+
+  const contentList = collectContentFocusablesReadingOrder(modal);
+  const onStrip = isTabStripButton(active);
+
+  /**
+   * Section tab buttons use tabindex=-1 and are not in the Tab cycle. Order is panel body → parser (if any)
+   * → footer through Save; Tab from Save runs selectTab(next) and focuses that panel’s first field.
+   */
+  if (e.shiftKey) {
+    if (onStrip) {
+      const stripId = active.getAttribute('data-rde-tab-id');
+      const curIdx = stripId ? tabs.findIndex((t) => t.id === stripId) : -1;
+      if (curIdx < 0) return;
+      e.preventDefault();
+      if (curIdx > 0) {
+        const prevId = tabs[curIdx - 1].id;
+        void (async () => {
+          await selectTab(prevId);
+          if (!props.isOpen || activeTab.value !== prevId) return;
+          await nextTick();
+          await nextTick();
+          const m = modalRef.value;
+          if (m) focusLastContentFocusable(m);
+        })();
+        return;
+      }
+      const lastId = tabs[tabs.length - 1].id;
+      void (async () => {
+        await selectTab(lastId);
+        if (!props.isOpen || activeTab.value !== lastId) return;
+        await nextTick();
+        await nextTick();
+        const m = modalRef.value;
+        if (m) focusLastContentFocusable(m);
+      })();
+      return;
+    }
+
+    const idx = contentList.indexOf(active);
+    if (idx > 0) {
+      e.preventDefault();
+      contentList[idx - 1].focus();
+      return;
+    }
+    if (idx === 0) {
+      e.preventDefault();
+      const curIdx = tabs.findIndex((t) => t.id === activeTab.value);
+      if (curIdx <= 0) {
+        const lastId = tabs[tabs.length - 1].id;
+        void (async () => {
+          await selectTab(lastId);
+          if (!props.isOpen || activeTab.value !== lastId) return;
+          await nextTick();
+          await nextTick();
+          const m = modalRef.value;
+          if (m) focusLastContentFocusable(m);
+        })();
+        return;
+      }
+      const prevId = tabs[curIdx - 1].id;
+      void (async () => {
+        await selectTab(prevId);
+        if (!props.isOpen || activeTab.value !== prevId) return;
+        await nextTick();
+        await nextTick();
+        const m = modalRef.value;
+        if (m) focusLastContentFocusable(m);
+      })();
+    }
+    return;
+  }
+
+  // Forward Tab
+  if (onStrip) {
+    const stripId = active.getAttribute('data-rde-tab-id');
+    if (!stripId) return;
+    e.preventDefault();
+    void (async () => {
+      await selectTab(stripId);
+      if (!props.isOpen || activeTab.value !== stripId) return;
+      scheduleFocusTopLeftAfterTabChange();
+    })();
+    return;
+  }
+
+  const idx = contentList.indexOf(active);
+  if (idx < 0) return;
+  if (idx < contentList.length - 1) {
+    e.preventDefault();
+    contentList[idx + 1].focus();
+    return;
+  }
+
+  const curIdx = tabs.findIndex((t) => t.id === activeTab.value);
+  if (curIdx < 0) return;
+  e.preventDefault();
+  if (curIdx < tabs.length - 1) {
+    const nextId = tabs[curIdx + 1].id;
+    void (async () => {
+      await selectTab(nextId);
+      if (!props.isOpen || activeTab.value !== nextId) return;
+      scheduleFocusTopLeftAfterTabChange();
+    })();
+    return;
+  }
+
+  void (async () => {
+    await selectTab('meta');
+    if (!props.isOpen || activeTab.value !== 'meta') return;
+    scheduleFocusTopLeftAfterTabChange();
+  })();
+}
+
+/** First focusable in .rde-body area (reading order), excluding the section tab strip. */
+function focusTopLeftContentField() {
+  if (!props.isOpen) return false;
+  const modal = modalRef.value;
+  if (!modal) return false;
+  // Jobs / Job skills: job dropdown is always first (see JobsTab / SkillsTab DOM order).
+  if (activeTab.value === 'resume-jobs') {
+    const el = modal.querySelector('#rde-jobs-job-select');
+    if (el && isRdeModalFocusable(el)) {
+      try {
+        el.focus({ preventScroll: false });
+      } catch {
+        el.focus();
+      }
+      return true;
+    }
+  }
+  if (activeTab.value === 'job-skills') {
+    const el = modal.querySelector('#rde-skills-job-select');
+    if (el && isRdeModalFocusable(el)) {
+      try {
+        el.focus({ preventScroll: false });
+      } catch {
+        el.focus();
+      }
+      return true;
+    }
+  }
+  const list = collectContentFocusablesReadingOrder(modal);
+  if (!list.length) return false;
+  const el = list[0];
+  try {
+    el.focus({ preventScroll: false });
+  } catch {
+    el.focus();
+  }
+  return true;
+}
+
+/**
+ * After switching section tab or opening the modal, move focus to the panel's top-left field.
+ * Deferred pass helps Jobs/Skills tabs that mount inputs after fetch.
+ */
+/** JobsTab / SkillsTab fetch finishes after mount; re-run focus so job selects exist and are enabled. */
+function onResumeJobsOrSkillsPanelReady() {
+  if (!props.isOpen) return;
+  if (activeTab.value !== 'resume-jobs' && activeTab.value !== 'job-skills') return;
+  scheduleFocusTopLeftAfterTabChange();
+}
+
+function scheduleFocusTopLeftAfterTabChange() {
+  if (!props.isOpen) return;
+  nextTick(() => {
+    nextTick(() => {
+      requestAnimationFrame(() => {
+        if (!props.isOpen) return;
+        focusTopLeftContentField();
+        setTimeout(() => {
+          if (!props.isOpen) return;
+          const modal = modalRef.value;
+          if (!modal) return;
+          const list = collectContentFocusablesReadingOrder(modal);
+          if (!list.length) return;
+          const first = list[0];
+          const ae = document.activeElement;
+          if (isTabStripButton(ae)) {
+            first.focus();
+            return;
+          }
+          if (!list.includes(ae)) {
+            first.focus();
+          }
+        }, 0);
+      });
+    });
+  });
+}
+
+watch(
+  () => [props.isOpen, activeTab.value],
+  ([open]) => {
+    if (!open) return;
+    scheduleFocusTopLeftAfterTabChange();
+  },
+  { flush: 'post' }
+);
 
 function onOverlayClick() {
   if (ignoreNextOverlayClick.value || isDragging.value || isResizing.value) {
@@ -779,5 +1104,16 @@ async function save() {
   letter-spacing: 0.05em;
   color: rgba(255, 255, 255, 0.5);
   margin-bottom: 4px;
+}
+
+/* One focus treatment for all modal fields (matches Education textarea prominence: border + ring). */
+.rde-modal .rde-input:focus,
+.rde-modal .rde-textarea:focus,
+.rde-modal .rde-select:focus,
+.rde-modal .rde-parser-output:focus,
+.rde-skill-edit-modal .rde-input:focus {
+  outline: none;
+  border-color: rgba(74, 158, 255, 0.85);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.35);
 }
 </style>

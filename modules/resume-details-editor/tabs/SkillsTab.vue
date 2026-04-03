@@ -66,11 +66,16 @@
             />
             <span class="rde-count">{{ checkedCount }} selected out of {{ totalCount }} total</span>
           </div>
-          <div class="rde-skill-grid">
+          <div
+            ref="skillGridRef"
+            class="rde-skill-grid"
+            @keydown="onSkillGridKeydown"
+          >
             <div
               v-for="skill in filteredSkills"
               :key="skill.id"
               class="rde-skill-item"
+              :data-skill-id="String(skill.id)"
               :class="{ checked: selected.has(skill.id) }"
             >
               <label class="rde-skill-item-label">
@@ -161,7 +166,7 @@ const props = defineProps({
   selectedJobIndex: { type: Number, default: null }
 });
 
-const emit = defineEmits(['saved', 'update:selectedJobIndex']);
+const emit = defineEmits(['saved', 'update:selectedJobIndex', 'content-ready']);
 
 const jobs = shallowRef([]);
 const skills = shallowRef({});
@@ -180,6 +185,13 @@ const editCancelBtnRef = ref(null);
 const skillEditModalOpen = ref(false);
 const mergeFromKey = ref('');
 const mergeToKey = ref('');
+const skillGridRef = ref(null);
+/** Same letter repeated cycles through filtered skills whose names start with that letter (a–z). */
+const skillLetterCycle = ref({ letter: '', matchIndex: -1 });
+
+function resetSkillLetterCycle() {
+  skillLetterCycle.value = { letter: '', matchIndex: -1 };
+}
 
 const newSkillNameTrimmed = computed(() => (newSkillName.value || '').trim());
 const canMerge = computed(() => {
@@ -263,6 +275,7 @@ watch(() => [props.resumeId, props.reloadNonce], async ([id]) => {
     console.error('[SkillsTab] load failed:', err);
     loadError.value = 'Failed to load jobs and skills: ' + err.message;
   }
+  nextTick(() => emit('content-ready'));
 }, { immediate: true });
 
 watch(
@@ -275,6 +288,7 @@ watch(
 );
 
 watch(jobIndexLocal, (idx) => {
+  resetSkillLetterCycle();
   if (idx == null || !jobs.value[idx]) {
     selected.value = new Set();
     return;
@@ -306,6 +320,181 @@ const filteredSkills = computed(() => {
   if (!q) return sortedSkills.value;
   return sortedSkills.value.filter(s => s.name.toLowerCase().includes(q));
 });
+
+watch(
+  () => [search.value, filteredSkills.value],
+  () => resetSkillLetterCycle(),
+  { deep: true }
+);
+
+function escapeAttrId(id) {
+  const s = String(id);
+  return typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(s) : s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function focusSkillCheckboxById(skillId) {
+  const grid = skillGridRef.value;
+  if (!grid) return;
+  const row = grid.querySelector(`[data-skill-id="${escapeAttrId(skillId)}"]`);
+  const cb = row?.querySelector('input[type="checkbox"]');
+  if (cb && typeof cb.focus === 'function') cb.focus();
+}
+
+const RDE_SKILL_LETTER_ORDER = 'abcdefghijklmnopqrstuvwxyz';
+
+function matchesForLetterKey(ch) {
+  const c = String(ch).toLowerCase();
+  if (!/^[a-z]$/.test(c)) return [];
+  return filteredSkills.value.filter((s) => (s.name || '').toLowerCase().startsWith(c));
+}
+
+function nextLetterGroupAfter(letter) {
+  const start = RDE_SKILL_LETTER_ORDER.indexOf(String(letter).toLowerCase());
+  if (start < 0) return null;
+  for (let step = 1; step < 26; step++) {
+    const L = RDE_SKILL_LETTER_ORDER[(start + step) % 26];
+    const m = matchesForLetterKey(L);
+    if (m.length) return { letter: L, matches: m };
+  }
+  return null;
+}
+
+function prevLetterGroupBefore(letter) {
+  const start = RDE_SKILL_LETTER_ORDER.indexOf(String(letter).toLowerCase());
+  if (start < 0) return null;
+  for (let step = 1; step < 26; step++) {
+    const L = RDE_SKILL_LETTER_ORDER[(start - step + 26) % 26];
+    const m = matchesForLetterKey(L);
+    if (m.length) return { letter: L, matches: m };
+  }
+  return null;
+}
+
+function skillIdFromGridKeyTarget(target) {
+  const row = target?.closest?.('[data-skill-id]');
+  const id = row?.getAttribute?.('data-skill-id');
+  return id != null && id !== '' ? id : null;
+}
+
+/** Tab order inside `.rde-skill-grid` (matches ResumeDetailsEditor focus walker). */
+function gridFocusablesInOrder() {
+  const grid = skillGridRef.value;
+  if (!grid) return [];
+  const list = [];
+  const walker = document.createTreeWalker(
+    grid,
+    NodeFilter.SHOW_ELEMENT,
+    {
+      acceptNode(node) {
+        if (node.nodeType !== Node.ELEMENT_NODE) return NodeFilter.FILTER_SKIP;
+        const tag = node.tagName;
+        if (!['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(tag)) return NodeFilter.FILTER_SKIP;
+        if (node.hasAttribute('disabled')) return NodeFilter.FILTER_SKIP;
+        if (node.getAttribute('tabindex') === '-1') return NodeFilter.FILTER_SKIP;
+        if (tag === 'INPUT' && node.type === 'hidden') return NodeFilter.FILTER_SKIP;
+        const s = getComputedStyle(node);
+        if (s.visibility === 'hidden' || s.display === 'none') return NodeFilter.FILTER_SKIP;
+        const r = node.getBoundingClientRect();
+        if (r.width <= 0 && r.height <= 0) return NodeFilter.FILTER_SKIP;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
+  let n = walker.nextNode();
+  while (n) {
+    list.push(n);
+    n = walker.nextNode();
+  }
+  return list;
+}
+
+function onSkillGridKeydown(e) {
+  if (skillEditModalOpen.value) return;
+  if (!skillGridRef.value?.contains(e.target)) return;
+  const t = e.target;
+
+  if (e.key === 'Tab') {
+    const L = skillLetterCycle.value.letter;
+    if (!L || !/^[a-z]$/.test(L)) return;
+
+    const matches = matchesForLetterKey(L);
+    if (!matches.length) return;
+
+    const tabStops = gridFocusablesInOrder();
+
+    // Shift+Tab from first grid stop → previous panel control (modal handler).
+    if (e.shiftKey && tabStops.length && tabStops[0] === t) {
+      return;
+    }
+    // Forward Tab from letter-focused checkbox → same row’s pencil (native order).
+    if (!e.shiftKey && t.tagName === 'INPUT' && t.type === 'checkbox') {
+      return;
+    }
+    // Forward Tab from last grid stop → footer (modal handler), not next letter group.
+    if (!e.shiftKey && tabStops.length && tabStops[tabStops.length - 1] === t) {
+      return;
+    }
+
+    const currentId = skillIdFromGridKeyTarget(t);
+    if (currentId == null) return;
+
+    const idx = matches.findIndex((s) => s.id === currentId);
+    if (idx < 0) return;
+
+    if (e.shiftKey) {
+      if (idx > 0) {
+        e.preventDefault();
+        const nextIdx = idx - 1;
+        skillLetterCycle.value = { letter: L, matchIndex: nextIdx };
+        focusSkillCheckboxById(matches[nextIdx].id);
+        return;
+      }
+      const prevGroup = prevLetterGroupBefore(L);
+      if (!prevGroup) return;
+      e.preventDefault();
+      const lastIdx = prevGroup.matches.length - 1;
+      skillLetterCycle.value = { letter: prevGroup.letter, matchIndex: lastIdx };
+      focusSkillCheckboxById(prevGroup.matches[lastIdx].id);
+      return;
+    }
+
+    if (idx < matches.length - 1) {
+      e.preventDefault();
+      const nextIdx = idx + 1;
+      skillLetterCycle.value = { letter: L, matchIndex: nextIdx };
+      focusSkillCheckboxById(matches[nextIdx].id);
+      return;
+    }
+    const nextGroup = nextLetterGroupAfter(L);
+    if (!nextGroup) return;
+    e.preventDefault();
+    skillLetterCycle.value = { letter: nextGroup.letter, matchIndex: 0 };
+    focusSkillCheckboxById(nextGroup.matches[0].id);
+    return;
+  }
+
+  if (t.tagName === 'TEXTAREA') return;
+  if (t.tagName === 'INPUT' && t.type !== 'checkbox') return;
+
+  if (e.key.length !== 1) return;
+  const ch = e.key.toLowerCase();
+  if (!/^[a-z]$/.test(ch)) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const list = filteredSkills.value;
+  const matches = list.filter((s) => (s.name || '').toLowerCase().startsWith(ch));
+  if (!matches.length) return;
+
+  e.preventDefault();
+
+  let nextIdx = 0;
+  if (skillLetterCycle.value.letter === ch) {
+    nextIdx = (skillLetterCycle.value.matchIndex + 1) % matches.length;
+  }
+  skillLetterCycle.value = { letter: ch, matchIndex: nextIdx };
+
+  focusSkillCheckboxById(matches[nextIdx].id);
+}
 
 const checkedCount = computed(() => selected.value.size);
 const totalCount = computed(() => sortedSkills.value.length);
@@ -490,7 +679,6 @@ defineExpose({ saveForCurrentJob });
   font-size: 0.9rem;
   box-sizing: border-box;
 }
-.rde-input:focus { outline: none; border-color: rgba(74,158,255,0.6); }
 .rde-select {
   width: 100%;
   background: rgba(255,255,255,0.07);

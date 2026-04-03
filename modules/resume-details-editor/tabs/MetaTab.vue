@@ -78,7 +78,6 @@ function formatDate(iso) {
 .rde-field { margin-bottom: 12px; }
 .rde-label { display: block; font-size: 0.7rem; text-transform: none; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
 .rde-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; box-sizing: border-box; }
-.rde-input:focus { outline: none; border-color: rgba(74,158,255,0.6); }
 .rde-readonly { margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.4); }
 .rde-value { margin-left: 6px; }
 </style>

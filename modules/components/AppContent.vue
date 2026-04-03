@@ -84,10 +84,14 @@ import { get_filterStr_from_z } from '../core/filters.mjs'
 import { selectionManager } from '../core/selectionManager.mjs'
 import { updateContrastForBrightness } from '../composables/useColorPalette.mjs'
 import { reportError } from '../utils/errorReporting.mjs'
+import { listVisibleSceneCardRoots } from '../utils/sceneCardVisibility.mjs'
+import { installBizSelectionFocus } from '../utils/bizSelectionFocus.mjs'
 import { listResumes } from '../api/resumeManagerApi.mjs'
 
 /** Dev / ?debugSkillContrast=1 — teardown in onUnmounted */
 let skillCardContrastGuardTeardown = null
+/** Teardown for biz job selection → first tab stop inside rDiv/cDiv */
+let teardownBizSelectionFocus = null
 
 // Resume system initialization (to be migrated)
 import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrolling } from '../resume/resumeSystemInitializer.mjs'
@@ -390,7 +394,8 @@ async function selectFirstCardWhenReady() {
   while (Date.now() < deadline) {
     const rlc = window.resumeFlyer?.resumeListController
     const items = rlc?.scrollContainer?.originalItems
-    const cDivCount = document.querySelectorAll('.biz-card-div').length
+    const plane = document.getElementById('scene-plane')
+    const cDivCount = plane ? listVisibleSceneCardRoots(plane).length : 0
     if (Array.isArray(items) && items.length > 0 && cDivCount > 0) break
     await new Promise(resolve => setTimeout(resolve, 50))
   }
@@ -414,20 +419,24 @@ async function scrollSceneToLatestCard() {
   const sceneContentEl = document.getElementById('scene-content')
   const scenePlaneEl = document.getElementById('scene-plane')
   if (!sceneContentEl || !scenePlaneEl) return
-  const bizCards = Array.from(scenePlaneEl.querySelectorAll('.biz-card-div'))
+  const bizCards = listVisibleSceneCardRoots(scenePlaneEl).filter((el) => el.classList.contains('biz-card-div'))
   if (bizCards.length === 0) return
 
-  // Use first card in sorted order if available
+  // Use first card in sorted order if available (visible root only — not hidden original when clone is shown)
   const rlc = window.resumeFlyer?.resumeListController
   const firstJobIndex = rlc?.sortedIndices?.[0] ?? null
-  let targetCard = firstJobIndex !== null
-    ? document.getElementById(`biz-card-div-${firstJobIndex}`)
-    : null
+  let targetCard = null
+  if (firstJobIndex !== null) {
+    targetCard =
+      document.getElementById(`biz-card-div-${firstJobIndex}`) ||
+      document.getElementById(`biz-card-div-${firstJobIndex}-clone`)
+    if (targetCard && !bizCards.includes(targetCard)) targetCard = null
+  }
 
-  // Fallback: card with lowest top px
+  // Fallback: visible card with lowest top px
   if (!targetCard) {
     targetCard = bizCards.reduce((best, card) =>
-      parseInt(card.style.top || '0') < parseInt(best.style.top || '0') ? card : best
+      parseInt(card.style.top || '0', 10) < parseInt(best.style.top || '0', 10) ? card : best
     )
   }
 
@@ -569,7 +578,8 @@ async function resolveStartupResumeId(persistedResumeId) {
 function handleRenderingChanged() {
   const plane = document.getElementById('scene-plane')
   if (!plane) return
-  const cards = plane.querySelectorAll('.biz-card-div, .skill-card-div')
+  // Only visible cDiv or its clone (tab order and filters should match user-visible cards)
+  const cards = listVisibleSceneCardRoots(plane)
   cards.forEach((card) => {
     const z = parseFloat(card.getAttribute('data-sceneZ'))
     if (!Number.isNaN(z)) {
@@ -736,6 +746,8 @@ onMounted(async () => {
       }
     }
 
+    teardownBizSelectionFocus = installBizSelectionFocus(selectionManager)
+
     console.log('[AppContent] ✅ Vue 3 app initialization complete!')
     
   } catch (error) {
@@ -751,6 +763,10 @@ onUnmounted(() => {
   if (typeof skillCardContrastGuardTeardown === 'function') {
     skillCardContrastGuardTeardown()
     skillCardContrastGuardTeardown = null
+  }
+  if (typeof teardownBizSelectionFocus === 'function') {
+    teardownBizSelectionFocus()
+    teardownBizSelectionFocus = null
   }
   console.log('[AppContent] ✅ Cleanup complete')
 })

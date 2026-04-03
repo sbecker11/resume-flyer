@@ -3,8 +3,8 @@
     "index": 0,
     "degree": "PhD, Media Arts & Sciences — Computer Vision / Video Coding / Computer Graphics",
     "institution": "Massachusetts Institute of Technology, Cambridge, MA",
-    "start": "1963/01",
-    "end": "2026/12",
+    "start": "",
+    "end": "1997",
     "description": ""
   },
   "1": {
@@ -12,7 +12,15 @@
     "degree": "MS, Computer Science — Medical Imaging / Computer Graphics",
     "institution": "Brigham Young University, Provo, UT",
     "start": "",
-    "end": "",
-    "description": "BS, Design Engineering Technology — CAD / CAE / CAM • CERTIFICATIONS, PUBLICATIONS, PATENTS, WEBSITES"
+    "end": "1990",
+    "description": ""
+  },
+  "2": {
+    "index": 2,
+    "degree": "BS Design Engineering Technology",
+    "institution": "Brigham Young University",
+    "start": "",
+    "end": "1987",
+    "description": ""
   }
 }

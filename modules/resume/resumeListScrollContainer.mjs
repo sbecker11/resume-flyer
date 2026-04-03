@@ -200,16 +200,27 @@ class ResumeListScrollContainer {
     if (Number.isNaN(jobNumber)) return;
     rDivOrClone.addEventListener('click', (e) => {
       if (e.target.closest('.r-div-close')) return;
+      const itemsController = window.resumeFlyer?.resumeItemsController;
+      if (itemsController && typeof itemsController.handleBizResumeDivClickEvent === 'function') {
+        itemsController.handleBizResumeDivClickEvent(rDivOrClone, e);
+        return;
+      }
       const sm = selectionManager;
       const isSelected = sm.getSelectedJobNumber() === jobNumber;
       if (isSelected) {
         sm.clearSelection('ResumeListScrollContainer.rDivCloneClick');
       } else {
         sm.selectJobNumber(jobNumber, 'ResumeListScrollContainer.rDivCloneClick');
-        const controller = window.resumeFlyer?.resumeItemsController;
-        if (controller && typeof controller._scrollRDivIntoView === 'function') {
-          controller._scrollRDivIntoView(rDivOrClone, jobNumber);
+        if (itemsController && typeof itemsController._scrollRDivIntoView === 'function') {
+          itemsController._scrollRDivIntoView(rDivOrClone, jobNumber);
         }
+      }
+    });
+    rDivOrClone.addEventListener('keydown', (e) => {
+      if (e.target.closest('.r-div-close')) return;
+      const itemsController = window.resumeFlyer?.resumeItemsController;
+      if (itemsController && typeof itemsController.handleBizResumeDivKeydownEvent === 'function') {
+        itemsController.handleBizResumeDivKeydownEvent(rDivOrClone, e);
       }
     });
   }

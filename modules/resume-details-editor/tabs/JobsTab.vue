@@ -125,9 +125,34 @@
           </div>
         </section>
         <section class="rde-section rde-job-actions">
-          <button type="button" class="rde-btn skills" :disabled="saving" @click="openSkillsForCurrentJob">
+          <button
+            type="button"
+            class="rde-btn skills"
+            :aria-busy="saving"
+            @click="openSkillsForCurrentJob"
+          >
             Skills
           </button>
+          <div class="rde-job-nav-group">
+            <button
+              type="button"
+              class="rde-btn rde-btn-nav"
+              :disabled="saving || !canGoToPreviousJob"
+              aria-label="Previous job"
+              @click="goToPreviousJob"
+            >
+              Previous job
+            </button>
+            <button
+              type="button"
+              class="rde-btn rde-btn-nav"
+              :disabled="saving || !canGoToNextJob"
+              aria-label="Next job"
+              @click="goToNextJob"
+            >
+              Next job
+            </button>
+          </div>
         </section>
       </template>
     </template>
@@ -147,11 +172,9 @@ const props = defineProps({
   reloadNonce: { type: Number, default: 0 },
   /** Shared 0-based job index (synced with Job skills tab). */
   selectedJobIndex: { type: Number, default: null },
-  /** After job is selected, focus this field ('employer' | 'description'). */
-  initialFocusField: { type: String, default: null }
 });
 
-const emit = defineEmits(['saved', 'open-skills-for-job', 'update:selectedJobIndex']);
+const emit = defineEmits(['saved', 'open-skills-for-job', 'update:selectedJobIndex', 'content-ready']);
 
 const employerInputRef = ref(null);
 const descriptionInputRef = ref(null);
@@ -205,10 +228,8 @@ function ymScore(yyyy, mm) {
 }
 
 let selectedJobWatchCount = 0;
-let focusWatchCount = 0;
 watch(() => [props.resumeId, props.reloadNonce], ([id]) => {
   selectedJobWatchCount = 0;
-  focusWatchCount = 0;
   jobsLoaded.value = false;
   loadError.value = '';
   jobs.value = [];
@@ -231,11 +252,13 @@ watch(() => [props.resumeId, props.reloadNonce], ([id]) => {
       setTimeout(() => {
         jobIndexLocal.value = idx;
         if (idx != null) emit('update:selectedJobIndex', idx);
+        nextTick(() => emit('content-ready'));
       }, 0);
     } catch (err) {
       console.error('[JobsTab] load failed:', err);
       loadError.value = 'Failed to load jobs: ' + err.message;
       jobsLoaded.value = true;
+      nextTick(() => emit('content-ready'));
     }
   }, 0);
 }, { immediate: true });
@@ -262,10 +285,29 @@ watch([() => jobs.value.length, jobIndexLocal], ([len, idx]) => {
   }
 });
 
+function jobIndexAsNumber() {
+  const v = jobIndexLocal.value;
+  if (v === '' || v == null) return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return n;
+}
+
 const selectedJob = computed(() => {
-  const idx = jobIndexLocal.value;
+  const idx = jobIndexAsNumber();
   if (idx == null || idx < 0 || idx >= jobs.value.length) return null;
   return jobs.value[idx];
+});
+
+const canGoToPreviousJob = computed(() => {
+  const idx = jobIndexAsNumber();
+  return idx != null && idx > 0;
+});
+
+const canGoToNextJob = computed(() => {
+  const idx = jobIndexAsNumber();
+  const len = jobs.value.length;
+  return idx != null && len > 0 && idx < len - 1;
 });
 
 function parseYearMonth(str) {
@@ -331,17 +373,6 @@ function onFourDigitInput(field) {
 function onTwoDigitInput(field) {
   local.value[field] = toTwoDigits(local.value[field]);
 }
-
-// Only run focus after jobs have loaded and we have a selected job (avoids empty-dropdown path).
-watch(() => [jobsLoaded.value, props.initialFocusField, selectedJob.value], ([loaded, focusField, job]) => {
-  focusWatchCount++;
-  if (focusWatchCount > 5) console.warn('[RDE] JobsTab focus watch LOOP', focusWatchCount);
-  if (!loaded || !focusField || !job) return;
-  setTimeout(() => {
-    const el = focusField === 'employer' ? employerInputRef.value : focusField === 'description' ? descriptionInputRef.value : null;
-    if (el && typeof el.focus === 'function') el.focus();
-  }, 0);
-}, { immediate: true });
 
 function jobOptionLabel(job, i) {
   const title = job?.title ?? job?.role ?? job?.Role ?? '';
@@ -439,6 +470,7 @@ function onEndGroupFocusOut(e) {
 }
 
 async function openSkillsForCurrentJob() {
+  if (saving.value) return;
   const idx = jobIndexLocal.value;
   if (idx == null) return;
   // Auto-save job before switching to Skills.
@@ -447,6 +479,33 @@ async function openSkillsForCurrentJob() {
     if (!ok) return;
   }
   emit('open-skills-for-job', idx);
+}
+
+async function goToPreviousJob() {
+  if (saving.value || !canGoToPreviousJob.value) return;
+  const idx = jobIndexAsNumber();
+  if (idx == null || idx <= 0) return;
+  if (canEdit) {
+    const ok = await saveCurrentJob();
+    if (!ok) return;
+  }
+  const next = idx - 1;
+  jobIndexLocal.value = next;
+  emit('update:selectedJobIndex', next);
+}
+
+async function goToNextJob() {
+  if (saving.value || !canGoToNextJob.value) return;
+  const idx = jobIndexAsNumber();
+  const len = jobs.value.length;
+  if (idx == null || idx >= len - 1) return;
+  if (canEdit) {
+    const ok = await saveCurrentJob();
+    if (!ok) return;
+  }
+  const next = idx + 1;
+  jobIndexLocal.value = next;
+  emit('update:selectedJobIndex', next);
 }
 
 defineExpose({ saveCurrentJob });
@@ -487,7 +546,39 @@ defineExpose({ saveCurrentJob });
 .rde-date-field { flex: 1; }
 .rde-date-inputs { display: flex; gap: 6px; }
 .rde-date-select { flex: 1; min-width: 0; }
-.rde-job-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); }
-.rde-job-actions .rde-btn.skills { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); padding: 6px 18px; border-radius: 4px; font-size: 0.85rem; cursor: pointer; }
+.rde-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.rde-job-nav-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.rde-job-actions .rde-btn.rde-btn-nav,
+.rde-job-actions .rde-btn.skills {
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.rde-job-actions .rde-btn.rde-btn-nav:hover:not(:disabled),
 .rde-job-actions .rde-btn.skills:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.rde-job-actions .rde-btn.rde-btn-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.rde-job-actions .rde-btn.skills { padding: 6px 18px; }
 </style>
