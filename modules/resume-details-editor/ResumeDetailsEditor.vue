@@ -92,12 +92,18 @@
             type="button"
             class="rde-btn reparse"
             @click="reparse"
-            :disabled="saving || reparsing || !canEdit || !canReparse"
-            title="Delete derived files in this resume folder and re-run the parser (keeps only the original .docx/.pdf)"
+            :disabled="reparseButtonDisabled"
+            :title="reparseButtonTitle"
           >
             {{ reparsing ? 'Reparsing…' : 'Reparse…' }}
           </button>
-          <button type="button" class="rde-btn save" @click="save" :disabled="saving || !canEdit">
+          <button
+            type="button"
+            class="rde-btn save"
+            @click="save"
+            :disabled="saveButtonDisabled"
+            :title="saveButtonTitle"
+          >
             {{ saving ? 'Saving…' : 'Save' }}
           </button>
         </div>
@@ -678,6 +684,45 @@ const canReparse = computed(() => {
   return Boolean(props.resumeId && props.resumeId !== 'default');
 });
 
+const saveButtonDisabled = computed(() => saving.value || !canEdit);
+const saveButtonTitle = computed(() => {
+  if (!canEdit) return 'Save requires a server with the resume API (not available on static hosting).';
+  if (saving.value) return 'Saving in progress…';
+  return 'Save pending changes and close';
+});
+
+const reparseButtonDisabled = computed(
+  () => saving.value || reparsing.value || !canEdit || !canReparse.value
+);
+const reparseButtonTitle = computed(() => {
+  if (!canEdit) return 'Reparse requires a server with the resume API.';
+  if (saving.value) return 'Wait until save finishes.';
+  if (reparsing.value) return 'Reparsing in progress…';
+  if (!canReparse.value) return 'Select a saved resume (not the default placeholder) to reparse.';
+  return 'Delete derived files in this resume folder and re-run the parser (keeps only the original .docx/.pdf)';
+});
+
+/** Clear stale async flags when the modal opens or closes so footer actions are not stuck disabled. */
+watch(
+  () => props.isOpen,
+  (open) => {
+    saving.value = false;
+    reparsing.value = false;
+    fieldAutosaving.value = false;
+    otherSectionsAutosaving.value = false;
+    if (!open) return;
+    if (!canEdit) {
+      console.warn(
+        '[ResumeDetailsEditor] Save and Reparse are disabled: no API server (e.g. static / GitHub Pages hosting).'
+      );
+    } else if (!props.resumeId || props.resumeId === 'default') {
+      console.warn(
+        '[ResumeDetailsEditor] Reparse is disabled: resumeId is missing or "default". Save may still run for in-memory edits.'
+      );
+    }
+  }
+);
+
 function onMetaUpdate(updates) {
   pendingMeta.value = updates;
 }
@@ -843,8 +888,14 @@ function cancel() {
 }
 
 async function reparse() {
-  if (!canEdit) return;
-  if (!props.resumeId || props.resumeId === 'default') return;
+  if (!canEdit) {
+    console.warn('[ResumeDetailsEditor] reparse: ignored (no API server).');
+    return;
+  }
+  if (!props.resumeId || props.resumeId === 'default') {
+    console.warn('[ResumeDetailsEditor] reparse: ignored (invalid resumeId).');
+    return;
+  }
   reparsing.value = true;
   reparseOutput.value = '';
   let reparseSucceeded = false;
@@ -902,8 +953,14 @@ async function reparse() {
 }
 
 async function save() {
-  if (!canEdit) return
-  if (!props.resumeId || props.resumeId === 'default') return;
+  if (!canEdit) {
+    console.warn('[ResumeDetailsEditor] save: ignored (no API server).');
+    return;
+  }
+  if (!props.resumeId || props.resumeId === 'default') {
+    console.warn('[ResumeDetailsEditor] save: ignored (invalid resumeId).');
+    return;
+  }
   saving.value = true;
   try {
     const id = props.resumeId;
