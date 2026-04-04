@@ -1,5 +1,6 @@
 import { ref, onMounted, onUnmounted, watch, inject, computed, watchEffect } from 'vue'
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs'
+import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs'
 import { selectionManager } from '@/modules/core/selectionManager.mjs'
 import { useTimeline, initialize } from '@/modules/composables/useTimeline.mjs'
 import { useColorPalette, applyPaletteToElement, updateContrastForBrightness, readyPromise } from '@/modules/composables/useColorPalette.mjs'
@@ -674,7 +675,17 @@ export function useCardsController() {
             employerEditBtn.addEventListener('click', (e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' } }))
+                const jobs = getGlobalJobsDependency().getJobsData()
+                const job = jobs[jobNumber]
+                if (isEducationDerivedJob(job)) {
+                    window.dispatchEvent(new CustomEvent('open-resume-details', {
+                        detail: { tab: 'education', educationKey: educationKeyOf(job) },
+                    }))
+                } else {
+                    window.dispatchEvent(new CustomEvent('open-resume-details', {
+                        detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' },
+                    }))
+                }
             })
         }
         const skillsEditBtn = card.querySelector('.resume-skills .biz-details-edit-btn')

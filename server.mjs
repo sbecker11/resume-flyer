@@ -185,6 +185,34 @@ async function readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath =
     return { jobs, skills, categories };
 }
 
+/** Shift skill.jobIDs at/after insert so indices stay aligned with jobs.json (0-based). */
+function reindexSkillJobIdsAfterJobInsert(skills, insertAt) {
+    const at = Number(insertAt);
+    if (!Number.isFinite(at) || at < 0) return;
+    for (const s of Object.values(skills)) {
+        if (!s || typeof s !== 'object' || !Array.isArray(s.jobIDs)) continue;
+        const next = s.jobIDs.map((j) => {
+            const n = Number(j);
+            return Number.isFinite(n) && n >= at ? n + 1 : n;
+        });
+        s.jobIDs = [...new Set(next)].sort((a, b) => a - b);
+    }
+}
+
+/** Remove deleted job index from skill.jobIDs and decrement higher indices. */
+function reindexSkillJobIdsAfterJobDelete(skills, deletedIndex) {
+    const d = Number(deletedIndex);
+    if (!Number.isFinite(d) || d < 0) return;
+    for (const s of Object.values(skills)) {
+        if (!s || typeof s !== 'object' || !Array.isArray(s.jobIDs)) continue;
+        const next = s.jobIDs
+            .map((j) => Number(j))
+            .filter((n) => Number.isFinite(n) && n !== d)
+            .map((n) => (n > d ? n - 1 : n));
+        s.jobIDs = [...new Set(next)].sort((a, b) => a - b);
+    }
+}
+
 /** If state file is missing, create it from app_state.default.json (safe defaults). */
 async function ensureAppStateFile() {
     try {
@@ -572,6 +600,105 @@ app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     Object.assign(jobs[idx], updates);
     await atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2));
     res.json({ ok: true, job: jobs[idx] });
+});
+
+// POST /api/resumes/:id/jobs: Insert empty work job after `afterIndex` (-1 = at index 0)
+app.post('/api/resumes/:id/jobs', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') {
+        return res.status(400).json({ error: 'Invalid resume id.' });
+    }
+    const rawAfter = req.body?.afterIndex;
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    const skillsPath = path.join(dir, 'skills.json');
+    try {
+        await fs.access(jobsPath);
+    } catch (e) {
+        if (e.code === 'ENOENT') return res.status(404).json({ error: 'Resume or jobs.json not found.' });
+        throw e;
+    }
+    try {
+        const jobsContent = await fs.readFile(jobsPath, 'utf-8');
+        let skills = {};
+        try {
+            const skillsContent = await fs.readFile(skillsPath, 'utf-8');
+            skills = parseResumeFile(skillsContent, skillsPath, 'skills') || {};
+        } catch (e2) {
+            if (e2.code !== 'ENOENT') throw e2;
+        }
+        const arr = normalizeParserJobs(parseResumeFile(jobsContent, jobsPath, 'jobs'));
+        let insertAt = 0;
+        if (rawAfter != null && rawAfter !== '' && Number(rawAfter) >= 0) {
+            insertAt = Number(rawAfter) + 1;
+        }
+        if (insertAt > arr.length) insertAt = arr.length;
+        if (insertAt < 0) insertAt = 0;
+        const newJob = {
+            employer: '',
+            role: '',
+            title: '',
+            start: '',
+            end: '',
+            Description: '',
+            skillIDs: [],
+        };
+        arr.splice(insertAt, 0, newJob);
+        reindexSkillJobIdsAfterJobInsert(skills, insertAt);
+        await Promise.all([
+            atomicWriteWithLock(jobsPath, JSON.stringify(arr, null, 2)),
+            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+        ]);
+        res.json({ ok: true, insertIndex: insertAt });
+    } catch (err) {
+        console.error('[POST jobs]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE /api/resumes/:id/jobs/:jobIndex: Remove one work job; reindex skills.json jobIDs
+app.delete('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
+    const { id, jobIndex } = req.params;
+    if (!id || id === 'default' || jobIndex == null) {
+        return res.status(400).json({ error: 'Invalid resume id or job index.' });
+    }
+    const idx = parseInt(jobIndex, 10);
+    if (Number.isNaN(idx) || idx < 0) {
+        return res.status(400).json({ error: 'Invalid job index.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    const skillsPath = path.join(dir, 'skills.json');
+    try {
+        await fs.access(jobsPath);
+    } catch (e) {
+        if (e.code === 'ENOENT') return res.status(404).json({ error: 'Resume or jobs.json not found.' });
+        throw e;
+    }
+    try {
+        const jobsContent = await fs.readFile(jobsPath, 'utf-8');
+        let skills = {};
+        try {
+            const skillsContent = await fs.readFile(skillsPath, 'utf-8');
+            skills = parseResumeFile(skillsContent, skillsPath, 'skills') || {};
+        } catch (e2) {
+            if (e2.code !== 'ENOENT') throw e2;
+        }
+        const arr = normalizeParserJobs(parseResumeFile(jobsContent, jobsPath, 'jobs'));
+        if (arr[idx] == null) {
+            return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
+        }
+        arr.splice(idx, 1);
+        reindexSkillJobIdsAfterJobDelete(skills, idx);
+        await Promise.all([
+            atomicWriteWithLock(jobsPath, JSON.stringify(arr, null, 2)),
+            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+        ]);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[DELETE jobs]', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // GET /api/resumes/:id/meta: Return meta.json for a parsed resume

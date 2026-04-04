@@ -7,7 +7,23 @@ import { selectionManager } from '../core/selectionManager.mjs';
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // import { initializationManager } from '../core/initializationManager.mjs'; // IM framework no longer used
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
+import { isEducationDerivedJob, educationKeyOf } from '../data/ResumeJob.mjs';
 // No longer directly manipulating other managers
+
+/** Open Resume Details on Resume jobs or Education tab (education-as-job rows use Education only). */
+function dispatchOpenResumeDetailsFromJob(jobNumber, focusField) {
+    const jobs = getGlobalJobsDependency().getJobsData();
+    const job = jobs[jobNumber];
+    if (isEducationDerivedJob(job)) {
+        window.dispatchEvent(new CustomEvent('open-resume-details', {
+            detail: { tab: 'education', educationKey: educationKeyOf(job) },
+        }));
+        return;
+    }
+    window.dispatchEvent(new CustomEvent('open-resume-details', {
+        detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField },
+    }));
+}
 
 /** HTML attributes so .biz-card-skill-title participates in Tab order (per rDiv focus list). */
 function skillTitleFocusAttrsForDisplayName(displayName) {
@@ -248,7 +264,7 @@ class ResumeItemsController {
             console.log('[RDE] pencil click (employer) start', jobNumber);
             e.preventDefault();
             e.stopPropagation();
-            window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' } }));
+            dispatchOpenResumeDetailsFromJob(jobNumber, 'employer');
             console.log('[RDE] pencil click (employer) dispatchEvent done');
         });
         employerWrap.appendChild(employerEditBtn);
@@ -312,7 +328,7 @@ class ResumeItemsController {
                 console.log('[RDE] pencil click (description) start', jobNumber);
                 e.preventDefault();
                 e.stopPropagation();
-                window.dispatchEvent(new CustomEvent('open-resume-details', { detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'description' } }));
+                dispatchOpenResumeDetailsFromJob(jobNumber, 'description');
                 console.log('[RDE] pencil click (description) dispatchEvent done');
             });
             descTitleWrap.appendChild(descEditBtn);

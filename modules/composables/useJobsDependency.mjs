@@ -3,6 +3,7 @@
 
 import { ref, computed, readonly } from 'vue'
 import { enrichJobsWithSkills } from '../data/enrichedJobs.mjs'
+import { mergeJobsWithEducation, toJobsArray as rawJobsToArray } from '../data/mergeEducationIntoJobs.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { hasServer } from '@/modules/core/hasServer.mjs'
 
@@ -26,10 +27,7 @@ function basePathJoin(relPath) {
 
 /** Normalize API/static jobs value to an array (accepts array, { jobs: [...] }, or object keyed by id). */
 function toJobsArray(value) {
-  if (Array.isArray(value)) return value
-  if (value && typeof value === 'object' && Array.isArray(value.jobs)) return value.jobs
-  if (value && typeof value === 'object') return Object.values(value)
-  return []
+  return rawJobsToArray(value)
 }
 
 // Global state for jobs dependency
@@ -74,6 +72,7 @@ export function useJobsDependency() {
     const getStaticUrls = (id) => ({
       jobs: basePathJoin(`parsed_resumes/${encodeURIComponent(id)}/jobs.json`),
       skills: basePathJoin(`parsed_resumes/${encodeURIComponent(id)}/skills.json`),
+      education: basePathJoin(`parsed_resumes/${encodeURIComponent(id)}/education.json`),
     })
     let effectiveResumeId = resumeId
     const resolveDefaultFromIndex = async () => {
@@ -86,17 +85,20 @@ export function useJobsDependency() {
     }
     const getStaticPayload = async (id) => {
       const effectiveId = id === 'default' ? await resolveDefaultFromIndex() : id
-      const { jobs: u1, skills: u2 } = getStaticUrls(effectiveId)
-      const [jobsRes, skillsRes] = await Promise.all([
+      const { jobs: u1, skills: u2, education: uEdu } = getStaticUrls(effectiveId)
+      const [jobsRes, skillsRes, educationRes] = await Promise.all([
         fetch(u1),
         fetch(u2).catch(() => null),
+        fetch(uEdu).catch(() => null),
       ])
       if (!jobsRes.ok) {
         const errBody = await jobsRes.text().catch(() => '')
         throw new Error(`Static resume jobs not found: ${u1}${errBody ? ` — ${errBody}` : ''}`)
       }
-      const jobs = await jobsRes.json()
+      const jobsRaw = await jobsRes.json()
       const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {}
+      const education = (educationRes && educationRes.ok) ? await educationRes.json() : {}
+      const jobs = mergeJobsWithEducation(toJobsArray(jobsRaw), education)
       return { jobs, skills }
     }
 
@@ -107,14 +109,29 @@ export function useJobsDependency() {
 
     try {
       let payload = null
+      const educationUrl = basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/education`)
       if (hasServer()) {
         try {
-          const res = await fetch(apiUrl)
+          const [res, educationRes] = await Promise.all([
+            fetch(apiUrl),
+            fetch(educationUrl).catch(() => null),
+          ])
           if (!res.ok) {
             const errBody = await res.text().catch(() => '')
             throw new Error(res.status === 404 ? `Resume data not found: ${apiUrl}` : `Resume API ${res.status}: ${errBody}`)
           }
           payload = await res.json()
+          const education = (educationRes && educationRes.ok) ? await educationRes.json() : {}
+          const rawJobs = mergeJobsWithEducation(toJobsArray(payload?.jobs ?? payload), education)
+          const skills = payload?.skills ?? {}
+          const jobs = enrichJobsWithSkills(rawJobs, skills || {})
+          jobsState.value.data = jobs
+          jobsState.value.isInitialized = true
+
+          console.log(`[useJobsDependency] ✅ Jobs loaded successfully: ${jobs.length} jobs`)
+
+          await notifyDependentControllers()
+          return jobs
         } catch (e) {
           const is404OrNotFound = e?.message?.includes('404') || e?.message?.includes('Resume data not found')
           if (!is404OrNotFound) {

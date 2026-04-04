@@ -236,17 +236,6 @@
       0
     ]
   },
-  "dockerized": {
-    "name": "Dockerized",
-    "url": "https://docker.com",
-    "img": "",
-    "categoryIDs": [
-      "devops"
-    ],
-    "jobIDs": [
-      0
-    ]
-  },
   "ci-cd": {
     "name": "CI/CD",
     "url": "https://en.wikipedia.org/wiki/CI/CD",
@@ -737,19 +726,6 @@
     ],
     "jobIDs": [
       4
-    ]
-  },
-  "amazon-quicksight": {
-    "name": "Amazon QuickSight",
-    "url": "https://aws.amazon.com/quicksight",
-    "img": "",
-    "categoryIDs": [
-      "tool",
-      "data-science"
-    ],
-    "jobIDs": [
-      4,
-      5
     ]
   },
   "zendesk": {
@@ -1510,15 +1486,6 @@
     ],
     "jobIDs": []
   },
-  "pii-phi-pci-hipaa-gdpr-compliance": {
-    "name": "PII/PHI/PCI/HIPAA/GDPR Compliance",
-    "url": "https://gdpr-info.eu",
-    "img": "",
-    "categoryIDs": [
-      "tool"
-    ],
-    "jobIDs": []
-  },
   "agile-scrum": {
     "name": "Agile Scrum",
     "url": "https://scrum.org",
@@ -1663,14 +1630,37 @@
     ],
     "jobIDs": []
   },
-  "Adobe Is Too Good to be True": {
-    "name": "Adobe Is Too Good to be True",
+  "Compliance": {
+    "name": "Compliance",
+    "jobIDs": []
+  },
+  "Adobe": {
+    "name": "Adobe",
     "jobIDs": [
       0
     ]
   },
-  "adobe": {
-    "name": "adobe",
+  "AWS QuickSight": {
+    "name": "AWS QuickSight",
+    "jobIDs": [
+      4,
+      5
+    ]
+  },
+  "dockerized": {
+    "name": "dockerized",
+    "jobIDs": [
+      0
+    ]
+  },
+  "Matryoshka embeddings": {
+    "name": "Matryoshka embeddings",
+    "jobIDs": [
+      0
+    ]
+  },
+  "PCA": {
+    "name": "PCA",
     "jobIDs": [
       0
     ]

@@ -2,25 +2,25 @@
   "0": {
     "index": 0,
     "degree": "PhD, Media Arts & Sciences — Computer Vision / Video Coding / Computer Graphics",
-    "institution": "Massachusetts Institute of Technology, Cambridge, MA",
-    "start": "",
-    "end": "1997",
+    "institution": "MIT, Massachusetts Institute of Technology, Cambridge, MA",
+    "start": "1990/09",
+    "end": "1997/02",
     "description": ""
   },
   "1": {
     "index": 1,
     "degree": "MS, Computer Science — Medical Imaging / Computer Graphics",
-    "institution": "Brigham Young University, Provo, UT",
-    "start": "",
-    "end": "1990",
+    "institution": "BYU, Brigham Young University, Provo, UT",
+    "start": "1987/09",
+    "end": "1990/04",
     "description": ""
   },
   "2": {
     "index": 2,
-    "degree": "BS Design Engineering Technology",
-    "institution": "Brigham Young University",
-    "start": "",
-    "end": "1987",
+    "degree": "BS, Design Eng Tech",
+    "institution": "BYU, Brigham Young University",
+    "start": "1983/09",
+    "end": "1987/04",
     "description": ""
   }
 }

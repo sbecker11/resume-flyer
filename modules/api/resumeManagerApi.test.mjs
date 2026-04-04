@@ -16,6 +16,8 @@ import {
     getResumeOtherSections,
     getResumeEducation
 } from './resumeManagerApi.mjs';
+import { mergeJobsWithEducation, toJobsArray } from '@/modules/data/mergeEducationIntoJobs.mjs';
+import { enrichJobsWithSkills } from '@/modules/data/enrichedJobs.mjs';
 
 describe('resumeManagerApi', () => {
     let fetchMock;
@@ -360,14 +362,23 @@ describe('resumeManagerApi', () => {
                 categories: []
             };
 
-            fetchMock.mockResolvedValue({
-                ok: true,
-                json: async () => mockData
-            });
+            fetchMock
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockData
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => ({})
+                });
 
             const result = await getResumeData('default');
 
-            expect(result).toEqual(mockData);
+            const merged = mergeJobsWithEducation(toJobsArray(mockData.jobs), {});
+            const expectedJobs = enrichJobsWithSkills(merged, mockData.skills ?? {});
+            expect(result.skills).toEqual(mockData.skills);
+            expect(result.categories).toEqual(mockData.categories);
+            expect(result.jobs.map((j) => j.toPlainObject())).toEqual(expectedJobs.map((j) => j.toPlainObject()));
             expect(fetchMock).toHaveBeenCalledWith('/api/resumes/default/data', expect.any(Object));
         });
 
@@ -378,14 +389,23 @@ describe('resumeManagerApi', () => {
                 categories: []
             };
 
-            fetchMock.mockResolvedValue({
-                ok: true,
-                json: async () => mockData
-            });
+            fetchMock
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => mockData
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    json: async () => ({})
+                });
 
             const result = await getResumeData('resume-123');
 
-            expect(result).toEqual(mockData);
+            const merged = mergeJobsWithEducation(toJobsArray(mockData.jobs), {});
+            const expectedJobs = enrichJobsWithSkills(merged, mockData.skills ?? {});
+            expect(result.skills).toEqual(mockData.skills);
+            expect(result.categories).toEqual(mockData.categories);
+            expect(result.jobs.map((j) => j.toPlainObject())).toEqual(expectedJobs.map((j) => j.toPlainObject()));
             expect(fetchMock).toHaveBeenCalledWith('/api/resumes/resume-123/data', expect.any(Object));
         });
 
@@ -436,11 +456,17 @@ describe('resumeManagerApi', () => {
             const data = { jobs: [{ index: 0 }], skills: {}, categories: {} };
             fetchMock
                 .mockRejectedValueOnce(new Error('Network error'))
+                .mockResolvedValueOnce({ ok: true, json: async () => ({}) })
                 .mockResolvedValueOnce({ ok: true, json: async () => data.jobs })
                 .mockResolvedValueOnce({ ok: true, json: async () => data.skills })
-                .mockResolvedValueOnce({ ok: true, json: async () => data.categories });
+                .mockResolvedValueOnce({ ok: true, json: async () => data.categories })
+                .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
             const result = await getResumeData('resume-1');
-            expect(result).toEqual(data);
+            const merged = mergeJobsWithEducation(toJobsArray(data.jobs), {});
+            const expectedJobs = enrichJobsWithSkills(merged, data.skills);
+            expect(result.skills).toEqual(data.skills);
+            expect(result.categories).toEqual(data.categories);
+            expect(result.jobs.map((j) => j.toPlainObject())).toEqual(expectedJobs.map((j) => j.toPlainObject()));
         });
 
         it('getResumeOtherSections falls back to static when API fails', async () => {
@@ -925,9 +951,14 @@ describe('resumeManagerApi', () => {
             fetchMock
                 .mockResolvedValueOnce({ ok: true, json: async () => jobs })
                 .mockResolvedValueOnce({ ok: true, json: async () => skills })
-                .mockResolvedValueOnce({ ok: true, json: async () => categories });
+                .mockResolvedValueOnce({ ok: true, json: async () => categories })
+                .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
             const result = await getResumeDataStatic('resume-1');
-            expect(result).toEqual({ jobs, skills, categories });
+            const merged = mergeJobsWithEducation(toJobsArray(jobs), {});
+            const expectedJobs = enrichJobsWithSkills(merged, skills);
+            expect(result.skills).toEqual(skills);
+            expect(result.categories).toEqual(categories);
+            expect(result.jobs.map((j) => j.toPlainObject())).toEqual(expectedJobs.map((j) => j.toPlainObject()));
         });
 
         it('getResumeData throws for default resume on static host', async () => {

@@ -49,6 +49,7 @@
           <EducationTab
             v-if="activeTab === 'education'"
             :data="education"
+            :scroll-to-entry-key="educationScrollKey"
             @update:data="onEducationUpdate"
             @autosave="onEducationAutosave"
           />
@@ -61,6 +62,7 @@
             @update:selected-job-index="sharedJobIndex = $event"
             @saved="onJobsSaved"
             @open-skills-for-job="openSkillsForJob"
+            @open-education-for-job="onOpenEducationForJob"
             @content-ready="onResumeJobsOrSkillsPanelReady"
           />
           <SkillsTab
@@ -71,6 +73,12 @@
             :selected-job-index="sharedJobIndex"
             @update:selected-job-index="sharedJobIndex = $event"
             @saved="onSkillsSaved"
+            @content-ready="onResumeJobsOrSkillsPanelReady"
+          />
+          <SkillJobsTab
+            v-if="activeTab === 'skill-jobs'"
+            :resume-id="resumeId"
+            :reload-nonce="reloadNonce"
             @content-ready="onResumeJobsOrSkillsPanelReady"
           />
         </div>
@@ -126,6 +134,7 @@ import OtherSectionsTab from './tabs/OtherSectionsTab.vue';
 import EducationTab from './tabs/EducationTab.vue';
 import JobsTab from './tabs/JobsTab.vue';
 import SkillsTab from './tabs/SkillsTab.vue';
+import SkillJobsTab from './tabs/SkillJobsTab.vue';
 import * as api from './api.mjs';
 import { reparseResumeWithParserStream } from '@/modules/api/resumeManagerApi.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
@@ -140,6 +149,8 @@ const props = defineProps({
   initialTab: { type: String, default: 'meta' },
   /** When opening on Job skills tab, preselect this job index (0-based). */
   initialJobIndex: { type: Number, default: null },
+  /** When opening on Education tab, scroll to this entry key (education.json object key). */
+  initialEducationKey: { type: String, default: '' },
 });
 
 const emit = defineEmits(['close', 'saved']);
@@ -149,6 +160,7 @@ const tabs = [
   { id: 'other-sections', label: 'Other sections' },
   { id: 'resume-jobs', label: 'Resume jobs' },
   { id: 'job-skills', label: 'Job skills' },
+  { id: 'skill-jobs', label: 'Skill jobs' },
   { id: 'education', label: 'Education' }
 ];
 
@@ -162,6 +174,8 @@ const saving = ref(false);
 const reparsing = ref(false);
 const canEdit = hasServer();
 const reloadNonce = ref(0);
+/** Passed to EducationTab to scroll/highlight an entry (from Jobs tab "Skills" on education row or external open). */
+const educationScrollKey = ref('');
 
 const jobsTabRef = ref(null);
 const skillsTabRef = ref(null);
@@ -487,6 +501,17 @@ function focusTopLeftContentField() {
       return true;
     }
   }
+  if (activeTab.value === 'skill-jobs') {
+    const el = modal.querySelector('#rde-skill-jobs-root');
+    if (el instanceof HTMLElement) {
+      try {
+        el.focus({ preventScroll: false });
+      } catch {
+        el.focus();
+      }
+      return true;
+    }
+  }
   const list = collectContentFocusablesReadingOrder(modal);
   if (!list.length) return false;
   const el = list[0];
@@ -502,10 +527,16 @@ function focusTopLeftContentField() {
  * After switching section tab or opening the modal, move focus to the panel's top-left field.
  * Deferred pass helps Jobs/Skills tabs that mount inputs after fetch.
  */
-/** JobsTab / SkillsTab fetch finishes after mount; re-run focus so job selects exist and are enabled. */
+/** JobsTab / SkillsTab / SkillJobsTab: deferred mount or fetch — re-run focus into panel. */
 function onResumeJobsOrSkillsPanelReady() {
   if (!props.isOpen) return;
-  if (activeTab.value !== 'resume-jobs' && activeTab.value !== 'job-skills') return;
+  if (
+    activeTab.value !== 'resume-jobs' &&
+    activeTab.value !== 'job-skills' &&
+    activeTab.value !== 'skill-jobs'
+  ) {
+    return;
+  }
   scheduleFocusTopLeftAfterTabChange();
 }
 
@@ -520,10 +551,11 @@ function scheduleFocusTopLeftAfterTabChange() {
           if (!props.isOpen) return;
           const modal = modalRef.value;
           if (!modal) return;
+          const ae = document.activeElement;
+          if (ae?.id === 'rde-skill-jobs-root') return;
           const list = collectContentFocusablesReadingOrder(modal);
           if (!list.length) return;
           const first = list[0];
-          const ae = document.activeElement;
           if (isTabStripButton(ae)) {
             first.focus();
             return;
@@ -654,6 +686,7 @@ watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
   sharedJobIndex.value = props.initialJobIndex != null && props.initialJobIndex >= 0
     ? Number(props.initialJobIndex)
     : null;
+  educationScrollKey.value = props.initialEducationKey ? String(props.initialEducationKey) : '';
   dragOffset.value = { x: 0, y: 0 };
   const v = getViewportMaxSize();
   modalWidth.value = Math.max(MIN_WIDTH, Math.min(720, Math.floor(v.w * 0.92)));
@@ -866,13 +899,19 @@ async function selectTab(nextId) {
   }
 }
 
-function onJobsSaved() {
+function onJobsSaved(payload) {
+  if (payload?.jobsMutated) reloadNonce.value++;
   emit('saved');
 }
 
 function openSkillsForJob(jobIndex) {
   sharedJobIndex.value = jobIndex;
   activeTab.value = 'job-skills';
+}
+
+function onOpenEducationForJob(payload) {
+  educationScrollKey.value = String(payload?.educationKey ?? '');
+  activeTab.value = 'education';
 }
 
 function onSkillsSaved(payload) {
@@ -1093,8 +1132,10 @@ async function save() {
 .rde-tab.active { color: #4a9eff; border-bottom-color: #4a9eff; }
 .rde-body {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  min-height: 120px;
   padding: 16px var(--rde-inner-padding-x);
   box-sizing: border-box;
 }

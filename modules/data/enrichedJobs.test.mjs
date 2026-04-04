@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { enrichJobsWithSkills } from './enrichedJobs.mjs';
+import { ResumeJob } from './ResumeJob.mjs';
 
 describe('enrichedJobs', () => {
   it('enrichJobsWithSkills returns array with references and job-skills', () => {
@@ -101,5 +102,24 @@ describe('enrichedJobs', () => {
     const jobs = enrichJobsWithSkills(rawJobs, skills);
     expect(jobs[0].references).toContain('<a href="https://python.org">[Python]</a>');
     expect(jobs[0]['job-skills']).toHaveProperty('Python');
+  });
+
+  it('enriches education-derived jobs the same way (educationKey + skills from Description)', () => {
+    const rawJobs = [
+      new ResumeJob({
+        employer: 'MIT',
+        title: 'MS',
+        role: 'MS',
+        Description: 'Thesis on [Machine Learning].',
+        educationKey: '0',
+      }),
+    ];
+    const skills = { 'Machine Learning': { url: 'https://example.com/ml', img: '' } };
+    const jobs = enrichJobsWithSkills(rawJobs, skills);
+    expect(jobs[0]).toBeInstanceOf(ResumeJob);
+    expect(jobs[0].educationKey).toBe('0');
+    expect(jobs[0].isEducationDerived).toBe(true);
+    expect(jobs[0]['job-skills']).toHaveProperty('Machine Learning');
+    expect(jobs[0].references.length).toBeGreaterThan(0);
   });
 });

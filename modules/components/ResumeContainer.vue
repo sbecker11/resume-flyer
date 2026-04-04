@@ -13,6 +13,7 @@ import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -390,6 +391,8 @@ function goToJob(jobNumber) {
 const isDetailsEditorOpen = ref(false);
 const detailsEditorInitialTab = ref('meta');
 const detailsEditorInitialJobIndex = ref(null);
+/** Education object key (e.g. "0") when opening the editor on the Education tab from an education-as-job row. */
+const detailsEditorInitialEducationKey = ref('');
 
 // --- About modal (hero phrase) ---
 const isAboutModalOpen = ref(false);
@@ -417,9 +420,11 @@ function handleGlobalKeyDown(e) {
   if (e?.key === 'Escape') closeAboutModal();
 }
 
-function openDetailsModal(tab = 'meta', jobIndex = null) {
+function openDetailsModal(tab = 'meta', jobIndex = null, educationKey = null) {
   detailsEditorInitialTab.value = tab;
   detailsEditorInitialJobIndex.value = jobIndex;
+  detailsEditorInitialEducationKey.value =
+    educationKey != null && String(educationKey).length ? String(educationKey) : '';
   isDetailsEditorOpen.value = true;
 }
 
@@ -432,13 +437,24 @@ async function handleEditJobSkills(e) {
   if (current !== jobNumber) {
     selectionManager?.selectJobNumber(jobNumber, 'ResumeContainer.handleEditJobSkills');
   }
+  const jobs = getGlobalJobsDependency().getJobsData();
+  const job = jobs[jobNumber];
+  if (isEducationDerivedJob(job)) {
+    openDetailsModal('education', null, educationKeyOf(job));
+    return;
+  }
   openDetailsModal('job-skills', jobNumber);
 }
 
 function handleOpenResumeDetails(e) {
-  const { tab, jobIndex } = e.detail || {};
-  if (!tab || jobIndex == null) return;
-  // Defer to macrotask so click/mouseleave/Vue flush finish first; avoids lock before "Loading jobs".
+  const d = e.detail || {};
+  const { tab, jobIndex, educationKey } = d;
+  if (!tab) return;
+  if (tab === 'education') {
+    setTimeout(() => openDetailsModal('education', null, educationKey ?? ''), 0);
+    return;
+  }
+  if (jobIndex == null) return;
   setTimeout(() => openDetailsModal(tab, jobIndex), 0);
 }
 
@@ -1011,6 +1027,7 @@ function onResumeSkillCardClick(event) {
             :is-open="isDetailsEditorOpen"
             :initial-tab="detailsEditorInitialTab"
             :initial-job-index="detailsEditorInitialJobIndex"
+            :initial-education-key="detailsEditorInitialEducationKey"
             @close="isDetailsEditorOpen = false"
             @saved="handleDetailsSaved"
         />

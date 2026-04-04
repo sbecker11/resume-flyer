@@ -5,6 +5,8 @@
  */
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import { mergeJobsWithEducation, toJobsArray } from '@/modules/data/mergeEducationIntoJobs.mjs';
+import { enrichJobsWithSkills } from '@/modules/data/enrichedJobs.mjs';
 
 /** @returns {string} Base URL for API (empty = same origin) */
 function getApiBase() {
@@ -29,13 +31,6 @@ function basePathJoin(relPath) {
     const b = getRuntimeBase();
     const p = relPath.startsWith('/') ? relPath.slice(1) : relPath;
     return `${b}${p}`;
-}
-
-function toJobsArray(value) {
-    if (Array.isArray(value)) return value;
-    if (value && typeof value === 'object' && Array.isArray(value.jobs)) return value.jobs;
-    if (value && typeof value === 'object') return Object.values(value);
-    return [];
 }
 
 function downloadJson(filename, data) {
@@ -239,26 +234,41 @@ export async function updateResumeEducation(resumeId, payload) {
 /**
  * @param {string} resumeId - use 'default' for static content
  * @returns {Promise<{ jobs: Array, skills: Object, categories: Object }>}
+ * Jobs array includes education rows appended after work jobs (see mapEducationToJob).
  */
 export async function getResumeData(resumeId) {
     if (hasServer()) {
         const path = resumeId === 'default' ? '/api/resumes/default/data' : `/api/resumes/${encodeURIComponent(resumeId)}/data`;
         try {
-            return await apiJson(path);
+            const [data, education] = await Promise.all([
+                apiJson(path),
+                getResumeEducation(resumeId).catch(() => ({}))
+            ]);
+            const merged = mergeJobsWithEducation(toJobsArray(data.jobs), education);
+            const jobs = enrichJobsWithSkills(merged, data.skills ?? {});
+            return {
+                ...data,
+                jobs,
+                skills: data.skills ?? {},
+                categories: data.categories ?? {}
+            };
         } catch (e) {
             if (resumeId !== 'default' && (e?.message?.includes('404') || e?.message?.includes('not found'))) {
                 try {
                     const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
-                    const [jobsRes, skillsRes, categoriesRes] = await Promise.all([
+                    const [jobsRes, skillsRes, categoriesRes, educationRes] = await Promise.all([
                         fetch(`${base}/jobs.json`),
                         fetch(`${base}/skills.json`).catch(() => null),
-                        fetch(`${base}/categories.json`).catch(() => null)
+                        fetch(`${base}/categories.json`).catch(() => null),
+                        fetch(`${base}/education.json`).catch(() => null)
                     ]);
                     if (!jobsRes.ok) throw new Error(`Static jobs not found`);
                     const jobsRaw = await jobsRes.json();
                     const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {};
                     const categories = (categoriesRes && categoriesRes.ok) ? await categoriesRes.json() : {};
-                    const jobs = toJobsArray(jobsRaw);
+                    const education = (educationRes && educationRes.ok) ? await educationRes.json() : {};
+                    const merged = mergeJobsWithEducation(toJobsArray(jobsRaw), education);
+                    const jobs = enrichJobsWithSkills(merged, skills);
                     return { jobs, skills, categories };
                 } catch (staticErr) {
                     reportError(staticErr, '[resume-details-editor/api] Static fallback for getResumeData failed');
@@ -270,16 +280,19 @@ export async function getResumeData(resumeId) {
         if (resumeId !== 'default') {
             try {
                 const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
-                const [jobsRes, skillsRes, categoriesRes] = await Promise.all([
+                const [jobsRes, skillsRes, categoriesRes, educationRes] = await Promise.all([
                     fetch(`${base}/jobs.json`),
                     fetch(`${base}/skills.json`).catch(() => null),
-                    fetch(`${base}/categories.json`).catch(() => null)
+                    fetch(`${base}/categories.json`).catch(() => null),
+                    fetch(`${base}/education.json`).catch(() => null)
                 ]);
                 if (!jobsRes.ok) throw new Error(`Static jobs not found: ${base}/jobs.json`);
                 const jobsRaw = await jobsRes.json();
                 const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {};
                 const categories = (categoriesRes && categoriesRes.ok) ? await categoriesRes.json() : {};
-                const jobs = toJobsArray(jobsRaw);
+                const education = (educationRes && educationRes.ok) ? await educationRes.json() : {};
+                const merged = mergeJobsWithEducation(toJobsArray(jobsRaw), education);
+                const jobs = enrichJobsWithSkills(merged, skills);
                 return { jobs, skills, categories };
             } catch (e) {
                 if (!e?.message?.includes('404') && !e?.message?.includes('not found')) {
@@ -312,6 +325,51 @@ export async function updateJob(resumeId, jobIndex, updates) {
         }
     } else {
         downloadJson(`${resumeId}-job-${jobIndex}.patch.json`, { resumeId, jobIndex, operation: 'updateJob', updates });
+        throw new Error('Save is not available on static hosting. A patch file was downloaded for manual application.');
+    }
+}
+
+/**
+ * @param {string} resumeId
+ * @param {number} afterIndex - Work job index to insert after; -1 inserts at position 0
+ * @returns {Promise<{ ok: boolean, insertIndex: number }>}
+ */
+export async function addJobAfter(resumeId, afterIndex) {
+    if (hasServer()) {
+        try {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/jobs`, {
+                method: 'POST',
+                body: JSON.stringify({ afterIndex })
+            });
+        } catch (e) {
+            reportError(e, '[resume-details-editor/api] Failed to add job', 'Downloading a JSON patch for manual application');
+            downloadJson(`${resumeId}-add-job.patch.json`, { resumeId, afterIndex, operation: 'addJobAfter' });
+            throw e;
+        }
+    } else {
+        downloadJson(`${resumeId}-add-job.patch.json`, { resumeId, afterIndex, operation: 'addJobAfter' });
+        throw new Error('Save is not available on static hosting. A patch file was downloaded for manual application.');
+    }
+}
+
+/**
+ * @param {string} resumeId
+ * @param {number} jobIndex - 0-based work job index
+ * @returns {Promise<{ ok: boolean }>}
+ */
+export async function deleteJob(resumeId, jobIndex) {
+    if (hasServer()) {
+        try {
+            return await apiJson(`/api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}`, {
+                method: 'DELETE'
+            });
+        } catch (e) {
+            reportError(e, '[resume-details-editor/api] Failed to delete job', 'Downloading a JSON patch for manual application');
+            downloadJson(`${resumeId}-delete-job-${jobIndex}.patch.json`, { resumeId, jobIndex, operation: 'deleteJob' });
+            throw e;
+        }
+    } else {
+        downloadJson(`${resumeId}-delete-job-${jobIndex}.patch.json`, { resumeId, jobIndex, operation: 'deleteJob' });
         throw new Error('Save is not available on static hosting. A patch file was downloaded for manual application.');
     }
 }

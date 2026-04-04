@@ -17,6 +17,9 @@ import {
     updateResumeCategories,
     updateJob
 } from './api.mjs';
+import { mergeJobsWithEducation, toJobsArray } from '@/modules/data/mergeEducationIntoJobs.mjs';
+import { enrichJobsWithSkills } from '@/modules/data/enrichedJobs.mjs';
+import { ResumeJob } from '@/modules/data/ResumeJob.mjs';
 
 describe('resume-details-editor api', () => {
     let fetchMock;
@@ -195,18 +198,57 @@ describe('resume-details-editor api', () => {
     describe('getResumeData', () => {
         it('fetches default resume from /api/resumes/default/data', async () => {
             const data = { jobs: [], skills: {}, categories: {} };
-            fetchMock.mockResolvedValue(okJson(data));
+            fetchMock
+                .mockResolvedValueOnce(okJson(data))
+                .mockResolvedValueOnce(okJson({}));
             await getResumeData('default');
             expect(fetchMock).toHaveBeenCalledWith('/api/resumes/default/data', expect.any(Object));
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/default/education', expect.any(Object));
         });
 
         it('fetches parsed resume from /api/resumes/:id/data', async () => {
-            fetchMock.mockResolvedValue(okJson({ jobs: [], skills: {}, categories: {} }));
+            fetchMock
+                .mockResolvedValueOnce(okJson({ jobs: [], skills: {}, categories: {} }))
+                .mockResolvedValueOnce(okJson({}));
             await getResumeData('parsed-resume-1');
             expect(fetchMock).toHaveBeenCalledWith(
                 '/api/resumes/parsed-resume-1/data',
                 expect.any(Object)
             );
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/parsed-resume-1/education',
+                expect.any(Object)
+            );
+        });
+
+        it('appends education entries to jobs from API', async () => {
+            const work = [{ employer: 'Acme', title: 'Dev' }];
+            const education = {
+                '0': { index: 0, institution: 'MIT', degree: 'BS', start: '2010/09', end: '2014/05', description: 'CS' }
+            };
+            fetchMock
+                .mockResolvedValueOnce(okJson({ jobs: work, skills: {}, categories: {} }))
+                .mockResolvedValueOnce(okJson(education));
+            const result = await getResumeData('r1');
+            expect(result.jobs).toHaveLength(2);
+            expect(result.jobs[0]).toBeInstanceOf(ResumeJob);
+            expect(result.jobs[0].toPlainObject()).toMatchObject({
+                ...work[0],
+                references: [],
+                'job-skills': {}
+            });
+            expect(result.jobs[1]).toBeInstanceOf(ResumeJob);
+            expect(result.jobs[1].toPlainObject()).toMatchObject({
+                employer: 'MIT',
+                title: 'BS',
+                role: 'BS',
+                start: '2010-09',
+                end: '2014-05',
+                Description: 'CS',
+                educationKey: '0',
+                references: [],
+                'job-skills': {}
+            });
         });
 
         it('falls back to static when API returns 404 for non-default resume', async () => {
@@ -215,11 +257,17 @@ describe('resume-details-editor api', () => {
             const categories = {};
             fetchMock
                 .mockResolvedValueOnce(errJson(404, 'not found'))
+                .mockResolvedValueOnce(okJson({}))
                 .mockResolvedValueOnce(okJson(jobs))
                 .mockResolvedValueOnce(okJson(skills))
-                .mockResolvedValueOnce(okJson(categories));
+                .mockResolvedValueOnce(okJson(categories))
+                .mockResolvedValueOnce(okJson({}));
             const result = await getResumeData('resume-1');
-            expect(result).toEqual({ jobs, skills, categories });
+            const merged = mergeJobsWithEducation(toJobsArray(jobs), {});
+            const expectedJobs = enrichJobsWithSkills(merged, skills);
+            expect(result.skills).toEqual(skills);
+            expect(result.categories).toEqual(categories);
+            expect(result.jobs.map((j) => j.toPlainObject())).toEqual(expectedJobs.map((j) => j.toPlainObject()));
         });
     });
 
@@ -342,9 +390,14 @@ describe('resume-details-editor api', () => {
             fetchMock
                 .mockResolvedValueOnce(okJson(jobs))
                 .mockResolvedValueOnce(okJson(skills))
-                .mockResolvedValueOnce(okJson(categories));
+                .mockResolvedValueOnce(okJson(categories))
+                .mockResolvedValueOnce(okJson({}));
             const result = await getResumeData('resume-1');
-            expect(result).toEqual({ jobs, skills, categories });
+            const merged = mergeJobsWithEducation(toJobsArray(jobs), {});
+            const expectedJobs = enrichJobsWithSkills(merged, skills);
+            expect(result.skills).toEqual(skills);
+            expect(result.categories).toEqual(categories);
+            expect(result.jobs.map((j) => j.toPlainObject())).toEqual(expectedJobs.map((j) => j.toPlainObject()));
         });
 
         it('getResumeData throws for default on static host', async () => {

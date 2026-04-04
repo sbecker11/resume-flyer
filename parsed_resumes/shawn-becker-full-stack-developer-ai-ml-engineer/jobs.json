@@ -1,5 +1,5 @@
-{
-  "0": {
+[
+  {
     "index": 0,
     "role": "Senior Full Stack Developer & AI/ML Engineer",
     "employer": "Spexture",
@@ -12,7 +12,6 @@
     "text color": "#FFFFFF",
     "Description": "• Hands-on technical consulting for Fortune 500 clients including [Adobe], [Fannie Mae], [Warner Bros Games], [Angel Studios], [The Cigna Group], and [NuSkin]—architecting [AI/ML] systems, full-stack applications, and data pipelines on the [AWS] platform. \n• Built production [RAG] pipelines using [LangChain] and [ChromaDB] for semantic search and retrieval-augmented generation, with prompt engineering, error analysis, and reliability controls. \n• Developed campaign asset automation system integrating [DALL-E 3] for programmatic social media ad generation with prompt engineering and quality controls. \n• Created \"Flock of Postcards\" sbecker11.github.io/flock-of-postcards—an interactive [JavaScript] visualization with 3D motion parallax, animated transitions, depth-of-field effects, and a data-driven [Excel]-to-[JS] content pipeline. 310 commits across 11 iterative versions. \n• Built Color Palette Maker github.com/sbecker11/color-palette-maker-react—a [React] 19/[Node.js]/[Python] app with a multi-stage [CV] pipeline: 5-strategy [OpenCV] region detection, region-masked [K-means] clustering, and [CIEDE2000] perceptual color matching. Full test suite, [Dockerized], [CI/CD], with [Docker Compose] and [Kubernetes] migration plans. \n• [GitHub Actions] for automated end-to-end [CI/CD] pipelines; [AWS Glue] and [PySpark] for data cleansing, lineage tracking, and governance.",
     "skillIDs": [
-      "adobe",
       "fannie-mae",
       "warner-bros-games",
       "angel-studios",
@@ -60,7 +59,6 @@
       "OpenCV",
       "K-means",
       "CIEDE2000",
-      "Dockerized",
       "CI/CD",
       "Docker Compose",
       "Kubernetes",
@@ -75,15 +73,21 @@
       "Agile Scrum",
       "API Gateway",
       "Artifactory",
-      "Adobe Is Too Good to be True"
-    ]
+      "ZenDesk",
+      "Adobe",
+      "AWS QuickSight",
+      "Docker",
+      "Matryoshka embeddings",
+      "PCA"
+    ],
+    "jobID": "0"
   },
-  "1": {
+  {
     "index": 1,
     "role": "Senior Data Engineer",
     "employer": "Adobe",
-    "start": "Mar 2025",
-    "end": "Jul 2025",
+    "start": "2025-03",
+    "end": "2025-07",
     "z-index": 2,
     "css name": "darkcyan",
     "css RGB": "#0069AC",
@@ -107,14 +111,15 @@
       "PostgreSQL",
       "AWS Aurora",
       "AWS IAM"
-    ]
+    ],
+    "jobID": "1"
   },
-  "2": {
+  {
     "index": 2,
-    "role": "Senior Data Engineer",
+    "role": "Senior Software Engineer",
     "employer": "Fannie Mae",
-    "start": "Mar 2024",
-    "end": "Jul 2024",
+    "start": "2024-03",
+    "end": "2024-07",
     "z-index": 3,
     "css name": "darkcyan",
     "css RGB": "#006688",
@@ -133,14 +138,15 @@
       "amazon-glue",
       "redshift",
       "etl"
-    ]
+    ],
+    "jobID": "2"
   },
-  "3": {
+  {
     "index": 3,
     "role": "Senior Software Engineer",
     "employer": "The Cigna Group",
-    "start": "Jun 2023",
-    "end": "Dec 2023",
+    "start": "2023-06",
+    "end": "2023-12",
     "z-index": 1,
     "css name": "blue",
     "css RGB": "#0000ff",
@@ -164,15 +170,33 @@
       "cyberark",
       "ssl-tls",
       "kafka",
-      "fivetran"
-    ]
+      "fivetran",
+      "Jenkins",
+      "CI/CD",
+      "SetupTools",
+      "Artifactory",
+      "PyPI",
+      "SonarQube",
+      "Xray",
+      "Terraform",
+      "Python",
+      "REST API",
+      "CyberArk",
+      "SSL/TLS",
+      "ETL",
+      "AWS",
+      "Kafka",
+      "Airflow",
+      "FiveTran"
+    ],
+    "jobID": "3"
   },
-  "4": {
+  {
     "index": 4,
     "role": "Senior Data Engineer",
-    "employer": "Warner Brothers Interactive Entertainment",
-    "start": "Sep 2022",
-    "end": "Apr 2023",
+    "employer": "Warner Bros Games",
+    "start": "2022-09",
+    "end": "2023-04",
     "z-index": 2,
     "css name": "mediumblue",
     "css RGB": "#4400cd",
@@ -191,16 +215,17 @@
       "google-bigquery",
       "snowflake",
       "datadog",
-      "amazon-quicksight",
+      "AWS QuickSight",
       "zendesk"
-    ]
+    ],
+    "jobID": "4"
   },
-  "5": {
+  {
     "index": 5,
     "role": "Senior Data Engineer",
     "employer": "Angel Studios",
-    "start": "Dec 2021",
-    "end": "Aug 2022",
+    "start": "2021-12",
+    "end": "2022-08",
     "z-index": 3,
     "css name": "blueviolet",
     "css RGB": "#8a2be2",
@@ -211,7 +236,7 @@
       "python",
       "redshift",
       "snowflake",
-      "amazon-quicksight",
+      "AWS QuickSight",
       "cnn",
       "pytorch",
       "aws-sagemaker",
@@ -225,14 +250,15 @@
       "restful-apis",
       "looker",
       "tableau"
-    ]
+    ],
+    "jobID": "5"
   },
-  "6": {
+  {
     "index": 6,
     "role": "Senior Data Engineer",
-    "employer": "Greenseed Data Laboratory",
-    "start": "Nov 2020",
-    "end": "Nov 2021",
+    "employer": "Greenseed Data",
+    "start": "2020-11",
+    "end": "2021-11",
     "z-index": 1,
     "css name": "purple",
     "css RGB": "#800080",
@@ -253,14 +279,15 @@
       "scikit-learn-1",
       "coverage",
       "helm"
-    ]
+    ],
+    "jobID": "6"
   },
-  "7": {
+  {
     "index": 7,
-    "role": "Senior Full Stack Developer",
+    "role": "Senior Full Stack Engineer",
     "employer": "NuSkin",
-    "start": "Nov 2019",
-    "end": "Nov 2020",
+    "start": "2019-11",
+    "end": "2020-11",
     "z-index": 2,
     "css name": "maroon",
     "css RGB": "#800000",
@@ -276,14 +303,15 @@
       "adobe-experience-cloud",
       "cdp",
       "xdm"
-    ]
+    ],
+    "jobID": "7"
   },
-  "8": {
+  {
     "index": 8,
     "role": "Senior Data Engineer",
     "employer": "SeniorLink / Vela",
-    "start": "Mar 2017",
-    "end": "Nov 2019",
+    "start": "2017-03",
+    "end": "2019-11",
     "z-index": 3,
     "css name": "orangered",
     "css RGB": "#ff4500",
@@ -307,14 +335,15 @@
       "hl7",
       "hipaa",
       "gdpr"
-    ]
+    ],
+    "jobID": "8"
   },
-  "9": {
+  {
     "index": 9,
-    "role": "Technical Lead, Co-Founder",
+    "role": "Co-founder, Technical Lead",
     "employer": "ClipFile",
-    "start": "Feb 2011",
-    "end": "Mar 2017",
+    "start": "2011-02",
+    "end": "2017-03",
     "z-index": 1,
     "css name": "orange",
     "css RGB": "#ffa500",
@@ -325,14 +354,15 @@
       "k-means",
       "nlp",
       "bayesian"
-    ]
+    ],
+    "jobID": "9"
   },
-  "10": {
+  {
     "index": 10,
     "role": "Technical Lead, Co-Founder",
     "employer": "Sierra Vista Group",
-    "start": "Nov 2002",
-    "end": "Feb 2011",
+    "start": "2002-11",
+    "end": "2011-02",
     "z-index": 2,
     "css name": "teal",
     "css RGB": "#008080",
@@ -342,6 +372,16 @@
     "skillIDs": [
       "iot",
       "IoT"
-    ]
+    ],
+    "jobID": "10"
+  },
+  {
+    "employer": "HomePortfolio, LLC",
+    "role": "Co-founder, Technical Lead",
+    "title": "",
+    "start": "1997-04",
+    "end": "2002-11",
+    "Description": "• Recruited a team of software developers and database administrators\n• Created a visual catalog of 700K premium home design products from 2K manufacturers for discerning project planners and interior designers\n• Helped raise over $70M in venture funding\n• Website attracted over 5M unique monthly visitors\n• Used Java, ATG Dynamo, and Oracle",
+    "skillIDs": []
   }
-}
+]

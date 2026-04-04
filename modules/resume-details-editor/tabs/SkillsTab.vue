@@ -155,6 +155,8 @@ import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { updateJobSkills, renameSkill, mergeSkill } from '@/modules/api/resumeManagerApi.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import { isEducationDerivedJob } from '@/modules/data/ResumeJob.mjs';
+import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDisplayName.mjs';
 
 const canEdit = hasServer();
 
@@ -305,6 +307,10 @@ const selectedJob = computed(() => {
 function jobLabel(job, i) {
   const title = job?.title ?? job?.role ?? job?.Role ?? '';
   const employer = job?.employer ?? job?.Employer ?? job?.label ?? '';
+  if (isEducationDerivedJob(job)) {
+    const shortName = educationJobDisplayNameFromParts(employer, title);
+    return shortName ? `${shortName} (education)` : `Job ${i + 1} (education)`;
+  }
   const parts = [employer, title].filter(Boolean);
   return parts.length ? parts.join(' -- ') : `Job ${i + 1}`;
 }

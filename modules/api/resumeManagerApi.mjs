@@ -2,6 +2,8 @@
 // API client for resume manager operations
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import { mergeJobsWithEducation, toJobsArray } from '@/modules/data/mergeEducationIntoJobs.mjs';
+import { enrichJobsWithSkills } from '@/modules/data/enrichedJobs.mjs';
 
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -43,11 +45,14 @@ async function fetchStaticResumesIndex() {
 
 async function fetchStaticResumeData(resumeId) {
     const base = basePathJoin(`parsed_resumes/${encodeURIComponent(resumeId)}`);
-    const [jobs, skills, categories] = await Promise.all([
+    const [jobsRaw, skills, categories, education] = await Promise.all([
         fetchJsonOrThrow(`${base}/jobs.json`),
         fetchJsonOrThrow(`${base}/skills.json`).catch(() => ({})),
         fetchJsonOrThrow(`${base}/categories.json`).catch(() => ({})),
+        fetch(`${base}/education.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
     ]);
+    const merged = mergeJobsWithEducation(toJobsArray(jobsRaw), education);
+    const jobs = enrichJobsWithSkills(merged, skills);
     return { jobs, skills, categories };
 }
 
@@ -567,7 +572,13 @@ export async function getResumeData(resumeId) {
             const endpoint = resumeId === 'default'
                 ? basePathJoin('api/resumes/default/data')
                 : basePathJoin(`api/resumes/${resumeId}/data`);
-            return await fetchJsonOrThrow(endpoint);
+            const [data, education] = await Promise.all([
+                fetchJsonOrThrow(endpoint),
+                getResumeEducation(resumeId).catch(() => ({})),
+            ]);
+            const merged = mergeJobsWithEducation(toJobsArray(data.jobs), education);
+            const jobs = enrichJobsWithSkills(merged, data.skills ?? {});
+            return { ...data, jobs, skills: data.skills ?? {}, categories: data.categories ?? {} };
         } catch (error) {
             reportError(error, `[ResumeManagerAPI] Failed to get resume data for ${resumeId}`, 'Falling back to static parsed_resumes data files (if available)');
             if (!resumeId || resumeId === 'default') throw error;

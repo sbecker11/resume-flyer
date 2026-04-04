@@ -6,8 +6,9 @@
 
       <div
         v-for="(item, i) in localItems"
-        :key="i"
+        :key="item.educationObjectKey ?? i"
         class="rde-edu-item"
+        :data-education-key="item.educationObjectKey ?? ''"
       >
         <div class="rde-row">
           <label class="rde-label">Degree</label>
@@ -43,6 +44,17 @@
                 @input="onTwoDigitItemInput(item, 'startMM')"
                 @blur="() => { onMonthBlur(item, 'startMM', 'startYY'); requestAutosave(); }"
               />
+              <input
+                v-model="item.startDD"
+                type="text"
+                class="rde-input rde-date-input"
+                inputmode="numeric"
+                maxlength="2"
+                pattern="\\d{0,2}"
+                placeholder="DD"
+                @input="onTwoDigitItemInput(item, 'startDD')"
+                @blur="() => { onDayBlur(item, 'startDD', 'startYY', 'startMM'); requestAutosave(); }"
+              />
             </div>
           </div>
           <div class="rde-row">
@@ -68,6 +80,16 @@
                 placeholder="MM"
                 @input="onTwoDigitItemInput(item, 'endMM')"
               />
+              <input
+                v-model="item.endDD"
+                type="text"
+                class="rde-input rde-date-input"
+                inputmode="numeric"
+                maxlength="2"
+                pattern="\\d{0,2}"
+                placeholder="DD"
+                @input="onTwoDigitItemInput(item, 'endDD')"
+              />
             </div>
           </div>
         </div>
@@ -85,25 +107,29 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 
 const props = defineProps({
-  data: { type: Object, default: () => ({}) }
+  data: { type: Object, default: () => ({}) },
+  /** education.json object key — scroll this block into view when set (e.g. from scene / Jobs tab). */
+  scrollToEntryKey: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:data', 'autosave']);
 
 function normalizeItem(entry, fallbackIndex = 0) {
-  const { yy: startYY, mm: startMM } = splitYearMonthYYMM(entry?.start);
-  const { yy: endYY, mm: endMM } = splitYearMonthYYMM(entry?.end);
+  const { yy: startYY, mm: startMM, dd: startDD } = splitEducationDate(entry?.start);
+  const { yy: endYY, mm: endMM, dd: endDD } = splitEducationDate(entry?.end);
   return {
     index: typeof entry?.index === 'number' ? entry.index : fallbackIndex,
     degree: entry?.degree ?? '',
     institution: entry?.institution ?? '',
     startYY,
     startMM,
+    startDD,
     endYY,
     endMM,
+    endDD,
     description: entry?.description ?? ''
   };
 }
@@ -133,6 +159,35 @@ function normalizeMonthOrBlank(value) {
   return String(n).padStart(2, '0');
 }
 
+/** @param {string} dd @param {string} yyyy @param {string} mm */
+function normalizeDayOrBlank(dd, yyyy, mm) {
+  const d = toTwoDigits(dd);
+  if (!d) return '';
+  const n = Number(d);
+  if (!Number.isFinite(n) || n < 1 || n > 31) return null;
+  const y = Number(yyyy);
+  const m = Number(mm);
+  if (Number.isFinite(y) && Number.isFinite(m) && m >= 1 && m <= 12) {
+    const last = new Date(y, m, 0).getDate();
+    if (n > last) return null;
+  }
+  return String(n).padStart(2, '0');
+}
+
+/** @returns {number|null} local date ms, or null if incomplete */
+function ymdToTime(yyyy, mm, dd) {
+  if (!yyyy) return null;
+  const y = Number(yyyy);
+  if (!Number.isFinite(y)) return null;
+  if (!mm) return null;
+  const m = Number(mm);
+  if (!Number.isFinite(m) || m < 1 || m > 12) return null;
+  const d = dd ? Number(dd) : 1;
+  if (!Number.isFinite(d) || d < 1 || d > 31) return null;
+  const t = new Date(y, m - 1, d).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
 function ymScore(yyyy, mm) {
   const y = Number(yyyy);
   const m = mm ? Number(mm) : 0;
@@ -140,31 +195,48 @@ function ymScore(yyyy, mm) {
 }
 
 /**
- * Parse a variety of persisted formats into {yy, mm}:
- * - "YYYY-MM" or "YYYY/MM"
- * - "YY-MM" or "YY/MM"
+ * Parse persisted formats into {yy, mm, dd}:
+ * - "YYYY/MM/DD" or "YYYY-MM-DD"
+ * - "YYYY/MM" or "YYYY-MM"
  * - "YYYY" or "YY"
  */
-function splitYearMonthYYMM(value) {
+function splitEducationDate(value) {
   const raw = String(value ?? '').trim();
-  if (!raw) return { yy: '', mm: '' };
+  if (!raw) return { yy: '', mm: '', dd: '' };
   const parts = raw.split(/[-/]/).map(p => p.trim()).filter(Boolean);
   if (parts.length === 1) {
     const digits = parts[0].replace(/\D/g, '');
-    if (digits.length >= 4) return { yy: digits.slice(0, 4), mm: '' };
-    return { yy: toFourDigits(digits), mm: '' };
+    if (digits.length >= 4) return { yy: digits.slice(0, 4), mm: '', dd: '' };
+    return { yy: toFourDigits(digits), mm: '', dd: '' };
   }
   const yearDigits = parts[0].replace(/\D/g, '');
   const monthDigits = parts[1].replace(/\D/g, '');
   const yy = toFourDigits(yearDigits);
   const mm = toTwoDigits(monthDigits);
-  return { yy, mm };
+  if (parts.length >= 3) {
+    const dayDigits = parts[2].replace(/\D/g, '');
+    const dd = toTwoDigits(dayDigits);
+    return { yy, mm, dd };
+  }
+  return { yy, mm, dd: '' };
 }
 
-function joinYearMonthYYMM(yy, mm) {
-  const y = normalizeYearOrBlank(yy);
-  const m = normalizeMonthOrBlank(mm);
-  if (y === null || m === null) return '';
+function joinEducationDate(yy, mm, dd) {
+  const rawY = String(yy ?? '').trim();
+  const rawM = String(mm ?? '').trim();
+  const rawD = String(dd ?? '').trim();
+  if (!rawY && !rawM && !rawD) return '';
+
+  const y = rawY ? normalizeYearOrBlank(yy) : '';
+  if (rawY && y === null) return '';
+  // Year-only: valid without month or day
+  if (y && !rawM && !rawD) return y;
+
+  const m = rawM ? normalizeMonthOrBlank(mm) : '';
+  if (rawM && m === null) return '';
+  const d = rawD ? normalizeDayOrBlank(dd, y || '', m || '') : '';
+  if (rawD && d === null) return '';
+  if (y && m && d) return `${y}/${m}/${d}`;
   if (y && m) return `${y}/${m}`;
   return y || '';
 }
@@ -178,7 +250,10 @@ function normalizeToArray(data) {
     if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
     return String(a).localeCompare(String(b));
   });
-  return entries.map(([key, value], idx) => normalizeItem(value, Number.isNaN(Number(key)) ? idx : Number(key)));
+  return entries.map(([key, value], idx) => ({
+    ...normalizeItem(value, Number.isNaN(Number(key)) ? idx : Number(key)),
+    educationObjectKey: key,
+  }));
 }
 
 function toIndexedObject(items) {
@@ -188,8 +263,8 @@ function toIndexedObject(items) {
       index: i,
       degree: item.degree ?? '',
       institution: item.institution ?? '',
-      start: joinYearMonthYYMM(item.startYY, item.startMM),
-      end: joinYearMonthYYMM(item.endYY, item.endMM),
+      start: joinEducationDate(item.startYY, item.startMM, item.startDD),
+      end: joinEducationDate(item.endYY, item.endMM, item.endDD),
       description: item.description ?? ''
     };
   });
@@ -198,6 +273,23 @@ function toIndexedObject(items) {
 
 const localItems = ref(normalizeToArray(props.data));
 let isSyncingFromParent = false;
+
+function scrollEducationKeyIntoView(key) {
+  const k = String(key ?? '').trim();
+  if (!k || typeof document === 'undefined') return;
+  nextTick(() => {
+    const esc = typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(k) : k.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const el = document.querySelector(`.rde-edu-item[data-education-key="${esc}"]`);
+    el?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+watch(
+  () => props.scrollToEntryKey,
+  (key) => {
+    if (key) scrollEducationKeyIntoView(key);
+  }
+);
 
 watch(
   () => props.data,
@@ -253,12 +345,23 @@ function onYearBlur(item, field) {
   const startM = normalizeMonthOrBlank(item.startMM);
   const endM = normalizeMonthOrBlank(item.endMM);
   if (startY && startY !== null && endY && endY !== null) {
-    const startScore = ymScore(startY, startM || '');
-    const endScore = ymScore(endY, endM || '');
-    if (endScore < startScore) {
+    const sFull = item.startYY && startM && item.startDD;
+    const eFull = item.endYY && endM && item.endDD;
+    const sTime = ymdToTime(item.startYY, startM || '', item.startDD || '');
+    const eTime = ymdToTime(item.endYY, endM || '', item.endDD || '');
+    let orderBad = false;
+    if (sFull && eFull && sTime != null && eTime != null) {
+      orderBad = eTime < sTime;
+    } else {
+      const startScore = ymScore(startY, startM || '');
+      const endScore = ymScore(endY, endM || '');
+      orderBad = endScore < startScore;
+    }
+    if (orderBad) {
       alert('End date must be on or after start date');
       item.endYY = '';
       item.endMM = '';
+      item.endDD = '';
     }
   }
 }
@@ -280,27 +383,83 @@ function onMonthBlur(item, field, yearField) {
   item[field] = mm;
 }
 
+function onDayBlur(item, field, yearField, monthField) {
+  if (!item[field]) return;
+  const y = normalizeYearOrBlank(item[yearField]);
+  if (!y || y === null) {
+    alert('Enter a 4-digit year (YYYY) before entering a day');
+    item[field] = '';
+    return;
+  }
+  const m = normalizeMonthOrBlank(item[monthField]);
+  if (m === null) {
+    alert('Month must be between 1 and 12');
+    item[field] = '';
+    return;
+  }
+  if (!m) {
+    alert('Enter month (MM) before entering a day');
+    item[field] = '';
+    return;
+  }
+  const dd = normalizeDayOrBlank(item[field], y, m);
+  if (dd === null) {
+    alert('Day is invalid for this month');
+    item[field] = '';
+    return;
+  }
+  item[field] = dd;
+}
+
 function validateAndNormalizeEducationEnd(item) {
-  const startY = normalizeYearOrBlank(item.startYY, { minYear: 1900 });
-  if (startY === null) throw new Error('Start year must be between 1900 and the current year');
-  const startM = normalizeMonthOrBlank(item.startMM);
-  if (startM === null) throw new Error('Start month must be between 1 and 12');
-  if (item.startMM && !startY) throw new Error('Enter a 4-digit year (YYYY) before entering a month');
+  const rawStartY = String(item.startYY ?? '').trim();
+  const rawStartM = String(item.startMM ?? '').trim();
+  const rawStartD = String(item.startDD ?? '').trim();
+  const rawEndY = String(item.endYY ?? '').trim();
+  const rawEndM = String(item.endMM ?? '').trim();
+  const rawEndD = String(item.endDD ?? '').trim();
+
+  const startY = rawStartY ? normalizeYearOrBlank(item.startYY, { minYear: 1900 }) : '';
+  if (rawStartY && startY === null) throw new Error('Start year must be between 1900 and the current year');
+  const startM = rawStartM ? normalizeMonthOrBlank(item.startMM) : '';
+  if (rawStartM && startM === null) throw new Error('Start month must be between 1 and 12');
+  if (rawStartM && !startY) throw new Error('Enter a 4-digit year (YYYY) before entering a month');
+
+  const startDD = rawStartD ? normalizeDayOrBlank(item.startDD, startY || '', startM || '') : '';
+  if (rawStartD && startDD === null) throw new Error('Start day is invalid for this month');
+  if (rawStartD && (!startM || !startY)) throw new Error('Enter year and month before start day');
+  item.startDD = startDD || '';
 
   const endMin = startY ? Number(startY) : 1900;
-  const endY = normalizeYearOrBlank(item.endYY, { minYear: endMin });
-  const endM = normalizeMonthOrBlank(item.endMM);
-  if (endY === null) throw new Error('End year must be between start year and the current year');
-  if (endM === null) throw new Error('End month must be between 1 and 12');
-  if (item.endMM && !endY) throw new Error('Enter a 4-digit year (YYYY) before entering a month');
+  const endY = rawEndY ? normalizeYearOrBlank(item.endYY, { minYear: endMin }) : '';
+  if (rawEndY && endY === null) throw new Error('End year must be between start year and the current year');
+  const endM = rawEndM ? normalizeMonthOrBlank(item.endMM) : '';
+  if (rawEndM && endM === null) throw new Error('End month must be between 1 and 12');
+  if (rawEndM && !endY) throw new Error('Enter a 4-digit year (YYYY) before entering a month');
 
+  const endDD = rawEndD ? normalizeDayOrBlank(item.endDD, endY || '', endM || '') : '';
+  if (rawEndD && endDD === null) throw new Error('End day is invalid for this month');
+  if (rawEndD && (!endM || !endY)) throw new Error('Enter year and month before end day');
+
+  item.startYY = startY || '';
+  item.startMM = startM || '';
   item.endYY = endY || '';
   item.endMM = endM || '';
+  item.endDD = endDD || '';
+
+  const sFull = item.startYY && item.startMM && item.startDD;
+  const eFull = item.endYY && item.endMM && item.endDD;
+  const sTime = ymdToTime(item.startYY, item.startMM || '', item.startDD || '');
+  const eTime = ymdToTime(item.endYY, item.endMM || '', item.endDD || '');
 
   if (startY && endY) {
-    const startScore = ymScore(startY, startM || '');
-    const endScore = ymScore(endY, endM || '');
-    if (endScore < startScore) throw new Error('End date must be on or after start date');
+    if (sFull && eFull && sTime != null && eTime != null) {
+      if (eTime < sTime) throw new Error('End date must be on or after start date');
+    } else {
+      const startScore = ymScore(startY, startM || '');
+      const endScore = ymScore(endY, endM || '');
+      if (endScore < startScore) throw new Error('End date must be on or after start date');
+    }
   }
 }
 
@@ -311,9 +470,15 @@ function onEndGroupFocusOut(e, item) {
   try {
     validateAndNormalizeEducationEnd(item);
   } catch (err) {
-    alert(err instanceof Error ? err.message : String(err));
-    item.endYY = '';
-    item.endMM = '';
+    const msg = err instanceof Error ? err.message : String(err);
+    alert(msg);
+    if (msg.includes('before start day') || msg.includes('Start day is invalid')) {
+      item.startDD = '';
+    } else {
+      item.endYY = '';
+      item.endMM = '';
+      item.endDD = '';
+    }
   }
   requestAutosave();
 }
