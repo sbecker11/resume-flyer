@@ -116,6 +116,50 @@ export function parseFlexibleDateString(dateStr) {
     throw new Error(`Invalid or unhandled date format: "${dateStr}".`);
 }
 
+/**
+ * Parse a job start/end string for tenure math. Does not throw.
+ * @param {unknown} value
+ * @param {{ emptyMeansNow?: boolean }} [opts] - if true, blank/null is treated as "today" (open-ended role)
+ * @returns {Date|null}
+ */
+export function parseJobTenureEndpoint(value, { emptyMeansNow = false } = {}) {
+    if (value == null) {
+        return emptyMeansNow ? new Date() : null;
+    }
+    const s = String(value).trim();
+    if (!s) {
+        return emptyMeansNow ? new Date() : null;
+    }
+    const low = s.toLowerCase();
+    if (low === 'present' || low === 'current' || low === 'current_date') {
+        return new Date();
+    }
+    try {
+        return parseFlexibleDateString(s);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Inclusive calendar-month span between job start and end (UTC year/month of parsed dates).
+ * Empty end is treated as "now" (ongoing role). Empty start returns null.
+ * @param {unknown} startStr
+ * @param {unknown} endStr
+ * @returns {number|null}
+ */
+export function jobTenureMonthsInclusive(startStr, endStr) {
+    const start = parseJobTenureEndpoint(startStr, { emptyMeansNow: false });
+    const end = parseJobTenureEndpoint(endStr, { emptyMeansNow: true });
+    if (!start || !end) return null;
+    if (end.getTime() < start.getTime()) return null;
+    const sy = start.getUTCFullYear();
+    const sm = start.getUTCMonth();
+    const ey = end.getUTCFullYear();
+    const em = end.getUTCMonth();
+    return (ey - sy) * 12 + (em - sm) + 1;
+}
+
 /*
  * Parse a 4-digit year string
  * @param {*} yearStr 

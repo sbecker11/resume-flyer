@@ -5,8 +5,33 @@
 
 const DEFAULT_HIGHLIGHT_PERCENT = 135;
 const NEARLY_WHITE_L_THRESHOLD = 75;
-/** L* >= this → black text/icons; below → white */
-const LAB_LIGHT_THRESHOLD = 50;
+
+/**
+ * WCAG 2.x relative luminance for sRGB 8-bit channels (same linearization as CSS).
+ * @param {number} r8 @param {number} g8 @param {number} b8
+ */
+function relativeLuminanceSrgb(r8, g8, b8) {
+    const R = srgbToLinear(r8 / 255);
+    const G = srgbToLinear(g8 / 255);
+    const B = srgbToLinear(b8 / 255);
+    return 0.2126 * R + 0.7152 * G + 0.0722 * B;
+}
+
+/** @param {number} L1 @param {number} L2 - relative luminances in [0, 1] */
+function contrastRatio(L1, L2) {
+    const lighter = Math.max(L1, L2);
+    const darker = Math.min(L1, L2);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * WCAG often picks black on saturated mid blues (e.g. #6c79fb) because its relative luminance
+ * is just high enough; white still meets a usable contrast floor and tends to read more comfortably.
+ * Neutrals (low chroma) keep the strict max-ratio winner.
+ */
+const COMFORT_WHITE_MIN_CONTRAST_VS_BG = 3;
+const COMFORT_WHITE_MIN_CHROMA = 22;
+const COMFORT_WHITE_MAX_BG_RELATIVE_LUMINANCE = 0.45;
 
 /** @param {string | null | undefined} hex */
 export function formatHexDisplay(hex) {
@@ -109,17 +134,30 @@ function lchToLab(L, C, H) {
     return { L, a: C * Math.cos(rad), b: C * Math.sin(rad) };
 }
 
-function getLightnessLab(hex) {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return 50;
-    const lab = rgbToLab(rgb.r, rgb.g, rgb.b);
-    return lab.L;
-}
-
-/** @param {string} hex */
+/**
+ * Black or white foreground: higher WCAG 2.x contrast ratio vs the background, with a comfort
+ * override for saturated, not-too-light colors when white is still at least
+ * {@link COMFORT_WHITE_MIN_CONTRAST_VS_BG}:1 (see module constants).
+ * @param {string} hex
+ */
 export function getHighContrastMono(hex) {
-    const L = getLightnessLab(hex);
-    return L >= LAB_LIGHT_THRESHOLD ? '#000000' : '#ffffff';
+    const rgb = hexToRgb(hex);
+    if (!rgb) return '#000000';
+    const Lbg = relativeLuminanceSrgb(rgb.r, rgb.g, rgb.b);
+    const ratioWhite = contrastRatio(Lbg, 1);
+    const ratioBlack = contrastRatio(Lbg, 0);
+    if (
+        ratioBlack > ratioWhite
+        && ratioWhite >= COMFORT_WHITE_MIN_CONTRAST_VS_BG
+        && Lbg <= COMFORT_WHITE_MAX_BG_RELATIVE_LUMINANCE
+    ) {
+        const lab = rgbToLab(rgb.r, rgb.g, rgb.b);
+        const chroma = Math.hypot(lab.a, lab.b);
+        if (chroma >= COMFORT_WHITE_MIN_CHROMA) {
+            return '#ffffff';
+        }
+    }
+    return ratioWhite >= ratioBlack ? '#ffffff' : '#000000';
 }
 
 /**
@@ -127,8 +165,7 @@ export function getHighContrastMono(hex) {
  * @param {{ iconBase?: string }} [options]
  */
 export function getHighContrastForBackground(backgroundColorHex, options = {}) {
-    const L = getLightnessLab(backgroundColorHex);
-    const textColor = L >= LAB_LIGHT_THRESHOLD ? '#000000' : '#ffffff';
+    const textColor = getHighContrastMono(backgroundColorHex);
     const variant = textColor === '#000000' ? 'black' : 'white';
     const iconBase = options.iconBase ?? '/palette-utils/icons/anchors';
     const iconSet = {

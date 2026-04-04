@@ -4,10 +4,12 @@
  *
  * - references: array of "<a href=\"url\">[SkillName]</a>" for parseDescriptionToBullets
  * - job-skills: object of skill names mentioned in Description that exist in skills
+ * - durationMonths: inclusive calendar-month span start→end (blank end = today); not persisted
  */
 
 import { ResumeJob } from './ResumeJob.mjs';
 import { skillsObjectToResumeSkills } from './ResumeSkill.mjs';
+import { jobTenureMonthsInclusive } from '../utils/dateUtils.mjs';
 
 const BRACKET_REGEX = /\[([^\]]+)\]/g;
 
@@ -100,6 +102,7 @@ export function enrichJobsWithSkills(rawJobs, skills) {
     }
     rj.references = refs;
     rj['job-skills'] = jobSkills;
+    rj.durationMonths = jobTenureMonthsInclusive(rj.start, rj.end);
     return rj;
   });
 }

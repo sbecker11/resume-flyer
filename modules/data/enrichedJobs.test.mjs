@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { enrichJobsWithSkills } from './enrichedJobs.mjs';
 import { ResumeJob } from './ResumeJob.mjs';
 
@@ -121,5 +121,24 @@ describe('enrichedJobs', () => {
     expect(jobs[0].isEducationDerived).toBe(true);
     expect(jobs[0]['job-skills']).toHaveProperty('Machine Learning');
     expect(jobs[0].references.length).toBeGreaterThan(0);
+  });
+
+  it('sets durationMonths as inclusive calendar months from start to end', () => {
+    const rawJobs = [{ start: '2020-01', end: '2021-06' }];
+    const jobs = enrichJobsWithSkills(rawJobs, {});
+    expect(jobs[0].durationMonths).toBe(18);
+  });
+
+  it('durationMonths is null when start is missing', () => {
+    const jobs = enrichJobsWithSkills([{ start: '', end: '2020' }], {});
+    expect(jobs[0].durationMonths).toBeNull();
+  });
+
+  it('durationMonths uses today when end is blank (fixed clock)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(Date.UTC(2022, 0, 1)));
+    const jobs = enrichJobsWithSkills([{ start: '2020-01', end: '' }], {});
+    expect(jobs[0].durationMonths).toBe(25);
+    vi.useRealTimers();
   });
 });

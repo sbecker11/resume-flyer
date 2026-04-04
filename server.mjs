@@ -11,6 +11,7 @@ import sanitizeFilename from 'sanitize-filename';
 import fetch from 'node-fetch';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
+import { mergeJobsWithEducation, toJobsArray } from './modules/data/mergeEducationIntoJobs.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
 import { reportError } from './modules/utils/errorReporting.mjs';
 import {
@@ -437,6 +438,82 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
         res.json({ ok: true, skillIDs: newSkillIDs });
     } catch (err) {
         console.error('[PATCH jobs skills]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PATCH /api/resumes/:id/education/:educationKey/skills: Update skillIDs on one education entry; sync skills.json jobIDs using merged job index.
+app.patch('/api/resumes/:id/education/:educationKey/skills', async (req, res) => {
+    const { id, educationKey } = req.params;
+    const { skillIDs, newSkills } = req.body;
+    if (!id || educationKey == null || !Array.isArray(skillIDs)) {
+        return res.status(400).json({ error: 'Missing id, educationKey, or skillIDs array.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    const skillsPath = path.join(dir, 'skills.json');
+    const educationPath = path.join(dir, 'education.json');
+    try {
+        const [jobsContent, skillsContent, educationContent] = await Promise.all([
+            fs.readFile(jobsPath, 'utf-8'),
+            fs.readFile(skillsPath, 'utf-8'),
+            fs.readFile(educationPath, 'utf-8'),
+        ]);
+        const rawJobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
+        const workJobs = normalizeParserJobs(rawJobs);
+        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        const educationData = JSON.parse(educationContent);
+        if (!educationData || typeof educationData !== 'object' || educationData[educationKey] == null) {
+            return res.status(404).json({ error: `Education key "${educationKey}" not found.` });
+        }
+        const merged = mergeJobsWithEducation(toJobsArray(workJobs), educationData);
+        const mergedIdx = merged.findIndex((j) => {
+            const ek = j?.educationKey ?? j?.__educationKey;
+            return ek != null && String(ek) === String(educationKey);
+        });
+        if (mergedIdx < 0) {
+            return res.status(404).json({ error: `Education key "${educationKey}" not found in merged jobs.` });
+        }
+
+        const toCreate = Array.isArray(newSkills) ? newSkills : [];
+        for (const entry of toCreate) {
+            const name = typeof entry === 'string' ? entry.trim() : (entry?.name && String(entry.name).trim());
+            if (!name) continue;
+            if (skills[name] == null) {
+                skills[name] = { name, jobIDs: [] };
+            }
+        }
+
+        const eduEntry = educationData[educationKey];
+        const oldSkillIDs = Array.isArray(eduEntry.skillIDs) ? eduEntry.skillIDs.map(String) : [];
+        const newSkillIDs = skillIDs.map(String);
+        eduEntry.skillIDs = newSkillIDs;
+
+        const jobNum = mergedIdx;
+        const removed = oldSkillIDs.filter((s) => !newSkillIDs.includes(s));
+        const added = newSkillIDs.filter((s) => !oldSkillIDs.includes(s));
+        for (const sid of removed) {
+            if (skills[sid]) skills[sid].jobIDs = (skills[sid].jobIDs || []).filter((j) => j !== jobNum);
+        }
+        for (const sid of added) {
+            if (skills[sid] && !skills[sid].jobIDs.includes(jobNum)) skills[sid].jobIDs.push(jobNum);
+        }
+        for (const s of Object.values(skills)) {
+            if (s && typeof s === 'object' && Array.isArray(s.jobIDs)) {
+                s.jobIDs = [...new Set(s.jobIDs)].sort((a, b) => a - b);
+            }
+        }
+
+        await Promise.all([
+            atomicWriteWithLock(educationPath, JSON.stringify(educationData, null, 2)),
+            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+        ]);
+        res.json({ ok: true, skillIDs: newSkillIDs });
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            return res.status(404).json({ error: 'education.json or related file not found.' });
+        }
+        console.error('[PATCH education skills]', err);
         res.status(500).json({ error: err.message });
     }
 });

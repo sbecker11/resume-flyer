@@ -400,9 +400,7 @@
       "tool",
       "data-science"
     ],
-    "jobIDs": [
-      2
-    ]
+    "jobIDs": []
   },
   "sql": {
     "name": "SQL",
@@ -1632,26 +1630,21 @@
   },
   "Compliance": {
     "name": "Compliance",
-    "jobIDs": []
+    "jobIDs": [
+      9
+    ]
   },
   "Adobe": {
     "name": "Adobe",
-    "jobIDs": [
-      0
-    ]
+    "jobIDs": []
   },
   "AWS QuickSight": {
     "name": "AWS QuickSight",
-    "jobIDs": [
-      4,
-      5
-    ]
+    "jobIDs": []
   },
   "dockerized": {
     "name": "dockerized",
-    "jobIDs": [
-      0
-    ]
+    "jobIDs": []
   },
   "Matryoshka embeddings": {
     "name": "Matryoshka embeddings",

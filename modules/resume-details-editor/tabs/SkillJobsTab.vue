@@ -8,7 +8,7 @@
     <p v-else-if="!jobsLoaded && resumeId && resumeId !== 'default'" class="rde-loading">Loading jobs…</p>
     <template v-else>
       <p
-        v-if="jobsList.length === 0 || sortedSkillsForSidebar.length === 0"
+        v-if="jobsList.length === 0 || skillRowsForMatrix.length === 0"
         class="rde-skill-jobs-cross-empty"
       >
         <span v-if="jobsList.length === 0">No jobs in this resume.</span>
@@ -24,22 +24,27 @@
               :key="'job-h-' + ji"
               class="rde-sj-head-job"
             >
-              <span class="rde-skill-jobs-label rotated-job-name">{{ fullJobLabel(job, ji) }}</span>
+              <span class="rde-skill-jobs-label rotated-job-name">{{ rotatedJobHeaderText(job, ji) }}</span>
             </div>
           </div>
 
           <!-- Scrolls: skill names + matrix cells -->
           <div class="rde-sj-scroll">
             <div class="rde-sj-body-grid" :style="crossBodyGridStyle">
-              <template v-for="(skillRow, si) in sortedSkillsForSidebar" :key="'skill-row-' + skillRow.id">
-                <div class="rde-sj-head-skill" :title="skillRow.fullName">
-                  {{ skillRow.fullName }}
+              <template v-for="(skillRow, si) in skillRowsForMatrix" :key="'skill-row-' + skillRow.id">
+                <div class="rde-sj-head-skill" :title="skillRow.displayLabel">
+                  {{ skillRow.displayLabel }}
                 </div>
-                <div
+                <button
                   v-for="(job, ji) in jobsList"
                   :key="'cell-' + skillRow.id + '-' + ji"
+                  type="button"
                   class="rde-sj-cell"
+                  :class="{ 'rde-sj-cell--selected': isMatrixCellSelected(job, skillRow.id) }"
+                  :disabled="!matrixCellInteractive(job)"
                   :aria-label="cellAriaLabel(job, ji, skillRow)"
+                  :aria-pressed="isMatrixCellSelected(job, skillRow.id)"
+                  @click="onMatrixCellClick(ji, skillRow)"
                 />
               </template>
             </div>
@@ -54,15 +59,23 @@
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
-import { isEducationDerivedJob } from '@/modules/data/ResumeJob.mjs';
+import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDisplayName.mjs';
+import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
+import { hasServer } from '@/modules/core/hasServer.mjs';
+import { updateJobSkills, updateEducationJobSkills } from '@/modules/api/resumeManagerApi.mjs';
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
   reloadNonce: { type: Number, default: 0 },
 });
 
-const emit = defineEmits(['content-ready']);
+const emit = defineEmits(['content-ready', 'saved']);
+
+const canEdit = hasServer();
+const saving = ref(false);
+/** Skill keys that existed when this panel loaded / last refetched (for updateJobSkills newSkills). */
+const initialSkillKeys = ref(new Set());
 
 /** Same rem for job column width and body row height → square matrix cells; wider = more space between rotated job headers. */
 const JOB_MATRIX_CELL_REM = 1.4;
@@ -83,11 +96,26 @@ function jobsArray(data) {
 
 const jobsList = computed(() => jobs.value);
 
-const sortedSkillsForSidebar = computed(() => {
-  const entries = Object.entries(skillsMap.value || {});
+/** Sum of job durationMonths for jobs where this skill is linked (same cells as matrix selection). */
+function linkedJobsDurationMonthsTotal(skillId, jobsArr, map) {
+  let sum = 0;
+  for (const job of jobsArr) {
+    if (!getSelectedSkillIdsForJob(job, map).has(skillId)) continue;
+    const n = job?.durationMonths;
+    if (typeof n === 'number' && Number.isFinite(n) && n > 0) sum += n;
+  }
+  return sum;
+}
+
+const skillRowsForMatrix = computed(() => {
+  const map = skillsMap.value || {};
+  const jlist = jobsList.value;
+  const entries = Object.entries(map);
   const rows = entries.map(([id, s]) => {
     const fullName = (s && s.name) || id;
-    return { id, fullName };
+    const monthsTotal = linkedJobsDurationMonthsTotal(id, jlist, map);
+    const displayLabel = monthsTotal > 0 ? `${fullName} (${monthsTotal})` : fullName;
+    return { id, fullName, displayLabel, monthsTotal };
   });
   rows.sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' }));
   return rows;
@@ -109,7 +137,7 @@ const crossHeaderGridStyle = computed(() => ({
 }));
 
 const crossBodyGridStyle = computed(() => {
-  const ns = sortedSkillsForSidebar.value.length;
+  const ns = skillRowsForMatrix.value.length;
   return {
     ...crossGridColumnsStyle.value,
     gridTemplateRows: `repeat(${Math.max(ns, 1)}, minmax(${JOB_MATRIX_CELL_REM}rem, auto))`,
@@ -144,8 +172,70 @@ function fullJobLabel(job, i) {
   return `Job ${i + 1}`;
 }
 
+/** Rotated column header: "(N) employer/label" where N is enriched durationMonths. */
+function rotatedJobHeaderText(job, i) {
+  const base = fullJobLabel(job, i);
+  const n = job?.durationMonths;
+  if (typeof n === 'number' && Number.isFinite(n) && n > 0) {
+    return `(${n}) ${base}`;
+  }
+  return base;
+}
+
 function cellAriaLabel(job, ji, skillRow) {
-  return `${fullJobLabel(job, ji)} — ${skillRow.fullName}`;
+  const base = `${rotatedJobHeaderText(job, ji)} — ${skillRow.displayLabel}`;
+  const link = isMatrixCellSelected(job, skillRow.id) ? 'linked' : 'not linked';
+  return `${base} — ${link}`;
+}
+
+function isMatrixCellSelected(job, skillId) {
+  return getSelectedSkillIdsForJob(job, skillsMap.value).has(skillId);
+}
+
+function matrixCellInteractive(job) {
+  return (
+    canEdit
+    && !saving.value
+    && props.resumeId
+    && props.resumeId !== 'default'
+    && job != null
+  );
+}
+
+async function onMatrixCellClick(jobIndex, skillRow) {
+  const job = jobs.value[jobIndex];
+  if (!matrixCellInteractive(job)) return;
+  const map = skillsMap.value;
+  const next = new Set(getSelectedSkillIdsForJob(job, map));
+  if (next.has(skillRow.id)) next.delete(skillRow.id);
+  else next.add(skillRow.id);
+  const skillIDs = [...next];
+  const newSkills = skillIDs.filter((id) => !initialSkillKeys.value.has(id));
+  saving.value = true;
+  try {
+    if (isEducationDerivedJob(job)) {
+      const ek = educationKeyOf(job);
+      if (!ek) throw new Error('Education row has no educationKey.');
+      await updateEducationJobSkills(props.resumeId, ek, skillIDs, newSkills);
+    } else {
+      await updateJobSkills(props.resumeId, jobIndex, skillIDs, newSkills);
+      const rawDesc = String(job?.Description ?? job?.description ?? '');
+      const alignedDesc = filterDescriptionBracketsToSkillSelection(rawDesc, next, map);
+      if (alignedDesc !== rawDesc) {
+        await api.updateJob(props.resumeId, jobIndex, { Description: alignedDesc });
+      }
+    }
+    const data = await api.getResumeData(props.resumeId);
+    jobs.value = jobsArray(data.jobs);
+    skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
+    initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
+    emit('saved', { jobIndex, skillIDs });
+  } catch (err) {
+    reportError(err, '[SkillJobsTab] Failed to save job–skill link', '');
+    alert('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
+  } finally {
+    saving.value = false;
+  }
 }
 
 watch(
@@ -155,6 +245,7 @@ watch(
     loadError.value = '';
     jobs.value = [];
     skillsMap.value = {};
+    initialSkillKeys.value = new Set();
     if (!id || id === 'default') {
       jobsLoaded.value = true;
       nextTick(() => emit('content-ready'));
@@ -165,6 +256,7 @@ watch(
         const data = await api.getResumeData(id);
         jobs.value = jobsArray(data.jobs);
         skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
+        initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
         jobsLoaded.value = true;
         nextTick(() => emit('content-ready'));
       } catch (err) {
@@ -307,10 +399,32 @@ watch(
 }
 
 .rde-sj-cell {
+  appearance: none;
+  display: block;
+  margin: 0;
   box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   min-height: var(--rde-sj-cell-size, 1.4rem);
-  background: rgba(20, 24, 32, 0.85);
+  background: #000;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.rde-sj-cell--selected {
+  background: #6e6e6e;
+}
+.rde-sj-cell:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+.rde-sj-cell:disabled {
+  cursor: default;
+  filter: none;
+}
+.rde-sj-cell:focus-visible {
+  outline: 2px solid rgba(74, 158, 255, 0.85);
+  outline-offset: -2px;
+  z-index: 1;
 }
 
 .rotated-job-name,

@@ -16,6 +16,12 @@ export class ResumeJob {
 
   end = '';
 
+  /**
+   * Derived in enrichJobsWithSkills: inclusive calendar months from start→end (not in jobs.json).
+   * @type {number|null}
+   */
+  durationMonths = null;
+
   Description = '';
 
   /**
@@ -42,6 +48,7 @@ export class ResumeJob {
     delete plain.__fromEducation;
     delete plain.__educationKey;
     delete plain.educationKey;
+    delete plain.durationMonths;
 
     Object.assign(this, {
       employer: '',
@@ -82,6 +89,7 @@ export class ResumeJob {
   toJobPatchPlainObject() {
     const o = this.toPlainObject();
     delete o.educationKey;
+    delete o.durationMonths;
     return o;
   }
 
@@ -93,6 +101,7 @@ export class ResumeJob {
       label: this.label,
       start: this.start,
       end: this.end,
+      durationMonths: this.durationMonths,
       Description: this.Description,
       educationKey: this.educationKey,
       skillIDs: this.skillIDs,

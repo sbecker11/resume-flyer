@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   getMonthDates,
   getIsoDateString,
   parseFlexibleDateString,
+  parseJobTenureEndpoint,
+  jobTenureMonthsInclusive,
   parseYearStr,
   parseMonthStr,
   parseISO8601,
@@ -82,6 +84,41 @@ describe('dateUtils', () => {
       expect(() => parseFlexibleDateString('')).toThrow(/Invalid or empty/);
       expect(() => parseFlexibleDateString('   ')).toThrow();
       expect(() => parseFlexibleDateString('invalid-date')).toThrow();
+    });
+  });
+
+  describe('parseJobTenureEndpoint', () => {
+    it('returns null for empty when emptyMeansNow is false', () => {
+      expect(parseJobTenureEndpoint('')).toBeNull();
+      expect(parseJobTenureEndpoint(null)).toBeNull();
+    });
+    it('returns Date for empty when emptyMeansNow is true', () => {
+      const d = parseJobTenureEndpoint('', { emptyMeansNow: true });
+      expect(d).toBeInstanceOf(Date);
+    });
+    it('parses Present without throwing', () => {
+      expect(parseJobTenureEndpoint('CURRENT_DATE')).toBeInstanceOf(Date);
+    });
+  });
+
+  describe('jobTenureMonthsInclusive', () => {
+    it('counts inclusive calendar months for YYYY-MM range', () => {
+      expect(jobTenureMonthsInclusive('2020-01', '2020-03')).toBe(3);
+    });
+    it('returns 1 for same YYYY', () => {
+      expect(jobTenureMonthsInclusive('2020', '2020')).toBe(1);
+    });
+    it('returns null without start', () => {
+      expect(jobTenureMonthsInclusive('', '2020')).toBeNull();
+    });
+    it('treats blank end as now when clock fixed', () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(Date.UTC(2021, 5, 15)));
+      expect(jobTenureMonthsInclusive('2020-01', '')).toBe(18);
+      vi.useRealTimers();
+    });
+    it('returns null when end before start', () => {
+      expect(jobTenureMonthsInclusive('2021-01', '2020-01')).toBeNull();
     });
   });
 

@@ -80,6 +80,7 @@
             :resume-id="resumeId"
             :reload-nonce="reloadNonce"
             @content-ready="onResumeJobsOrSkillsPanelReady"
+            @saved="onSkillsSaved"
           />
         </div>
 

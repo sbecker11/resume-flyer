@@ -44,6 +44,10 @@ export function normalizeEducationDateForJobField(value) {
 export function mapEducationToJob(educationKey, edu) {
   const institution = String(edu?.institution ?? '').trim();
   const degree = String(edu?.degree ?? '').trim();
+  const rawSkillIds = edu?.skillIDs;
+  const skillIDsFromEdu = Array.isArray(rawSkillIds)
+    ? rawSkillIds.map((x) => String(x)).filter((s) => s.length > 0)
+    : null;
   return new ResumeJob({
     employer: institution,
     title: degree,
@@ -53,6 +57,7 @@ export function mapEducationToJob(educationKey, edu) {
     end: normalizeEducationDateForJobField(edu?.end),
     Description: String(edu?.description ?? ''),
     educationKey: String(educationKey),
+    ...(skillIDsFromEdu != null ? { skillIDs: skillIDsFromEdu } : {}),
   });
 }
 

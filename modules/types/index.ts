@@ -7,6 +7,8 @@ export interface JobData {
   start: string; // Date string
   end: string | 'CURRENT_DATE'; // Date string or current marker
   startDate?: string; // Alternative field name
+  /** Set by enrichJobsWithSkills; inclusive calendar months start→end; not persisted */
+  durationMonths?: number | null;
   Description?: string;
   'job-skills'?: Record<string, string>; // skill ID -> skill name mapping
   references?: string[];

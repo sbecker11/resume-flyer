@@ -5,7 +5,8 @@
     "institution": "MIT, Massachusetts Institute of Technology, Cambridge, MA",
     "start": "1990/09",
     "end": "1997/02",
-    "description": ""
+    "description": "",
+    "skillIDs": []
   },
   "1": {
     "index": 1,
@@ -13,7 +14,11 @@
     "institution": "BYU, Brigham Young University, Provo, UT",
     "start": "1987/09",
     "end": "1990/04",
-    "description": ""
+    "description": "",
+    "skillIDs": [
+      "FHIR",
+      "HL7"
+    ]
   },
   "2": {
     "index": 2,
@@ -21,6 +26,7 @@
     "institution": "BYU, Brigham Young University",
     "start": "1983/09",
     "end": "1987/04",
-    "description": ""
+    "description": "",
+    "skillIDs": []
   }
 }

@@ -153,10 +153,11 @@
 <script setup>
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
-import { updateJobSkills, renameSkill, mergeSkill } from '@/modules/api/resumeManagerApi.mjs';
+import { updateJobSkills, updateEducationJobSkills, renameSkill, mergeSkill } from '@/modules/api/resumeManagerApi.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
-import { isEducationDerivedJob } from '@/modules/data/ResumeJob.mjs';
+import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDisplayName.mjs';
+import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
 
 const canEdit = hasServer();
 
@@ -209,40 +210,6 @@ function jobsArray(data) {
   if (Array.isArray(data)) return data;
   const keys = Object.keys(data).filter(k => /^\d+$/.test(k)).sort((a, b) => Number(a) - Number(b));
   return keys.map(k => data[k]);
-}
-
-/** Resolve a skill name to the key used in skillsMap (name-keyed: name is key; id-keyed: find id where skill.name === name). */
-function resolveSkillKey(name, skillsMap) {
-  if (!name || !skillsMap || typeof skillsMap !== 'object') return null;
-  if (skillsMap[name]) return name;
-  const entry = Object.entries(skillsMap).find(([, s]) => s && (s.name === name || s.name === name.trim()));
-  return entry ? entry[0] : null;
-}
-
-/** Extract skill keys (ids) that exist in skillsMap from [bracket] terms in description (matches enrichJobsWithSkills). */
-function skillKeysFromDescription(description, skillsMap) {
-  if (!description || typeof description !== 'string' || !skillsMap || typeof skillsMap !== 'object') return [];
-  const out = [];
-  const seen = new Set();
-  const bracketRe = /\[([^\]]+)\]/g;
-  let m;
-  while ((m = bracketRe.exec(description)) !== null) {
-    const name = m[1].trim();
-    if (!name || seen.has(name)) continue;
-    const key = resolveSkillKey(name, skillsMap);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(key);
-  }
-  return out;
-}
-
-/** Return the set of skill IDs to show as selected for this job (skillIDs + description brackets in skills map). */
-function getSelectedSkillIdsForJob(job, skillsMap) {
-  const fromIds = new Set(job?.skillIDs || []);
-  const fromDesc = skillKeysFromDescription(job?.Description ?? job?.description, skillsMap);
-  fromDesc.forEach(id => fromIds.add(id));
-  return fromIds;
 }
 
 watch(() => [props.resumeId, props.reloadNonce], async ([id]) => {
@@ -635,9 +602,22 @@ async function saveForCurrentJob() {
   if (idx == null || !props.resumeId || props.resumeId === 'default') return true;
   saving.value = true;
   try {
-    const skillIDs = [...selected.value];
+    const selectedSet = selected.value;
+    const skillIDs = [...selectedSet];
     const newSkills = skillIDs.filter(id => !initialSkillKeys.value.has(id));
-    await updateJobSkills(props.resumeId, idx, skillIDs, newSkills);
+    const jobRow = jobs.value[idx];
+    if (isEducationDerivedJob(jobRow)) {
+      const ek = educationKeyOf(jobRow);
+      if (!ek) throw new Error('Education row has no educationKey.');
+      await updateEducationJobSkills(props.resumeId, ek, skillIDs, newSkills);
+    } else {
+      await updateJobSkills(props.resumeId, idx, skillIDs, newSkills);
+      const rawDesc = String(jobRow?.Description ?? jobRow?.description ?? '');
+      const alignedDesc = filterDescriptionBracketsToSkillSelection(rawDesc, selectedSet, skills.value);
+      if (alignedDesc !== rawDesc) {
+        await api.updateJob(props.resumeId, idx, { Description: alignedDesc });
+      }
+    }
     if (jobs.value[idx]) jobs.value[idx].skillIDs = skillIDs;
     newSkills.forEach(id => initialSkillKeys.value.add(id));
     // Refetch resume data so the updated skills list (including any new skill) is available for all jobs

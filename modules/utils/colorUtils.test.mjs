@@ -67,6 +67,13 @@ describe('colorUtils', () => {
             expect(getHighContrastMono('#ffffff')).toBe('#000000');
             expect(getHighContrastMono('#f5f5f5')).toBe('#000000');
         });
+        it('comfort override: white on saturated #6c79fb (black would win WCAG ratio)', () => {
+            expect(getHighContrastMono('#6c79fb')).toBe('#ffffff');
+            expect(getHighContrastMono('#6C79FB')).toBe('#ffffff');
+        });
+        it('no override on neutral gray #888888 (keep WCAG max-ratio black)', () => {
+            expect(getHighContrastMono('#888888')).toBe('#000000');
+        });
     });
 
     describe('getHighContrastForBackground', () => {
@@ -82,6 +89,11 @@ describe('colorUtils', () => {
             });
             expect(iconSet.url).toBe('/static_content/icons/icons8-url-16-black.png');
             expect(iconSet.variant).toBe('black');
+        });
+        it('matches getHighContrastMono on #6c79fb (comfort → white)', () => {
+            const { textColor, iconSet } = getHighContrastForBackground('#6c79fb');
+            expect(textColor).toBe('#ffffff');
+            expect(iconSet.variant).toBe('white');
         });
     });
 

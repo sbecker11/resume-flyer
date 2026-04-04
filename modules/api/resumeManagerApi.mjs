@@ -478,6 +478,30 @@ export async function updateJobSkills(resumeId, jobIndex, skillIDs, newSkills = 
 }
 
 /**
+ * Update skillIDs for one education entry (education.json), syncing skills.json jobIDs using merged job index.
+ * @param {string} resumeId
+ * @param {string} educationKey - key in education.json
+ * @param {string[]} skillIDs
+ * @param {string[]} [newSkills] - Skill names to create on the resume if they don't exist
+ */
+export async function updateEducationJobSkills(resumeId, educationKey, skillIDs, newSkills = []) {
+    if (hasServer()) {
+        const body = { skillIDs };
+        if (newSkills.length) body.newSkills = newSkills;
+        const response = await fetch(
+            basePathJoin(
+                `api/resumes/${encodeURIComponent(resumeId)}/education/${encodeURIComponent(educationKey)}/skills`
+            ),
+            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    } else {
+        throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
+    }
+}
+
+/**
  * Rename an existing skill for a resume (updates skills and all job skillIDs).
  * @param {string} resumeId
  * @param {string} oldKey - Current skill id/name (key in skills map)

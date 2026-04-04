@@ -19,7 +19,7 @@ Use this for continuity when starting a new session. Full session history and ar
   All rDivs (originals and resume-list clones) are deleteable. Originals get the close handler in `ResumeItemsController.createBizResumeDiv`. Clones get it re-attached in `ResumeListScrollContainer._attachRDivCloseHandler` (because `cloneNode(true)` does not copy event listeners). Remove persists via `ResumeListController.removedJobNumbers`; `ensureJobInListing` / `scrollToElementId` re-add when needed.
 
 - **Resume list**  
-  Single list: job rDivs + appended skill card copies. Scroll by DOM id: `scrollToElementId('resume-' + jobNumber)`. List position/length shown in debug row. High-contrast text/icons use LAB-based rules in `modules/utils/colorUtils.mjs` (see `LAB_LIGHT_THRESHOLD`); readonly vendor catalog is `color-palette-utils-ts/` only.
+  Single list: job rDivs + appended skill card copies. Scroll by DOM id: `scrollToElementId('resume-' + jobNumber)`. List position/length shown in debug row. High-contrast text/icons use `getHighContrastMono` / `getHighContrastForBackground` in `modules/utils/colorUtils.mjs` (WCAG 2.x contrast, plus saturated-mid comfort white when white is still ≥3:1); readonly vendor catalog is `color-palette-utils-ts/` only.
 
 ## Conventions
 
