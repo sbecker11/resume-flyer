@@ -251,7 +251,7 @@ const props = defineProps({
   selectedJobIndex: { type: Number, default: null },
 });
 
-const emit = defineEmits(['saved', 'open-skills-for-job', 'update:selectedJobIndex', 'content-ready']);
+const emit = defineEmits(['saved', 'open-skills-for-job', 'open-education-for-job', 'update:selectedJobIndex', 'content-ready']);
 
 const employerInputRef = ref(null);
 const descriptionInputRef = ref(null);
@@ -349,9 +349,7 @@ function ymdToTime(yyyy, mm, dd) {
   return Number.isNaN(t) ? null : t;
 }
 
-let selectedJobWatchCount = 0;
 watch(() => [props.resumeId, props.reloadNonce], ([id]) => {
-  selectedJobWatchCount = 0;
   jobsLoaded.value = false;
   loadError.value = '';
   jobs.value = [];
@@ -522,16 +520,14 @@ function toStartEnd(l) {
   return { start, end };
 }
 
-watch(selectedJob, (job) => {
-  selectedJobWatchCount++;
-  if (selectedJobWatchCount > 5) console.warn('[RDE] JobsTab selectedJob watch LOOP', selectedJobWatchCount);
+watch(jobIndexLocal, () => {
+  const job = selectedJob.value;
   if (!job) return;
-  console.log('[RDE] JobsTab selectedJob watch, setting local');
   const start = parseYearMonthDay(job.start);
   const end = parseYearMonthDay(job.end);
   local.value = {
     employer: job.employer ?? job.Employer ?? job.label ?? '',
-    title: job.title ?? job.role ?? job.Role ?? '',
+    title: job.title || job.role || job.Role || '',
     startYYYY: toFourDigits(start.year),
     startMM: toTwoDigits(start.month),
     startDD: toTwoDigits(start.day),
@@ -567,13 +563,14 @@ async function saveCurrentJob() {
   saving.value = true;
   try {
     const { start, end } = toStartEnd(local.value);
-    await api.updateJob(props.resumeId, idx, {
-      employer: local.value.employer || undefined,
-      role: local.value.title || undefined,
-      start: start || undefined,
-      end: end || undefined,
-      Description: local.value.Description || undefined
-    });
+    const patch = {};
+    if (local.value.employer) patch.employer = local.value.employer;
+    if (local.value.title) patch.role = local.value.title;
+    if (start) patch.start = start;
+    if (end) patch.end = end;
+    if (local.value.Description) patch.Description = local.value.Description;
+    if (Object.keys(patch).length === 0) return true;
+    await api.updateJob(props.resumeId, idx, patch);
     // Replace job in array so Jobs dropdown option label updates (employer/title) reactively
     const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
     jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));

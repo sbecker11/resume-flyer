@@ -42,12 +42,12 @@
           <div v-if="sortedSkills.length >= 2" class="rde-skills-merge-row">
             <label for="rde-skills-merge-from" class="rde-sr-only">Skill to merge away</label>
             <select id="rde-skills-merge-from" name="mergeFrom" v-model="mergeFromKey" class="rde-select rde-merge-select" title="Skill to merge away">
-              <option value="" disabled>Merge link</option>
+              <option value="" disabled>Merge skill</option>
               <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
             <label for="rde-skills-merge-to" class="rde-sr-only">Keep this skill</label>
             <select id="rde-skills-merge-to" name="mergeTo" v-model="mergeToKey" class="rde-select rde-merge-select" title="Keep this skill (canonical skillID)">
-              <option value="" disabled>Into link</option>
+              <option value="" disabled>To skill</option>
               <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
             <button type="button" class="rde-btn merge" :disabled="!canEdit || !canMerge" title="Replace the first skill with the second everywhere" @click="mergeSkills">
@@ -155,8 +155,9 @@ import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { updateJobSkills, updateEducationJobSkills, renameSkill, mergeSkill } from '@/modules/api/resumeManagerApi.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
-import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
+import { ResumeJob, isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDisplayName.mjs';
+import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
 
 const canEdit = hasServer();
@@ -595,6 +596,29 @@ async function mergeSkills() {
   }
 }
 
+/** @param {string[]} skillIDs @param {Record<string, { name?: string }>} map */
+function jobSkillsRecordFromMap(skillIDs, map) {
+  const o = {};
+  for (const sid of skillIDs) {
+    const skill = map[sid];
+    o[sid] = skill?.name ?? sid;
+  }
+  return o;
+}
+
+function patchJobRowLocal(jobIndex, skillIDs, descriptionIfWork) {
+  const list = jobs.value.map((j, i) => {
+    if (i !== jobIndex) return j;
+    const plain = j instanceof ResumeJob ? j.toPlainObject() : { ...j };
+    plain.skillIDs = [...skillIDs];
+    if (descriptionIfWork !== undefined) plain.Description = descriptionIfWork;
+    const patched = ResumeJob.fromPlainObject(plain);
+    patched.durationMonths = jobTenureMonthsInclusive(patched.start, patched.end);
+    return patched;
+  });
+  jobs.value = list;
+}
+
 /** @returns {Promise<boolean>} true if saved or nothing to save; false if save failed */
 async function saveForCurrentJob() {
   if (!canEdit) return true;
@@ -606,27 +630,40 @@ async function saveForCurrentJob() {
     const skillIDs = [...selectedSet];
     const newSkills = skillIDs.filter(id => !initialSkillKeys.value.has(id));
     const jobRow = jobs.value[idx];
+    const rawDesc = String(jobRow?.Description ?? jobRow?.description ?? '');
+    const alignedDesc = !isEducationDerivedJob(jobRow)
+      ? filterDescriptionBracketsToSkillSelection(rawDesc, selectedSet, skills.value)
+      : rawDesc;
     if (isEducationDerivedJob(jobRow)) {
       const ek = educationKeyOf(jobRow);
       if (!ek) throw new Error('Education row has no educationKey.');
       await updateEducationJobSkills(props.resumeId, ek, skillIDs, newSkills);
     } else {
       await updateJobSkills(props.resumeId, idx, skillIDs, newSkills);
-      const rawDesc = String(jobRow?.Description ?? jobRow?.description ?? '');
-      const alignedDesc = filterDescriptionBracketsToSkillSelection(rawDesc, selectedSet, skills.value);
       if (alignedDesc !== rawDesc) {
         await api.updateJob(props.resumeId, idx, { Description: alignedDesc });
       }
     }
-    if (jobs.value[idx]) jobs.value[idx].skillIDs = skillIDs;
-    newSkills.forEach(id => initialSkillKeys.value.add(id));
-    // Refetch resume data so the updated skills list (including any new skill) is available for all jobs
-    const data = await api.getResumeData(props.resumeId);
-    jobs.value = jobsArray(data.jobs);
-    skills.value = data.skills || {};
-    initialSkillKeys.value = new Set(Object.keys(skills.value));
-    selected.value = getSelectedSkillIdsForJob(jobs.value[idx], skills.value);
-    emit('saved', { jobIndex: idx, skillIDs });
+    let nextSkills = skills.value;
+    if (newSkills.length) {
+      nextSkills = { ...skills.value };
+      for (const n of newSkills) {
+        if (!nextSkills[n]) nextSkills[n] = { name: n };
+      }
+      skills.value = nextSkills;
+      initialSkillKeys.value = new Set(Object.keys(nextSkills));
+    }
+    patchJobRowLocal(
+      idx,
+      skillIDs,
+      isEducationDerivedJob(jobRow) ? undefined : alignedDesc
+    );
+    selected.value = getSelectedSkillIdsForJob(jobs.value[idx], nextSkills);
+    emit('saved', {
+      jobIndex: idx,
+      skillIDs,
+      jobSkills: jobSkillsRecordFromMap(skillIDs, nextSkills),
+    });
     return true;
   } catch (err) {
     console.error('[SkillsTab] save failed:', err);

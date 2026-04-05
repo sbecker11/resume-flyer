@@ -15,10 +15,22 @@
         <span v-else>No skills in this resume.</span>
       </p>
       <div v-else class="rde-skill-jobs-split">
-        <div class="rde-skill-jobs-cross-frame" aria-label="Job and skill cross grid">
-          <!-- Fixed: job headers only (rotated names stay visible) -->
-          <div class="rde-sj-header-strip" :style="crossHeaderGridStyle">
-            <div class="rde-sj-corner" aria-hidden="true" />
+        <!-- Single scrolling container; one grid inside so header and body share column widths -->
+        <div class="rde-sj-scroll" aria-label="Job and skill cross grid">
+          <div class="rde-sj-matrix-grid" :style="matrixGridStyle">
+            <!-- Row 0: corner + job headers (sticky top) -->
+            <div class="rde-sj-corner" role="group" aria-label="Skill–jobs actions">
+              <button
+                type="button"
+                class="rde-btn rde-sj-clear"
+                aria-label="Clear all job–skill links"
+                title="Clear all job–skill links"
+                :disabled="!canClearGrid"
+                @click="onClearGrid"
+              >
+                Clear
+              </button>
+            </div>
             <div
               v-for="(job, ji) in jobsList"
               :key="'job-h-' + ji"
@@ -26,28 +38,24 @@
             >
               <span class="rde-skill-jobs-label rotated-job-name">{{ rotatedJobHeaderText(job, ji) }}</span>
             </div>
-          </div>
 
-          <!-- Scrolls: skill names + matrix cells -->
-          <div class="rde-sj-scroll">
-            <div class="rde-sj-body-grid" :style="crossBodyGridStyle">
-              <template v-for="(skillRow, si) in skillRowsForMatrix" :key="'skill-row-' + skillRow.id">
-                <div class="rde-sj-head-skill" :title="skillRow.displayLabel">
-                  {{ skillRow.displayLabel }}
-                </div>
-                <button
-                  v-for="(job, ji) in jobsList"
-                  :key="'cell-' + skillRow.id + '-' + ji"
-                  type="button"
-                  class="rde-sj-cell"
-                  :class="{ 'rde-sj-cell--selected': isMatrixCellSelected(job, skillRow.id) }"
-                  :disabled="!matrixCellInteractive(job)"
-                  :aria-label="cellAriaLabel(job, ji, skillRow)"
-                  :aria-pressed="isMatrixCellSelected(job, skillRow.id)"
-                  @click="onMatrixCellClick(ji, skillRow)"
-                />
-              </template>
-            </div>
+            <!-- Rows 1…N: skill label + matrix cells -->
+            <template v-for="(skillRow, si) in skillRowsForMatrix" :key="'skill-row-' + skillRow.id">
+              <div class="rde-sj-head-skill" :title="skillRow.displayLabel">
+                {{ skillRow.displayLabel }}
+              </div>
+              <button
+                v-for="(job, ji) in jobsList"
+                :key="'cell-' + skillRow.id + '-' + ji"
+                type="button"
+                class="rde-sj-cell"
+                :class="{ 'rde-sj-cell--selected': isMatrixCellSelected(job, skillRow.id) }"
+                :disabled="!matrixCellInteractive(job)"
+                :aria-label="cellAriaLabel(job, ji, skillRow)"
+                :aria-pressed="isMatrixCellSelected(job, skillRow.id)"
+                @click="onMatrixCellClick(ji, skillRow)"
+              />
+            </template>
           </div>
         </div>
       </div>
@@ -59,11 +67,15 @@
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
-import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
+import { ResumeJob, isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDisplayName.mjs';
-import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
+import {
+  getSelectedSkillIdsForJob,
+  filterDescriptionBracketsToSkillSelection,
+} from '../jobSkillsSelection.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { updateJobSkills, updateEducationJobSkills } from '@/modules/api/resumeManagerApi.mjs';
+import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -73,9 +85,29 @@ const props = defineProps({
 const emit = defineEmits(['content-ready', 'saved']);
 
 const canEdit = hasServer();
+/** True only while "Clear all" runs; cell toggles no longer block the grid (optimistic UI + background save). */
 const saving = ref(false);
+/** In-flight per-cell save count; Clear is disabled until these finish to avoid inconsistent bulk clear. */
+const pendingToggleSaves = ref(0);
 /** Skill keys that existed when this panel loaded / last refetched (for updateJobSkills newSkills). */
 const initialSkillKeys = ref(new Set());
+
+/** @type {Map<number, Promise<void>>} */
+const jobSaveTail = new Map();
+
+/**
+ * Serialize PATCH for the same job column so rapid toggles don't reorder server writes.
+ * @param {number} jobIndex
+ * @param {() => Promise<void>} task
+ */
+function chainJobSave(jobIndex, task) {
+  const prev = jobSaveTail.get(jobIndex) ?? Promise.resolve();
+  const next = prev.then(() => task()).finally(() => {
+    if (jobSaveTail.get(jobIndex) === next) jobSaveTail.delete(jobIndex);
+  });
+  jobSaveTail.set(jobIndex, next);
+  return next;
+}
 
 /** Same rem for job column width and body row height → square matrix cells; wider = more space between rotated job headers. */
 const JOB_MATRIX_CELL_REM = 1.4;
@@ -121,6 +153,26 @@ const skillRowsForMatrix = computed(() => {
   return rows;
 });
 
+const hasAnyMatrixLink = computed(() => {
+  const map = skillsMap.value;
+  for (const job of jobsList.value) {
+    if (getSelectedSkillIdsForJob(job, map).size > 0) return true;
+  }
+  return false;
+});
+
+const canClearGrid = computed(
+  () =>
+    canEdit
+    && props.resumeId
+    && props.resumeId !== 'default'
+    && !saving.value
+    && pendingToggleSaves.value === 0
+    && jobsList.value.length > 0
+    && skillRowsForMatrix.value.length > 0
+    && hasAnyMatrixLink.value
+);
+
 const crossGridColumnsStyle = computed(() => {
   const nj = jobsList.value.length;
   if (nj === 0) return {};
@@ -130,17 +182,13 @@ const crossGridColumnsStyle = computed(() => {
   };
 });
 
-const crossHeaderGridStyle = computed(() => ({
-  ...crossGridColumnsStyle.value,
-  gridTemplateRows: `minmax(${JOB_HEADER_ROW_MIN_REM}rem, auto)`,
-  '--rde-sj-header-row-min': `${JOB_HEADER_ROW_MIN_REM}rem`,
-}));
-
-const crossBodyGridStyle = computed(() => {
+/** Single grid: first row = header, remaining rows = skill body rows. */
+const matrixGridStyle = computed(() => {
   const ns = skillRowsForMatrix.value.length;
   return {
     ...crossGridColumnsStyle.value,
-    gridTemplateRows: `repeat(${Math.max(ns, 1)}, minmax(${JOB_MATRIX_CELL_REM}rem, auto))`,
+    gridTemplateRows: `minmax(${JOB_HEADER_ROW_MIN_REM}rem, auto) repeat(${Math.max(ns, 1)}, minmax(${JOB_MATRIX_CELL_REM}rem, auto))`,
+    '--rde-sj-header-row-min': `${JOB_HEADER_ROW_MIN_REM}rem`,
     '--rde-sj-cell-size': `${JOB_MATRIX_CELL_REM}rem`,
   };
 });
@@ -195,44 +243,144 @@ function isMatrixCellSelected(job, skillId) {
 function matrixCellInteractive(job) {
   return (
     canEdit
-    && !saving.value
     && props.resumeId
     && props.resumeId !== 'default'
     && job != null
   );
 }
 
-async function onMatrixCellClick(jobIndex, skillRow) {
+/** @param {string[]} skillIDs @param {Record<string, { name?: string }>} map */
+function jobSkillsRecordFromMap(skillIDs, map) {
+  const o = {};
+  for (const sid of skillIDs) {
+    const skill = map[sid];
+    o[sid] = skill?.name ?? sid;
+  }
+  return o;
+}
+
+/** Replace shallowRef jobs list entry so the matrix updates without a full getResumeData round-trip. */
+function patchJobRowLocal(jobIndex, skillIDs, descriptionIfWork) {
+  const list = jobs.value.map((j, i) => {
+    if (i !== jobIndex) return j;
+    const plain = j instanceof ResumeJob ? j.toPlainObject() : { ...j };
+    plain.skillIDs = [...skillIDs];
+    if (descriptionIfWork !== undefined) plain.Description = descriptionIfWork;
+    const patched = ResumeJob.fromPlainObject(plain);
+    // Constructor strips durationMonths (not persisted); recompute so skill-row month sums stay correct.
+    patched.durationMonths = jobTenureMonthsInclusive(patched.start, patched.end);
+    return patched;
+  });
+  jobs.value = list;
+}
+
+function onMatrixCellClick(jobIndex, skillRow) {
   const job = jobs.value[jobIndex];
   if (!matrixCellInteractive(job)) return;
+  const resumeId = props.resumeId;
   const map = skillsMap.value;
   const next = new Set(getSelectedSkillIdsForJob(job, map));
   if (next.has(skillRow.id)) next.delete(skillRow.id);
   else next.add(skillRow.id);
   const skillIDs = [...next];
   const newSkills = skillIDs.filter((id) => !initialSkillKeys.value.has(id));
+  const rawDesc = String(job?.Description ?? job?.description ?? '');
+  const isEdu = isEducationDerivedJob(job);
+  const alignedDesc = !isEdu ? filterDescriptionBracketsToSkillSelection(rawDesc, next, map) : rawDesc;
+  const educationKey = isEdu ? educationKeyOf(job) : null;
+  if (isEdu && !educationKey) {
+    reportError(
+      new Error('Education row has no educationKey.'),
+      '[SkillJobsTab] Cannot save job–skill link',
+      ''
+    );
+    alert('Cannot save: education row has no education key.');
+    return;
+  }
+
+  let nextMap = skillsMap.value;
+  if (newSkills.length) {
+    nextMap = { ...skillsMap.value };
+    for (const n of newSkills) {
+      if (!nextMap[n]) nextMap[n] = { name: n };
+    }
+    skillsMap.value = nextMap;
+    initialSkillKeys.value = new Set(Object.keys(nextMap));
+  }
+  patchJobRowLocal(jobIndex, skillIDs, isEdu ? undefined : alignedDesc);
+  emit('saved', {
+    jobIndex,
+    skillIDs,
+    jobSkills: jobSkillsRecordFromMap(skillIDs, nextMap),
+  });
+
+  pendingToggleSaves.value++;
+  chainJobSave(jobIndex, async () => {
+    try {
+      if (isEdu && educationKey) {
+        await updateEducationJobSkills(resumeId, educationKey, skillIDs, newSkills);
+      } else {
+        await updateJobSkills(resumeId, jobIndex, skillIDs, newSkills);
+        if (alignedDesc !== rawDesc) {
+          await api.updateJob(resumeId, jobIndex, { Description: alignedDesc });
+        }
+      }
+    } catch (err) {
+      reportError(err, '[SkillJobsTab] Failed to save job–skill link', 'Refetching resume data to resync');
+      try {
+        const data = await api.getResumeData(resumeId);
+        jobs.value = jobsArray(data.jobs);
+        skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
+        initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
+      } catch (e2) {
+        reportError(e2, '[SkillJobsTab] Refetch after toggle save failed', '');
+      }
+      alert('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      pendingToggleSaves.value--;
+    }
+  });
+}
+
+async function onClearGrid() {
+  if (!canClearGrid.value) return;
+  if (!window.confirm('Clear all job–skill links for this resume? This cannot be undone from here.')) {
+    return;
+  }
+  const map = skillsMap.value;
   saving.value = true;
   try {
-    if (isEducationDerivedJob(job)) {
-      const ek = educationKeyOf(job);
-      if (!ek) throw new Error('Education row has no educationKey.');
-      await updateEducationJobSkills(props.resumeId, ek, skillIDs, newSkills);
-    } else {
-      await updateJobSkills(props.resumeId, jobIndex, skillIDs, newSkills);
-      const rawDesc = String(job?.Description ?? job?.description ?? '');
-      const alignedDesc = filterDescriptionBracketsToSkillSelection(rawDesc, next, map);
-      if (alignedDesc !== rawDesc) {
-        await api.updateJob(props.resumeId, jobIndex, { Description: alignedDesc });
+    for (let ji = 0; ji < jobs.value.length; ji++) {
+      const row = jobs.value[ji];
+      if (isEducationDerivedJob(row)) {
+        const ek = educationKeyOf(row);
+        if (!ek) continue;
+        await updateEducationJobSkills(props.resumeId, ek, [], []);
+      } else {
+        await updateJobSkills(props.resumeId, ji, [], []);
+        const rawDesc = String(row?.Description ?? row?.description ?? '');
+        const alignedDesc = filterDescriptionBracketsToSkillSelection(rawDesc, new Set(), map);
+        if (alignedDesc !== rawDesc) {
+          await api.updateJob(props.resumeId, ji, { Description: alignedDesc });
+        }
       }
     }
     const data = await api.getResumeData(props.resumeId);
     jobs.value = jobsArray(data.jobs);
     skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
     initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
-    emit('saved', { jobIndex, skillIDs });
+    emit('saved', { clearAllJobSkillLinks: true });
   } catch (err) {
-    reportError(err, '[SkillJobsTab] Failed to save job–skill link', '');
-    alert('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
+    reportError(err, '[SkillJobsTab] Clear all grid cells failed', 'Refetching resume data to resync');
+    try {
+      const data = await api.getResumeData(props.resumeId);
+      jobs.value = jobsArray(data.jobs);
+      skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
+      initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
+    } catch (e2) {
+      reportError(e2, '[SkillJobsTab] Clear all: refetch after error failed', '');
+    }
+    alert('Failed to clear: ' + (err instanceof Error ? err.message : String(err)));
   } finally {
     saving.value = false;
   }
@@ -312,57 +460,47 @@ watch(
   max-width: 100%;
 }
 
-/*
- * Cartesian grid: columns = jobs; header row fixed, body = skills × jobs (scrolls).
- */
-.rde-skill-jobs-cross-frame {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
-  max-width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 4px;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.rde-sj-header-strip {
-  display: grid;
-  flex: 0 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-  gap: 1px;
-  padding: 0;
-  background: rgba(255, 255, 255, 0.14);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  z-index: 1;
-}
 
 .rde-sj-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  /* Block scroll chaining to .rde-body; damp rubber-band at top/bottom (macOS trackpad / touch) */
   overscroll-behavior-x: contain;
   overscroll-behavior-y: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
 }
 
-.rde-sj-body-grid {
+/* One grid — header row + all skill rows — so columns are always shared. */
+.rde-sj-matrix-grid {
   display: grid;
-  width: 100%;
+  min-width: min-content;
   box-sizing: border-box;
   gap: 1px;
-  padding: 0;
   background: rgba(255, 255, 255, 0.14);
-  min-width: min-content;
+}
+
+/* Header cells stick to the top of the scroll viewport. */
+.rde-sj-corner,
+.rde-sj-head-job {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .rde-sj-corner {
+  position: relative;
+  box-sizing: border-box;
   background: rgba(20, 24, 32, 0.92);
   min-height: var(--rde-sj-header-row-min, 4.35rem);
+}
+
+.rde-sj-corner .rde-sj-clear {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
 }
 
 .rde-sj-head-job {
@@ -441,5 +579,23 @@ watch(
   line-height: 1;
   user-select: none;
   max-width: none;
+}
+
+.rde-btn.rde-sj-clear {
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: rgba(232, 80, 80, 0.2);
+  color: #f5a5a5;
+  border: 1px solid rgba(232, 100, 100, 0.45);
+  cursor: pointer;
+}
+.rde-btn.rde-sj-clear:hover:not(:disabled) {
+  background: rgba(232, 80, 80, 0.35);
+  color: #fff;
+}
+.rde-btn.rde-sj-clear:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 </style>

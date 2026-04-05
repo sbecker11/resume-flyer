@@ -467,7 +467,12 @@ export function useCardsController() {
         // Calculate duration-based height (equivalent to setGeometry)
         try {
             // Re-parse the dates for height calculation (need both start and end)
-            const jobStartDate = dateUtils.parseFlexibleDateString(job.start || job.startDate)
+            const rawStart = job.start || job.startDate;
+            if (!rawStart) {
+                console.warn(`[CardsController] Skipping height calculation for job ${jobNumber}: no start date`);
+                // fall through to card content setup below
+            } else {
+            const jobStartDate = dateUtils.parseFlexibleDateString(rawStart)
             const jobEndDate = (job.end === "CURRENT_DATE" || !job.end) ? new Date() : dateUtils.parseFlexibleDateString(job.end)
             
             // Initialize scene position variables
@@ -534,9 +539,9 @@ export function useCardsController() {
             } else {
                 console.warn(`[CardsController] Could not calculate height for job ${jobNumber}: missing dates or timeline not ready`)
             }
+            } // end rawStart else
         } catch (error) {
             console.error(`[CardsController] Error calculating height for job ${jobNumber}:`, error)
-            throw error
         }
 
         // Add comprehensive content including job number and description
@@ -545,7 +550,7 @@ export function useCardsController() {
         const hasSkills = job['job-skills'] && Object.keys(job['job-skills']).length > 0;
         
         // Parse dates once at the top level for use throughout the function
-        const originalJobStartDate = dateUtils.parseFlexibleDateString(job.start || job.startDate)
+        const originalJobStartDate = (job.start || job.startDate) ? dateUtils.parseFlexibleDateString(job.start || job.startDate) : null
         const originalJobEndDate = (job.end === "CURRENT_DATE" || (job.end && String(job.end).toLowerCase().includes('present')) || !job.end) ? new Date() : dateUtils.parseFlexibleDateString(job.end)
         const isEndPresent = !job.end || job.end === 'CURRENT_DATE' || (typeof job.end === 'string' && job.end.toLowerCase().includes('present'))
         

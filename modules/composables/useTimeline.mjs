@@ -16,12 +16,12 @@ function computeBoundsFromJobs(jobsData) {
     if (!jobsData || !Array.isArray(jobsData) || jobsData.length === 0) return null;
     let earliestStartDate = null;
     for (const job of jobsData) {
+        if (!job.start) continue;
         try {
             const startDate = dateUtils.parseFlexibleDateString(job.start);
             if (!earliestStartDate || startDate < earliestStartDate) earliestStartDate = startDate;
         } catch (e) {
             console.error('Error parsing job start date:', job.start, e);
-            throw e;
         }
     }
     if (!earliestStartDate) return null;

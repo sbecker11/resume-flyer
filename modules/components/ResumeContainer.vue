@@ -473,19 +473,26 @@ async function handleDetailsSaved(payload) {
     emit('resume-selected', props.currentResumeId);
     return;
   }
+  if (payload?.clearAllJobSkillLinks === true) {
+    emit('resume-selected', props.currentResumeId);
+    return;
+  }
   if (payload == null || payload.jobIndex == null) return;
-  const { jobIndex, skillIDs } = payload;
+  const { jobIndex, skillIDs, jobSkills: payloadJobSkills } = payload;
   const jobs = getGlobalJobsDependency().getJobsData();
   if (!jobs[jobIndex]) return;
   const oldSkillIDs = jobs[jobIndex].skillIDs || [];
   jobs[jobIndex].skillIDs = skillIDs;
   try {
-    const resumeData = await getResumeData(props.currentResumeId);
-    const skillsMap = resumeData?.skills || {};
-    const newJobSkills = {};
-    for (const sid of skillIDs) {
-      const skill = skillsMap[sid];
-      newJobSkills[sid] = skill?.name ?? sid;
+    let newJobSkills = payloadJobSkills;
+    if (!newJobSkills || typeof newJobSkills !== 'object') {
+      const resumeData = await getResumeData(props.currentResumeId);
+      const skillsMap = resumeData?.skills || {};
+      newJobSkills = {};
+      for (const sid of skillIDs) {
+        const skill = skillsMap[sid];
+        newJobSkills[sid] = skill?.name ?? sid;
+      }
     }
     jobs[jobIndex]['job-skills'] = newJobSkills;
     window.dispatchEvent(new CustomEvent('job-skills-updated', {

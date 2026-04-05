@@ -714,7 +714,6 @@ app.post('/api/resumes/:id/jobs', async (req, res) => {
         const newJob = {
             employer: '',
             role: '',
-            title: '',
             start: '',
             end: '',
             Description: '',
