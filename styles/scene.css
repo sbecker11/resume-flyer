@@ -102,9 +102,10 @@ body .biz-resume-div,
     cursor: pointer;
     pointer-events: auto;
     font-family: Arial, sans-serif;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
+    padding-bottom: 8px;
 }
 
 /* Skills section inside biz-card-div: expands to fill remaining card height; card grows to fit all skills */
@@ -119,17 +120,46 @@ body .biz-resume-div,
     white-space: normal;
 }
 
-/* Skill title spans: anchor-style links that select the corresponding skill card */
-.biz-card-div .biz-card-skill-title {
-    color: var(--data-link-color, var(--data-foreground-color));
-    text-decoration: underline;
+/* Skill title spans: anchor-style links that select the corresponding skill card.
+   Color tracks the palette high-contrast foreground for every card state. */
+.biz-card-div .biz-card-skill-title,
+.biz-resume-div .biz-card-skill-title,
+body .biz-resume-div .biz-card-skill-title,
+#resume-container .biz-resume-div .biz-card-skill-title,
+#resume-content-listing .biz-resume-div .biz-card-skill-title {
+    color: var(--data-link-color, var(--data-foreground-color)) !important;
+    text-decoration: none;
     cursor: pointer;
     display: inline;
 }
-.biz-card-div .biz-card-skill-title:hover {
+/* Hovered card state */
+.biz-card-div.hovered .biz-card-skill-title,
+.biz-resume-div.hovered .biz-card-skill-title,
+body .biz-resume-div.hovered .biz-card-skill-title,
+#resume-container .biz-resume-div.hovered .biz-card-skill-title,
+#resume-content-listing .biz-resume-div.hovered .biz-card-skill-title {
+    color: var(--data-link-color-hovered, var(--data-foreground-color-hovered)) !important;
+}
+/* Selected card state */
+.biz-card-div.clone .biz-card-skill-title,
+.biz-resume-div.selected .biz-card-skill-title,
+body .biz-resume-div.selected .biz-card-skill-title,
+#resume-container .biz-resume-div.selected .biz-card-skill-title,
+#resume-content-listing .biz-resume-div.selected .biz-card-skill-title {
+    color: var(--data-link-color-selected, var(--data-foreground-color-selected)) !important;
+}
+/* Individual skill-title span selected (skill card selected from any context) */
+.biz-card-skill-title.selected {
+    color: var(--data-link-color-selected, var(--data-foreground-color-selected)) !important;
+    font-weight: bold;
+    text-decoration: none;
+}
+.biz-card-div .biz-card-skill-title:hover,
+.biz-resume-div .biz-card-skill-title:hover {
     opacity: 0.8;
 }
-.biz-card-div .biz-card-skill-title:focus-visible {
+.biz-card-div .biz-card-skill-title:focus-visible,
+.biz-resume-div .biz-card-skill-title:focus-visible {
     outline: 2px solid var(--data-link-color, #2563eb);
     outline-offset: 2px;
 }
@@ -306,6 +336,14 @@ body .biz-resume-div.selected a,
 .skill-card-div.clone[data-icon-set-selected-variant="white"] .img-icon {
     filter: invert(1);
 }
+/* Skill id tag: de-emphasised monospace slug shown before the display name.
+   color: inherit ensures it always tracks the parent's high-contrast foreground.
+   Used in cDiv/rDiv HTML (skill-id-tag) and Vue editor templates (rde-skill-id-tag). */
+.skill-id-tag,
+.rde-skill-id-tag {
+    display: none;
+}
+
 /* Match resume-flyer .tag-link (skill title): bold, underlined */
 .skill-card-div .skill-card-label {
     display: inline-block;
@@ -315,7 +353,7 @@ body .biz-resume-div.selected a,
     overflow: hidden;
     text-overflow: ellipsis;
     font-weight: 900;
-    text-decoration: underline;
+    text-decoration: none;
     line-height: 1.2;
     text-align: left;
 }
@@ -324,7 +362,7 @@ body .biz-resume-div.selected a,
 }
 .skill-card-div .skill-card-years {
     font-size: 12px;
-    text-decoration: underline;
+    text-decoration: none;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -824,4 +862,133 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
     transition: opacity 0.15s ease-out;
 }
 
+/* ── Skill info modal ─────────────────────────────────────────────────────── */
+.skill-info-modal-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid white;
+    background-color: var(--button-bg-color, #555);
+    color: var(--button-text-color, white);
+    cursor: pointer;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 0;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    z-index: 2;
+}
+/* Show on selected skill-card-div (.clone) and selected skill-resume-div (.selected) */
+.skill-card-div.clone .skill-info-modal-btn,
+.skill-resume-div.selected .skill-info-modal-btn {
+    display: flex;
+}
+/* On skill-resume-div the × close button occupies top-right; shift ? to its left */
+.skill-resume-div .skill-info-modal-btn,
+.appended-skill-resume-div .skill-info-modal-btn {
+    right: 30px;
+}
 
+#skill-info-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+}
+#skill-info-modal.open {
+    display: flex;
+}
+.skill-info-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    /* backdrop click intentionally does nothing — close via × only */
+    pointer-events: none;
+}
+.skill-info-modal-box {
+    position: relative;
+    /* Normal (unselected) state — matches .skill-card-div base.
+       Hard fallbacks because --data-* vars are scoped to card elements, not :root. */
+    background-color: var(--data-background-color, #2a1a3e);
+    color: var(--data-foreground-color, #e8e0f0);
+    border: 1px solid var(--data-normal-inner-border-color, #6a3a8a);
+    outline: 1px solid var(--data-normal-outer-border-color, #4a2a6a);
+    border-radius: 12px;
+    transition: background-color 0.2s, color 0.2s, border 0.2s, outline 0.2s;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+    /* Layout */
+    width: 420px;
+    max-width: 92vw;
+    min-height: 80px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 20px 24px 20px 20px;
+    resize: vertical;
+    z-index: 1;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+}
+.skill-info-modal-box:hover {
+    /* Hovered (unselected) state — matches .skill-card-div:not(.clone).hovered */
+    background-color: var(--data-background-color-hovered, #3a2a4e);
+    color: var(--data-foreground-color-hovered, #ffffff);
+    border: 1px solid #0028fb;
+    outline: 2px solid #929292;
+    box-shadow: none;
+}
+.skill-info-modal-close {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--data-foreground-color, #c00);
+    background: white;
+    color: #c00;
+    font-size: 16px;
+    line-height: 1;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+}
+.skill-info-modal-close:hover {
+    color: #f00;
+    border-color: #f00;
+    background: rgba(255, 255, 255, 0.9);
+}
+.skill-info-modal-title {
+    margin: 0 28px 12px 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: inherit;
+}
+.skill-info-modal-body {
+    font-size: 13px;
+    line-height: 1.6;
+    color: inherit;
+}
+.skill-info-summary {
+    margin: 0;
+}
+.skill-info-loading,
+.skill-info-error {
+    opacity: 0.7;
+    font-style: italic;
+}
+.skill-info-error {
+    color: #f38ba8;
+}

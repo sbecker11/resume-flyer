@@ -35,7 +35,7 @@
     "open-chrome": "node scripts/open-app.mjs",
     "preview": "vite preview",
     "build": "vite build",
-    "kill-listeners": "pkill -f 'node server.mjs' && pkill -f 'nodemon' && pkill -f 'vite' || true",
+    "kill-listeners": "pkill -f 'node server.mjs'; pkill -f 'nodemon'; pkill -f 'vite'; for port in 3001 3002 3003 5174 5175 5176; do lsof -ti:$port | xargs kill -9 2>/dev/null; done; true",
     "clean": "npm run kill-listeners && rm -rf node_modules dist .vite npm-debug.log* && npm cache clean --force",
     "test": "vitest run --config vitest.config.js && (cd color-palette-utils-ts && npm test)",
     "test:watch": "vitest --config vitest.config.js",

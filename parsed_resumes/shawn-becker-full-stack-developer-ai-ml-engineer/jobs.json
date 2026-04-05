@@ -10,7 +10,7 @@
     "css RGB": "#116611",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Hands-on technical consulting for Fortune 500 clients including , , , , , and \u2014architecting systems, full-stack applications, and data pipelines on the [AWS] platform. \u2022 Built production [RAG] pipelines using [LangChain] and [ChromaDB] for semantic search and retrieval-augmented generation, with prompt engineering, error analysis, and reliability controls. \u2022 Developed campaign asset automation system integrating [DALL-E 3] for programmatic social media ad generation with prompt engineering and quality controls. \u2022 Created \"Flock of Postcards\" sbecker11.github.io/flock-of-postcards\u2014an interactive [JavaScript] visualization with 3D motion parallax, animated transitions, depth-of-field effects, and a data-driven [Excel]-to-[JavaScript] content pipeline. 310 commits across 11 iterative versions. \u2022 Built Color Palette Maker github.com/sbecker11/color-palette-maker-react\u2014a [React] [Node.js]/[Python] app with a multi-stage [CV] pipeline: 5-strategy [OpenCV] region detection, region-masked [K-means clustering], and [CIEDE2000] perceptual color matching. Full test suite, Dockerized, [CI/CD], with [Docker Compose] and [Kubernetes] migration plans. \u2022 [GitHub Actions] for automated end-to-end [CI/CD] pipelines; [AWS Glue] and for data cleansing, lineage tracking, and governance.",
+    "Description": "• Hands-on technical consulting for Fortune 500 clients including , , , , , and —architecting systems, full-stack applications, and data pipelines on the [AWS] platform. • Built production [RAG] pipelines using [LangChain] and [ChromaDB] for semantic search and retrieval-augmented generation, with prompt engineering, error analysis, and reliability controls. • Developed campaign asset automation system integrating [DALL-E 3] for programmatic social media ad generation with prompt engineering and quality controls. • Created \"Flock of Postcards\" sbecker11.github.io/flock-of-postcards—an interactive [JavaScript] visualization with 3D motion parallax, animated transitions, depth-of-field effects, and a data-driven [Excel]-to-[JavaScript] content pipeline. 310 commits across 11 iterative versions. • Built Color Palette Maker github.com/sbecker11/color-palette-maker-react—a [React] [Node.js]/[Python] app with a multi-stage [OpenCV] pipeline: 5-strategy [OpenCV] region detection, region-masked [K-means clustering], and [CIEDE2000] perceptual color matching. Full test suite, Dockerized, [CI/CD], with [Docker Compose] and [Kubernetes] migration plans. • [CI/CD GitHub Actions] for automated end-to-end [CI/CD] pipelines; [AWS Glue] and for data cleansing, lineage tracking, and governance.",
     "skillIDs": [
       "aws",
       "rag",
@@ -28,12 +28,11 @@
       "ci-cd",
       "docker-compose",
       "kubernetes",
-      "AWS Glue",
+      "aws-glue",
       "ai-ml",
       "aws-s3",
       "business-requirements",
       "certified-scrummaster",
-      "ci-cd-github-actions",
       "computer-vision",
       "coverage",
       "data-modeling",
@@ -63,13 +62,13 @@
       "vitest",
       "vue-js",
       "vuetify",
-      "CAD/CAM/CAE",
-      "Computer Graphics",
-      "3D splotch rendering",
-      "Chirplet visualizations",
-      "Color space transformations",
-      "Machine Learning",
-      "Natural Language Processing"
+      "computer-graphics",
+      "color-space-transformations",
+      "machine-learning",
+      "natural-language-processing",
+      "ci-cd-github-actions",
+      "aws-fargate",
+      "aws-ecs"
     ],
     "jobID": "0"
   },
@@ -84,7 +83,7 @@
     "css RGB": "#0069AC",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Refactored and extended legacy [Python]/[Django] [REST APIs] for Adobe's global [SEO] platform, reducing technical debt and improving maintainability within the Data Analytics division. \u2022 Developed new [REST API] endpoints backed by [PostgreSQL] on [AWS Aurora], with comprehensive [Python] unit tests to ensure reliability and code coverage. \u2022 Built admin tooling to streamline [SEO] platform management workflows, collaborating with cross-functional product and analytics teams. \u2022 Coordinated with Adobe's system security team to configure [AWS IAM] role access for development and testing of platform services.",
+    "Description": "• Refactored and extended legacy [Python]/[Django] [REST API] for Adobe's global [SEO] platform, reducing technical debt and improving maintainability within the Data Analytics division. • Developed new [REST API] endpoints backed by [PostgreSQL] on [AWS Aurora], with comprehensive [Python] unit tests to ensure reliability and code coverage. • Built admin tooling to streamline [SEO] platform management workflows, collaborating with cross-functional product and analytics teams. • Coordinated with Adobe's system security team to configure [AWS IAM] role access for development and testing of platform services.",
     "skillIDs": [
       "python",
       "django",
@@ -104,13 +103,13 @@
       "etl",
       "excel",
       "aws",
-      "AWS Glue",
+      "aws-glue",
       "jira",
       "javascript",
       "restful-api-design",
       "sql",
       "pypi",
-      "the-cigna-group"
+      "rest-api"
     ],
     "jobID": "1"
   },
@@ -125,14 +124,13 @@
     "css RGB": "#006688",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Created [dbt]-validated [SQL] code for data cleansing and data lake ingestion using [AWS Redshift], [Glue], [Airflow], [S3], and [Lambda]. \u2022 Used [Amazon Glue] to track schema changes and revise [Redshift] external views; created custom views for analysis and reporting. \u2022 Utilized [Python] to consolidate multiple spreadsheets of industrial automation data into final, client-ready reports. \u2022 Documented processes to build, test, and deploy data pipeline components for in-house [ETL] framework.",
+    "Description": "• Created [dbt]-validated [SQL] code for data cleansing and data lake ingestion using [AWS Redshift], [AWS Glue], [Airflow], [AWS S3], and [AWS Lambda]. • Used [AWS Glue] to track schema changes and revise [Redshift] external views; created custom views for analysis and reporting. • Utilized [Python] to consolidate multiple spreadsheets of industrial automation data into final, client-ready reports. • Documented processes to build, test, and deploy data pipeline components for in-house [ETL] framework.",
     "skillIDs": [
       "dbt",
       "sql",
       "aws-redshift",
-      "AWS Glue",
+      "aws-glue",
       "airflow",
-      "amazon-glue",
       "redshift",
       "python",
       "etl",
@@ -162,9 +160,10 @@
       "system-integrations",
       "system-migrations",
       "fannie-mae",
-      "Standards Compliance",
+      "standards-compliance",
       "vite",
-      "vitest"
+      "vitest",
+      "react-testing-library"
     ],
     "jobID": "2"
   },
@@ -179,7 +178,7 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Modernized apps via [Jenkins] [CI/CD] pipeline upgrade, integrating [SetupTools], [Artifactory]/[PyPI], [SonarQube], and [Xray]. \u2022 Created custom application generator producing templates with [Terraform] and pipeline-related files for new applications. \u2022 Engineered [Python] [REST API] integration enabling credential retrieval from [CyberArk]'s identity management platform using mutual [SSL/TLS] authentication, reducing password rollover costs by 95%. \u2022 Investigated migration of legacy on-prem [ETL] pipeline components to serverless [AWS] cloud using [Kafka], [Airflow], and .",
+    "Description": "• Modernized apps via [CI/CD Jenkins] [CI/CD] pipeline upgrade, integrating [SetupTools], [Artifactory]/[PyPI], [SonarQube], and [Xray]. • Created custom application generator producing templates with [Terraform] and pipeline-related files for new applications. • Engineered [Python] [REST API] integration enabling credential retrieval from [CyberArk]'s identity management platform using mutual [SSL/TLS] authentication, reducing password rollover costs by 95%. • Investigated migration of legacy on-prem [ETL] pipeline components to serverless [AWS] cloud using [Kafka], [Airflow], and .",
     "skillIDs": [
       "ci-cd",
       "setuptools",
@@ -196,7 +195,6 @@
       "kafka",
       "airflow",
       "agile-scrum",
-      "amazon-glue",
       "aws-redshift",
       "aws-s3",
       "ci-cd-github-actions",
@@ -206,10 +204,13 @@
       "docker-compose",
       "excel",
       "aws-iam",
-      "AWS Glue",
+      "aws-glue",
       "jira",
       "javascript",
-      "sql"
+      "sql",
+      "ci-cd-jenkins",
+      "rest-api",
+      "the-cigna-group"
     ],
     "jobID": "3"
   },
@@ -224,7 +225,7 @@
     "css RGB": "#4400cd",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Integrated [Segment CDP] with user in-game telemetry, purchase history, and [Salesforce] profiles for unified customer identity resolution across marketing platforms. \u2022 Built segmented user population groupings for targeted advertising campaigns, with audience sharing to [Google Ads], [YouTube], and advertising partners. \u2022 Utilized [Python] to integrate with third-party marketing platforms using [REST APIs] and direct connections to [Google BigQuery], [AWS] services, [Salesforce], and [Snowflake]. \u2022 Created status dashboards using [DataDog] and ; implemented integrations with [Jenkins] and [ZenDesk].",
+    "Description": "• Integrated [Segment CDP] with user in-game telemetry, purchase history, and [Salesforce] profiles for unified customer identity resolution across marketing platforms. • Built segmented user population groupings for targeted advertising campaigns, with audience sharing to [Google Ads], [YouTube], and advertising partners. • Utilized [Python] to integrate with third-party marketing platforms using [REST API] and direct connections to [Google BigQuery], [AWS] services, [Salesforce], and [Snowflake]. • Created status dashboards using [DataDog] and ; implemented integrations with [CI/CD Jenkins] and [ZenDesk].",
     "skillIDs": [
       "segment-cdp",
       "salesforce",
@@ -246,7 +247,7 @@
       "docker",
       "etl",
       "excel",
-      "AWS Glue",
+      "aws-glue",
       "aws-iam",
       "identity-resolution",
       "jira",
@@ -270,12 +271,12 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Designed and deployed a production [CNN]-based video classification system using [PyTorch] on [AWS SageMaker] for automated content tagging, enabling a new revenue opportunity through frame-level categorization. \u2022 Conducted data exploration with [ML] algorithms using [Jupyter], [Python], [Pandas], [NumPy], [Scikit-Learn], and [Keras]; visualized results with and [Plotly]. \u2022 Created [RESTful APIs] to exchange data with external e-commerce and advertising partners. \u2022 Developed business intelligence reports using [Looker] and with [Snowflake] and [Redshift] for sales and finance reporting.",
+    "Description": "• Designed and deployed a production [CNN]-based video classification system using [PyTorch] on [AWS SageMaker] for automated content tagging, enabling a new revenue opportunity through frame-level categorization. • Conducted data exploration with [AI/ML] algorithms using [Jupyter], [Python], [Pandas], [NumPy], [Scikit-Learn], and [Keras]; visualized results with and [Plotly]. • Created [REST API] to exchange data with external e-commerce and advertising partners. • Developed business intelligence reports using [Looker] and with [Snowflake] and [Redshift] for sales and finance reporting.",
     "skillIDs": [
       "cnn",
       "pytorch",
       "aws-sagemaker",
-      "Machine Learning",
+      "machine-learning",
       "jupyter",
       "python",
       "pandas",
@@ -303,7 +304,10 @@
       "k-means-clustering",
       "sql",
       "pypi",
-      "tableau"
+      "tableau",
+      "ai-ml",
+      "rest-api",
+      "amazon-quicksight"
     ],
     "jobID": "5"
   },
@@ -318,7 +322,7 @@
     "css RGB": "#800080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Conducted advanced statistical exploration of real-estate sales data using [Python], [Pandas], [NumPy], [SciPy], and [Scikit-learn]. \u2022 Developed batch automation program transforming months of manual project duplication and text replacement into minutes. \u2022 Implemented [CI/CD] pipeline using [GitHub Actions] with [Coverage], [SonarQube], and [Xray]; used [Terraform] and [Helm] for environment management. \u2022 Managed [RESTful APIs] for data exchange with real-estate data teams and customers.",
+    "Description": "• Conducted advanced statistical exploration of real-estate sales data using [Python], [Pandas], [NumPy], [SciPy], and [Scikit-learn]. • Developed batch automation program transforming months of manual project duplication and text replacement into minutes. • Implemented [CI/CD] pipeline using [CI/CD GitHub Actions] with [Coverage], [SonarQube], and [Xray]; used [Terraform] and for environment management. • Managed [REST API] for data exchange with real-estate data teams and customers.",
     "skillIDs": [
       "python",
       "pandas",
@@ -329,7 +333,6 @@
       "sonarqube",
       "xray",
       "terraform",
-      "helm",
       "agile-scrum",
       "ci-cd-jenkins",
       "dimensional-modeling",
@@ -343,7 +346,10 @@
       "jira",
       "sql",
       "postgresql",
-      "pypi"
+      "pypi",
+      "ci-cd-github-actions",
+      "rest-api",
+      "artifactory"
     ],
     "jobID": "6"
   },
@@ -358,7 +364,7 @@
     "css RGB": "#800000",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Redesigned and optimized site registration and login workflows by designing wireframes and collaborating with [UX] designers for improved conversion and usability. \u2022 Developed reusable [Vue.js]/[Vuetify] components with [Node.js] and [SCSS] for improved functionality; documented and launched new packages for company-wide use. \u2022 Internationalized web content and unified customer data using [Adobe Experience Cloud], , and [XDM] for personalized global user experiences.",
+    "Description": "• Redesigned and optimized site registration and login workflows by designing wireframes and collaborating with [UX] designers for improved conversion and usability. • Developed reusable [Vue.js]/[Vuetify] components with [Node.js] and [SCSS] for improved functionality; documented and launched new packages for company-wide use. • Internationalized web content and unified customer data using [Adobe Experience Cloud], , and [XDM] for personalized global user experiences.",
     "skillIDs": [
       "ux",
       "vue-js",
@@ -380,7 +386,8 @@
       "uml-diagrams",
       "use-cases",
       "user-stories",
-      "a-b-testing"
+      "a-b-testing",
+      "numpy"
     ],
     "jobID": "7"
   },
@@ -395,7 +402,7 @@
     "css RGB": "#ff4500",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Designed and deployed an [AWS] data pipeline for the Vela healthcare platform, providing messaging, communication, and collaboration tools for the healthcare industry\n\u2022 Defined [RESTful APIs] for daily caregiver questionnaire submission and data retrieval through web applications\n\u2022 Managed data ingress by queueing [API Gateway] messages via [Kinesis] streams, transforming to [Parquet] in [S3], and processing with [PySpark] on for [Redshift] loading\n\u2022 Ensured privacy and encryption standards for [PII], [PHI], [PCI], Patient Data, [FHIR], and , as well as and [GDPR] compliance.",
+    "Description": "• Designed and deployed an [AWS] data pipeline for the Vela healthcare platform, providing messaging, communication, and collaboration tools for the healthcare industry\n• Defined [REST API] for daily caregiver questionnaire submission and data retrieval through web applications\n• Managed data ingress by queueing [API Gateway] messages via [Kinesis] streams, transforming to [Parquet] in [AWS S3], and processing with [PySpark] on for [Redshift] loading\n• Ensured privacy and encryption standards for [PII], [PHI], [PCI], Patient Data, [FHIR], and , as well as and [GDPR] compliance.",
     "skillIDs": [
       "aws",
       "api-gateway",
@@ -415,7 +422,7 @@
       "ci-cd-jenkins",
       "confluence",
       "data-modeling",
-      "AWS EMR",
+      "aws-emr",
       "etl",
       "excel",
       "aws-iam",
@@ -429,8 +436,15 @@
       "postgresql",
       "pypi",
       "python",
-      "Standards Compliance",
-      "tableau"
+      "standards-compliance",
+      "tableau",
+      "rest-api",
+      "restful-api-design",
+      "use-cases",
+      "user-stories",
+      "aws-ec2",
+      "aws-aurora",
+      "apache-spark"
     ],
     "jobID": "8"
   },
@@ -445,9 +459,9 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "\u2022 Spearheaded development of an [NLP]-based platform for user preference analysis from curated books, articles, websites, and quotes.\n\u2022 Used vectorization, eigenvector decomposition for dimensionality reduction, and [K-means] [Bayesian clustering] for collaborative filtering to find content and users with similar preferences.\n\u2022 Co-authored three patents for [NLP]-based recommendation systems using vector embeddings and cosine similarity.",
+    "Description": "• Spearheaded development of an [Natural Language Processing]-based platform for user preference analysis from curated books, articles, websites, and quotes.\n• Used vectorization, eigenvector decomposition for dimensionality reduction, and [K-means clustering] [Bayesian clustering] for collaborative filtering to find content and users with similar preferences.\n• Co-authored three patents for [Natural Language Processing]-based recommendation systems using vector embeddings and cosine similarity.",
     "skillIDs": [
-      "Natural Language Processing",
+      "natural-language-processing",
       "bayesian-clustering",
       "agile-scrum",
       "aws-s3",
@@ -469,7 +483,9 @@
       "scss",
       "springboot",
       "sql",
-      "technical-specifications"
+      "technical-specifications",
+      "rest-api",
+      "seo"
     ],
     "jobID": "9"
   },
@@ -484,7 +500,7 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Co-founded boutique consulting firm serving clients in entertainment, medical services, manufacturing, insurance, and cybersecurity including AMI, Coca-Cola Corp. Europe, Medical Services Corp., and Intrusic Cyber Security.\n\u2022 Identified profitable opportunities in product development and software engineering; negotiated budgets and milestones with C-level management.\n\u2022 Architected full-internet and low-bandwidth cache-and-sync solutions for enterprise systems with mobile devices.",
+    "Description": "• Co-founded boutique consulting firm serving clients in entertainment, medical services, manufacturing, insurance, and cybersecurity including AMI, Coca-Cola Corp. Europe, Medical Services Corp., and Intrusic Cyber Security.\n• Identified profitable opportunities in product development and software engineering; negotiated budgets and milestones with C-level management.\n• Architected full-internet and low-bandwidth cache-and-sync solutions for enterprise systems with mobile devices.",
     "skillIDs": [
       "ci-cd-jenkins"
     ],
@@ -495,7 +511,7 @@
     "role": "Technical Lead",
     "start": "2008-11",
     "end": "2011-11",
-    "Description": "\u2022 Managed client stakeholders of a workers' compensation services operation\n\u2022 Collaborated with division managers, CFO, and legal department\n\u2022 Optimized vendor selection processes across ten healthcare divisions for Medical Services Company (now One Call), boosting division profitability by 25%\n\u2022 Secured FHIR-compliant data flows across vendor integrations, reducing compliance exposure",
+    "Description": "• Managed client stakeholders of a workers' compensation services operation\n• Collaborated with division managers, CFO, and legal department\n• Optimized vendor selection processes across ten healthcare divisions for Medical Services Company (now One Call), boosting division profitability by 25%\n• Secured FHIR-compliant data flows across vendor integrations, reducing compliance exposure",
     "skillIDs": [
       "agile-scrum",
       "aws-s3",
@@ -512,7 +528,11 @@
       "technical-specifications",
       "uml-diagrams",
       "use-cases",
-      "user-stories"
+      "user-stories",
+      "pci",
+      "pii",
+      "phi",
+      "standards-compliance"
     ]
   },
   {
@@ -520,7 +540,7 @@
     "role": "Technical Lead",
     "start": "2006-11",
     "end": "2008-11",
-    "Description": "\u2022 Led the effort to modernize legacy ERP inventory management system for Coca-Cola's field service operations, cutting service truck inventory losses by 90%\n\u2022 Integrated enterprise service management workflows into existing infrastructure, enabling real-time inventory visibility for distributed field technicians using [Windows Mobile 5]",
+    "Description": "• Led the effort to modernize legacy ERP inventory management system for Coca-Cola's field service operations, cutting service truck inventory losses by 90%\n• Integrated enterprise service management workflows into existing infrastructure, enabling real-time inventory visibility for distributed field technicians using [Windows Mobile 5]",
     "skillIDs": [
       "agile-scrum",
       "business-requirements",
@@ -530,7 +550,10 @@
       "java",
       "iot",
       "stakeholder-management",
-      "technical-specifications"
+      "technical-specifications",
+      "windows-mobile-5",
+      "phi",
+      "sql-anywhere"
     ]
   },
   {
@@ -538,7 +561,7 @@
     "role": "CTO",
     "start": "2005-07",
     "end": "2006-11",
-    "Description": "\u2022 Led efforts to built mobile inventory management tools using and [SQL Anywhere] for domestic and international food distributors, enabling field workers to operate reliably in low-connectivity environments\n\u2022 Delivered a production-ready mobile platform that contributed to Eleven Systems' acquisition by Trimble, a leading GPS and geospatial solutions company",
+    "Description": "• Led efforts to built mobile inventory management tools using and [SQL Anywhere] for domestic and international food distributors, enabling field workers to operate reliably in low-connectivity environments\n• Delivered a production-ready mobile platform that contributed to Eleven Systems' acquisition by Trimble, a leading GPS and geospatial solutions company",
     "skillIDs": [
       "agile-scrum",
       "business-requirements",
@@ -547,7 +570,9 @@
       "java",
       "iot",
       "stakeholder-management",
-      "technical-specifications"
+      "technical-specifications",
+      "sql-anywhere",
+      "windows-mobile-5"
     ]
   },
   {
@@ -555,7 +580,7 @@
     "role": "Technical lead",
     "start": "2004-06",
     "end": "2005-07",
-    "Description": "\u2022 Designed and led implementation of a music usage tracking and royalty payout system using [Oracle] and [FileMaker Pro], creating an auditable record of all licensing activity\n\u2022 Eliminated ambiguity in royalty attribution, reducing litigation risk exposure by an estimated 99% and replacing a previously manual, error-prone reconciliation process",
+    "Description": "• Designed and led implementation of a music usage tracking and royalty payout system using [Oracle] and [FileMaker Pro], creating an auditable record of all licensing activity\n• Eliminated ambiguity in royalty attribution, reducing litigation risk exposure by an estimated 99% and replacing a previously manual, error-prone reconciliation process",
     "skillIDs": [
       "agile-scrum",
       "business-requirements",
@@ -563,7 +588,7 @@
       "javascript",
       "java",
       "stakeholder-management",
-      "Standards Compliance",
+      "standards-compliance",
       "technical-specifications",
       "sql"
     ]
@@ -573,9 +598,9 @@
     "role": "Technical lead",
     "start": "2003-07",
     "end": "2004-07",
-    "Description": "\u2022 Built and [PostgreSQL] back-end services for Rowe's digital jukebox network, hardening cash handling security and reducing cash losses by 90%\n\u2022 Delivered enhanced remote service and diagnostics capabilities, extending the operational lifespan and profitability of deployed jukebox hardware",
+    "Description": "• Built and [PostgreSQL] back-end services for Rowe's digital jukebox network, hardening cash handling security and reducing cash losses by 90%\n• Delivered enhanced remote service and diagnostics capabilities, extending the operational lifespan and profitability of deployed jukebox hardware",
     "skillIDs": [
-      "C++",
+      "cpp",
       "postgresql",
       "agile-scrum",
       "data-modeling",
@@ -591,7 +616,7 @@
     "role": "Software Systems Architect",
     "start": "2002-11",
     "end": "2003-05",
-    "Description": "\u2022 Architected a real-time network intrusion detection system in on [BSD Linux], capturing and analyzing UDP and TCP packet streams across high-volume traffic\n\u2022 Designed packet classification and tracking pipeline that provided actionable threat intelligence, directly supporting the company's pursuit of government security contracts\n\u2022 Delivered production-grade network security infrastructure for an early-stage startup operating under tight timelines and government scrutiny",
+    "Description": "• Architected a real-time network intrusion detection system in on [BSD Linux], capturing and analyzing UDP and TCP packet streams across high-volume traffic\n• Designed packet classification and tracking pipeline that provided actionable threat intelligence, directly supporting the company's pursuit of government security contracts\n• Delivered production-grade network security infrastructure for an early-stage startup operating under tight timelines and government scrutiny",
     "skillIDs": [
       "agile-scrum",
       "data-modeling",
@@ -603,9 +628,9 @@
     "role": "Co-founder, CTO",
     "start": "1997-04",
     "end": "2002-11",
-    "Description": "\u2022 Helped raise over $70M in venture funding\n\u2022 Recruited a team of software engineers and database administrators\n\u2022 Led the design and development of a visual catalog of 700K premium home design products from 2K manufacturers for discerning project planners and interior designers\n\u2022 Website attracted over 5M unique monthly visitors\n\u2022 Technologies used: Java, ATG Dynamo, Oracle DB",
+    "Description": "• Helped raise over $70M in venture funding\n• Recruited a team of software engineers and database administrators\n• Led the design and development of a visual catalog of 700K premium home design products from 2K manufacturers for discerning project planners and interior designers\n• Website attracted over 5M unique monthly visitors\n• Technologies used: Java, ATG Dynamo, Oracle DB",
     "skillIDs": [
-      "C",
+      "c-lang",
       "agile-scrum",
       "aws-s3",
       "data-modeling",
@@ -618,7 +643,11 @@
       "user-stories",
       "a-b-testing",
       "nosql",
-      "sql"
+      "sql",
+      "dynamodb",
+      "oracle",
+      "scss",
+      "filemaker-pro"
     ]
   }
 ]

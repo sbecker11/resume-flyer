@@ -27,7 +27,7 @@ import { useCardRegistry } from '@/modules/composables/useCardRegistry.mjs'
 import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElementRegistry.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
-
+import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/')
     let base = envBase
@@ -124,9 +124,49 @@ export function useCardsController() {
         // Wait for scene-plane-ready event (proper dependency ordering)
         window.addEventListener('scene-plane-ready', handleScenePlaneReady)
 
+        // If cDivs or skill cards were rendered before skillsData was populated, re-render them now.
+        const handleSkillsDataReady = () => {
+            if (!isInitialized.value) return
+            const skillsData = getGlobalJobsDependency().getSkillsData()
+            const jobs = getGlobalJobsDependency().getJobsData()
+
+            // Refresh skill card labels (slug + display name)
+            document.querySelectorAll('.skill-card-div[data-skill-name]').forEach(skillCard => {
+                const skillName = skillCard.getAttribute('data-skill-name')
+                const skillObj = skillsData[skillName]
+                const labelEl = skillCard.querySelector('.skill-card-label')
+                if (labelEl) labelEl.innerHTML = skillLabelHtml(skillName, skillObj)
+                skillCard.setAttribute('aria-label', skillLabelText(skillName, skillObj))
+            })
+
+            // Refresh biz card skill title spans
+            if (!Array.isArray(jobs)) return
+            document.querySelectorAll('.biz-card-div[data-job-number]').forEach(card => {
+                const jobIndex = parseInt(card.getAttribute('data-job-number'), 10)
+                if (isNaN(jobIndex)) return
+                const job = jobs[jobIndex]
+                if (!job) return
+                const container = card.querySelector('.biz-card-skill-titles')
+                if (!container) return
+                const liveMap = Object.create(null)
+                document.querySelectorAll('.skill-card-div[data-skill-name]').forEach(el => {
+                    liveMap[el.getAttribute('data-skill-name')] = el.id
+                })
+                const descriptionSlugs = new Set(Object.keys(job['job-skills'] || {}))
+                const entries = orderedSkillEntriesForBizCard(job, liveMap, descriptionSlugs)
+                if (entries.length) {
+                    renderSkillTitleSpans(container, entries)
+                    const displayNames = entries.map(e => skillLabelText(e.skillKey, skillsData[e.skillKey]))
+                    expandBizCardToFitSkills(card, displayNames)
+                }
+            })
+        }
+        window.addEventListener('skills-data-ready', handleSkillsDataReady, { once: true })
+
         // Cleanup listener on unmount
         onUnmounted(() => {
             window.removeEventListener('scene-plane-ready', handleScenePlaneReady)
+            window.removeEventListener('skills-data-ready', handleSkillsDataReady)
             stop()
         })
     })
@@ -265,12 +305,16 @@ export function useCardsController() {
                 if (skillCardsCreated.length === 0) {
                     console.warn('[CardsController] No skill cards created — resume may have no job-skills entries.')
                 }
-                // Each biz card: populate skill titles from skillIDs (primary) + job-skills (supplement)
+                // Each biz card: populate skill titles from skillIDs + job-skills + description brackets
                 for (let index = 0; index < cards.length; index++) {
                     const card = cards[index]
                     const job = jobs[index]
                     if (!card || !job) continue
-                    const entries = orderedSkillEntriesForBizCard(job, skillCardIdsBySkillName)
+                    // job['job-skills'] already contains all slugs from [brackets] in the description
+                    // (populated by enrichJobFromDescription). Pass them as descriptionSlugs so
+                    // the skills section is the union of all sources.
+                    const descriptionSlugs = new Set(Object.keys(job['job-skills'] || {}))
+                    const entries = orderedSkillEntriesForBizCard(job, skillCardIdsBySkillName, descriptionSlugs)
                     if (entries.length) {
                         // data-skill-card-ids: only entries that have a real skill card
                         const skillCardIds = entries.map(e => e.skillCardId).filter(Boolean)
@@ -279,7 +323,8 @@ export function useCardsController() {
                         const container = card.querySelector('.biz-card-skill-titles')
                         renderSkillTitleSpans(container, entries)
                         // Synchronously expand card height before paint so skills are never clipped
-                        const displayNames = entries.map(e => e.displayName || e.skillKey)
+                        const skillsData = getGlobalJobsDependency().getSkillsData()
+                        const displayNames = entries.map(e => skillLabelText(e.skillKey, skillsData[e.skillKey]))
                         expandBizCardToFitSkills(card, displayNames)
                     }
                 }
@@ -770,15 +815,17 @@ export function useCardsController() {
         const LINE_H = 17
         const AVG_CHAR_W = 7   // 12px Arial
         const SEP_W = 14       // ' • ' separator
+        // Each label is rendered as "<slug> DisplayName" — slug adds ~(slug.length+3) chars.
+        // We don't have slugs here, so add a flat 40% overhead to cover the prefix.
+        const SLUG_OVERHEAD = 1.4
         const innerW = Math.max(60, (cardWidth || BIZCARD_WIDTH) - 16) // subtract card padding
-        // Measure total text width of all skill names + separators
         let lineW = 0
         let lines = 1
         for (let i = 0; i < displayNames.length; i++) {
-            const tokenW = displayNames[i].length * AVG_CHAR_W + (i > 0 ? SEP_W : 0)
+            const tokenW = Math.ceil(displayNames[i].length * AVG_CHAR_W * SLUG_OVERHEAD) + (i > 0 ? SEP_W : 0)
             if (lineW + tokenW > innerW && lineW > 0) {
                 lines++
-                lineW = displayNames[i].length * AVG_CHAR_W
+                lineW = Math.ceil(displayNames[i].length * AVG_CHAR_W * SLUG_OVERHEAD)
             } else {
                 lineW += tokenW
             }
@@ -798,9 +845,10 @@ export function useCardsController() {
         if (!displayNames || !displayNames.length) return
         const cardWidth = parseFloat(card.style.width) || BIZCARD_WIDTH
         // Fixed header content above the skills section (employer + role + dates + debug row)
-        const HEADER_H = 80
+        const HEADER_H = 100
+        const BOTTOM_PAD = 12
         const skillsH = estimateBizCardSkillsSectionHeight(displayNames, cardWidth)
-        const needed = HEADER_H + skillsH
+        const needed = HEADER_H + skillsH + BOTTOM_PAD
         // Only grow, never shrink the timeline-derived height
         const currentFixed = parseFloat(card.style.height) || 0
         const currentMin  = parseFloat(card.style.minHeight) || 0
@@ -821,38 +869,37 @@ export function useCardsController() {
      * @param {Record<string,string>} skillCardIdsByName - map of skillKey → skillCardId
      * @returns {{ skillKey: string, skillCardId: string|null, displayName: string }[]}
      */
-    function orderedSkillEntriesForBizCard(job, skillCardIdsByName) {
+    /**
+     * Build the ordered skill entry list for a cDiv skills section.
+     * Exactly one entry per unique slug from all sources:
+     *   1. job.skillIDs       — user-assigned, ordered
+     *   2. job['job-skills']  — enrichment-derived (from description text)
+     *   3. descriptionSlugs   — any additional slugs found in [brackets] in the description
+     *
+     * @param {object} job
+     * @param {Record<string,string>} skillCardIdsByName  slug → skill-card-div id
+     * @param {Set<string>} [descriptionSlugs]  slugs found in description brackets
+     */
+    function orderedSkillEntriesForBizCard(job, skillCardIdsByName, descriptionSlugs = new Set()) {
         const jobSkills = job['job-skills'] || {}
         const skillsData = getGlobalJobsDependency().getSkillsData()
         const seen = new Set()
         const result = []
         const resolveDisplayName = (sid) =>
             jobSkills[sid] || skillsData[sid]?.name || sid
-        // Primary: explicit skillIDs (user-assigned, ordered)
-        if (Array.isArray(job.skillIDs)) {
-            for (const sid of job.skillIDs) {
-                if (!seen.has(sid)) {
-                    seen.add(sid)
-                    result.push({
-                        skillKey: sid,
-                        skillCardId: skillCardIdsByName[sid] || null,
-                        displayName: resolveDisplayName(sid),
-                    })
-                }
-            }
+        const add = (sid) => {
+            if (seen.has(sid)) return
+            seen.add(sid)
+            result.push({
+                skillKey: sid,
+                skillCardId: skillCardIdsByName[sid] || null,
+                displayName: resolveDisplayName(sid),
+            })
         }
-        // Supplement: description-derived job-skills not already listed
-        for (const sid of Object.keys(jobSkills)) {
-            if (!seen.has(sid)) {
-                seen.add(sid)
-                result.push({
-                    skillKey: sid,
-                    skillCardId: skillCardIdsByName[sid] || null,
-                    displayName: resolveDisplayName(sid),
-                })
-            }
-        }
-        return result
+        if (Array.isArray(job.skillIDs)) job.skillIDs.forEach(add)
+        Object.keys(jobSkills).forEach(add)
+        descriptionSlugs.forEach(add)
+        return result.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }))
     }
 
     /**
@@ -868,14 +915,12 @@ export function useCardsController() {
             container.innerHTML = ''
             return
         }
-        container.innerHTML = entries.map(({ skillKey, skillCardId, displayName: entryDisplayName }) => {
-            // Prefer entry's pre-resolved displayName; fall back to DOM attr or skillKey
-            const el = skillCardId ? document.getElementById(skillCardId) : null
-            const displayName = entryDisplayName
-                || (el ? el.getAttribute('data-skill-name') : null)
-                || skillKey
+        const skillsData = getGlobalJobsDependency().getSkillsData()
+        container.innerHTML = entries.map(({ skillKey, skillCardId }) => {
+            const skillObj = skillsData[skillKey]
             const cardIdAttr = skillCardId ? ` data-skill-card-id="${escapeHtml(skillCardId)}"` : ''
-            return `<span class="biz-card-skill-title"${skillTitleFocusAttrs(displayName)}${cardIdAttr} data-skill-name="${escapeHtml(skillKey)}">${escapeHtml(displayName)}</span>`
+            const ariaLabel = `View skill: ${skillLabelText(skillKey, skillObj)}`
+            return `<span class="biz-card-skill-title" tabindex="0" role="link" aria-label="${escapeHtml(ariaLabel)}"${cardIdAttr} data-skill-name="${escapeHtml(skillKey)}">${skillLabelHtml(skillKey, skillObj)}</span>`
         }).join(' • ')
     }
 
@@ -971,15 +1016,19 @@ export function useCardsController() {
         const yearsHtml = totalYears > 0
             ? `<span class="skill-card-years">(${totalYears} yr${totalYears !== 1 ? 's' : ''} exp.)</span>`
             : ''
+        const skillObj = getGlobalJobsDependency().getSkillsData()[skillName]
+        skillCard.setAttribute('aria-label', skillLabelText(skillName, skillObj))
         skillCard.innerHTML = `
+            <button class="skill-info-modal-btn" data-skill-slug="${escapeHtml(skillName)}" aria-label="What is ${escapeHtml(skillObj?.name || skillName)}?">?</button>
             <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; padding: 4px; box-sizing: border-box;">
-                <span class="skill-card-label">${escapeHtml(skillName)}</span>
+                <span class="skill-card-label">${skillLabelHtml(skillName, skillObj)}</span>
                 ${backIconsHtml ? `<div class="skill-card-back-icons" style="display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start; align-items: center;">${backIconsHtml}</div>` : ''}
                 ${yearsHtml}
             </div>`
 
         skillCard.addEventListener('click', (e) => {
             e.stopPropagation()
+            if (e.target.closest('.skill-info-modal-btn')) return  // handled by global delegate in skillInfoModal.mjs
             const bizTitleEl = e.target.closest('.skill-card-biz-title')
             if (bizTitleEl && selectionManager) {
                 const bizCardId = bizTitleEl.getAttribute('data-biz-card-id')
@@ -2178,13 +2227,15 @@ export function useCardsController() {
                         skillIDs: skillIDs || liveJob.skillIDs || [],
                         'job-skills': jobSkills || liveJob['job-skills'] || {},
                     }
-                    const entries = orderedSkillEntriesForBizCard(jobLike, liveMap)
+                    const descriptionSlugs = new Set(Object.keys(jobLike['job-skills'] || {}))
+                    const entries = orderedSkillEntriesForBizCard(jobLike, liveMap, descriptionSlugs)
                     if (entries.length) {
                         const skillCardIds = entries.map(e => e.skillCardId).filter(Boolean)
                         card.dataset.skillCardIds = skillCardIds.join(',')
                         card.setAttribute('data-skill-card-ids', skillCardIds.join(','))
                         renderSkillTitleSpans(container, entries)
-                        const displayNames = entries.map(e => e.displayName || e.skillKey)
+                        const skillsDataLive = getGlobalJobsDependency().getSkillsData()
+                        const displayNames = entries.map(e => skillLabelText(e.skillKey, skillsDataLive[e.skillKey]))
                         expandBizCardToFitSkills(card, displayNames)
                     } else {
                         container.innerHTML = ''

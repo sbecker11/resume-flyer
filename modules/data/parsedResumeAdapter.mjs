@@ -26,17 +26,33 @@ export function normalizeParserJobs(jobs) {
   return [];
 }
 
+/** Returns true if a key looks like a slug: lowercase, hyphens, digits, dots — no spaces or uppercase. */
+function isSlugKey(key) {
+  return /^[a-z0-9][a-z0-9\-._]*$/.test(key);
+}
+
 /**
- * @param {unknown} skills - Parser output: legacy { [skillName]: { url?, img? } } or new { [skillID]: { name, url?, img?, categoryIDs?, jobIDs? } }
- * @returns {Record<string, { url?: string, img?: string }>} Name-keyed skills for enrichment (enrichJobFromDescription)
+ * @param {unknown} skills - One of three formats:
+ *   1. Already slug-keyed: { [slug]: { name, url?, img?, ... } }  — our skills.json format; pass through unchanged.
+ *   2. Parser new format: { [opaqueID]: { name, url?, img?, ... } } — re-key by name for enrichment.
+ *   3. Legacy name-keyed: { [skillName]: { url?, img? } }          — pass through unchanged.
+ * @returns {Record<string, { name?: string, url?: string, img?: string }>} Slug- or name-keyed skills for enrichment
  */
 export function normalizeParserSkills(skills) {
   if (!skills || typeof skills !== 'object') return {};
-  const first = Object.values(skills)[0];
-  const isNewFormat = first && typeof first === 'object' && 'name' in first && typeof (first).name === 'string';
+  const entries = Object.entries(skills);
+  if (entries.length === 0) return {};
+
+  // If all keys are valid slugs, the map is already in our canonical format — pass through.
+  const allSlugs = entries.every(([k]) => isSlugKey(k));
+  if (allSlugs) return /** @type {Record<string, { name?: string, url?: string, img?: string }>} */ (skills);
+
+  // Parser "new format": keys are opaque IDs, values have a name field — re-key by name.
+  const first = entries[0][1];
+  const isNewFormat = first && typeof first === 'object' && 'name' in first && typeof first.name === 'string';
   if (isNewFormat) {
     const byName = {};
-    for (const skill of Object.values(skills)) {
+    for (const [, skill] of entries) {
       if (skill && typeof skill === 'object' && skill.name) {
         const name = String(skill.name).trim();
         if (name && !byName[name]) byName[name] = { url: skill.url, img: skill.img };
@@ -44,7 +60,9 @@ export function normalizeParserSkills(skills) {
     }
     return byName;
   }
-  return /** @type {Record<string, { url?: string, img?: string }>} */ (skills);
+
+  // Legacy name-keyed format — pass through unchanged.
+  return /** @type {Record<string, { name?: string, url?: string, img?: string }>} */ (skills);
 }
 
 /**

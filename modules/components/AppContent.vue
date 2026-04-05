@@ -671,13 +671,22 @@ onMounted(async () => {
           })
         }
       } catch (err) {
-        // Resume folder was deleted — clear the stale ID and show the upload modal
-        console.warn(`[AppContent] ⚠️ Resume "${startupResumeId}" not found, clearing persisted ID:`, err.message)
-        noJobsLoaded.value = true
-        try {
-          await updateAppState({ 'user-settings': { currentResumeId: 'default' } }, true)
-        } catch (saveErr) {
-          console.warn('[AppContent] Could not persist cleared resume ID (server may be unavailable):', saveErr.message)
+        const isNotFound = err?.message?.includes('404') ||
+          err?.message?.includes('not found') ||
+          err?.message?.includes('unavailable')
+        if (isNotFound) {
+          // Resume folder was deleted — clear the stale ID and show the upload modal
+          console.warn(`[AppContent] ⚠️ Resume "${startupResumeId}" not found, clearing persisted ID:`, err.message)
+          noJobsLoaded.value = true
+          try {
+            await updateAppState({ 'user-settings': { currentResumeId: 'default' } }, true)
+          } catch (saveErr) {
+            console.warn('[AppContent] Could not persist cleared resume ID (server may be unavailable):', saveErr.message)
+          }
+        } else {
+          // Data or code error — keep the persisted resume ID, surface the error
+          reportError(err, `[AppContent] ❌ Failed to initialize resume "${startupResumeId}"`, 'Resume ID preserved — fix the data error and reload')
+          noJobsLoaded.value = true
         }
       }
     }

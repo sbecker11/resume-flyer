@@ -7,6 +7,29 @@ import { mergeJobsWithEducation, toJobsArray as rawJobsToArray } from '../data/m
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { hasServer } from '@/modules/core/hasServer.mjs'
 
+/**
+ * Validate that no two slugs in the skills map resolve to the same display name.
+ * Called once at load time so data anomalies are caught before any render occurs.
+ * Logs a warning for each duplicate pair; does not throw (non-fatal at runtime).
+ *
+ * @param {Record<string, { name?: string }>} skills
+ */
+function validateSkillLabelUniqueness(skills) {
+    const nameToSlug = new Map() // displayName.toLowerCase() → first slug seen
+    for (const [slug, skill] of Object.entries(skills)) {
+        const name = (skill?.name || slug).toLowerCase()
+        if (nameToSlug.has(name)) {
+            console.warn(
+                `[useJobsDependency] Duplicate skill label detected: ` +
+                `slug "${slug}" and slug "${nameToSlug.get(name)}" both resolve to "${skill?.name || slug}". ` +
+                `Merge or rename one entry in skills.json.`
+            )
+        } else {
+            nameToSlug.set(name, slug)
+        }
+    }
+}
+
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/')
   let base = envBase
@@ -128,9 +151,11 @@ export function useJobsDependency() {
           const rawJobs = mergeJobsWithEducation(toJobsArray(payload?.jobs ?? payload), education)
           const skills = payload?.skills ?? {}
           const jobs = enrichJobsWithSkills(rawJobs, skills || {})
+          skillsState.value = skills || {}
+          validateSkillLabelUniqueness(skillsState.value)
           jobsState.value.data = jobs
           jobsState.value.isInitialized = true
-          skillsState.value = skills || {}
+          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('skills-data-ready'))
 
           console.log(`[useJobsDependency] ✅ Jobs loaded successfully: ${jobs.length} jobs`)
 
@@ -150,9 +175,11 @@ export function useJobsDependency() {
       const rawJobs = toJobsArray(payload?.jobs ?? payload)
       const skills = payload?.skills ?? {}
       const jobs = enrichJobsWithSkills(rawJobs, skills || {})
+      skillsState.value = skills || {}
+      validateSkillLabelUniqueness(skillsState.value)
       jobsState.value.data = jobs
       jobsState.value.isInitialized = true
-      skillsState.value = skills || {}
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('skills-data-ready'))
 
       console.log(`[useJobsDependency] ✅ Jobs loaded successfully: ${jobs.length} jobs`)
 

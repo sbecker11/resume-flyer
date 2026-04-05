@@ -186,6 +186,31 @@ async function readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath =
     return { jobs, skills, categories };
 }
 
+/**
+ * Replace every [OldName] bracket reference in all job Descriptions with [NewName].
+ * Called after a skill rename or merge so descriptions stay in sync with skills.json.
+ * Mutates jobs in place; returns the number of replacements made.
+ *
+ * @param {Array<object>} jobs
+ * @param {string} oldName  - the old skill.name (text inside brackets to replace)
+ * @param {string} newName  - the new skill.name (replacement text inside brackets)
+ * @returns {number}
+ */
+function replaceSkillNameInDescriptions(jobs, oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return 0;
+    const jobsArr = Array.isArray(jobs) ? jobs : Object.values(jobs);
+    const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\[${escaped}\\]`, 'g');
+    let count = 0;
+    for (const job of jobsArr) {
+        if (!job.Description) continue;
+        const before = job.Description;
+        job.Description = job.Description.replace(regex, `[${newName}]`);
+        if (job.Description !== before) count++;
+    }
+    return count;
+}
+
 /** Shift skill.jobIDs at/after insert so indices stay aligned with jobs.json (0-based). */
 function reindexSkillJobIdsAfterJobInsert(skills, insertAt) {
     const at = Number(insertAt);
@@ -554,6 +579,7 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
         if (resolvedOldKey == null) {
             return res.status(404).json({ error: `Skill "${oldKey}" not found.` });
         }
+        const oldSkillName = skills[resolvedOldKey].name || resolvedOldKey;
         const jobIDsFromOld = skills[resolvedOldKey].jobIDs || [];
         delete skills[resolvedOldKey];
         if (skills[newNameTrimmed] != null) {
@@ -575,11 +601,14 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
             }
             job.skillIDs = out;
         }
+        // Replace [OldName] → [NewName] in all job descriptions
+        const descFixes = replaceSkillNameInDescriptions(jobs, oldSkillName, newNameTrimmed);
+        console.log(`[PATCH skills/rename] replaced [${oldSkillName}] → [${newNameTrimmed}] in ${descFixes} descriptions`);
         await Promise.all([
             atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
-        res.json({ ok: true, key: newNameTrimmed });
+        res.json({ ok: true, key: newNameTrimmed, descriptionFixes: descFixes });
     } catch (err) {
         console.error('[PATCH skills/rename]', err);
         res.status(500).json({ error: err.message });
@@ -617,6 +646,8 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
         if (resolvedFromKey === resolvedToKey) {
             return res.status(400).json({ error: 'fromKey and toKey must be different.' });
         }
+        const fromSkillName = skills[resolvedFromKey].name || resolvedFromKey;
+        const toSkillName = skills[resolvedToKey].name || resolvedToKey;
         const fromJobIDs = new Set(skills[resolvedFromKey].jobIDs || []);
         const toJobIDsSet = new Set(skills[resolvedToKey].jobIDs || []);
         fromJobIDs.forEach(j => toJobIDsSet.add(j));
@@ -637,11 +668,14 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
             }
             job.skillIDs = out;
         }
+        // Replace [FromName] → [ToName] in all job descriptions
+        const descFixes = replaceSkillNameInDescriptions(jobs, fromSkillName, toSkillName);
+        console.log(`[PATCH skills/merge] replaced [${fromSkillName}] → [${toSkillName}] in ${descFixes} descriptions`);
         await Promise.all([
             atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
-        res.json({ ok: true, mergedInto: toKey });
+        res.json({ ok: true, mergedInto: toKey, descriptionFixes: descFixes });
     } catch (err) {
         console.error('[PATCH skills/merge]', err);
         res.status(500).json({ error: err.message });
@@ -3531,6 +3565,61 @@ function generateFixInstructions(violation) {
 // --- Static File Serving ---
 // Serve static content (including color palettes)
 app.use('/static_content', express.static(path.resolve(PROJECT_ROOT, 'static_content')));
+
+// ---------------------------------------------------------------------------
+// GET /api/skills/:slug/info  — LLM-generated skill definition (cached)
+// Requires OPENAI_API_KEY in .env. Returns { slug, summary, cached }.
+// ---------------------------------------------------------------------------
+const skillInfoCache = new Map(); // in-memory; cleared on server restart
+
+app.get('/api/skills/:slug/info', async (req, res) => {
+    const { slug } = req.params;
+    if (!slug || !/^[a-z0-9][a-z0-9\-._]*$/.test(slug)) {
+        return res.status(400).json({ error: 'Invalid skill slug.' });
+    }
+    if (skillInfoCache.has(slug)) {
+        return res.json({ slug, summary: skillInfoCache.get(slug), cached: true });
+    }
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+        return res.status(503).json({ error: 'OPENAI_API_KEY not configured on server.' });
+    }
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                max_tokens: 300,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a concise technical reference. Answer in 2–4 sentences. No markdown, no bullet points, plain prose only.',
+                    },
+                    {
+                        role: 'user',
+                        content: `What is "${slug.replace(/-/g, ' ')}" in the context of software engineering and data engineering? Give a brief, plain-English definition suitable for a resume portfolio.`,
+                    },
+                ],
+            }),
+        });
+        if (!response.ok) {
+            const body = await response.text().catch(() => '');
+            return res.status(502).json({ error: `OpenAI API error ${response.status}: ${body.slice(0, 200)}` });
+        }
+        const data = await response.json();
+        const summary = data.choices?.[0]?.message?.content?.trim() || '';
+        if (!summary) return res.status(502).json({ error: 'Empty response from OpenAI.' });
+        skillInfoCache.set(slug, summary);
+        res.json({ slug, summary, cached: false });
+    } catch (e) {
+        reportError(e, '[skill-info] Failed to fetch from OpenAI');
+        res.status(500).json({ error: e.message });
+    }
+});
 
 const MAX_PORT_RETRIES = 10; // Limit how many ports to try
 const START_PORT = parseInt(process.env.EXPRESS_PORT, 10) || parseInt(process.env.PORT, 10) || 3001;

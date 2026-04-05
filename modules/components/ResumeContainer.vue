@@ -14,6 +14,8 @@ import ResumeManagerDelete from './ResumeManagerDelete.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
+import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
+import { openSkillInfoModal } from '@/modules/utils/skillInfoModal.mjs';
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -609,8 +611,12 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   copy.className = 'skill-resume-div appended-skill-resume-div';
   copy.setAttribute('data-color-index', String(colorIndex));
   if (skillCardId) copy.setAttribute('data-skill-card-id', skillCardId);
+  const skillSlug = data.skillName;
+  const skillObj = getGlobalJobsDependency().getSkillsData()[skillSlug];
+  const displayName = skillObj?.name || skillSlug;
   copy.innerHTML = `
-    <span class="skill-resume-div-skill-name">${escapeHtml(data.skillName)}</span>
+    <button type="button" class="skill-info-modal-btn" data-skill-slug="${escapeHtml(skillSlug)}" aria-label="What is ${escapeHtml(displayName)}?">?</button>
+    <span class="skill-resume-div-skill-name">${skillLabelHtml(skillSlug, skillObj)}</span>
     <div class="skill-resume-div-back-links">
       ${(data.referencingJobNumbers || []).map(jobNum => `
         <button type="button" class="skill-resume-div-back-link" aria-label="Go to job" data-job-number="${jobNum}">
@@ -621,6 +627,8 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     ${data.totalYearsExperience > 0 ? `<span class="skill-resume-div-years">(${data.totalYearsExperience} year${data.totalYearsExperience !== 1 ? 's' : ''} experience)</span>` : ''}
     <button type="button" class="skill-resume-div-close" aria-label="Remove skill card from resume listing">×</button>
   `;
+
+  // ? button handled by global delegate in skillInfoModal.mjs
 
   const closeBtn = copy.querySelector('.skill-resume-div-close');
   if (closeBtn) {
@@ -675,7 +683,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   });
   // Click: same as biz-resume-div — unselected → select; selected → unselect
   copy.addEventListener('click', (e) => {
-    if (e.target.closest('.skill-resume-div-close') || e.target.closest('.skill-resume-div-back-link')) return;
+    if (e.target.closest('.skill-resume-div-close') || e.target.closest('.skill-resume-div-back-link') || e.target.closest('.skill-info-modal-btn')) return;
     if (!skillCardId) return;
     const sel = selectionManager?.selectedCard;
     if (sel?.type === 'skill' && sel?.skillCardId === skillCardId) {
@@ -801,7 +809,7 @@ function scrollSceneSkillCardIntoView() {
   if (sceneSkillCard) sceneSkillCard.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 }
 function onResumeSkillCardClick(event) {
-  if (event.target.closest('.skill-resume-div-close') || event.target.closest('.skill-resume-div-back-link')) return;
+  if (event.target.closest('.skill-resume-div-close') || event.target.closest('.skill-resume-div-back-link') || event.target.closest('.skill-info-modal-btn')) return;
   scrollSceneSkillCardIntoView();
 }
 
@@ -1044,7 +1052,7 @@ function onResumeSkillCardClick(event) {
                 <!-- Skill cards only appear as appended copies in the list below; top panel hidden to avoid duplicate. -->
                 <div v-if="false" id="skill-resume-divs-panel" class="skill-resume-divs-panel">
                     <div ref="resumeSkillCardRef" class="skill-resume-div" :data-color-index="selectedSkillCard?.referencingJobNumbers?.[0] ?? 0" @click="onResumeSkillCardClick">
-                        <span class="skill-resume-div-skill-name">{{ selectedSkillCard.skillName }}</span>
+                        <span class="skill-resume-div-skill-name" v-html="skillLabelHtml(selectedSkillCard.skillName, getGlobalJobsDependency().getSkillsData()[selectedSkillCard.skillName])"></span>
                         <div class="skill-resume-div-back-links">
                             <button
                                 v-for="jobNum in selectedSkillCard.referencingJobNumbers"
@@ -1649,7 +1657,7 @@ function onResumeSkillCardClick(event) {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    z-index: 3;
 }
 .skill-resume-div-close:hover {
     color: #f00;
@@ -1687,7 +1695,7 @@ function onResumeSkillCardClick(event) {
 }
 .skill-resume-div-years {
     font-size: 14px;
-    text-decoration: underline;
+    text-decoration: none;
 }
 .appended-skill-resume-div {
     flex-shrink: 0;
