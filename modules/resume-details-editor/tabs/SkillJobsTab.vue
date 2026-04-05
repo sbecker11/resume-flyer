@@ -18,25 +18,27 @@
         <!-- Single scrolling container; one grid inside so header and body share column widths -->
         <div class="rde-sj-scroll" aria-label="Job and skill cross grid">
           <div class="rde-sj-matrix-grid" :style="matrixGridStyle">
-            <!-- Row 0: corner + job headers (sticky top) -->
-            <div class="rde-sj-corner" role="group" aria-label="Skill–jobs actions">
-              <button
-                type="button"
-                class="rde-btn rde-sj-clear"
-                aria-label="Clear all job–skill links"
-                title="Clear all job–skill links"
-                :disabled="!canClearGrid"
-                @click="onClearGrid"
+            <!-- Row 0: corner + job headers; subgrid inherits outer column sizes exactly -->
+            <div class="rde-sj-header-jobs">
+              <div class="rde-sj-corner" role="group" aria-label="Skill–jobs actions">
+                <button
+                  type="button"
+                  class="rde-btn rde-sj-clear"
+                  aria-label="Clear all job–skill links"
+                  title="Clear all job–skill links"
+                  :disabled="!canClearGrid"
+                  @click="onClearGrid"
+                >
+                  Clear
+                </button>
+              </div>
+              <div
+                v-for="(job, ji) in jobsList"
+                :key="'job-h-' + ji"
+                class="rde-sj-head-job"
               >
-                Clear
-              </button>
-            </div>
-            <div
-              v-for="(job, ji) in jobsList"
-              :key="'job-h-' + ji"
-              class="rde-sj-head-job"
-            >
-              <span class="rde-skill-jobs-label rotated-job-name">{{ rotatedJobHeaderText(job, ji) }}</span>
+                <span class="rde-skill-jobs-label rotated-job-name">{{ rotatedJobHeaderText(job, ji) }}</span>
+              </div>
             </div>
 
             <!-- Rows 1…N: skill label + matrix cells -->
@@ -182,16 +184,20 @@ const crossGridColumnsStyle = computed(() => {
   };
 });
 
-/** Single grid: first row = header, remaining rows = skill body rows. */
+/**
+ * Outer matrix grid: one column spanning full width for the sticky header wrapper,
+ * then one row per skill for the body cells.
+ */
 const matrixGridStyle = computed(() => {
   const ns = skillRowsForMatrix.value.length;
   return {
     ...crossGridColumnsStyle.value,
-    gridTemplateRows: `minmax(${JOB_HEADER_ROW_MIN_REM}rem, auto) repeat(${Math.max(ns, 1)}, minmax(${JOB_MATRIX_CELL_REM}rem, auto))`,
+    gridTemplateRows: `auto repeat(${Math.max(ns, 1)}, minmax(${JOB_MATRIX_CELL_REM}rem, auto))`,
     '--rde-sj-header-row-min': `${JOB_HEADER_ROW_MIN_REM}rem`,
     '--rde-sj-cell-size': `${JOB_MATRIX_CELL_REM}rem`,
   };
 });
+
 
 /**
  * Text before the first dash that has whitespace on both sides (-, –, —).
@@ -279,10 +285,15 @@ function onMatrixCellClick(jobIndex, skillRow) {
   if (!matrixCellInteractive(job)) return;
   const resumeId = props.resumeId;
   const map = skillsMap.value;
-  const next = new Set(getSelectedSkillIdsForJob(job, map));
-  if (next.has(skillRow.id)) next.delete(skillRow.id);
-  else next.add(skillRow.id);
+  // Only keep IDs that exist in the skills map; drop any stale display-name orphans.
+  const existing = new Set(
+    [...getSelectedSkillIdsForJob(job, map)].filter((id) => map[id] != null)
+  );
+  if (existing.has(skillRow.id)) existing.delete(skillRow.id);
+  else existing.add(skillRow.id);
+  const next = existing;
   const skillIDs = [...next];
+  // newSkills: IDs added this toggle that weren't in the map at load time (genuinely new skills).
   const newSkills = skillIDs.filter((id) => !initialSkillKeys.value.has(id));
   const rawDesc = String(job?.Description ?? job?.description ?? '');
   const isEdu = isEducationDerivedJob(job);
@@ -481,18 +492,24 @@ watch(
   background: rgba(255, 255, 255, 0.14);
 }
 
-/* Header cells stick to the top of the scroll viewport. */
-.rde-sj-corner,
-.rde-sj-head-job {
+/* Sticky opaque header wrapper — spans all grid columns via subgrid so tracks match exactly. */
+.rde-sj-header-jobs {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
   position: sticky;
   top: 0;
   z-index: 2;
+  box-sizing: border-box;
+  background: rgb(20, 24, 32);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+/* Corner and job-header cells are transparent — parent provides the opaque background. */
 .rde-sj-corner {
   position: relative;
   box-sizing: border-box;
-  background: rgba(20, 24, 32, 0.92);
+  background: transparent;
   min-height: var(--rde-sj-header-row-min, 4.35rem);
 }
 
@@ -508,7 +525,7 @@ watch(
   box-sizing: border-box;
   min-height: var(--rde-sj-header-row-min, 4.35rem);
   padding: 0 1px;
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
   min-width: 0;
 }
 
