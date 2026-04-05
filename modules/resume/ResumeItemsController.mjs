@@ -33,6 +33,55 @@ function skillTitleFocusAttrsForDisplayName(displayName) {
         .replace(/</g, '&lt;');
     return ` tabindex="0" role="link" aria-label="View skill: ${esc}"`;
 }
+/**
+ * Build the ordered list of { skillKey, displayName } pairs for a job's skills section.
+ * Uses job.skillIDs as the primary ordered source (user-assigned), then appends any
+ * extra keys from job['job-skills'] (description-derived) not already present.
+ * Resolves displayName from job['job-skills'] map; falls back to skillKey.
+ * @param {object} jobData
+ * @returns {{ skillKey: string, displayName: string }[]}
+ */
+function orderedSkillEntriesForRDiv(jobData) {
+    const jobSkills = jobData['job-skills'] || {}
+    const skillsData = getGlobalJobsDependency().getSkillsData()
+    const resolveDisplayName = (sid) =>
+        jobSkills[sid] || skillsData[sid]?.name || sid
+    const seen = new Set()
+    const result = []
+    if (Array.isArray(jobData.skillIDs)) {
+        for (const sid of jobData.skillIDs) {
+            if (!seen.has(sid)) {
+                seen.add(sid)
+                result.push({ skillKey: sid, displayName: resolveDisplayName(sid) })
+            }
+        }
+    }
+    for (const sid of Object.keys(jobSkills)) {
+        if (!seen.has(sid)) {
+            seen.add(sid)
+            result.push({ skillKey: sid, displayName: resolveDisplayName(sid) })
+        }
+    }
+    return result
+}
+
+/**
+ * Build the HTML for a skills-list inner span from an ordered entry list.
+ * Resolves data-skill-card-id from the live DOM when available.
+ * @param {{ skillKey: string, displayName: string }[]} entries
+ * @returns {string} HTML string for the .skills-list content
+ */
+function buildSkillListHTML(entries) {
+    const escHtml = (s) => String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    const spans = entries.map(({ skillKey, displayName }) => {
+        const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(skillKey)}"]`)
+        const idAttr = cardEl ? ` data-skill-card-id="${cardEl.id}"` : ''
+        return `<span class="biz-card-skill-title"${skillTitleFocusAttrsForDisplayName(displayName)} data-skill-name="${escHtml(skillKey)}"${idAttr}>${escHtml(displayName)}</span>`
+    }).join(' • ')
+    return '<span class="bullet">•</span><span class="skills-text">' + spans + '</span>'
+}
+
 // import { bizCardDivManager } from './bizCardDivManager.mjs';
 // import * as scenePlane from './scenePlane.mjs';
 // import { resumeManager } from '../resume/resumeManager.mjs';
@@ -337,14 +386,15 @@ class ResumeItemsController {
             // Parse description and create bullet points with clickable references
             const descContent = document.createElement('div');
             descContent.className = 'description-content';
-            this.parseDescriptionToBullets(jobData.Description, descContent, jobData.references, jobData['job-skills']);
+            this.parseDescriptionToBullets(jobData.Description, descContent);
             descDiv.appendChild(descContent);
 
             detailsDiv.appendChild(descDiv);
         }
 
-        // Create skills section
-        if (jobData['job-skills'] && Object.keys(jobData['job-skills']).length > 0) {
+        // Create skills section — ordered by skillIDs (user-assigned) then job-skills (description-derived)
+        const skillEntries = orderedSkillEntriesForRDiv(jobData)
+        if (skillEntries.length > 0) {
             const skillsDiv = document.createElement('div');
             skillsDiv.className = 'resume-skills';
             
@@ -368,15 +418,7 @@ class ResumeItemsController {
 
             const skillsList = document.createElement('div');
             skillsList.className = 'skills-list';
-            
-            // Create skill spans: store data-skill-name (key) for reliable runtime lookup.
-            // data-skill-card-id may be absent at init time (skill cards not yet in DOM) — resolved lazily on click.
-            const skillSpans = Object.entries(jobData['job-skills']).map(([skillKey, displayName]) => {
-                const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillKey}"]`);
-                const idAttr = skillCardEl ? ` data-skill-card-id="${skillCardEl.id}"` : '';
-                return `<span class="biz-card-skill-title"${skillTitleFocusAttrsForDisplayName(displayName)} data-skill-name="${skillKey}"${idAttr}>${displayName}</span>`;
-            }).join(' • ');
-            skillsList.innerHTML = '<span class="bullet">•</span><span class="skills-text">' + skillSpans + '</span>';
+            skillsList.innerHTML = buildSkillListHTML(skillEntries);
 
             skillsDiv.appendChild(skillsList);
             detailsDiv.appendChild(skillsDiv);
@@ -406,7 +448,7 @@ class ResumeItemsController {
         return dateStr;
     }
 
-    parseDescriptionToBullets(description, container, references = [], jobSkills = {}) {
+    parseDescriptionToBullets(description, container) {
         if (!description) return;
 
         const escapeHtml = (str) => String(str)
@@ -415,57 +457,48 @@ class ResumeItemsController {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-        
-        // Focus on resume skills (the same ones driving the resume-skills section).
-        // We ignore bracketed phrases in the description and instead wrap any
-        // occurrence of these skill terms.
-        const skillKeys = jobSkills && typeof jobSkills === 'object'
-            ? Object.keys(jobSkills)
-            : [];
-        if (skillKeys.length === 0) {
-            // Still render bullets, just without skill highlighting.
-            const parts = description.split(/[•\n]+|(?<=\.)\s+/).filter(part => part.trim().length > 0);
-            parts.forEach(part => {
-                const trimmed = part.trim();
-                const bulletPoint = document.createElement('div');
-                bulletPoint.className = 'job-description-item';
-                bulletPoint.innerHTML = '<span class="bullet">•</span><span class="bullet-text">' + trimmed + '</span>';
-                container.appendChild(bulletPoint);
-            });
-            return;
+
+        // Build a lookup table: lowercased term → { slug, displayName }
+        // Sources: skill keys, skill names, and skill aliases from skills.json
+        const skillsData = getGlobalJobsDependency().getSkillsData();
+        const termToSkill = new Map(); // lower(term) → { slug, displayName }
+        for (const [slug, skill] of Object.entries(skillsData)) {
+            const name = skill.name || slug;
+            // Index by slug
+            termToSkill.set(slug.toLowerCase(), { slug, displayName: name });
+            // Index by display name
+            termToSkill.set(name.toLowerCase(), { slug, displayName: name });
+            // Index by each alias
+            for (const alias of (skill.aliases || [])) {
+                termToSkill.set(String(alias).toLowerCase(), { slug, displayName: name });
+            }
         }
 
-        const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const termKeyByLower = new Map(skillKeys.map(k => [String(k).toLowerCase(), k]));
+        // Resolve a bracketed term to a skill entry, or null if unknown
+        const resolveSkill = (term) => termToSkill.get(term.toLowerCase()) || null;
 
-        // Match only when a skill term isn't embedded inside a longer alphanumeric token.
-        // Multi-word phrases are supported because boundaries are only applied to edges.
-        const escapedAlternation = skillKeys
-            .slice()
-            .sort((a, b) => String(b).length - String(a).length)
-            .map(escapeRegex)
-            .join('|');
+        // Replace [term] tokens in a text segment with skill spans or plain text
+        const renderSegment = (text) =>
+            text.replace(/\[([^\]]+)\]/g, (_, term) => {
+                const skill = resolveSkill(term);
+                if (skill) {
+                    const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(skill.slug)}"]`);
+                    const idAttr = cardEl ? ` data-skill-card-id="${cardEl.id}"` : '';
+                    return `<span class="biz-card-skill-title"${skillTitleFocusAttrsForDisplayName(skill.displayName)} data-skill-name="${escapeHtml(skill.slug)}"${idAttr}>${escapeHtml(skill.displayName)}</span>`;
+                }
+                // Unknown bracketed term — strip brackets, render as plain text
+                return escapeHtml(term);
+            });
 
-        const skillRegex = new RegExp(`(^|[^A-Za-z0-9])(${escapedAlternation})(?=[^A-Za-z0-9]|$)`, 'gi');
-        
-        // Split by various delimiters: bullet points, line breaks, or sentences
-        const parts = description.split(/[•\n]+|(?<=\.)\s+/).filter(part => part.trim().length > 0);
-        
+        // Split into bullet segments and render each
+        const parts = description.split(/[•\n]+|(?<=\.)\s+/).filter(p => p.trim().length > 0);
         parts.forEach(part => {
-            let trimmed = part.trim();
-            if (trimmed.length > 0) {
-                trimmed = trimmed.replace(skillRegex, (match, leading, matchedTerm) => {
-                    const lower = String(matchedTerm).toLowerCase();
-                    const canonicalSkillKey = termKeyByLower.get(lower) || matchedTerm;
-                    const attrs = skillTitleFocusAttrsForDisplayName(matchedTerm);
-                    return `${leading}<span class="biz-card-skill-title"${attrs} data-skill-name="${escapeHtml(canonicalSkillKey)}">${escapeHtml(matchedTerm)}</span>`;
-                });
-                
-                const bulletPoint = document.createElement('div');
-                bulletPoint.className = 'job-description-item';
-                bulletPoint.innerHTML = '<span class="bullet">•</span><span class="bullet-text">' + trimmed + '</span>';
-                container.appendChild(bulletPoint);
-            }
+            const trimmed = part.trim();
+            if (!trimmed) return;
+            const bulletPoint = document.createElement('div');
+            bulletPoint.className = 'job-description-item';
+            bulletPoint.innerHTML = '<span class="bullet">•</span><span class="bullet-text">' + renderSegment(trimmed) + '</span>';
+            container.appendChild(bulletPoint);
         });
     }
 
@@ -483,7 +516,11 @@ class ResumeItemsController {
         const detailsDiv = rDiv.querySelector('.biz-resume-details-div');
         if (!detailsDiv) return;
         let skillsDiv = detailsDiv.querySelector('.resume-skills');
-        if (!jobSkills || Object.keys(jobSkills).length === 0) {
+        // Re-read live job data so skillIDs ordering is respected
+        const jobs = getGlobalJobsDependency().getJobsData();
+        const jobData = jobs[jobIndex] || {}
+        const skillEntries = orderedSkillEntriesForRDiv({ ...jobData, 'job-skills': jobSkills || jobData['job-skills'] || {} })
+        if (skillEntries.length === 0) {
             if (skillsDiv) skillsDiv.remove();
             return;
         }
@@ -514,12 +551,7 @@ class ResumeItemsController {
         }
         const skillsList = skillsDiv.querySelector('.skills-list');
         if (!skillsList) return;
-        const skillSpans = Object.entries(jobSkills).map(([skillKey, displayName]) => {
-            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillKey}"]`);
-            const idAttr = skillCardEl ? ` data-skill-card-id="${skillCardEl.id}"` : '';
-            return `<span class="biz-card-skill-title"${skillTitleFocusAttrsForDisplayName(displayName)} data-skill-name="${skillKey}"${idAttr}>${displayName}</span>`;
-        }).join(' • ');
-        skillsList.innerHTML = '<span class="bullet">•</span><span class="skills-text">' + skillSpans + '</span>';
+        skillsList.innerHTML = buildSkillListHTML(skillEntries);
     }
 
     getBizResumeDivByJobNumber(jobNumber) {

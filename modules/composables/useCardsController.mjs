@@ -238,15 +238,19 @@ export function useCardsController() {
             const skillCardsCreated = []
             try {
                 for (const skillName of allSkillNames) {
-                    const referencingBizCardIds = (skillToJobIndices[skillName] || []).map(i => createBizCardDivId(i))
+                    const referencingJobIndices = skillToJobIndices[skillName] || []
+                    const referencingBizCardIds = referencingJobIndices.map(i => createBizCardDivId(i))
                     if (referencingBizCardIds.length === 0) continue
-                    const skillCard = createSkillCardDiv(skillName, scenePlaneEl, referencingBizCardIds)
+                    const skillCard = createSkillCardDiv(skillName, scenePlaneEl, referencingBizCardIds, referencingJobIndices, jobs)
                     if (!skillCard) continue
                     const skillMinDistance = appState.value?.['system-constants']?.cards?.skillMinDistance ?? SKILL_REPOSITION_MIN_DISTANCE
-                    const { left, top } = placeOneSkillCard(placementParams, placedCenters, skillCardWidth, skillCardHeight, skillMinDistance, skillCardsCreated.length, skillCard.id)
+                    const totalYearsForCard = skillCard.hasAttribute('data-total-years-experience')
+                        ? parseInt(skillCard.getAttribute('data-total-years-experience'), 10) : 0
+                    const thisCardHeight = estimateSkillCardHeight(referencingBizCardIds.length, totalYearsForCard)
+                    const { left, top } = placeOneSkillCard(placementParams, placedCenters, skillCardWidth, thisCardHeight, skillMinDistance, skillCardsCreated.length, skillCard.id)
                     skillCard.style.left = `${left}px`
                     skillCard.style.top = `${Math.max(0, top)}px`
-                    placedCenters.push({ cx: left + skillCardWidth / 2, cy: top + skillCardHeight / 2 })
+                    placedCenters.push({ cx: left + skillCardWidth / 2, cy: top + thisCardHeight / 2 })
                     scenePlaneEl.appendChild(skillCard)
                     try {
                         await applyPaletteToElement(skillCard)
@@ -261,25 +265,22 @@ export function useCardsController() {
                 if (skillCardsCreated.length === 0) {
                     console.warn('[CardsController] No skill cards created — resume may have no job-skills entries.')
                 }
-                // Each biz card: only list of skill card element ids; titles come from those elements
+                // Each biz card: populate skill titles from skillIDs (primary) + job-skills (supplement)
                 for (let index = 0; index < cards.length; index++) {
                     const card = cards[index]
                     const job = jobs[index]
-                    if (!card || !job || !job['job-skills']) continue
-                    const skillIds = Object.keys(job['job-skills'])
-                        .map(name => skillCardIdsBySkillName[name])
-                        .filter(Boolean)
-                    if (skillIds.length) {
-                        card.dataset.skillCardIds = skillIds.join(',')
-                        card.setAttribute('data-skill-card-ids', skillIds.join(','))
+                    if (!card || !job) continue
+                    const entries = orderedSkillEntriesForBizCard(job, skillCardIdsBySkillName)
+                    if (entries.length) {
+                        // data-skill-card-ids: only entries that have a real skill card
+                        const skillCardIds = entries.map(e => e.skillCardId).filter(Boolean)
+                        card.dataset.skillCardIds = skillCardIds.join(',')
+                        card.setAttribute('data-skill-card-ids', skillCardIds.join(','))
                         const container = card.querySelector('.biz-card-skill-titles')
-                        if (container) {
-                            container.innerHTML = skillIds.map(skillCardId => {
-                                const el = document.getElementById(skillCardId)
-                                const title = el ? (el.getAttribute('data-skill-name') || skillCardId) : skillCardId
-                                return `<span class="biz-card-skill-title"${skillTitleFocusAttrs(title)} data-skill-card-id="${escapeHtml(skillCardId)}">${escapeHtml(title)}</span>`
-                            }).join(' • ')
-                        }
+                        renderSkillTitleSpans(container, entries)
+                        // Synchronously expand card height before paint so skills are never clipped
+                        const displayNames = entries.map(e => e.displayName || e.skillKey)
+                        expandBizCardToFitSkills(card, displayNames)
                     }
                 }
                 console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
@@ -547,7 +548,8 @@ export function useCardsController() {
         // Add comprehensive content including job number and description
         const description = job.Description ? job.Description.substring(0, 200) + '...' : '';
         const skillCount = job['job-skills'] ? Object.keys(job['job-skills']).length : 0;
-        const hasSkills = job['job-skills'] && Object.keys(job['job-skills']).length > 0;
+        const hasSkills = (job['job-skills'] && Object.keys(job['job-skills']).length > 0) ||
+            (Array.isArray(job.skillIDs) && job.skillIDs.length > 0);
         
         // Parse dates once at the top level for use throughout the function
         const originalJobStartDate = (job.start || job.startDate) ? dateUtils.parseFlexibleDateString(job.start || job.startDate) : null
@@ -748,14 +750,168 @@ export function useCardsController() {
     }
 
     /**
+     * Estimate the height (px) needed for the skills section of a biz card, given the
+     * display names of the skills to show.  Uses the card's actual inline width when
+     * available, otherwise falls back to BIZCARD_WIDTH.
+     *
+     * Layout model (12px Arial, ~7px avg char width, 1.4 line-height ≈ 17px/line):
+     *   - section title row: 28px  (h4 + edit button)
+     *   - skills-list row wraps at card inner width; each line ≈ 17px
+     *   - padding/margin: 16px
+     *
+     * @param {string[]} displayNames  - ordered list of skill display names
+     * @param {number}   cardWidth     - card's current pixel width (inline style)
+     * @returns {number} estimated px height of the skills section
+     */
+    function estimateBizCardSkillsSectionHeight(displayNames, cardWidth) {
+        if (!displayNames.length) return 0
+        const PADDING = 16
+        const SECTION_TITLE_H = 28
+        const LINE_H = 17
+        const AVG_CHAR_W = 7   // 12px Arial
+        const SEP_W = 14       // ' • ' separator
+        const innerW = Math.max(60, (cardWidth || BIZCARD_WIDTH) - 16) // subtract card padding
+        // Measure total text width of all skill names + separators
+        let lineW = 0
+        let lines = 1
+        for (let i = 0; i < displayNames.length; i++) {
+            const tokenW = displayNames[i].length * AVG_CHAR_W + (i > 0 ? SEP_W : 0)
+            if (lineW + tokenW > innerW && lineW > 0) {
+                lines++
+                lineW = displayNames[i].length * AVG_CHAR_W
+            } else {
+                lineW += tokenW
+            }
+        }
+        return PADDING + SECTION_TITLE_H + lines * LINE_H
+    }
+
+    /**
+     * Ensure a biz card's inline height (and minHeight) is tall enough to display all
+     * skill title spans without clipping.  Call synchronously after skill entries are
+     * known, before the card is painted.
+     *
+     * @param {HTMLElement} card
+     * @param {string[]}    displayNames  - ordered list of skill display names to show
+     */
+    function expandBizCardToFitSkills(card, displayNames) {
+        if (!displayNames || !displayNames.length) return
+        const cardWidth = parseFloat(card.style.width) || BIZCARD_WIDTH
+        // Fixed header content above the skills section (employer + role + dates + debug row)
+        const HEADER_H = 80
+        const skillsH = estimateBizCardSkillsSectionHeight(displayNames, cardWidth)
+        const needed = HEADER_H + skillsH
+        // Only grow, never shrink the timeline-derived height
+        const currentFixed = parseFloat(card.style.height) || 0
+        const currentMin  = parseFloat(card.style.minHeight) || 0
+        const baseline = Math.max(currentFixed, currentMin, MIN_BIZCARD_HEIGHT)
+        if (needed > baseline) {
+            card.style.minHeight = `${needed}px`
+        }
+    }
+
+    /**
+     * Build the ordered list of skill entries to show in a biz card's skill titles section.
+     * Mirrors orderedSkillEntriesForRDiv in ResumeItemsController exactly:
+     *   1. job.skillIDs first (user-assigned, ordered)
+     *   2. then any extra keys from job['job-skills'] (description-derived) not already present
+     * Every skill is included regardless of whether a skill card exists in the scene.
+     * skillCardId is resolved from skillCardIdsByName when available, otherwise null.
+     * @param {object} job
+     * @param {Record<string,string>} skillCardIdsByName - map of skillKey → skillCardId
+     * @returns {{ skillKey: string, skillCardId: string|null, displayName: string }[]}
+     */
+    function orderedSkillEntriesForBizCard(job, skillCardIdsByName) {
+        const jobSkills = job['job-skills'] || {}
+        const skillsData = getGlobalJobsDependency().getSkillsData()
+        const seen = new Set()
+        const result = []
+        const resolveDisplayName = (sid) =>
+            jobSkills[sid] || skillsData[sid]?.name || sid
+        // Primary: explicit skillIDs (user-assigned, ordered)
+        if (Array.isArray(job.skillIDs)) {
+            for (const sid of job.skillIDs) {
+                if (!seen.has(sid)) {
+                    seen.add(sid)
+                    result.push({
+                        skillKey: sid,
+                        skillCardId: skillCardIdsByName[sid] || null,
+                        displayName: resolveDisplayName(sid),
+                    })
+                }
+            }
+        }
+        // Supplement: description-derived job-skills not already listed
+        for (const sid of Object.keys(jobSkills)) {
+            if (!seen.has(sid)) {
+                seen.add(sid)
+                result.push({
+                    skillKey: sid,
+                    skillCardId: skillCardIdsByName[sid] || null,
+                    displayName: resolveDisplayName(sid),
+                })
+            }
+        }
+        return result
+    }
+
+    /**
+     * Render skill title spans into a .biz-card-skill-titles container.
+     * Each span is an anchor-style clickable link to the corresponding skill card.
+     * Entries without a skillCardId are rendered as plain (non-linking) spans.
+     * @param {HTMLElement} container - the .biz-card-skill-titles element
+     * @param {{ skillKey: string, skillCardId: string|null, displayName?: string }[]} entries
+     */
+    function renderSkillTitleSpans(container, entries) {
+        if (!container) return
+        if (entries.length === 0) {
+            container.innerHTML = ''
+            return
+        }
+        container.innerHTML = entries.map(({ skillKey, skillCardId, displayName: entryDisplayName }) => {
+            // Prefer entry's pre-resolved displayName; fall back to DOM attr or skillKey
+            const el = skillCardId ? document.getElementById(skillCardId) : null
+            const displayName = entryDisplayName
+                || (el ? el.getAttribute('data-skill-name') : null)
+                || skillKey
+            const cardIdAttr = skillCardId ? ` data-skill-card-id="${escapeHtml(skillCardId)}"` : ''
+            return `<span class="biz-card-skill-title"${skillTitleFocusAttrs(displayName)}${cardIdAttr} data-skill-name="${escapeHtml(skillKey)}">${escapeHtml(displayName)}</span>`
+        }).join(' • ')
+    }
+
+    /**
+     * Estimate the rendered height of a skill card given the number of back-arrow icons.
+     * Title row: ~22px. Icon rows: icons are ~20px wide each; inner width ≈ MEAN_CARD_WIDTH - 8px padding.
+     * Each row of icons is 20px tall with 2px gap between rows.
+     * Years row: ~18px (when totalYears > 0).
+     * @param {number} numIcons
+     * @param {number} totalYears - 0 means no years row
+     * @returns {number} height in px including border
+     */
+    function estimateSkillCardHeight(numIcons, totalYears = 0) {
+        const innerWidth = MEAN_CARD_WIDTH - 8 // ~8px for padding
+        const iconSlotWidth = 20 // 16px img + 4px gap
+        const iconsPerRow = Math.max(1, Math.floor(innerWidth / iconSlotWidth))
+        const iconRows = numIcons > 0 ? Math.ceil(numIcons / iconsPerRow) : 0
+        const titleHeight = 22 // label line-height ~1.2 × 14px font + gap
+        const iconRowHeight = 20 // 16px icon + 2px gap
+        const yearsRowHeight = totalYears > 0 ? 20 : 0 // "N years experience" row
+        const padding = 8 // top+bottom padding inside card
+        const contentHeight = titleHeight + (iconRows > 0 ? 2 + iconRows * iconRowHeight : 0) + (yearsRowHeight > 0 ? 2 + yearsRowHeight : 0) + padding
+        return Math.max(MEAN_CARD_HEIGHT, contentHeight) + 2 * CARD_BORDER_WIDTH
+    }
+
+    /**
      * Create a single skill card div for a skill name (one card per skill, referenced by multiple biz cards).
      * Position is set at creation by placeOneSkillCard (uniform Y over timeline span, X clustered at biz edges).
      * Only stores list of biz card element ids; titles are read from those elements via data-biz-card-title.
      * @param {string} skillName
      * @param {HTMLElement} scenePlane
      * @param {string[]} referencingBizCardIds - element ids of biz cards that reference this skill
+     * @param {number[]} referencingJobIndices - parallel array of job indices (for durationMonths sum)
+     * @param {object[]} jobsData - full jobs array (passed explicitly; not in closure scope)
      */
-    function createSkillCardDiv(skillName, scenePlane, referencingBizCardIds) {
+    function createSkillCardDiv(skillName, scenePlane, referencingBizCardIds, referencingJobIndices, jobsData) {
         if (!skillName || !referencingBizCardIds?.length) return null
         const id = `skill-card-div-${skillCardIdCounter++}`
         const skillCard = document.createElement('div')
@@ -776,14 +932,26 @@ export function useCardsController() {
         skillCard.setAttribute('data-sceneZ', sceneZ)
         skillCard.style.zIndex = String(skillZIndex)
 
+        // Sum durationMonths across referencing jobs → ceiling to whole years
+        let totalMonths = 0
+        if (Array.isArray(referencingJobIndices) && Array.isArray(jobsData)) {
+            for (const idx of referencingJobIndices) {
+                const n = jobsData[idx]?.durationMonths
+                if (typeof n === 'number' && Number.isFinite(n) && n > 0) totalMonths += n
+            }
+        }
+        const totalYears = totalMonths > 0 ? Math.ceil(totalMonths / 12) : 0
+        if (totalYears > 0) skillCard.setAttribute('data-total-years-experience', String(totalYears))
+
         const width = MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH
-        const height = MEAN_CARD_HEIGHT + 2 * CARD_BORDER_WIDTH
+        const minHeight = estimateSkillCardHeight(referencingBizCardIds.length, totalYears)
         // Position set immediately below via placeOneSkillCard (Y uniformly over timeline span, X by cluster)
         skillCard.style.position = 'absolute'
         skillCard.style.top = '0px'
         skillCard.style.left = '0px'
         skillCard.style.width = `${width}px`
-        skillCard.style.height = `${height}px`
+        skillCard.style.minHeight = `${minHeight}px`
+        skillCard.style.height = 'auto'
         skillCard.style.borderWidth = `${CARD_BORDER_WIDTH}px`
         skillCard.style.borderStyle = 'solid'
         skillCard.style.boxSizing = 'border-box'
@@ -800,10 +968,14 @@ export function useCardsController() {
         const backIconsHtml = referencingBizCardIds.map(bizCardId => {
             return `<span class="skill-card-biz-title skill-card-back-icon" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; display: inline-flex;"><img class="back-icon" src="${backIconUrl}" alt="" width="16" height="16" aria-hidden="true"></span>`
         }).join('')
+        const yearsHtml = totalYears > 0
+            ? `<span class="skill-card-years">(${totalYears} yr${totalYears !== 1 ? 's' : ''} exp.)</span>`
+            : ''
         skillCard.innerHTML = `
-            <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%;">
+            <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; padding: 4px; box-sizing: border-box;">
                 <span class="skill-card-label">${escapeHtml(skillName)}</span>
                 ${backIconsHtml ? `<div class="skill-card-back-icons" style="display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start; align-items: center;">${backIconsHtml}</div>` : ''}
+                ${yearsHtml}
             </div>`
 
         skillCard.addEventListener('click', (e) => {
@@ -1990,23 +2162,34 @@ export function useCardsController() {
         if (card) {
             const container = card.querySelector('.biz-card-skill-titles')
             if (container) {
-                if (!jobSkills || Object.keys(jobSkills).length === 0) {
+                const hasAny = (skillIDs && skillIDs.length > 0) || (jobSkills && Object.keys(jobSkills).length > 0)
+                if (!hasAny) {
                     container.innerHTML = ''
                     card.removeAttribute('data-skill-card-ids')
                 } else {
-                    const skillCardIds = Object.keys(jobSkills)
-                        .map(skillKey => {
-                            const el = document.querySelector(`.skill-card-div[data-skill-name="${skillKey}"]`)
-                            return el?.id
-                        })
-                        .filter(Boolean)
-                    card.dataset.skillCardIds = skillCardIds.join(',')
-                    card.setAttribute('data-skill-card-ids', skillCardIds.join(','))
-                    container.innerHTML = skillCardIds.map(skillCardId => {
-                        const el = document.getElementById(skillCardId)
-                        const title = el ? (el.getAttribute('data-skill-name') || skillCardId) : skillCardId
-                        return `<span class="biz-card-skill-title"${skillTitleFocusAttrs(title)} data-skill-card-id="${escapeHtml(skillCardId)}">${escapeHtml(title)}</span>`
-                    }).join(' • ')
+                    // Build a live skillCardIdsByName from the DOM (skill cards already in scene)
+                    const liveMap = Object.create(null)
+                    document.querySelectorAll('.skill-card-div[data-skill-name]').forEach(el => {
+                        liveMap[el.getAttribute('data-skill-name')] = el.id
+                    })
+                    // Merge event data with live job data so skillIDs ordering is respected
+                    const liveJob = getGlobalJobsDependency().getJobsData()[jobIndex] || {}
+                    const jobLike = {
+                        skillIDs: skillIDs || liveJob.skillIDs || [],
+                        'job-skills': jobSkills || liveJob['job-skills'] || {},
+                    }
+                    const entries = orderedSkillEntriesForBizCard(jobLike, liveMap)
+                    if (entries.length) {
+                        const skillCardIds = entries.map(e => e.skillCardId).filter(Boolean)
+                        card.dataset.skillCardIds = skillCardIds.join(',')
+                        card.setAttribute('data-skill-card-ids', skillCardIds.join(','))
+                        renderSkillTitleSpans(container, entries)
+                        const displayNames = entries.map(e => e.displayName || e.skillKey)
+                        expandBizCardToFitSkills(card, displayNames)
+                    } else {
+                        container.innerHTML = ''
+                        card.removeAttribute('data-skill-card-ids')
+                    }
                 }
             }
         }

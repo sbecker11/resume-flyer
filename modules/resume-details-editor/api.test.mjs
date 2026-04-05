@@ -15,7 +15,9 @@ import {
     updateResumeEducation,
     getResumeData,
     updateResumeCategories,
-    updateJob
+    updateJob,
+    addJobAfter,
+    deleteJob
 } from './api.mjs';
 import { mergeJobsWithEducation, toJobsArray } from '@/modules/data/mergeEducationIntoJobs.mjs';
 import { enrichJobsWithSkills } from '@/modules/data/enrichedJobs.mjs';
@@ -435,6 +437,102 @@ describe('resume-details-editor api', () => {
 
         it('updateResumeEducation throws and downloads patch', async () => {
             await expect(updateResumeEducation('r1', { e1: { degree: 'MS' } })).rejects.toThrow('not available on static hosting');
+        });
+
+        it('addJobAfter throws and downloads patch', async () => {
+            await expect(addJobAfter('r1', 0)).rejects.toThrow('not available on static hosting');
+        });
+
+        it('deleteJob throws and downloads patch', async () => {
+            await expect(deleteJob('r1', 0)).rejects.toThrow('not available on static hosting');
+        });
+    });
+
+    describe('addJobAfter (server mode)', () => {
+        beforeEach(() => {
+            vi.mocked(hasServer).mockReturnValue(true);
+        });
+
+        it('POSTs to /api/resumes/:id/jobs', async () => {
+            fetchMock.mockResolvedValue(okJson({ ok: true, insertIndex: 1 }));
+            const result = await addJobAfter('r1', 0);
+            expect(result).toEqual({ ok: true, insertIndex: 1 });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/jobs',
+                expect.objectContaining({
+                    method: 'POST',
+                    body: JSON.stringify({ afterIndex: 0 })
+                })
+            );
+        });
+
+        it('encodes resume id in URL', async () => {
+            fetchMock.mockResolvedValue(okJson({ ok: true, insertIndex: 0 }));
+            await addJobAfter('resume/with/slash', -1);
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/resume%2Fwith%2Fslash/jobs',
+                expect.any(Object)
+            );
+        });
+
+        it('downloads patch and rethrows when API fails', async () => {
+            fetchMock.mockResolvedValue(errJson(500, 'Server error'));
+            await expect(addJobAfter('r1', 0)).rejects.toThrow('Server error');
+        });
+    });
+
+    describe('deleteJob (server mode)', () => {
+        beforeEach(() => {
+            vi.mocked(hasServer).mockReturnValue(true);
+        });
+
+        it('DELETEs /api/resumes/:id/jobs/:jobIndex', async () => {
+            fetchMock.mockResolvedValue(okJson({ ok: true }));
+            const result = await deleteJob('r1', 2);
+            expect(result).toEqual({ ok: true });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/jobs/2',
+                expect.objectContaining({ method: 'DELETE' })
+            );
+        });
+
+        it('encodes resume id in URL', async () => {
+            fetchMock.mockResolvedValue(okJson({ ok: true }));
+            await deleteJob('resume/with/slash', 3);
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/resume%2Fwith%2Fslash/jobs/3',
+                expect.any(Object)
+            );
+        });
+
+        it('downloads patch and rethrows when API fails', async () => {
+            fetchMock.mockResolvedValue(errJson(500, 'Server error'));
+            await expect(deleteJob('r1', 0)).rejects.toThrow('Server error');
+        });
+    });
+
+    describe('getResumeData static error path', () => {
+        beforeEach(() => {
+            vi.mocked(hasServer).mockReturnValue(false);
+        });
+
+        it('throws when static jobs.json returns non-ok', async () => {
+            fetchMock
+                .mockResolvedValueOnce({ ok: false, text: async () => '' })  // jobs.json
+                .mockResolvedValueOnce({ ok: false })                         // skills.json
+                .mockResolvedValueOnce({ ok: false })                         // categories.json
+                .mockResolvedValueOnce({ ok: false });                        // education.json
+            await expect(getResumeData('r1')).rejects.toThrow('Static jobs not found');
+        });
+
+        it('throws and reports when static fetch throws a non-404/non-not-found error', async () => {
+            // Promise.all rejects when jobs.json fetch rejects
+            fetchMock
+                .mockRejectedValueOnce(new Error('Network failure'))  // jobs.json
+                .mockResolvedValueOnce({ ok: false })                  // skills.json
+                .mockResolvedValueOnce({ ok: false })                  // categories.json
+                .mockResolvedValueOnce({ ok: false });                 // education.json
+            await expect(getResumeData('r1')).rejects.toThrow('Network failure');
         });
     });
 });

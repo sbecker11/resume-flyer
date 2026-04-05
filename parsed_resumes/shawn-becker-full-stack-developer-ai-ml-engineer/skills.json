@@ -50,7 +50,10 @@
     "categoryIDs": [
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "ML"
+    ]
   },
   "aws": {
     "name": "AWS",
@@ -118,15 +121,6 @@
     ],
     "jobIDs": []
   },
-  "js": {
-    "name": "JS",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "programming-language"
-    ],
-    "jobIDs": []
-  },
   "react": {
     "name": "React",
     "url": "",
@@ -156,15 +150,6 @@
     ],
     "jobIDs": []
   },
-  "cv": {
-    "name": "CV",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "data-science"
-    ],
-    "jobIDs": []
-  },
   "opencv": {
     "name": "OpenCV",
     "url": "",
@@ -182,7 +167,10 @@
     "categoryIDs": [
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "K-means"
+    ]
   },
   "ciede2000": {
     "name": "CIEDE2000",
@@ -222,16 +210,6 @@
     ],
     "jobIDs": []
   },
-  "github-actions": {
-    "name": "GitHub Actions",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "devops",
-      "tool"
-    ],
-    "jobIDs": []
-  },
   "aws-glue": {
     "name": "AWS Glue",
     "url": "",
@@ -240,7 +218,11 @@
       "cloud",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "Glue",
+      "AWS Glue"
+    ]
   },
   "pyspark": {
     "name": "PySpark",
@@ -262,30 +244,12 @@
     ],
     "jobIDs": []
   },
-  "rest-apis": {
-    "name": "REST APIs",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "backend"
-    ],
-    "jobIDs": []
-  },
   "seo": {
     "name": "SEO",
     "url": "",
     "img": "",
     "categoryIDs": [
       "tool"
-    ],
-    "jobIDs": []
-  },
-  "rest-api": {
-    "name": "REST API",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "backend"
     ],
     "jobIDs": []
   },
@@ -350,16 +314,6 @@
     ],
     "jobIDs": []
   },
-  "glue": {
-    "name": "Glue",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "cloud",
-      "data-science"
-    ],
-    "jobIDs": []
-  },
   "airflow": {
     "name": "Airflow",
     "url": "",
@@ -368,25 +322,6 @@
       "tool",
       "data-science",
       "devops"
-    ],
-    "jobIDs": []
-  },
-  "s3": {
-    "name": "S3",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "cloud"
-    ],
-    "jobIDs": []
-  },
-  "lambda": {
-    "name": "Lambda",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "cloud",
-      "backend"
     ],
     "jobIDs": []
   },
@@ -416,16 +351,6 @@
     "img": "",
     "categoryIDs": [
       "data-science",
-      "tool"
-    ],
-    "jobIDs": []
-  },
-  "jenkins": {
-    "name": "Jenkins",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "devops",
       "tool"
     ],
     "jobIDs": []
@@ -641,15 +566,6 @@
     ],
     "jobIDs": []
   },
-  "ml": {
-    "name": "ML",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "data-science"
-    ],
-    "jobIDs": []
-  },
   "jupyter": {
     "name": "Jupyter",
     "url": "",
@@ -707,15 +623,6 @@
     "categoryIDs": [
       "library",
       "data-science"
-    ],
-    "jobIDs": []
-  },
-  "restful-apis": {
-    "name": "RESTful APIs",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "backend"
     ],
     "jobIDs": []
   },
@@ -863,16 +770,6 @@
     ],
     "jobIDs": []
   },
-  "emr": {
-    "name": "EMR",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "cloud",
-      "data-science"
-    ],
-    "jobIDs": []
-  },
   "pii": {
     "name": "PII",
     "url": "",
@@ -936,24 +833,6 @@
     ],
     "jobIDs": []
   },
-  "nlp": {
-    "name": "NLP",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "data-science"
-    ],
-    "jobIDs": []
-  },
-  "k-means": {
-    "name": "K-means",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "data-science"
-    ],
-    "jobIDs": []
-  },
   "bayesian-clustering": {
     "name": "Bayesian clustering",
     "url": "",
@@ -970,9 +849,7 @@
     "categoryIDs": [
       "tool"
     ],
-    "jobIDs": [
-      10
-    ]
+    "jobIDs": []
   },
   "typescript": {
     "name": "TypeScript",
@@ -1039,7 +916,12 @@
     "categoryIDs": [
       "backend"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "REST API",
+      "REST APIs",
+      "RESTful APIs"
+    ]
   },
   "microservices": {
     "name": "Microservices",
@@ -1066,7 +948,10 @@
     "categoryIDs": [
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "CV"
+    ]
   },
   "tensorflow": {
     "name": "TensorFlow",
@@ -1107,16 +992,6 @@
     ],
     "jobIDs": []
   },
-  "etl-elt": {
-    "name": "ETL/ELT",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "data-science",
-      "tool"
-    ],
-    "jobIDs": []
-  },
   "aws-s3": {
     "name": "AWS S3",
     "url": "",
@@ -1124,7 +999,10 @@
     "categoryIDs": [
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "S3"
+    ]
   },
   "aws-ec2": {
     "name": "AWS EC2",
@@ -1143,7 +1021,10 @@
       "cloud",
       "backend"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "Lambda"
+    ]
   },
   "aws-emr": {
     "name": "AWS EMR",
@@ -1223,7 +1104,10 @@
     "categoryIDs": [
       "devops"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "GitHub Actions"
+    ]
   },
   "ci-cd-jenkins": {
     "name": "CI/CD Jenkins",
@@ -1232,7 +1116,10 @@
     "categoryIDs": [
       "devops"
     ],
-    "jobIDs": []
+    "jobIDs": [],
+    "aliases": [
+      "Jenkins"
+    ]
   },
   "vitest": {
     "name": "Vitest",
@@ -1264,15 +1151,6 @@
   },
   "identity-resolution": {
     "name": "Identity Resolution",
-    "url": "",
-    "img": "",
-    "categoryIDs": [
-      "data-science"
-    ],
-    "jobIDs": []
-  },
-  "pii-phi-pci-hipaa-gdpr-compliance": {
-    "name": "PII/PHI/PCI/HIPAA/GDPR Compliance",
     "url": "",
     "img": "",
     "categoryIDs": [
@@ -1428,17 +1306,129 @@
   "C": {
     "name": "C",
     "jobIDs": [
-      0,
+      17,
       18,
-      19,
-      17
+      19
     ]
   },
   "C++": {
     "name": "C++",
     "jobIDs": [
-      0,
       15
+    ]
+  },
+  "Standards Compliance": {
+    "name": "Standards Compliance",
+    "jobIDs": [
+      2,
+      8,
+      14
+    ]
+  },
+  "MIT": {
+    "name": "MIT",
+    "jobIDs": [
+      18
+    ]
+  },
+  "BYU, MS, Computer Science": {
+    "name": "BYU, MS, Computer Science",
+    "jobIDs": [
+      19
+    ]
+  },
+  "BYU, BS, Design Engineering Technology": {
+    "name": "BYU, BS, Design Engineering Technology",
+    "jobIDs": [
+      20
+    ]
+  },
+  "CAD/CAM/CAE": {
+    "name": "CAD/CAM/CAE",
+    "jobIDs": [
+      0,
+      20
+    ]
+  },
+  "Industrial Engineering": {
+    "name": "Industrial Engineering",
+    "jobIDs": [
+      20
+    ]
+  },
+  "Computer Graphics": {
+    "name": "Computer Graphics",
+    "jobIDs": [
+      0,
+      19
+    ]
+  },
+  "Digital Video Compression": {
+    "name": "Digital Video Compression",
+    "jobIDs": [
+      18
+    ]
+  },
+  "Lens Distortion Modeling": {
+    "name": "Lens Distortion Modeling",
+    "jobIDs": [
+      18
+    ]
+  },
+  "Medical Imaging": {
+    "name": "Medical Imaging",
+    "jobIDs": [
+      19
+    ]
+  },
+  "Textured 3-D structure from images": {
+    "name": "Textured 3-D structure from images",
+    "jobIDs": [
+      18
+    ]
+  },
+  "Intrinsic camera parameter modeling": {
+    "name": "Intrinsic camera parameter modeling",
+    "jobIDs": [
+      18
+    ]
+  },
+  "3D splotch rendering": {
+    "name": "3D splotch rendering",
+    "jobIDs": [
+      0
+    ]
+  },
+  "Chirplet visualizations": {
+    "name": "Chirplet visualizations",
+    "jobIDs": [
+      0
+    ]
+  },
+  "Color space transformations": {
+    "name": "Color space transformations",
+    "jobIDs": [
+      0,
+      19
+    ]
+  },
+  "AWS EMR": {
+    "name": "AWS EMR",
+    "jobIDs": []
+  },
+  "AWS Glue": {
+    "name": "AWS Glue",
+    "jobIDs": []
+  },
+  "Machine Learning": {
+    "name": "Machine Learning",
+    "jobIDs": []
+  },
+  "Natural Language Processing": {
+    "name": "Natural Language Processing",
+    "jobIDs": [],
+    "aliases": [
+      "NLP"
     ]
   }
 }

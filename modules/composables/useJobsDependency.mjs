@@ -38,6 +38,9 @@ const jobsState = ref({
   isInitialized: false
 })
 
+// Skills map: slug → { name, ... } — stored alongside jobs so display names are always available
+const skillsState = ref({})
+
 // Controllers that depend on jobs data
 const dependentControllers = ref(new Set())
 
@@ -127,6 +130,7 @@ export function useJobsDependency() {
           const jobs = enrichJobsWithSkills(rawJobs, skills || {})
           jobsState.value.data = jobs
           jobsState.value.isInitialized = true
+          skillsState.value = skills || {}
 
           console.log(`[useJobsDependency] ✅ Jobs loaded successfully: ${jobs.length} jobs`)
 
@@ -148,6 +152,7 @@ export function useJobsDependency() {
       const jobs = enrichJobsWithSkills(rawJobs, skills || {})
       jobsState.value.data = jobs
       jobsState.value.isInitialized = true
+      skillsState.value = skills || {}
 
       console.log(`[useJobsDependency] ✅ Jobs loaded successfully: ${jobs.length} jobs`)
 
@@ -249,6 +254,9 @@ export function useJobsDependency() {
   /** Sync getter for code that expects getJobsData() (returns current jobs array or empty array). */
   const getJobsData = () => jobsState.value.data ?? []
 
+  /** Sync getter for the skills map (slug → { name, ... }). Returns {} before load. */
+  const getSkillsData = () => skillsState.value ?? {}
+
   return {
     // Reactive state (readonly)
     jobsData: readonly(computed(() => jobsState.value.data)),
@@ -261,6 +269,7 @@ export function useJobsDependency() {
     // Methods
     loadJobs,
     getJobsData,
+    getSkillsData,
     registerController,
     waitForJobs
   }

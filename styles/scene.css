@@ -107,22 +107,28 @@ body .biz-resume-div,
     flex-direction: column;
 }
 
-/* Skills section inside biz-card-div: expands to fill remaining card height, fades only at bottom edge */
+/* Skills section inside biz-card-div: expands to fill remaining card height; card grows to fit all skills */
 .biz-card-div .resume-skills {
-    overflow: hidden;
+    overflow: visible;
     flex-grow: 1;
-    flex-shrink: 1;
-    min-height: 0;
-    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 1em), transparent 100%);
-    mask-image: linear-gradient(to bottom, black calc(100% - 1em), transparent 100%);
+    flex-shrink: 0;
 }
 
 .biz-card-div .biz-card-skill-titles.skills-text {
-    overflow: hidden;
     display: block;
     white-space: normal;
 }
 
+/* Skill title spans: anchor-style links that select the corresponding skill card */
+.biz-card-div .biz-card-skill-title {
+    color: var(--data-link-color, var(--data-foreground-color));
+    text-decoration: underline;
+    cursor: pointer;
+    display: inline;
+}
+.biz-card-div .biz-card-skill-title:hover {
+    opacity: 0.8;
+}
 .biz-card-div .biz-card-skill-title:focus-visible {
     outline: 2px solid var(--data-link-color, #2563eb);
     outline-offset: 2px;
@@ -304,7 +310,8 @@ body .biz-resume-div.selected a,
 .skill-card-div .skill-card-label {
     display: inline-block;
     max-width: 100%;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
     font-weight: 900;
@@ -314,6 +321,17 @@ body .biz-resume-div.selected a,
 }
 .skill-card-div .skill-card-z {
     font-size: 12px;
+}
+.skill-card-div .skill-card-years {
+    font-size: 12px;
+    text-decoration: underline;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    display: block;
+    margin-top: auto;
 }
 
 /* skillResumeLineItem: same state rules as biz-resume-div but border-radius = half (match skill-card-div). */

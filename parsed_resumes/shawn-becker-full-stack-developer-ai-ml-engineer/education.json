@@ -5,10 +5,7 @@
     "institution": "MIT, Massachusetts Institute of Technology, Cambridge, MA",
     "start": "1990/09",
     "end": "1997/02",
-    "description": "Computer Vision, Video Coding & Computer Graphics",
-    "skillIDs": [
-      "C"
-    ]
+    "description": "[Computer Vision], [Video Coding] & [Computer Graphics]"
   },
   "1": {
     "index": 1,
@@ -16,10 +13,7 @@
     "institution": "BYU, Brigham Young University, Provo, UT",
     "start": "1987/09",
     "end": "1990/04",
-    "description": "Medical Imaging & Computer Graphics",
-    "skillIDs": [
-      "C"
-    ]
+    "description": "[Medical Imaging] & [Computer Graphics]"
   },
   "2": {
     "index": 2,
@@ -27,6 +21,6 @@
     "institution": "BYU, Brigham Young University Provo, UT",
     "start": "1983/09",
     "end": "1987/04",
-    "description": "CAD/CAM/CAE, drafting"
+    "description": "[CAD] [CAM] [CAE] [drafting]"
   }
 }
