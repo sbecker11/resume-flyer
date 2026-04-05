@@ -1,32 +1,32 @@
 {
   "0": {
     "index": 0,
-    "degree": "PhD, Media Arts & Sciences — Computer Vision / Video Coding / Computer Graphics",
+    "degree": "PhD, Media Arts & Sciences ",
     "institution": "MIT, Massachusetts Institute of Technology, Cambridge, MA",
     "start": "1990/09",
     "end": "1997/02",
-    "description": "",
-    "skillIDs": []
+    "description": "Computer Vision, Video Coding & Computer Graphics",
+    "skillIDs": [
+      "C"
+    ]
   },
   "1": {
     "index": 1,
-    "degree": "MS, Computer Science — Medical Imaging / Computer Graphics",
+    "degree": "MS, Computer Science ",
     "institution": "BYU, Brigham Young University, Provo, UT",
     "start": "1987/09",
     "end": "1990/04",
-    "description": "",
+    "description": "Medical Imaging & Computer Graphics",
     "skillIDs": [
-      "FHIR",
-      "HL7"
+      "C"
     ]
   },
   "2": {
     "index": 2,
-    "degree": "BS, Design Eng Tech",
-    "institution": "BYU, Brigham Young University",
+    "degree": "BS, Design Engineering Technology",
+    "institution": "BYU, Brigham Young University Provo, UT",
     "start": "1983/09",
     "end": "1987/04",
-    "description": "",
-    "skillIDs": []
+    "description": "CAD/CAM/CAE, drafting"
   }
 }
