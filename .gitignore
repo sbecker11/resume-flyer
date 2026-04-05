@@ -23,6 +23,7 @@ app_status.json
 parsed_resumes/_local-*/
 parsed_resumes/_local-*/**
 parsed_resumes/.DS_Store
+parsed_resumes/**/parser-output.log
 
 # Schema validator test venv
 .venv-schema/.venv-schema/
