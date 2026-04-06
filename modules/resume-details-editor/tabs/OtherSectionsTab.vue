@@ -3,18 +3,18 @@
     <!-- 1. Summary -->
     <section class="rde-section">
       <label class="rde-top-label" for="rde-other-summary">Resume Summary</label>
-      <textarea id="rde-other-summary" name="summary" v-model="local.summary" class="rde-textarea" rows="4" placeholder="Professional summary…"></textarea>
+      <textarea id="rde-other-summary" name="summary" v-model="local.summary" class="rde-textarea" rows="4" placeholder="Professional summary…" :disabled="!canEdit"></textarea>
     </section>
 
     <!-- 2. Title -->
     <section class="rde-section">
       <label class="rde-top-label" for="rde-other-title">Resume Title</label>
-      <input id="rde-other-title" name="title" v-model="local.title" type="text" class="rde-input" placeholder="e.g. Senior Software Engineer" />
+      <input id="rde-other-title" name="title" v-model="local.title" type="text" class="rde-input" placeholder="e.g. Senior Software Engineer" :disabled="!canEdit" />
     </section>
 
     <!-- 3. Contact -->
     <section class="rde-section">
-      <ContactFields v-model="local.contact" />
+      <ContactFields v-model="local.contact" :disabled="!canEdit" />
     </section>
 
     <!-- 4. Websites -->
@@ -32,11 +32,12 @@
         :model-value="web"
         :should-focus="i === websiteFocusIndex"
         :focus-token="websiteFocusToken"
+        :disabled="!canEdit"
         @update:model-value="(v) => updateWebsite(i, v)"
         @remove="removeWebsite(i)"
         @entry-blur="autosaveFromEntryBlur"
       />
-      <button type="button" class="rde-btn-add" @click="addWebsite">+ Add website</button>
+      <button type="button" class="rde-btn-add" :disabled="!canEdit" @click="addWebsite">+ Add website</button>
     </section>
 
     <!-- 5. Certifications -->
@@ -54,11 +55,12 @@
         :model-value="cert"
         :should-focus="i === certFocusIndex"
         :focus-token="certFocusToken"
+        :disabled="!canEdit"
         @update:model-value="(v) => updateCert(i, v)"
         @remove="removeCert(i)"
         @entry-blur="autosaveFromEntryBlur"
       />
-      <button type="button" class="rde-btn-add" @click="addCert">+ Add certification</button>
+      <button type="button" class="rde-btn-add" :disabled="!canEdit" @click="addCert">+ Add certification</button>
     </section>
 
     <!-- 6. Other sections -->
@@ -76,11 +78,12 @@
         :model-value="sec"
         :should-focus="i === otherSectionFocusIndex"
         :focus-token="otherSectionFocusToken"
+        :disabled="!canEdit"
         @update:model-value="(v) => updateOtherSection(i, v)"
         @remove="removeOtherSection(i)"
         @entry-blur="autosaveFromEntryBlur"
       />
-      <button type="button" class="rde-btn-add" @click="addOtherSection">+ Add section</button>
+      <button type="button" class="rde-btn-add" :disabled="!canEdit" @click="addOtherSection">+ Add section</button>
     </section>
   </div>
 </template>
@@ -88,6 +91,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { DEFAULT_OTHER_SECTIONS } from '../constants.mjs';
+import { hasServer } from '@/modules/core/hasServer.mjs';
 import ContactFields from './fields/ContactFields.vue';
 import CertificationItem from './fields/CertificationItem.vue';
 import WebsiteItem from './fields/WebsiteItem.vue';
@@ -96,6 +100,8 @@ import OtherSectionItem from './fields/OtherSectionItem.vue';
 const props = defineProps({
   data: { type: Object, default: () => ({}) }
 });
+
+const canEdit = hasServer();
 
 const emit = defineEmits(['update:data', 'autosave']);
 
@@ -236,5 +242,6 @@ function autosaveFromEntryBlur() {
 .rde-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; box-sizing: border-box; }
 .rde-textarea { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; resize: vertical; box-sizing: border-box; font-family: Arial, sans-serif; }
 .rde-btn-add { margin-top: 4px; padding: 6px 12px; background: transparent; border: 1px dashed rgba(255,255,255,0.3); color: rgba(255,255,255,0.6); border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
-.rde-btn-add:hover { border-color: rgba(74,158,255,0.6); color: #7ac; }
+.rde-btn-add:hover:not(:disabled) { border-color: rgba(74,158,255,0.6); color: #7ac; }
+.rde-btn-add:disabled { opacity: 0.4; cursor: default; }
 </style>

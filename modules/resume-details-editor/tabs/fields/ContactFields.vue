@@ -1,11 +1,11 @@
 <template>
   <div class="rde-grid">
-    <div class="rde-field"><label class="rde-label" for="rde-contact-name">Name</label><input id="rde-contact-name" name="name" v-model="local.name" type="text" class="rde-input" autocomplete="name" /></div>
-    <div class="rde-field"><label class="rde-label" for="rde-contact-email">Email</label><input id="rde-contact-email" name="email" v-model="local.email" type="email" class="rde-input" autocomplete="email" /></div>
-    <div class="rde-field"><label class="rde-label" for="rde-contact-phone">Phone</label><input id="rde-contact-phone" name="phone" v-model="local.phone" type="tel" class="rde-input" autocomplete="tel" /></div>
-    <div class="rde-field"><label class="rde-label" for="rde-contact-location">Location</label><input id="rde-contact-location" name="location" v-model="local.location" type="text" class="rde-input" autocomplete="address-level2" /></div>
-    <div class="rde-field"><label class="rde-label" for="rde-contact-linkedin">LinkedIn</label><input id="rde-contact-linkedin" name="linkedin" v-model="local.linkedin" type="url" class="rde-input" /></div>
-    <div class="rde-field"><label class="rde-label" for="rde-contact-website">Portfolio</label><input id="rde-contact-website" name="website" v-model="local.website" type="url" class="rde-input" /></div>
+    <div class="rde-field"><label class="rde-label" for="rde-contact-name">Name</label><input id="rde-contact-name" name="name" v-model="local.name" type="text" class="rde-input" autocomplete="name" :disabled="disabled" /></div>
+    <div class="rde-field"><label class="rde-label" for="rde-contact-email">Email</label><input id="rde-contact-email" name="email" v-model="local.email" type="email" class="rde-input" autocomplete="email" :disabled="disabled" /></div>
+    <div class="rde-field"><label class="rde-label" for="rde-contact-phone">Phone</label><input id="rde-contact-phone" name="phone" v-model="local.phone" type="tel" class="rde-input" autocomplete="tel" :disabled="disabled" /></div>
+    <div class="rde-field"><label class="rde-label" for="rde-contact-location">Location</label><input id="rde-contact-location" name="location" v-model="local.location" type="text" class="rde-input" autocomplete="address-level2" :disabled="disabled" /></div>
+    <div class="rde-field"><label class="rde-label" for="rde-contact-linkedin">LinkedIn</label><input id="rde-contact-linkedin" name="linkedin" v-model="local.linkedin" type="url" class="rde-input" :disabled="disabled" /></div>
+    <div class="rde-field"><label class="rde-label" for="rde-contact-website">Portfolio</label><input id="rde-contact-website" name="website" v-model="local.website" type="url" class="rde-input" :disabled="disabled" /></div>
   </div>
 </template>
 
@@ -13,7 +13,8 @@
 import { ref, watch } from 'vue';
 
 const props = defineProps({
-  modelValue: { type: Object, default: () => ({}) }
+  modelValue: { type: Object, default: () => ({}) },
+  disabled: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue']);

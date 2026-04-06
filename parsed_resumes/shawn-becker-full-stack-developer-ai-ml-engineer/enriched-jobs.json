@@ -1327,18 +1327,6 @@
       "computer-vision",
       "video-coding",
       "computer-graphics",
-      "chirplet-visualizations",
-      "ciede2000",
-      "color-space-transformations",
-      "digital-video-compression",
-      "textured-3-d-structure-from-images",
-      "mit",
-      "machine-learning",
-      "lens-distortion-modeling",
-      "k-means-clustering",
-      "intrinsic-camera-parameter-modeling",
-      "excel",
-      "bayesian-clustering",
       "3d-splotch-rendering"
     ],
     "references": [
@@ -1350,18 +1338,6 @@
       "computer-vision": "computer-vision",
       "video-coding": "video-coding",
       "computer-graphics": "computer-graphics",
-      "chirplet-visualizations": "chirplet-visualizations",
-      "ciede2000": "ciede2000",
-      "color-space-transformations": "color-space-transformations",
-      "digital-video-compression": "digital-video-compression",
-      "textured-3-d-structure-from-images": "textured-3-d-structure-from-images",
-      "mit": "mit",
-      "machine-learning": "machine-learning",
-      "lens-distortion-modeling": "lens-distortion-modeling",
-      "k-means-clustering": "k-means-clustering",
-      "intrinsic-camera-parameter-modeling": "intrinsic-camera-parameter-modeling",
-      "excel": "excel",
-      "bayesian-clustering": "bayesian-clustering",
       "3d-splotch-rendering": "3d-splotch-rendering"
     }
   },
@@ -1375,21 +1351,13 @@
     "durationMonths": 32,
     "Description": "[Medical Imaging] & [Computer Graphics]",
     "educationKey": "1",
-    "skillIDs": [
-      "medical-imaging",
-      "computer-graphics",
-      "computer-vision",
-      "byu-ms-computer-science"
-    ],
     "references": [
       "<a href=\"#\">[medical-imaging]</a>",
       "<a href=\"#\">[computer-graphics]</a>"
     ],
     "job-skills": {
       "medical-imaging": "medical-imaging",
-      "computer-graphics": "computer-graphics",
-      "computer-vision": "computer-vision",
-      "byu-ms-computer-science": "byu-ms-computer-science"
+      "computer-graphics": "computer-graphics"
     }
   },
   {
@@ -1402,14 +1370,6 @@
     "durationMonths": 44,
     "Description": "[CAD] [CAM] [CAE] [drafting]",
     "educationKey": "2",
-    "skillIDs": [
-      "cad",
-      "cam",
-      "cae",
-      "drafting",
-      "industrial-engineering",
-      "byu-bs-design-engineering-technology"
-    ],
     "references": [
       "<a href=\"#\">[cad]</a>",
       "<a href=\"#\">[cam]</a>",
@@ -1420,9 +1380,7 @@
       "cad": "cad",
       "cam": "cam",
       "cae": "cae",
-      "drafting": "drafting",
-      "industrial-engineering": "industrial-engineering",
-      "byu-bs-design-engineering-technology": "byu-bs-design-engineering-technology"
+      "drafting": "drafting"
     }
   }
 ]

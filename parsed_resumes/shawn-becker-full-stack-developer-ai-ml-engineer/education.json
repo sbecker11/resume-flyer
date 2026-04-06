@@ -10,18 +10,6 @@
       "computer-vision",
       "video-coding",
       "computer-graphics",
-      "chirplet-visualizations",
-      "ciede2000",
-      "color-space-transformations",
-      "digital-video-compression",
-      "textured-3-d-structure-from-images",
-      "mit",
-      "machine-learning",
-      "lens-distortion-modeling",
-      "k-means-clustering",
-      "intrinsic-camera-parameter-modeling",
-      "excel",
-      "bayesian-clustering",
       "3d-splotch-rendering"
     ]
   },
@@ -31,13 +19,7 @@
     "institution": "BYU, Brigham Young University, Provo, UT",
     "start": "1987/09",
     "end": "1990/04",
-    "description": "[Medical Imaging] & [Computer Graphics]",
-    "skillIDs": [
-      "medical-imaging",
-      "computer-graphics",
-      "computer-vision",
-      "byu-ms-computer-science"
-    ]
+    "description": "[Medical Imaging] & [Computer Graphics]"
   },
   "2": {
     "index": 2,
@@ -45,14 +27,6 @@
     "institution": "BYU, Brigham Young University Provo, UT",
     "start": "1983/09",
     "end": "1987/04",
-    "description": "[CAD] [CAM] [CAE] [drafting]",
-    "skillIDs": [
-      "cad",
-      "cam",
-      "cae",
-      "drafting",
-      "industrial-engineering",
-      "byu-bs-design-engineering-technology"
-    ]
+    "description": "[CAD] [CAM] [CAE] [drafting]"
   }
 }

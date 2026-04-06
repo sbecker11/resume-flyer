@@ -12,10 +12,11 @@
       class="rde-input"
       placeholder="Name"
       aria-label="Certification name"
+      :disabled="disabled"
     />
-    <input v-model="local.url" type="url" name="certUrl" class="rde-input" placeholder="Link (optional)" aria-label="Certification link" />
-    <input v-model="local.description" type="text" name="certDescription" class="rde-input" placeholder="Description (optional)" aria-label="Certification description" />
-    <button type="button" class="rde-btn-remove" title="Remove" aria-label="Remove certification" @click="emit('remove')">×</button>
+    <input v-model="local.url" type="url" name="certUrl" class="rde-input" placeholder="Link (optional)" aria-label="Certification link" :disabled="disabled" />
+    <input v-model="local.description" type="text" name="certDescription" class="rde-input" placeholder="Description (optional)" aria-label="Certification description" :disabled="disabled" />
+    <button type="button" class="rde-btn-remove" title="Remove" aria-label="Remove certification" :disabled="disabled" @click="emit('remove')">×</button>
   </div>
 </template>
 
@@ -27,7 +28,8 @@ const props = defineProps({
   /** Incremented when a new entry is added; used to focus the newest entry exactly once. */
   focusToken: { type: Number, default: 0 },
   /** True only for the row that should be focused for the current focusToken. */
-  shouldFocus: { type: Boolean, default: false }
+  shouldFocus: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue', 'remove', 'entry-blur']);

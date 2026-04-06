@@ -188,24 +188,32 @@ async function readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath =
 }
 
 /**
- * Run enrichJobsWithSkills on the current jobs+skills for a resume folder and
- * write the result to enriched-jobs.json.  Called automatically after any write
- * that touches jobs.json or skills.json so the file stays current without a
- * separate build step.  Errors are logged but never thrown — a stale or missing
- * enriched-jobs.json is not fatal; the client falls back to live enrichment.
+ * Run enrichJobsWithSkills on the current jobs+skills+education for a resume
+ * folder and write the result to enriched-jobs.json.  Called automatically
+ * after any write that touches jobs.json, skills.json, or education.json so
+ * the file stays current without a separate build step.  Errors are logged but
+ * never thrown — a stale or missing enriched-jobs.json is not fatal; the
+ * client falls back to live enrichment.
  *
  * @param {string} dir          - absolute path to the resume folder
- * @param {Array}  jobs         - already-normalized jobs array (from readAndNormalizeResumeData)
+ * @param {Array}  jobs         - already-normalized work-jobs array
  * @param {object} skills       - already-normalized skills map
  */
 async function bakeEnrichedJobs(dir, jobs, skills) {
     try {
-        const enriched = enrichJobsWithSkills(jobs, skills);
-        // Serialize as plain objects — ResumeJob instances are JSON-serializable,
-        // but we strip the non-serializable `references` regex internals (they are
-        // re-derived strings, not RegExps, so JSON.stringify handles them fine).
+        // Always read education.json fresh so education-derived jobs are included.
+        let education = {};
+        try {
+            const eduContent = await fs.readFile(path.join(dir, 'education.json'), 'utf-8');
+            education = JSON.parse(eduContent);
+        } catch (e) {
+            if (e.code !== 'ENOENT') throw e;
+        }
+        const merged = mergeJobsWithEducation(jobs, education);
+        const enriched = enrichJobsWithSkills(merged, skills);
         const enrichedPath = path.join(dir, 'enriched-jobs.json');
         await atomicWriteWithLock(enrichedPath, JSON.stringify(enriched, null, 2));
+        console.log(`[bakeEnrichedJobs] ✅ Wrote enriched-jobs.json (${enriched.length} jobs incl. ${enriched.length - jobs.length} education)`);
     } catch (e) {
         reportError(e, '[bakeEnrichedJobs] Failed to write enriched-jobs.json — static host will fall back to live enrichment');
     }

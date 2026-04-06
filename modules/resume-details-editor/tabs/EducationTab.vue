@@ -12,11 +12,11 @@
       >
         <div class="rde-row">
           <label class="rde-label">Degree</label>
-          <input v-model="item.degree" type="text" class="rde-input" placeholder="BA in Economics" @blur="requestAutosave" />
+          <input v-model="item.degree" type="text" class="rde-input" placeholder="BA in Economics" :disabled="!canEdit" @blur="requestAutosave" />
         </div>
         <div class="rde-row">
           <label class="rde-label">Institution</label>
-          <input v-model="item.institution" type="text" class="rde-input" placeholder="Stanford University" @blur="requestAutosave" />
+          <input v-model="item.institution" type="text" class="rde-input" placeholder="Stanford University" :disabled="!canEdit" @blur="requestAutosave" />
         </div>
         <div class="rde-grid">
           <div class="rde-row">
@@ -30,6 +30,7 @@
                 maxlength="4"
                 pattern="\\d{0,4}"
                 placeholder="YYYY"
+                :disabled="!canEdit"
                 @input="onFourDigitItemInput(item, 'startYY')"
                 @blur="() => { onYearBlur(item, 'startYY'); requestAutosave(); }"
               />
@@ -41,6 +42,7 @@
                 maxlength="2"
                 pattern="\\d{0,2}"
                 placeholder="MM"
+                :disabled="!canEdit"
                 @input="onTwoDigitItemInput(item, 'startMM')"
                 @blur="() => { onMonthBlur(item, 'startMM', 'startYY'); requestAutosave(); }"
               />
@@ -52,6 +54,7 @@
                 maxlength="2"
                 pattern="\\d{0,2}"
                 placeholder="DD"
+                :disabled="!canEdit"
                 @input="onTwoDigitItemInput(item, 'startDD')"
                 @blur="() => { onDayBlur(item, 'startDD', 'startYY', 'startMM'); requestAutosave(); }"
               />
@@ -68,6 +71,7 @@
                 maxlength="4"
                 pattern="\\d{0,4}"
                 placeholder="YYYY"
+                :disabled="!canEdit"
                 @input="onFourDigitItemInput(item, 'endYY')"
               />
               <input
@@ -78,6 +82,7 @@
                 maxlength="2"
                 pattern="\\d{0,2}"
                 placeholder="MM"
+                :disabled="!canEdit"
                 @input="onTwoDigitItemInput(item, 'endMM')"
               />
               <input
@@ -88,6 +93,7 @@
                 maxlength="2"
                 pattern="\\d{0,2}"
                 placeholder="DD"
+                :disabled="!canEdit"
                 @input="onTwoDigitItemInput(item, 'endDD')"
               />
             </div>
@@ -95,19 +101,22 @@
         </div>
         <div class="rde-row">
           <label class="rde-label">Description</label>
-          <textarea v-model="item.description" class="rde-textarea" rows="5" placeholder="Relevant coursework, honors, additional notes..." @blur="requestAutosave" />
+          <textarea v-model="item.description" class="rde-textarea" rows="5" placeholder="Relevant coursework, honors, additional notes..." :disabled="!canEdit" @blur="requestAutosave" />
         </div>
 
-        <button type="button" class="rde-btn-remove" @click="removeItem(i)">Remove</button>
+        <button type="button" class="rde-btn-remove" :disabled="!canEdit" @click="removeItem(i)">Remove</button>
       </div>
 
-      <button type="button" class="rde-btn-add" @click="addItem">+ Add education item</button>
+      <button type="button" class="rde-btn-add" :disabled="!canEdit" @click="addItem">+ Add education item</button>
     </section>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';
+import { hasServer } from '@/modules/core/hasServer.mjs';
+
+const canEdit = hasServer();
 
 const props = defineProps({
   data: { type: Object, default: () => ({}) },
@@ -502,7 +511,9 @@ function requestAutosave() {
 .rde-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; box-sizing: border-box; }
 .rde-textarea { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; resize: vertical; box-sizing: border-box; font-family: Arial, sans-serif; }
 .rde-btn-add { margin-top: 4px; padding: 6px 12px; background: transparent; border: 1px dashed rgba(255,255,255,0.3); color: rgba(255,255,255,0.6); border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
-.rde-btn-add:hover { border-color: rgba(74,158,255,0.6); color: #7ac; }
+.rde-btn-add:hover:not(:disabled) { border-color: rgba(74,158,255,0.6); color: #7ac; }
+.rde-btn-add:disabled { opacity: 0.4; cursor: default; }
 .rde-btn-remove { margin-top: 4px; padding: 5px 10px; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
-.rde-btn-remove:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+.rde-btn-remove:hover:not(:disabled) { border-color: rgba(255,255,255,0.4); color: #fff; }
+.rde-btn-remove:disabled { opacity: 0.4; cursor: default; }
 </style>

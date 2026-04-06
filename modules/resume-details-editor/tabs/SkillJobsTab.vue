@@ -43,8 +43,8 @@
 
             <!-- Rows 1…N: skill label + matrix cells -->
             <template v-for="(skillRow, si) in skillRowsForMatrix" :key="'skill-row-' + skillRow.id">
-              <div class="rde-sj-head-skill" :title="skillLabelText(skillRow.id, { name: skillRow.fullName })">
-                <span class="rde-skill-id-tag">&lt;{{ skillRow.id }}&gt;</span> {{ skillRow.displayLabel }}
+              <div class="rde-sj-head-skill" :title="skillRow.displayLabel">
+                {{ skillRow.displayLabel }}
               </div>
               <button
                 v-for="(job, ji) in jobsList"
@@ -67,7 +67,6 @@
 
 <script setup>
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
-import { skillLabelText } from '@/modules/utils/skillLabel.mjs';
 import * as api from '../api.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { ResumeJob, isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
@@ -179,18 +178,17 @@ const canClearGrid = computed(
 const crossGridColumnsStyle = computed(() => {
   const nj = jobsList.value.length;
   if (nj === 0) return {};
-  // Estimate skill col width from longest "<id> DisplayName (months)" at 0.625rem font.
-  // ~0.28rem per char (≈4.5px at 16px base) for mixed normal+monospace at that size.
-  const CH_REM = 0.28;
-  const MIN_REM = 8;
-  const MAX_REM = 22;
+  // Estimate skill col width from longest "DisplayName (months)" at 0.625rem font.
+  // ~0.37rem per char (≈5.9px at 16px base) for this font size.
+  const CH_REM = 0.30;
+  const MIN_REM = 5;
+  const MAX_REM = 11;
   const longestChars = skillRowsForMatrix.value.reduce((max, row) => {
-    const len = `<${row.id}> ${row.displayLabel}`.length;
-    return len > max ? len : max;
+    return row.displayLabel.length > max ? row.displayLabel.length : max;
   }, 0);
-  const skillColMin = Math.min(MAX_REM, Math.max(MIN_REM, Math.ceil(longestChars * CH_REM * 10) / 10));
+  const skillColMin = Math.min(MAX_REM, Math.max(MIN_REM, Math.ceil(longestChars * CH_REM * 10) / 10 + 2));
   return {
-    /* Skill col: grows to fit <slug> DisplayName (months) on one line. */
+    /* Skill col: grows to fit DisplayName (months) on one line. */
     gridTemplateColumns: `minmax(${skillColMin}rem, max-content) repeat(${nj}, ${JOB_MATRIX_CELL_REM}rem)`,
   };
 });

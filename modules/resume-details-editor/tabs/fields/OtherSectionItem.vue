@@ -4,7 +4,7 @@
     class="rde-row rde-row-col"
     @focusout="onFocusOut"
   >
-    <input v-model="local.title" type="text" name="sectionTitle" class="rde-input" placeholder="Section title" aria-label="Section title" />
+    <input v-model="local.title" type="text" name="sectionTitle" class="rde-input" placeholder="Section title" aria-label="Section title" :disabled="disabled" />
     <input
       ref="subtitleInputRef"
       v-model="local.subtitle"
@@ -13,9 +13,10 @@
       class="rde-input"
       placeholder="Subtitle (optional)"
       aria-label="Section subtitle"
+      :disabled="disabled"
     />
-    <input v-model="local.description" type="text" name="sectionDescription" class="rde-input" placeholder="Description (optional)" aria-label="Section description" />
-    <button type="button" class="rde-btn-remove" title="Remove" aria-label="Remove section" @click="emit('remove')">×</button>
+    <input v-model="local.description" type="text" name="sectionDescription" class="rde-input" placeholder="Description (optional)" aria-label="Section description" :disabled="disabled" />
+    <button type="button" class="rde-btn-remove" title="Remove" aria-label="Remove section" :disabled="disabled" @click="emit('remove')">×</button>
   </div>
 </template>
 
@@ -27,7 +28,8 @@ const props = defineProps({
   /** Incremented when a new entry is added; used to focus the newest entry exactly once. */
   focusToken: { type: Number, default: 0 },
   /** True only for the row that should be focused for the current focusToken. */
-  shouldFocus: { type: Boolean, default: false }
+  shouldFocus: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue', 'remove', 'entry-blur']);

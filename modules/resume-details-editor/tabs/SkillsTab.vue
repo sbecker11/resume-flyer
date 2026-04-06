@@ -44,12 +44,12 @@
             <label for="rde-skills-merge-from" class="rde-sr-only">Skill to merge away</label>
             <select id="rde-skills-merge-from" name="mergeFrom" v-model="mergeFromKey" class="rde-select rde-merge-select" title="Skill to merge away" :disabled="!canEdit">
               <option value="" disabled>Merge skill</option>
-              <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillLabelText(s.id, s) }}</option>
+              <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillDisplayName(s.id, s) }}</option>
             </select>
             <label for="rde-skills-merge-to" class="rde-sr-only">Keep this skill</label>
             <select id="rde-skills-merge-to" name="mergeTo" v-model="mergeToKey" class="rde-select rde-merge-select" title="Keep this skill (canonical skillID)" :disabled="!canEdit">
               <option value="" disabled>To skill</option>
-              <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillLabelText(s.id, s) }}</option>
+              <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillDisplayName(s.id, s) }}</option>
             </select>
             <button type="button" class="rde-btn merge" :disabled="!canEdit || !canMerge" title="Replace the first skill with the second everywhere" @click="mergeSkills">
               Merge
@@ -154,7 +154,7 @@
 
 <script setup>
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
-import { skillLabelText } from '@/modules/utils/skillLabel.mjs';
+import { skillLabelText, skillDisplayName } from '@/modules/utils/skillLabel.mjs';
 import * as api from '../api.mjs';
 import { updateJobSkills, updateEducationJobSkills, renameSkill, mergeSkill } from '@/modules/api/resumeManagerApi.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';

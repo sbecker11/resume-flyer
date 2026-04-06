@@ -12,10 +12,11 @@
       class="rde-input"
       placeholder="Label"
       aria-label="Website label"
+      :disabled="disabled"
     />
-    <input v-model="local.url" type="url" name="websiteUrl" class="rde-input" placeholder="URL" aria-label="Website URL" />
-    <input v-model="local.description" type="text" name="websiteDescription" class="rde-input" placeholder="Description (optional)" aria-label="Website description" />
-    <button type="button" class="rde-btn-remove" title="Remove" aria-label="Remove website" @click="emit('remove')">×</button>
+    <input v-model="local.url" type="url" name="websiteUrl" class="rde-input" placeholder="URL" aria-label="Website URL" :disabled="disabled" />
+    <input v-model="local.description" type="text" name="websiteDescription" class="rde-input" placeholder="Description (optional)" aria-label="Website description" :disabled="disabled" />
+    <button type="button" class="rde-btn-remove" title="Remove" aria-label="Remove website" :disabled="disabled" @click="emit('remove')">×</button>
   </div>
 </template>
 
@@ -27,7 +28,8 @@ const props = defineProps({
   /** Incremented when a new entry is added; used to focus the newest entry exactly once. */
   focusToken: { type: Number, default: 0 },
   /** True only for the row that should be focused for the current focusToken. */
-  shouldFocus: { type: Boolean, default: false }
+  shouldFocus: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['update:modelValue', 'remove', 'entry-blur']);
