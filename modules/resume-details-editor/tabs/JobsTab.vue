@@ -36,6 +36,7 @@
               class="rde-input"
               placeholder="Employer name"
               autocomplete="organization"
+              :disabled="!canEdit"
               @blur="onJobFieldBlur"
             />
           </div>
@@ -49,6 +50,7 @@
               class="rde-input"
               placeholder="Job title"
               autocomplete="organization-title"
+              :disabled="!canEdit"
               @blur="onJobFieldBlur"
             />
           </div>
@@ -65,6 +67,7 @@
                   maxlength="4"
                   pattern="\\d{0,4}"
                   placeholder="YYYY"
+                  :disabled="!canEdit"
                   @input="onFourDigitInput('startYYYY')"
                   @blur="onJobFieldBlur"
                 />
@@ -77,6 +80,7 @@
                   maxlength="2"
                   pattern="\\d{0,2}"
                   placeholder="MM"
+                  :disabled="!canEdit"
                   @input="onTwoDigitInput('startMM')"
                   @blur="onJobFieldBlur"
                 />
@@ -89,6 +93,7 @@
                   maxlength="2"
                   pattern="\\d{0,2}"
                   placeholder="DD"
+                  :disabled="!canEdit"
                   @input="onTwoDigitInput('startDD')"
                   @blur="onJobFieldBlur"
                 />
@@ -106,6 +111,7 @@
                   maxlength="4"
                   pattern="\\d{0,4}"
                   placeholder="YYYY"
+                  :disabled="!canEdit"
                   @input="onFourDigitInput('endYYYY')"
                 />
                 <input
@@ -117,6 +123,7 @@
                   maxlength="2"
                   pattern="\\d{0,2}"
                   placeholder="MM"
+                  :disabled="!canEdit"
                   @input="onTwoDigitInput('endMM')"
                 />
                 <input
@@ -128,6 +135,7 @@
                   maxlength="2"
                   pattern="\\d{0,2}"
                   placeholder="DD"
+                  :disabled="!canEdit"
                   @input="onTwoDigitInput('endDD')"
                 />
               </div>
@@ -143,6 +151,7 @@
               class="rde-textarea rde-description"
               placeholder="Job description…"
               rows="8"
+              :disabled="!canEdit"
               @blur="onJobFieldBlur"
             />
           </div>

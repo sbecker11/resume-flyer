@@ -15,6 +15,10 @@
           <div class="rde-subtitle">{{ resumeId }}</div>
         </div>
 
+        <div v-if="!canEdit" class="rde-static-mode-banner" role="status">
+          View only — editing requires a local server.
+        </div>
+
         <div class="rde-tabs" role="tablist" aria-label="Resume details sections">
           <button
             v-for="t in tabs"
@@ -1096,6 +1100,14 @@ async function save() {
   width: 20px;
   height: 20px;
   cursor: nwse-resize;
+}
+.rde-static-mode-banner {
+  background: rgba(255, 180, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 180, 0, 0.4);
+  color: rgba(255, 220, 100, 0.95);
+  font-size: 0.78rem;
+  padding: 7px var(--rde-inner-padding-x, 16px);
+  line-height: 1.5;
 }
 .rde-header {
   padding: 14px var(--rde-inner-padding-x) 10px;

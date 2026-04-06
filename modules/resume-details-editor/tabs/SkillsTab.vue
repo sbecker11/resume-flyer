@@ -33,6 +33,7 @@
               class="rde-input rde-add-skill"
               type="text"
               placeholder="Add a new skill…"
+              :disabled="!canEdit"
               @keydown.enter="addNewSkill"
             />
             <button type="button" class="rde-btn add" :disabled="!canEdit || !newSkillNameTrimmed" @click="addNewSkill">
@@ -41,12 +42,12 @@
           </div>
           <div v-if="sortedSkills.length >= 2" class="rde-skills-merge-row">
             <label for="rde-skills-merge-from" class="rde-sr-only">Skill to merge away</label>
-            <select id="rde-skills-merge-from" name="mergeFrom" v-model="mergeFromKey" class="rde-select rde-merge-select" title="Skill to merge away">
+            <select id="rde-skills-merge-from" name="mergeFrom" v-model="mergeFromKey" class="rde-select rde-merge-select" title="Skill to merge away" :disabled="!canEdit">
               <option value="" disabled>Merge skill</option>
               <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillLabelText(s.id, s) }}</option>
             </select>
             <label for="rde-skills-merge-to" class="rde-sr-only">Keep this skill</label>
-            <select id="rde-skills-merge-to" name="mergeTo" v-model="mergeToKey" class="rde-select rde-merge-select" title="Keep this skill (canonical skillID)">
+            <select id="rde-skills-merge-to" name="mergeTo" v-model="mergeToKey" class="rde-select rde-merge-select" title="Keep this skill (canonical skillID)" :disabled="!canEdit">
               <option value="" disabled>To skill</option>
               <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillLabelText(s.id, s) }}</option>
             </select>
@@ -82,7 +83,7 @@
                 <input
                   type="checkbox"
                   :checked="selected.has(skill.id)"
-                  :disabled="skillEditModalOpen"
+                  :disabled="!canEdit || skillEditModalOpen"
                   @change="toggleAndAutosave(skill.id)"
                 />
                 <button
@@ -123,6 +124,7 @@
             type="text"
             class="rde-input rde-skill-edit-input"
             :aria-label="`Edit ${editingSkillId}`"
+            :disabled="!canEdit"
             @keydown.enter="saveEditSkill"
           />
         </div>
