@@ -894,6 +894,10 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
 .appended-skill-resume-div .skill-info-modal-btn {
     right: 30px;
 }
+/* Hide ? button entirely on static hosts (GitHub Pages) — no server API available */
+.static-host .skill-info-modal-btn {
+    display: none !important;
+}
 
 #skill-info-modal {
     display: none;

@@ -7,6 +7,11 @@ window.CONSOLE_INFO_IGNORE = () => {};
 // Ensure hasServer singleton is attached to window (self-initializes on first call)
 import './modules/core/hasServer.mjs';
 
+// Mark <body> immediately so CSS can hide server-only UI on static hosts.
+if (typeof window !== 'undefined' && !window.hasServer()) {
+    document.documentElement.classList.add('static-host');
+}
+
 // Create centralized logging control system
 // 
 // Usage:

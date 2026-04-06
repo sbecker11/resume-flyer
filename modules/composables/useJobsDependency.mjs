@@ -111,6 +111,22 @@ export function useJobsDependency() {
     }
     const getStaticPayload = async (id) => {
       const effectiveId = id === 'default' ? await resolveDefaultFromIndex() : id
+      // Try pre-baked enriched-jobs.json first — written automatically by the server
+      // after every edit, so it stays current without a separate build step.
+      const enrichedUrl = basePathJoin(`parsed_resumes/${encodeURIComponent(effectiveId)}/enriched-jobs.json`)
+      try {
+        const enrichedRes = await fetch(enrichedUrl)
+        if (enrichedRes.ok) {
+          const enrichedJobs = await enrichedRes.json()
+          // Also fetch skills so skillsState is populated for label resolution
+          const { skills: u2 } = getStaticUrls(effectiveId)
+          const skillsRes = await fetch(u2).catch(() => null)
+          const skills = (skillsRes && skillsRes.ok) ? await skillsRes.json() : {}
+          console.log(`[useJobsDependency] ✅ Using pre-baked enriched-jobs.json (${enrichedJobs.length} jobs)`)
+          return { jobs: enrichedJobs, skills, preEnriched: true }
+        }
+      } catch { /* fall through to raw enrichment */ }
+
       const { jobs: u1, skills: u2, education: uEdu } = getStaticUrls(effectiveId)
       const [jobsRes, skillsRes, educationRes] = await Promise.all([
         fetch(u1),
@@ -133,58 +149,121 @@ export function useJobsDependency() {
     jobsState.value.isLoading = true
     jobsState.value.error = null
 
-    try {
-      let payload = null
-      const educationUrl = basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/education`)
-      if (hasServer()) {
-        try {
-          const [res, educationRes] = await Promise.all([
-            fetch(apiUrl),
-            fetch(educationUrl).catch(() => null),
-          ])
-          if (!res.ok) {
-            const errBody = await res.text().catch(() => '')
-            throw new Error(res.status === 404 ? `Resume data not found: ${apiUrl}` : `Resume API ${res.status}: ${errBody}`)
-          }
-          payload = await res.json()
-          const education = (educationRes && educationRes.ok) ? await educationRes.json() : {}
-          const rawJobs = mergeJobsWithEducation(toJobsArray(payload?.jobs ?? payload), education)
-          const skills = payload?.skills ?? {}
-          const jobs = enrichJobsWithSkills(rawJobs, skills || {})
-          skillsState.value = skills || {}
-          validateSkillLabelUniqueness(skillsState.value)
-          jobsState.value.data = jobs
-          jobsState.value.isInitialized = true
-          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('skills-data-ready'))
-
-          console.log(`[useJobsDependency] ✅ Jobs loaded successfully: ${jobs.length} jobs`)
-
-          await notifyDependentControllers()
-          return jobs
-        } catch (e) {
-          const is404OrNotFound = e?.message?.includes('404') || e?.message?.includes('Resume data not found')
-          if (!is404OrNotFound) {
-            reportError(e, '[useJobsDependency] Failed to fetch resume data from API', 'Attempting static /parsed_resumes fallback')
-          }
-          payload = await getStaticPayload(resumeId)
-        }
-      } else {
-        payload = await getStaticPayload(resumeId)
-      }
-
-      const rawJobs = toJobsArray(payload?.jobs ?? payload)
-      const skills = payload?.skills ?? {}
-      const jobs = enrichJobsWithSkills(rawJobs, skills || {})
+    /** Commit a resolved jobs+skills payload to reactive state and notify controllers. */
+    const commitJobs = async (jobs, skills, source) => {
       skillsState.value = skills || {}
       validateSkillLabelUniqueness(skillsState.value)
       jobsState.value.data = jobs
       jobsState.value.isInitialized = true
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('skills-data-ready'))
-
-      console.log(`[useJobsDependency] ✅ Jobs loaded successfully: ${jobs.length} jobs`)
-
+      console.log(`[useJobsDependency] ✅ Committed ${jobs.length} jobs — source: ${source}`)
       await notifyDependentControllers()
-      return jobs
+    }
+
+    /** Simple fingerprint: job count + concatenated start dates. Fast and good enough. */
+    const fingerprint = (jobs) => {
+      if (!Array.isArray(jobs)) return ''
+      return `${jobs.length}:${jobs.map(j => j.start || '').join(',')}`
+    }
+
+    try {
+      const educationUrl = basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/education`)
+      const effectiveId = resumeId === 'default' ? await resolveDefaultFromIndex() : resumeId
+      const enrichedUrl = basePathJoin(`parsed_resumes/${encodeURIComponent(effectiveId)}/enriched-jobs.json`)
+      const { skills: skillsUrl } = getStaticUrls(effectiveId)
+
+      // ── Phase 1: load enriched-jobs.json immediately (fast path, always tried) ──
+      let phase1Jobs = null
+      let phase1Skills = null
+      console.log(`[useJobsDependency] 📦 Phase 1: trying pre-baked ${enrichedUrl}`)
+      try {
+        const [enrichedRes, skillsRes] = await Promise.all([
+          fetch(enrichedUrl),
+          fetch(skillsUrl).catch(() => null),
+        ])
+        if (enrichedRes.ok) {
+          phase1Jobs = await enrichedRes.json()
+          phase1Skills = (skillsRes?.ok) ? await skillsRes.json() : {}
+          await commitJobs(phase1Jobs, phase1Skills, 'enriched-jobs.json (pre-baked)')
+          jobsState.value.isLoading = false
+          console.log(`[useJobsDependency] ⚡ Phase 1 complete — UI rendered from pre-baked data`)
+        } else {
+          console.log(`[useJobsDependency] ⚠️  Phase 1: enriched-jobs.json not found (HTTP ${enrichedRes.status}) — skipping`)
+        }
+      } catch (e) {
+        console.log(`[useJobsDependency] ⚠️  Phase 1: fetch failed (${e.message}) — skipping`)
+      }
+
+      // ── Phase 2: authoritative source (API when server available, raw static otherwise) ──
+      if (hasServer()) {
+        // Run in background if phase 1 already committed; await if it didn't.
+        const runPhase2 = async () => {
+          console.log(`[useJobsDependency] 🌐 Phase 2: fetching from API ${apiUrl}`)
+          try {
+            const [res, educationRes] = await Promise.all([
+              fetch(apiUrl),
+              fetch(educationUrl).catch(() => null),
+            ])
+            if (!res.ok) {
+              const errBody = await res.text().catch(() => '')
+              throw new Error(res.status === 404 ? `Resume data not found: ${apiUrl}` : `Resume API ${res.status}: ${errBody}`)
+            }
+            const payload = await res.json()
+            const education = (educationRes?.ok) ? await educationRes.json() : {}
+            const rawJobs = mergeJobsWithEducation(toJobsArray(payload?.jobs ?? payload), education)
+            const skills = payload?.skills ?? {}
+            const jobs = enrichJobsWithSkills(rawJobs, skills || {})
+            const fp1 = fingerprint(phase1Jobs)
+            const fp2 = fingerprint(jobs)
+            if (!phase1Jobs || fp2 !== fp1) {
+              console.log(`[useJobsDependency] 🔄 Phase 2: API data differs from pre-baked (${fp1 || 'none'} → ${fp2}) — updating state`)
+              await commitJobs(jobs, skills, 'API (live enrichment)')
+            } else {
+              console.log(`[useJobsDependency] ✅ Phase 2: API matches pre-baked data (fingerprint: ${fp2}) — no update needed`)
+            }
+            return jobs
+          } catch (e) {
+            const is404OrNotFound = e?.message?.includes('404') || e?.message?.includes('Resume data not found')
+            if (!is404OrNotFound) {
+              reportError(e, '[useJobsDependency] Phase 2 API fetch failed', phase1Jobs ? 'Keeping phase 1 pre-baked data' : 'Attempting static fallback')
+            }
+            if (phase1Jobs) {
+              console.log(`[useJobsDependency] ⚠️  Phase 2 failed — keeping phase 1 pre-baked data`)
+              return phase1Jobs
+            }
+            // No phase 1 data — fall back to raw static files
+            console.log(`[useJobsDependency] 🗂️  Phase 2 fallback: loading raw static files`)
+            const payload = await getStaticPayload(resumeId)
+            const rawJobs = toJobsArray(payload?.jobs ?? payload)
+            const skills = payload?.skills ?? {}
+            const jobs = payload?.preEnriched ? rawJobs : enrichJobsWithSkills(rawJobs, skills || {})
+            await commitJobs(jobs, skills, payload?.preEnriched ? 'static enriched-jobs.json' : 'static jobs.json + live enrichment')
+            return jobs
+          }
+        }
+        if (phase1Jobs) {
+          // Phase 1 already rendered — run phase 2 in background, don't block
+          console.log(`[useJobsDependency] 🔀 Phase 1 rendered — phase 2 running in background`)
+          runPhase2().catch(e => reportError(e, '[useJobsDependency] Background phase 2 failed'))
+          return phase1Jobs
+        } else {
+          console.log(`[useJobsDependency] ⏳ Phase 1 unavailable — awaiting phase 2`)
+          return await runPhase2()
+        }
+      } else {
+        // Static host: phase 1 is the only source; if it failed, try raw static files
+        if (phase1Jobs) {
+          console.log(`[useJobsDependency] 🏁 Static host — using phase 1 pre-baked data`)
+          return phase1Jobs
+        }
+        console.log(`[useJobsDependency] 🗂️  Static host — phase 1 unavailable, loading raw static files`)
+        const payload = await getStaticPayload(resumeId)
+        const rawJobs = toJobsArray(payload?.jobs ?? payload)
+        const skills = payload?.skills ?? {}
+        const jobs = payload?.preEnriched ? rawJobs : enrichJobsWithSkills(rawJobs, skills || {})
+        await commitJobs(jobs, skills, payload?.preEnriched ? 'static enriched-jobs.json' : 'static jobs.json + live enrichment')
+        return jobs
+      }
     } catch (error) {
       reportError(error, '[useJobsDependency] ❌ Failed to load jobs')
       jobsState.value.error = error

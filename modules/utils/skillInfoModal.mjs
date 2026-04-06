@@ -4,10 +4,16 @@
  * Shared utility: fetch a skill's LLM-generated definition from the server
  * and display it in a modal overlay.
  *
+ * On static hosts (GitHub Pages) the API is unavailable; the ? button is
+ * hidden via CSS and openSkillInfoModal shows a "not available" message
+ * instead of making a failing network request.
+ *
  * Usage:
  *   import { openSkillInfoModal } from '@/modules/utils/skillInfoModal.mjs';
  *   openSkillInfoModal(slug, displayName);
  */
+
+import { hasServer } from '@/modules/core/hasServer.mjs';
 
 const MODAL_ID = 'skill-info-modal';
 
@@ -21,6 +27,8 @@ function installGlobalDelegate() {
         if (!btn) return;
         e.stopPropagation();
         e.preventDefault();
+        // On static hosts the button should be hidden by CSS, but guard here too.
+        if (!hasServer()) return;
         const card = btn.closest('.skill-card-div, .skill-resume-div, .appended-skill-resume-div');
         const slug = card?.getAttribute('data-skill-name') || btn.getAttribute('data-skill-slug') || '';
         const displayName = btn.getAttribute('aria-label')?.replace(/^What is /, '').replace(/\?$/, '') || slug;
@@ -92,6 +100,13 @@ installGlobalDelegate();
 export async function openSkillInfoModal(slug, displayName, cardEl = null) {
     const modal = getOrCreateModal();
     applyPaletteFromCard(modal, cardEl);
+
+    if (!hasServer()) {
+        setModalContent(modal, displayName || slug,
+            `<span class="skill-info-error">Skill definitions are not available in the static (GitHub Pages) version of this app.</span>`);
+        return;
+    }
+
     setModalContent(modal, displayName || slug, '<span class="skill-info-loading">Loading…</span>');
 
     try {

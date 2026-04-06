@@ -12,6 +12,7 @@ import fetch from 'node-fetch';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
 import { mergeJobsWithEducation, toJobsArray } from './modules/data/mergeEducationIntoJobs.mjs';
+import { enrichJobsWithSkills } from './modules/data/enrichedJobs.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
 import { reportError } from './modules/utils/errorReporting.mjs';
 import {
@@ -184,6 +185,30 @@ async function readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath =
     const skills = normalizeParserSkills(rawSkills);
     const categories = normalizeParserCategories(rawCategories);
     return { jobs, skills, categories };
+}
+
+/**
+ * Run enrichJobsWithSkills on the current jobs+skills for a resume folder and
+ * write the result to enriched-jobs.json.  Called automatically after any write
+ * that touches jobs.json or skills.json so the file stays current without a
+ * separate build step.  Errors are logged but never thrown — a stale or missing
+ * enriched-jobs.json is not fatal; the client falls back to live enrichment.
+ *
+ * @param {string} dir          - absolute path to the resume folder
+ * @param {Array}  jobs         - already-normalized jobs array (from readAndNormalizeResumeData)
+ * @param {object} skills       - already-normalized skills map
+ */
+async function bakeEnrichedJobs(dir, jobs, skills) {
+    try {
+        const enriched = enrichJobsWithSkills(jobs, skills);
+        // Serialize as plain objects — ResumeJob instances are JSON-serializable,
+        // but we strip the non-serializable `references` regex internals (they are
+        // re-derived strings, not RegExps, so JSON.stringify handles them fine).
+        const enrichedPath = path.join(dir, 'enriched-jobs.json');
+        await atomicWriteWithLock(enrichedPath, JSON.stringify(enriched, null, 2));
+    } catch (e) {
+        reportError(e, '[bakeEnrichedJobs] Failed to write enriched-jobs.json — static host will fall back to live enrichment');
+    }
 }
 
 /**
@@ -460,6 +485,7 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
             atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
+        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
         res.json({ ok: true, skillIDs: newSkillIDs });
     } catch (err) {
         console.error('[PATCH jobs skills]', err);
@@ -533,6 +559,12 @@ app.patch('/api/resumes/:id/education/:educationKey/skills', async (req, res) =>
             atomicWriteWithLock(educationPath, JSON.stringify(educationData, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
+        // Re-bake using current jobs.json (education changes affect enrichment too)
+        try {
+            const jobsContent = await fs.readFile(path.join(dir, 'jobs.json'), 'utf-8');
+            const rawJobs = parseResumeFile(jobsContent, path.join(dir, 'jobs.json'), 'jobs');
+            bakeEnrichedJobs(dir, normalizeParserJobs(rawJobs), normalizeParserSkills(skills));
+        } catch { /* bake failure is non-fatal */ }
         res.json({ ok: true, skillIDs: newSkillIDs });
     } catch (err) {
         if (err.code === 'ENOENT') {
@@ -608,6 +640,7 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
             atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
+        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
         res.json({ ok: true, key: newNameTrimmed, descriptionFixes: descFixes });
     } catch (err) {
         console.error('[PATCH skills/rename]', err);
@@ -675,6 +708,7 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
             atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
+        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
         res.json({ ok: true, mergedInto: toKey, descriptionFixes: descFixes });
     } catch (err) {
         console.error('[PATCH skills/merge]', err);
@@ -710,6 +744,14 @@ app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     if (jobs[idx] == null) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
     Object.assign(jobs[idx], updates);
     await atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2));
+    // Bake if Description changed (affects job-skills / references)
+    if ('Description' in updates) {
+        try {
+            const skillsContent = await fs.readFile(path.join(dir, 'skills.json'), 'utf-8').catch(() => '{}');
+            const rawSkills = parseResumeFile(skillsContent, path.join(dir, 'skills.json'), 'skills') || {};
+            bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(rawSkills));
+        } catch { /* bake failure is non-fatal */ }
+    }
     res.json({ ok: true, job: jobs[idx] });
 });
 
@@ -759,6 +801,7 @@ app.post('/api/resumes/:id/jobs', async (req, res) => {
             atomicWriteWithLock(jobsPath, JSON.stringify(arr, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
+        bakeEnrichedJobs(dir, arr, normalizeParserSkills(skills));
         res.json({ ok: true, insertIndex: insertAt });
     } catch (err) {
         console.error('[POST jobs]', err);
@@ -804,6 +847,7 @@ app.delete('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
             atomicWriteWithLock(jobsPath, JSON.stringify(arr, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
+        bakeEnrichedJobs(dir, arr, normalizeParserSkills(skills));
         res.json({ ok: true });
     } catch (err) {
         console.error('[DELETE jobs]', err);
