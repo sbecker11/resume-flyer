@@ -41,7 +41,6 @@
       "aws-iam",
       "aws-lambda",
       "cdp",
-      "cloudformation",
       "java",
       "llm",
       "numpy",
@@ -69,7 +68,9 @@
       "ci-cd-github-actions",
       "aws-fargate",
       "aws-ecs",
-      "terraform"
+      "terraform",
+      "cloudformation",
+      "3d-splotch-rendering"
     ],
     "jobID": "0"
   },

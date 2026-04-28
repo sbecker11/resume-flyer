@@ -1109,7 +1109,9 @@
       "devops",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "ci-cd-github-actions": {
     "name": "CI/CD GitHub Actions",
@@ -1324,7 +1326,8 @@
   "3d-splotch-rendering": {
     "name": "3D splotch rendering",
     "jobIDs": [
-      18
+      18,
+      0
     ]
   },
   "chirplet-visualizations": {

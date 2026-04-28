@@ -408,6 +408,42 @@ export function useCardsController() {
         }
     }
 
+    /**
+     * Wire cDiv pencil buttons to the same editor flows as rDiv.
+     * cloneNode(true) does not copy listeners, so this must be called for clones too.
+     * @param {HTMLElement} cardEl
+     * @param {number} jobNumber
+     */
+    function attachBizCardEditButtonListeners(cardEl, jobNumber) {
+        if (!cardEl) return
+        const employerEditBtn = cardEl.querySelector('.biz-details-employer-wrap .biz-details-edit-btn')
+        if (employerEditBtn) {
+            employerEditBtn.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const jobs = getGlobalJobsDependency().getJobsData()
+                const job = jobs[jobNumber]
+                if (isEducationDerivedJob(job)) {
+                    window.dispatchEvent(new CustomEvent('open-resume-details', {
+                        detail: { tab: 'education', educationKey: educationKeyOf(job) },
+                    }))
+                } else {
+                    window.dispatchEvent(new CustomEvent('open-resume-details', {
+                        detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' },
+                    }))
+                }
+            })
+        }
+        const skillsEditBtn = cardEl.querySelector('.resume-skills .biz-details-edit-btn')
+        if (skillsEditBtn) {
+            skillsEditBtn.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }))
+            })
+        }
+    }
+
     async function createBizCardDiv(job, jobNumber, scenePlane) {
         const cardId = createBizCardDivId(jobNumber)
 
@@ -731,32 +767,7 @@ export function useCardsController() {
             </div>` : ''}
         `
 
-        const employerEditBtn = card.querySelector('.biz-details-employer-wrap .biz-details-edit-btn')
-        if (employerEditBtn) {
-            employerEditBtn.addEventListener('click', (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                const jobs = getGlobalJobsDependency().getJobsData()
-                const job = jobs[jobNumber]
-                if (isEducationDerivedJob(job)) {
-                    window.dispatchEvent(new CustomEvent('open-resume-details', {
-                        detail: { tab: 'education', educationKey: educationKeyOf(job) },
-                    }))
-                } else {
-                    window.dispatchEvent(new CustomEvent('open-resume-details', {
-                        detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' },
-                    }))
-                }
-            })
-        }
-        const skillsEditBtn = card.querySelector('.resume-skills .biz-details-edit-btn')
-        if (skillsEditBtn) {
-            skillsEditBtn.addEventListener('click', (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }))
-            })
-        }
+        attachBizCardEditButtonListeners(card, jobNumber)
 
         // Add click handler: select this card or deselect if it is the selected card (one at a time). Clicking a skill title (by element id) selects that skill card.
         card.addEventListener('click', (event) => {
@@ -1961,6 +1972,9 @@ export function useCardsController() {
             event.stopPropagation()
             if (!selectionManager) return
 
+            // Pencil icons inside selected biz card clone should open editors, not toggle selection.
+            if (event.target.closest('.biz-details-edit-btn')) return
+
             // Skill title link inside selected biz card clone
             const skillTitleEl = event.target.closest('.biz-card-skill-title')
             if (skillTitleEl) {
@@ -1984,6 +1998,7 @@ export function useCardsController() {
             if (event.key === ' ') event.preventDefault()
             selectSkillCardById(skillTitleEl.getAttribute('data-skill-card-id'), 'CardsController.cloneSkillTitleKeydown')
         })
+        attachBizCardEditButtonListeners(clone, jobNumber)
 
         // Apply color palette to clone
         try {

@@ -14,10 +14,14 @@
  */
 
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
+import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 
 const MODAL_ID = 'skill-info-modal';
 const SKILL_BIZ_LINK_CLASS = 'skill-info-biz-link';
 const SKILL_BIZ_LINK_JOB_ATTR = 'data-job-number';
+const SKILL_BIZ_LINK_SKILL_ATTR = 'data-skill-name';
+const FOCUSED_SKILL_LINK_CLASS = 'skill-link-focused-from-modal';
 
 // Single global delegated listener — survives any innerHTML replacement on cards.
 let _delegateInstalled = false;
@@ -30,11 +34,16 @@ function installGlobalDelegate() {
             e.stopPropagation();
             e.preventDefault();
             const raw = bizLink.getAttribute(SKILL_BIZ_LINK_JOB_ATTR);
+            const skillSlug = String(bizLink.getAttribute(SKILL_BIZ_LINK_SKILL_ATTR) || '').trim();
             const jobNumber = raw == null ? NaN : Number.parseInt(raw, 10);
             if (!Number.isFinite(jobNumber)) return;
             const sm = window.resumeFlyer?.selectionManager;
             if (sm?.selectCard) {
                 sm.selectCard({ type: 'biz', jobNumber }, 'SkillInfoModal.bizLinkClick');
+                if (skillSlug) {
+                    // Clone creation/selection is async; retry briefly to mark both cDiv and rDiv links.
+                    markFocusedSkillLinkForJob(jobNumber, skillSlug);
+                }
                 const modal = document.getElementById(MODAL_ID);
                 if (modal) closeModal(modal);
             }
@@ -53,6 +62,44 @@ function installGlobalDelegate() {
         console.log(`[SkillInfoModal] ? clicked — slug: "${slug}", name: "${displayName}"`);
         if (slug) openSkillInfoModal(slug, displayName, card);
     }, true); // capture phase so stopPropagation blocks card deselection
+}
+
+function clearFocusedSkillLinkClass() {
+    document.querySelectorAll(`.biz-card-skill-title.${FOCUSED_SKILL_LINK_CLASS}`).forEach((el) => {
+        el.classList.remove(FOCUSED_SKILL_LINK_CLASS);
+    });
+}
+
+function markFocusedSkillLinkForJob(jobNumber, skillSlug) {
+    clearFocusedSkillLinkClass();
+    const escJob = CSS.escape(String(jobNumber));
+    const escSkill = CSS.escape(String(skillSlug));
+    const containerSelector = `.biz-card-div[data-job-number="${escJob}"], .biz-resume-div[data-job-number="${escJob}"]`;
+    const apply = () => {
+        const containers = Array.from(document.querySelectorAll(containerSelector));
+        if (!containers.length) return false;
+        let appliedAny = false;
+        containers.forEach((container) => {
+            container.querySelectorAll(`.biz-card-skill-title.${FOCUSED_SKILL_LINK_CLASS}`).forEach((el) => {
+                el.classList.remove(FOCUSED_SKILL_LINK_CLASS);
+            });
+            const firstMatch = container.querySelector(`.biz-card-skill-title[data-skill-name="${escSkill}"]`);
+            if (firstMatch) {
+                firstMatch.classList.add(FOCUSED_SKILL_LINK_CLASS);
+                appliedAny = true;
+            }
+        });
+        return appliedAny;
+    };
+    if (apply()) return;
+    // Retry a few times while selected cDiv clone is being created.
+    requestAnimationFrame(() => {
+        if (apply()) return;
+        requestAnimationFrame(() => {
+            if (apply()) return;
+            window.setTimeout(() => { apply(); }, 120);
+        });
+    });
 }
 
 function getOrCreateModal() {
@@ -155,7 +202,12 @@ function getAssociatedBizCards(skillCardEl) {
         const employer = bizEl.getAttribute('data-employer')
             || bizEl.getAttribute('data-biz-card-title')
             || `Job ${jobNumber}`;
-        out.push({ jobNumber, employer });
+        const jobs = getGlobalJobsDependency().getJobsData();
+        const job = Array.isArray(jobs) ? jobs[jobNumber] : null;
+        const months = job
+            ? jobTenureMonthsInclusive(job.start, job.end)
+            : null;
+        out.push({ jobNumber, employer, months: months ?? 0 });
     }
     out.sort((a, b) => a.jobNumber - b.jobNumber);
     return out;
@@ -164,10 +216,12 @@ function getAssociatedBizCards(skillCardEl) {
 function associatedBizCardsHtml(skillCardEl) {
     const cards = getAssociatedBizCards(skillCardEl);
     if (!cards.length) return '';
+    const skillSlug = String(skillCardEl?.getAttribute?.('data-skill-name') || '');
     const linksHtml = cards.map((biz) => {
         const employer = escapeHtml(biz.employer);
-        const label = `${employer} (#${biz.jobNumber})`;
-        return `<li><a href="#" class="${SKILL_BIZ_LINK_CLASS}" ${SKILL_BIZ_LINK_JOB_ATTR}="${biz.jobNumber}">${label}</a></li>`;
+        const months = Number.isFinite(biz.months) ? biz.months : 0;
+        const label = `${employer} (${months} months)`;
+        return `<li><a href="#" class="${SKILL_BIZ_LINK_CLASS}" ${SKILL_BIZ_LINK_JOB_ATTR}="${biz.jobNumber}" ${SKILL_BIZ_LINK_SKILL_ATTR}="${escapeHtml(skillSlug)}">${label}</a></li>`;
     }).join('');
     return `
         <div class="skill-info-associated-biz">

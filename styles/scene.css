@@ -884,9 +884,10 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
     transition: all 0.2s ease;
     z-index: 2;
 }
-/* Show on selected skill-card-div (.clone) and selected skill-resume-div (.selected) */
+/* Show on selected scene skill cards and all resume-list skill cards (including education-linked). */
 .skill-card-div.clone .skill-info-modal-btn,
-.skill-resume-div.selected .skill-info-modal-btn {
+.skill-resume-div .skill-info-modal-btn,
+.appended-skill-resume-div .skill-info-modal-btn {
     display: flex;
 }
 /* On skill-resume-div the × close button occupies top-right; shift ? to its left */
@@ -1014,6 +1015,9 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
 .skill-info-associated-biz-list a:hover,
 .skill-info-associated-biz-list a:focus-visible {
     opacity: 0.85;
+}
+.biz-card-skill-title.skill-link-focused-from-modal {
+    font-weight: 700;
 }
 .skill-info-loading,
 .skill-info-error {
