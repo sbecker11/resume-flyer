@@ -16,6 +16,8 @@
 import { hasServer } from '@/modules/core/hasServer.mjs';
 
 const MODAL_ID = 'skill-info-modal';
+const SKILL_BIZ_LINK_CLASS = 'skill-info-biz-link';
+const SKILL_BIZ_LINK_JOB_ATTR = 'data-job-number';
 
 // Single global delegated listener — survives any innerHTML replacement on cards.
 let _delegateInstalled = false;
@@ -23,6 +25,22 @@ function installGlobalDelegate() {
     if (_delegateInstalled) return;
     _delegateInstalled = true;
     document.addEventListener('click', (e) => {
+        const bizLink = e.target.closest(`.${SKILL_BIZ_LINK_CLASS}`);
+        if (bizLink) {
+            e.stopPropagation();
+            e.preventDefault();
+            const raw = bizLink.getAttribute(SKILL_BIZ_LINK_JOB_ATTR);
+            const jobNumber = raw == null ? NaN : Number.parseInt(raw, 10);
+            if (!Number.isFinite(jobNumber)) return;
+            const sm = window.resumeFlyer?.selectionManager;
+            if (sm?.selectCard) {
+                sm.selectCard({ type: 'biz', jobNumber }, 'SkillInfoModal.bizLinkClick');
+                const modal = document.getElementById(MODAL_ID);
+                if (modal) closeModal(modal);
+            }
+            return;
+        }
+
         const btn = e.target.closest('.skill-info-modal-btn');
         if (!btn) return;
         e.stopPropagation();
@@ -94,16 +112,83 @@ function setModalContent(modal, title, bodyHtml) {
     modal.classList.add('open');
 }
 
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
+function parseJobNumberFromBizCardElement(bizCardEl) {
+    if (!bizCardEl) return null;
+    const raw = bizCardEl.getAttribute('data-job-number');
+    const n = raw == null ? NaN : Number.parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+}
+
+function resolveSkillCardElement(cardEl, slug) {
+    if (cardEl?.classList?.contains('skill-card-div')) return cardEl;
+    const cardId = cardEl?.getAttribute?.('data-skill-card-id');
+    if (cardId) {
+        const byId = document.getElementById(cardId) || document.getElementById(`${cardId}-clone`);
+        if (byId?.classList?.contains('skill-card-div')) return byId;
+    }
+    if (!slug) return null;
+    const exact = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(slug)}"]:not(.clone)`);
+    if (exact) return exact;
+    return document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(slug)}"]`);
+}
+
+function getAssociatedBizCards(skillCardEl) {
+    if (!skillCardEl) return [];
+    const rawIds = String(skillCardEl.getAttribute('data-referencing-biz-card-ids') || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    const seenJobs = new Set();
+    const out = [];
+    for (const bizCardId of rawIds) {
+        const bizEl = document.getElementById(bizCardId);
+        if (!bizEl) continue;
+        const jobNumber = parseJobNumberFromBizCardElement(bizEl);
+        if (jobNumber == null || seenJobs.has(jobNumber)) continue;
+        seenJobs.add(jobNumber);
+        const employer = bizEl.getAttribute('data-employer')
+            || bizEl.getAttribute('data-biz-card-title')
+            || `Job ${jobNumber}`;
+        out.push({ jobNumber, employer });
+    }
+    out.sort((a, b) => a.jobNumber - b.jobNumber);
+    return out;
+}
+
+function associatedBizCardsHtml(skillCardEl) {
+    const cards = getAssociatedBizCards(skillCardEl);
+    if (!cards.length) return '';
+    const linksHtml = cards.map((biz) => {
+        const employer = escapeHtml(biz.employer);
+        const label = `${employer} (#${biz.jobNumber})`;
+        return `<li><a href="#" class="${SKILL_BIZ_LINK_CLASS}" ${SKILL_BIZ_LINK_JOB_ATTR}="${biz.jobNumber}">${label}</a></li>`;
+    }).join('');
+    return `
+        <div class="skill-info-associated-biz">
+            <div class="skill-info-associated-biz-title">Associated experience</div>
+            <ul class="skill-info-associated-biz-list">${linksHtml}</ul>
+        </div>
+    `;
+}
+
 // Install delegate immediately when this module is imported.
 installGlobalDelegate();
 
 export async function openSkillInfoModal(slug, displayName, cardEl = null) {
     const modal = getOrCreateModal();
     applyPaletteFromCard(modal, cardEl);
+    const skillCardEl = resolveSkillCardElement(cardEl, slug);
+    const bizLinksHtml = associatedBizCardsHtml(skillCardEl);
 
     if (!hasServer()) {
         setModalContent(modal, displayName || slug,
-            `<span class="skill-info-error">Skill definitions are not available in the static (GitHub Pages) version of this app.</span>`);
+            `<span class="skill-info-error">Skill definitions are not available in the static (GitHub Pages) version of this app.</span>${bizLinksHtml}`);
         return;
     }
 
@@ -114,14 +199,14 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
         if (!res.ok) {
             const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
             setModalContent(modal, displayName || slug,
-                `<span class="skill-info-error">Could not load definition: ${err.error || res.status}</span>`);
+                `<span class="skill-info-error">Could not load definition: ${err.error || res.status}</span>${bizLinksHtml}`);
             return;
         }
         const { summary } = await res.json();
         setModalContent(modal, displayName || slug,
-            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')}</p>`);
+            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')}</p>${bizLinksHtml}`);
     } catch (e) {
         setModalContent(modal, displayName || slug,
-            `<span class="skill-info-error">Network error: ${e.message}</span>`);
+            `<span class="skill-info-error">Network error: ${e.message}</span>${bizLinksHtml}`);
     }
 }

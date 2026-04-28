@@ -4,7 +4,7 @@
     "role": "Senior Full Stack Developer & AI/ML Engineer",
     "employer": "Spexture / Technical Consulting",
     "start": "2025-07",
-    "end": "2026-04",
+    "end": "CURRENT_DATE",
     "z-index": 1,
     "css name": "darkforest",
     "css RGB": "#116611",
@@ -68,7 +68,8 @@
       "natural-language-processing",
       "ci-cd-github-actions",
       "aws-fargate",
-      "aws-ecs"
+      "aws-ecs",
+      "terraform"
     ],
     "jobID": "0"
   },

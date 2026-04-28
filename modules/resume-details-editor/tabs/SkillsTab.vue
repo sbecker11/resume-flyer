@@ -162,6 +162,7 @@ import { ResumeJob, isEducationDerivedJob, educationKeyOf } from '@/modules/data
 import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDisplayName.mjs';
 import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
+import { filterSkillsBySearchQuery } from '@/modules/utils/skillSearch.mjs';
 
 const canEdit = hasServer();
 
@@ -293,9 +294,7 @@ const sortedSkills = computed(() => {
 });
 
 const filteredSkills = computed(() => {
-  const q = search.value.toLowerCase();
-  if (!q) return sortedSkills.value;
-  return sortedSkills.value.filter(s => s.name.toLowerCase().includes(q));
+  return filterSkillsBySearchQuery(sortedSkills.value, search.value);
 });
 
 watch(

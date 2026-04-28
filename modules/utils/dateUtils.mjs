@@ -61,14 +61,14 @@ export function parseFlexibleDateString(dateStr) {
     let match = trimmedDateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
         const [, year, month, day] = match;
-        return new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)));
+        return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
     }
     
     // Try YYYY-MM
     match = trimmedDateStr.match(/^(\d{4})-(\d{2})$/);
     if (match) {
         const [, year, month] = match;
-        return new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, 1));
+        return new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1);
     }
 
     // Month + year (trimmedDateStr is lowercased). Abbrevs: jan feb mar apr may jun jul aug sep oct nov dec;
@@ -94,7 +94,7 @@ export function parseFlexibleDateString(dateStr) {
         const monthIndex = monthNameToIndex[monthWord];
         const yearNum = parseInt(yearStr, 10);
         if (monthIndex !== undefined && yearNum >= 1000 && yearNum <= 9999) {
-            return new Date(Date.UTC(yearNum, monthIndex, 1));
+            return new Date(yearNum, monthIndex, 1);
         }
     }
 
@@ -102,7 +102,7 @@ export function parseFlexibleDateString(dateStr) {
     match = trimmedDateStr.match(/^(\d{4})$/);
     if (match) {
         const [, year] = match;
-        return new Date(Date.UTC(parseInt(year, 10), 0, 1)); // January 1st of that year
+        return new Date(parseInt(year, 10), 0, 1); // January 1st of that year
     }
 
     // Fallback for other potential full date formats that new Date() can handle
@@ -351,7 +351,9 @@ export function formatISO8601YearMonth(date) {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
         throw new Error('Invalid Date object');
     }
-    return date.toISOString().substring(0, 7);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
 }
 
 /**
@@ -708,8 +710,10 @@ export function test_dateUtils() {
  * @returns {string} Formatted date range string.
  */
 export function formatDateRange(start, end) {
+    const endRaw = String(end ?? '').trim().toLowerCase();
+    const isCurrentEnd = endRaw === 'current_date' || endRaw === 'current' || endRaw === 'present';
     const startDate = parseFlexibleDateString(start);
-    const endDate = (end === "CURRENT_DATE" || end === "Present")
+    const endDate = isCurrentEnd
         ? new Date()
         : parseFlexibleDateString(end);
 
@@ -717,7 +721,7 @@ export function formatDateRange(start, end) {
     if (!endDate) return "Invalid end date";
 
     const formatDate = (date) => {
-        if ((end === "CURRENT_DATE" || end === "Present") && date.getTime() === endDate.getTime()) {
+        if (isCurrentEnd && date.getTime() === endDate.getTime()) {
             return "Present";
         }
         return date.toLocaleDateString('en-US', {

@@ -600,6 +600,15 @@ export function useCardsController() {
         const originalJobStartDate = (job.start || job.startDate) ? dateUtils.parseFlexibleDateString(job.start || job.startDate) : null
         const originalJobEndDate = (job.end === "CURRENT_DATE" || (job.end && String(job.end).toLowerCase().includes('present')) || !job.end) ? new Date() : dateUtils.parseFlexibleDateString(job.end)
         const isEndPresent = !job.end || job.end === 'CURRENT_DATE' || (typeof job.end === 'string' && job.end.toLowerCase().includes('present'))
+        const formatMonthYear = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+        const datesDisplay = (() => {
+            const startRaw = job.start || job.startDate
+            if (!startRaw) return 'N/A'
+            const startDate = dateUtils.parseFlexibleDateString(startRaw)
+            const endDate = isEndPresent ? new Date() : dateUtils.parseFlexibleDateString(job.end)
+            if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 'N/A'
+            return `${formatMonthYear(startDate)} - ${formatMonthYear(endDate)}`
+        })()
         
         // Create separate copies for positioning calculations (will be forced to day 1)
         const jobStartDate = originalJobStartDate ? new Date(originalJobStartDate) : null
@@ -707,7 +716,7 @@ export function useCardsController() {
                 <button type="button" class="biz-details-edit-btn" aria-label="Edit employer">&#9998;</button>
             </div>
             <div class="biz-details-role">${job.role || 'Unknown Role'}</div>
-            <div class="biz-details-dates">${originalJobStartDate ? originalJobStartDate.toISOString().slice(0, 10) : 'N/A'} - ${isEndPresent ? 'Present' : (originalJobEndDate ? originalJobEndDate.toISOString().slice(0, 10) : 'N/A')}</div>
+            <div class="biz-details-dates">${datesDisplay}</div>
             <div class="biz-details-debug-row"><span class="biz-details-id-and-hex">#${jobNumber} z:${sceneZ} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span></div>
             ${hasSkills ? `
             <div class="resume-skills">

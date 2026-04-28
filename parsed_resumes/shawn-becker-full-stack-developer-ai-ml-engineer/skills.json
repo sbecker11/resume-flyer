@@ -407,7 +407,9 @@
       "cloud",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "cyberark": {
     "name": "CyberArk",

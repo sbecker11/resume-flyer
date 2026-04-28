@@ -9,6 +9,7 @@ import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '../data/ResumeJob.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
+import { parseFlexibleDateString } from '../utils/dateUtils.mjs';
 // No longer directly manipulating other managers
 
 /** Open Resume Details on Resume jobs or Education tab (education-as-job rows use Education only). */
@@ -446,11 +447,14 @@ class ResumeItemsController {
     formatDate(dateStr) {
         if (!dateStr) return 'Unknown';
         if (dateStr === 'CURRENT_DATE' || dateStr.toLowerCase().includes('current') || dateStr.toLowerCase().includes('present')) {
-            return 'Present';
+            return new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short'
+            });
         }
         
         try {
-            const date = new Date(dateStr);
+            const date = parseFlexibleDateString(dateStr);
             if (!isNaN(date.getTime())) {
                 return date.toLocaleDateString('en-US', { 
                     year: 'numeric', 

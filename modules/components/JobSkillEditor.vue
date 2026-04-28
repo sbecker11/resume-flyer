@@ -48,6 +48,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { updateJobSkills } from '@/modules/api/resumeManagerApi.mjs';
+import { filterSkillsBySearchQuery } from '@/modules/utils/skillSearch.mjs';
 
 const props = defineProps({
   isOpen:    { type: Boolean, default: false },
@@ -84,9 +85,7 @@ const sortedSkills = computed(() => {
 });
 
 const filteredSkills = computed(() => {
-  const q = search.value.toLowerCase();
-  if (!q) return sortedSkills.value;
-  return sortedSkills.value.filter(s => s.name.toLowerCase().includes(q));
+  return filterSkillsBySearchQuery(sortedSkills.value, search.value);
 });
 
 const checkedCount = computed(() => selected.value.size);

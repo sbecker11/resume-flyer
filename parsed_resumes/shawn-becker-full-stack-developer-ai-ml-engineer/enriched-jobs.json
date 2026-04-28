@@ -65,7 +65,8 @@
       "natural-language-processing",
       "ci-cd-github-actions",
       "aws-fargate",
-      "aws-ecs"
+      "aws-ecs",
+      "terraform"
     ],
     "references": [
       "<a href=\"#\">[aws]</a>",
@@ -144,7 +145,8 @@
       "machine-learning": "machine-learning",
       "natural-language-processing": "natural-language-processing",
       "aws-fargate": "aws-fargate",
-      "aws-ecs": "aws-ecs"
+      "aws-ecs": "aws-ecs",
+      "terraform": "terraform"
     },
     "index": 0,
     "z-index": 1,

@@ -67,6 +67,9 @@ describe('dateUtils', () => {
       expect(d.getUTCFullYear()).toBe(2023);
       expect(d.getUTCMonth()).toBe(1);
       expect(d.getUTCDate()).toBe(1);
+      expect(d.getFullYear()).toBe(2023);
+      expect(d.getMonth()).toBe(1);
+      expect(d.getDate()).toBe(1);
     });
     it('parses YYYY', () => {
       const d = parseFlexibleDateString('2024');
@@ -279,6 +282,10 @@ describe('dateUtils', () => {
       const s = formatDateRange('2022-01', 'CURRENT_DATE');
       expect(s).toMatch(/Present| - /);
       formatDateRange('2022-01', 'Present');
+    });
+    it('handles lowercase current markers', () => {
+      expect(formatDateRange('2022-01', 'current_date')).toContain('Present');
+      expect(formatDateRange('2022-01', 'current')).toContain('Present');
     });
   });
 
