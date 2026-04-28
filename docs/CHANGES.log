@@ -1,3 +1,32 @@
+# CHANGES log
+
+Most recent updates are listed first.
+
+## 2026-04-28
+
+### Commit prepared
+- Message: `docs: rename session archive to CHANGES.log and prepend latest updates`
+- Renamed `docs/session-archive-2026-03-06.md` to `docs/CHANGES.log`.
+- Prepended latest 2026-04-28 work summary at the top while preserving older archive notes below.
+
+### Commit pushed
+- Branch `master`, commit `7b145e1`: regex skill search, skill-info modal associated biz links, CURRENT_DATE/end-date rendering fixes.
+
+### Skills search
+- Added regex-capable filtering for skill lists in both the Resume Details Skills tab and Job Skill Editor.
+- Added shared utility `modules/utils/skillSearch.mjs` and tests in `modules/utils/skillSearch.test.mjs`.
+
+### Skill `?` popup improvements
+- Extended skill info modal to include associated biz-card links (employer + job number).
+- Clicking an associated link now selects the matching biz card via SelectionManager.
+
+### Date handling fixes
+- Updated Spexture end date to `CURRENT_DATE` in parsed resume data.
+- Fixed timezone/month parsing so `YYYY-MM` values no longer shift backward (e.g., Apr -> Mar in UTC- offsets).
+- Unified `.biz-details-dates` displays to use month/year semantics and current-month rendering for ongoing jobs.
+
+---
+
 # Chat session archive — 2026-03-06
 
 Summary of work from this session for future reference.
