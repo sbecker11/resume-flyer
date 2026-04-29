@@ -336,6 +336,32 @@ body .biz-resume-div.selected a,
 .skill-card-div.clone[data-icon-set-selected-variant="white"] .img-icon {
     filter: invert(1);
 }
+
+/* Source-job highlight: same .biz-back-link.biz-back-link-source on scene skill-card and resume skill-row */
+.skill-card-div .biz-back-link.biz-back-link-source,
+.skill-card-div.clone .biz-back-link.biz-back-link-source,
+#resume-content-listing .skill-resume-div .biz-back-link.biz-back-link-source,
+#resume-content-listing .appended-skill-resume-div .biz-back-link.biz-back-link-source,
+#resume-content-listing #resume-content-div-list .appended-skill-resume-div .biz-back-link.biz-back-link-source,
+#resume-container .skill-resume-div .biz-back-link.biz-back-link-source,
+#resume-container .appended-skill-resume-div .biz-back-link.biz-back-link-source {
+    border-radius: 10px;
+    padding: 2px 4px;
+    box-sizing: border-box;
+    background-color: var(
+        --data-link-color-selected,
+        var(--data-link-color, var(--data-foreground-color-selected, var(--data-foreground-color, currentColor)))
+    ) !important;
+}
+.skill-card-div .biz-back-link.biz-back-link-source .back-icon,
+.skill-card-div.clone .biz-back-link.biz-back-link-source .back-icon,
+#resume-content-listing .skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
+#resume-content-listing .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
+#resume-content-listing #resume-content-div-list .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
+#resume-container .skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
+#resume-container .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon {
+    filter: brightness(0) invert(1) !important;
+}
 /* Skill id tag: de-emphasised monospace slug shown before the display name.
    color: inherit ensures it always tracks the parent's high-contrast foreground.
    Used in cDiv/rDiv HTML (skill-id-tag) and Vue editor templates (rde-skill-id-tag). */

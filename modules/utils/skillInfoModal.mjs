@@ -22,6 +22,7 @@ const SKILL_BIZ_LINK_CLASS = 'skill-info-biz-link';
 const SKILL_BIZ_LINK_JOB_ATTR = 'data-job-number';
 const SKILL_BIZ_LINK_SKILL_ATTR = 'data-skill-name';
 const FOCUSED_SKILL_LINK_CLASS = 'skill-link-focused-from-modal';
+const SOURCE_BIZ_BACKLINK_CLASS = 'biz-back-link-source';
 
 // Single global delegated listener — survives any innerHTML replacement on cards.
 let _delegateInstalled = false;
@@ -100,6 +101,66 @@ export function markFocusedSkillLinkForJob(jobNumber, skillSlug) {
             window.setTimeout(() => { apply(); }, 120);
         });
     });
+}
+
+/** Remove “source job” highlight from all biz-back-link controls (scene skill-card + resume skill-row). */
+export function clearSourceBizBackLinkClass() {
+    document.querySelectorAll(`.biz-back-link.${SOURCE_BIZ_BACKLINK_CLASS}`).forEach((el) => {
+        el.classList.remove(SOURCE_BIZ_BACKLINK_CLASS);
+    });
+}
+
+/**
+ * After opening a skill card from a biz/rDiv skill phrase, invert the matching biz-back-link
+ * (same data-biz-card-id) on skill-card-div, its clone, and skill-resume-div rows.
+ *
+ * Resume copies are appended in Vue nextTick after selection, so we must keep retrying until
+ * rows exist — do not stop early when only the scene card was marked.
+ */
+export function markSourceBizBackLinkForSkill(skillCardId, bizCardId) {
+    if (!skillCardId || !bizCardId) return;
+    clearSourceBizBackLinkClass();
+    const escBiz = CSS.escape(String(bizCardId));
+    const escSkillCard = CSS.escape(String(skillCardId));
+    const rowSelector = `.skill-resume-div[data-skill-card-id="${escSkillCard}"], .appended-skill-resume-div[data-skill-card-id="${escSkillCard}"]`;
+    const markedSel = `.biz-back-link.${SOURCE_BIZ_BACKLINK_CLASS}[data-biz-card-id="${escBiz}"]`;
+
+    let n = 0;
+    const MAX = 40;
+    const tick = () => {
+        n += 1;
+        for (const id of [skillCardId, `${skillCardId}-clone`]) {
+            const cardEl = document.getElementById(id);
+            if (!cardEl || !cardEl.classList.contains('skill-card-div')) continue;
+            const link = cardEl.querySelector(`.biz-back-link[data-biz-card-id="${escBiz}"]`);
+            if (link) link.classList.add(SOURCE_BIZ_BACKLINK_CLASS);
+        }
+        document.querySelectorAll(rowSelector).forEach((row) => {
+            const link = row.querySelector(`.biz-back-link[data-biz-card-id="${escBiz}"]`);
+            if (link) link.classList.add(SOURCE_BIZ_BACKLINK_CLASS);
+        });
+
+        const rows = document.querySelectorAll(rowSelector);
+        const resumeDone =
+            rows.length > 0 &&
+            [...rows].every((row) => row.querySelector(markedSel));
+
+        let sceneDone = true;
+        let anyScene = false;
+        for (const id of [skillCardId, `${skillCardId}-clone`]) {
+            const cardEl = document.getElementById(id);
+            if (!cardEl || !cardEl.classList.contains('skill-card-div')) continue;
+            anyScene = true;
+            if (!cardEl.querySelector(markedSel)) sceneDone = false;
+        }
+        if (!anyScene) sceneDone = false;
+
+        const done = sceneDone && resumeDone;
+        if (done || n >= MAX) return;
+        if (n <= 8) requestAnimationFrame(tick);
+        else window.setTimeout(tick, 80);
+    };
+    tick();
 }
 
 function getOrCreateModal() {

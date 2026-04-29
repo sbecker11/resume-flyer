@@ -10,6 +10,8 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '../data/ResumeJob.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
 import { parseFlexibleDateString } from '../utils/dateUtils.mjs';
+import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
+import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass } from '../utils/skillInfoModal.mjs';
 // No longer directly manipulating other managers
 
 /** Open Resume Details on Resume jobs or Education tab (education-as-job rows use Education only). */
@@ -751,10 +753,15 @@ class ResumeItemsController {
         }
         if (!skillCardId) return;
         const sel = selectionManager.selectedCard;
+        const jobNumber = parseInt(bizResumeDiv.getAttribute('data-job-number'), 10);
+        const sourceBizId = Number.isFinite(jobNumber) ? createBizCardDivId(jobNumber) : null;
         if (sel?.type === 'skill' && sel.skillCardId === skillCardId) {
+            clearSourceBizBackLinkClass();
             selectionManager.clearSelection('ResumeItemsController.skillTitleActivate');
         } else {
+            if (sourceBizId == null) clearSourceBizBackLinkClass();
             selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeItemsController.skillTitleActivate');
+            if (sourceBizId != null) markSourceBizBackLinkForSkill(skillCardId, sourceBizId);
             const sceneEl = document.getElementById(skillCardId);
             if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
         }

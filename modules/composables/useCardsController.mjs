@@ -28,7 +28,11 @@ import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElem
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
-import { markFocusedSkillLinkForJob } from '@/modules/utils/skillInfoModal.mjs'
+import {
+    markFocusedSkillLinkForJob,
+    markSourceBizBackLinkForSkill,
+    clearSourceBizBackLinkClass
+} from '@/modules/utils/skillInfoModal.mjs'
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/')
     let base = envBase
@@ -775,7 +779,11 @@ export function useCardsController() {
             event.stopPropagation()
             const skillTitleEl = event.target.closest('.biz-card-skill-title')
             if (skillTitleEl) {
-                selectSkillCardById(skillTitleEl.getAttribute('data-skill-card-id'), 'CardsController.bizCardSkillTitleClick')
+                selectSkillCardById(
+                    skillTitleEl.getAttribute('data-skill-card-id'),
+                    'CardsController.bizCardSkillTitleClick',
+                    createBizCardDivId(jobNumber)
+                )
                 return
             }
             if (!selectionManager) return
@@ -792,7 +800,11 @@ export function useCardsController() {
             if (!skillTitleEl || !card.contains(skillTitleEl)) return
             event.stopPropagation()
             if (event.key === ' ') event.preventDefault()
-            selectSkillCardById(skillTitleEl.getAttribute('data-skill-card-id'), 'CardsController.bizCardSkillTitleKeydown')
+            selectSkillCardById(
+                skillTitleEl.getAttribute('data-skill-card-id'),
+                'CardsController.bizCardSkillTitleKeydown',
+                createBizCardDivId(jobNumber)
+            )
         })
         
         // Add hover handlers for synchronization with rDivs
@@ -1066,9 +1078,11 @@ export function useCardsController() {
             if (!selectionManager) return
             const card = selectionManager.selectedCard
             if (card?.type === 'skill' && card.skillCardId === skillCard.id) {
+                clearSourceBizBackLinkClass()
                 selectionManager.clearSelection('CardsController.skillCardClick')
                 return
             }
+            clearSourceBizBackLinkClass()
             selectionManager.selectCard({ type: 'skill', skillCardId: skillCard.id }, 'CardsController.skillCardClick')
         })
         skillCard.addEventListener('mouseenter', () => {
@@ -1369,13 +1383,16 @@ export function useCardsController() {
      * Select or deselect a skill card by ID — single source of truth used by all skill-tag click paths.
      * Identical to clicking the skill-card-div directly: toggle selection + scroll scene element into view.
      */
-    function selectSkillCardById(skillCardId, caller) {
+    function selectSkillCardById(skillCardId, caller, sourceBizCardId) {
         if (!selectionManager || !skillCardId) return
         const sel = selectionManager.selectedCard
         if (sel?.type === 'skill' && sel.skillCardId === skillCardId) {
+            clearSourceBizBackLinkClass()
             selectionManager.clearSelection(caller)
         } else {
+            if (sourceBizCardId == null) clearSourceBizBackLinkClass()
             selectionManager.selectCard({ type: 'skill', skillCardId }, caller)
+            if (sourceBizCardId != null) markSourceBizBackLinkForSkill(skillCardId, sourceBizCardId)
             const sceneEl = document.getElementById(skillCardId)
             if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
         }
@@ -1404,6 +1421,7 @@ export function useCardsController() {
         }
 
         if (card.type === 'biz') {
+            clearSourceBizBackLinkClass()
             // Do not call hideJobOriginal here — createSelectedClone must read geometry from a
             // visible original without hasClone (parallax skips hasClone cards; hiding first
             // freezes wrong transform until the next focal change).
@@ -1442,6 +1460,7 @@ export function useCardsController() {
 
     function handleSelectionCleared(event) {
         console.log('[useCardsController] Selection cleared, hiding all clones and showing originals...')
+        clearSourceBizBackLinkClass()
         const previousCard = event.detail?.previousCard
         if (previousCard?.type === 'skill') {
             removeSkillCardClone(previousCard.skillCardId)
@@ -1980,7 +1999,11 @@ export function useCardsController() {
             // Skill title link inside selected biz card clone
             const skillTitleEl = event.target.closest('.biz-card-skill-title')
             if (skillTitleEl) {
-                selectSkillCardById(skillTitleEl.getAttribute('data-skill-card-id'), 'CardsController.cloneSkillTitleClick')
+                selectSkillCardById(
+                    skillTitleEl.getAttribute('data-skill-card-id'),
+                    'CardsController.cloneSkillTitleClick',
+                    createBizCardDivId(jobNumber)
+                )
                 return
             }
 
@@ -1998,7 +2021,11 @@ export function useCardsController() {
             if (!selectionManager) return
             event.stopPropagation()
             if (event.key === ' ') event.preventDefault()
-            selectSkillCardById(skillTitleEl.getAttribute('data-skill-card-id'), 'CardsController.cloneSkillTitleKeydown')
+            selectSkillCardById(
+                skillTitleEl.getAttribute('data-skill-card-id'),
+                'CardsController.cloneSkillTitleKeydown',
+                createBizCardDivId(jobNumber)
+            )
         })
         attachBizCardEditButtonListeners(clone, jobNumber)
 
@@ -2141,9 +2168,11 @@ export function useCardsController() {
             }
 
             if (selectionManager.selectedCard?.type === 'skill' && selectionManager.selectedCard.skillCardId === skillCardId) {
+                clearSourceBizBackLinkClass()
                 selectionManager.clearSelection('CardsController.skillCardCloneClick')
                 return
             }
+            clearSourceBizBackLinkClass()
             selectionManager.selectCard({ type: 'skill', skillCardId }, 'CardsController.skillCardCloneClick')
         })
 

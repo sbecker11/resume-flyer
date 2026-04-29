@@ -15,7 +15,8 @@ import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
-import { openSkillInfoModal, markFocusedSkillLinkForJob } from '@/modules/utils/skillInfoModal.mjs';
+import { openSkillInfoModal, markFocusedSkillLinkForJob, clearSourceBizBackLinkClass } from '@/modules/utils/skillInfoModal.mjs';
+import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -621,7 +622,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     <span class="skill-resume-div-skill-name">${skillLabelHtml(skillSlug, skillObj)}</span>
     <div class="skill-resume-div-back-links">
       ${(data.referencingJobNumbers || []).map(jobNum => `
-        <button type="button" class="skill-resume-div-back-link" aria-label="Go to job" data-job-number="${jobNum}">
+        <button type="button" class="skill-resume-div-back-link biz-back-link" aria-label="Go to job" data-job-number="${jobNum}" data-biz-card-id="${escapeHtml(createBizCardDivId(jobNum))}">
           <img class="back-icon" src="${escapeHtml(backIconUrl)}" alt="" width="16" height="16" aria-hidden="true" />
         </button>
       `).join('')}
@@ -692,8 +693,10 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     if (!skillCardId) return;
     const sel = selectionManager?.selectedCard;
     if (sel?.type === 'skill' && sel?.skillCardId === skillCardId) {
+      clearSourceBizBackLinkClass();
       selectionManager.clearSelection('ResumeContainer.skillResumeDivClick');
     } else {
+      clearSourceBizBackLinkClass();
       selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeContainer.skillResumeDivClick');
       const sceneEl = document.getElementById(skillCardId);
       if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
@@ -1063,8 +1066,10 @@ function onResumeSkillCardClick(event) {
                                 v-for="jobNum in selectedSkillCard.referencingJobNumbers"
                                 :key="jobNum"
                                 type="button"
-                                class="skill-resume-div-back-link"
+                                class="skill-resume-div-back-link biz-back-link"
                                 aria-label="Go to job"
+                                :data-job-number="jobNum"
+                                :data-biz-card-id="createBizCardDivId(jobNum)"
                                 @click="goToJob(jobNum)"
                             >
                                 <img class="back-icon" src="/static_content/icons/anchors/icons8-back-16-black.png" alt="" width="16" height="16" aria-hidden="true" />
