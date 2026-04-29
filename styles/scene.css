@@ -352,6 +352,10 @@ body .biz-resume-div.selected a,
         --data-link-color-selected,
         var(--data-link-color, var(--data-foreground-color-selected, var(--data-foreground-color, currentColor)))
     ) !important;
+    color: var(
+        --data-background-color-selected,
+        var(--data-background-color, var(--data-frame-background-color, #fff))
+    ) !important;
 }
 .skill-card-div .biz-back-link.biz-back-link-source .back-icon,
 .skill-card-div.clone .biz-back-link.biz-back-link-source .back-icon,
@@ -360,7 +364,18 @@ body .biz-resume-div.selected a,
 #resume-content-listing #resume-content-div-list .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
 #resume-container .skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
 #resume-container .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon {
-    filter: brightness(0) invert(1) !important;
+    /* Inverted chip should swap icon polarity too (foreground <-> background). */
+    filter: none !important;
+}
+.skill-card-div:not(.clone):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
+.skill-card-div:not(.clone).hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
+.skill-card-div.clone[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
+#resume-content-listing .skill-resume-div[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
+#resume-content-listing .appended-skill-resume-div[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
+#resume-content-listing #resume-content-div-list .appended-skill-resume-div[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
+#resume-container .skill-resume-div[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
+#resume-container .appended-skill-resume-div[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon {
+    filter: invert(1) !important;
 }
 /* Skill id tag: de-emphasised monospace slug shown before the display name.
    color: inherit ensures it always tracks the parent's high-contrast foreground.
