@@ -86,7 +86,8 @@ const props = defineProps({
 
 const emit = defineEmits(['content-ready', 'saved']);
 
-const canEdit = hasServer();
+const canPersistToServer = hasServer();
+const canEdit = true;
 /** True only while "Clear all" runs; cell toggles no longer block the grid (optimistic UI + background save). */
 const saving = ref(false);
 /** In-flight per-cell save count; Clear is disabled until these finish to avoid inconsistent bulk clear. */
@@ -165,7 +166,7 @@ const hasAnyMatrixLink = computed(() => {
 
 const canClearGrid = computed(
   () =>
-    canEdit
+    canPersistToServer
     && props.resumeId
     && props.resumeId !== 'default'
     && !saving.value
@@ -333,6 +334,7 @@ function onMatrixCellClick(jobIndex, skillRow) {
     skillIDs,
     jobSkills: jobSkillsRecordFromMap(skillIDs, nextMap),
   });
+  if (!canPersistToServer) return;
 
   pendingToggleSaves.value++;
   chainJobSave(jobIndex, async () => {

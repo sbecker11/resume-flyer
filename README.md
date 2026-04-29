@@ -27,13 +27,26 @@ Additional capabilities you may use alongside the items above include:
 - **header lifecycle controls** — The resume selector menu includes quick actions for **Upload Resume...** and **Manage Resumes...**.
 - **details/print gating** — **Details** and **Print** appear only when the current resume is not `default`, preventing edits/print actions against static fallback content.
 - **print fallback path** — Print first builds HTML from live in-memory data; if that fails, it falls back to opening `/api/resumes/:id/html`.
-- **static-hosting patch export** — On static hosting (no backend API), save actions from the details editor download JSON patch files for manual application.
+- **static-hosting session saves** — On static hosting (no backend API), the details editor remains editable and Save stores changes for the current browser session only (no backend persistence).
 - **focal point modalities** — Tri-state focal point control: **locked** (pinned to the bulls-eye), **following** (tracks aim), and **dragging** (manual placement); drives parallax and how the scene responds to pointer position.
 - **3D depth rendering** — Tune **blur**, **saturation**, and **brightness** at maximum scene depth (far Z), plus parallax scale near/far, from **3D Settings** in the color-palette menu—so cards read clearly while keeping depth cues.
 - **attention highlighting** — Hover and selection state coordinates the resume list, timeline, badges, and 3D cards so the item in focus is easy to spot across views.
 - **business / skill linkages** — Selecting a job highlights its skills (and vice versa where applicable); skill badges and card clones stay in sync with the active job and assigned skills.
 - **scene vertical auto-scroll** — When the focal point sits in following or dragging mode and the effective focal position moves beyond the visible scene band, the scene view scrolls vertically to keep context on screen.
 - **skill definition source links** — Skill definition popups include an external source URL. Configure the source prefix with `VITE_SKILL_INFO_SOURCE_BASE_URL` (default in `.env.example` is Wikipedia-style `http://wikipedia.com/wiki/`).
+
+### Local dev vs static hosting (GitHub Pages)
+
+Features differ when the app runs with backend APIs (local dev) versus static hosting (no backend):
+
+| Feature | Local dev (server available) | Static hosting (GitHub Pages) |
+|---|---|---|
+| Resume upload + parse (`DOCX`/`PDF`) | ✅ Available (`/api/resumes/upload*`) | ❌ Unavailable |
+| Resume reparse | ✅ Available (`/api/resumes/:id/reparse*`) | ❌ Unavailable |
+| Skill definition `?` modal content | ✅ Available (`/api/skills/:slug/info`) | ❌ Unavailable (`?` button hidden) |
+| Details editor save behavior | ✅ Writes through backend APIs | ⚠️ Save is enabled, but changes are session-local only (not persisted to backend) |
+| `colorPalette` catalog refresh | ✅ API manifest fallback and local backend paths available | ✅ Uses S3/static paths only (no local backend fallback) |
+| `resizeHandle` persistence | ✅ Persists to server-backed app state (`/api/state`) | ✅ Persists in static-mode local state behavior (no backend calls) |
 
 ### Parsed resume storage contract
 

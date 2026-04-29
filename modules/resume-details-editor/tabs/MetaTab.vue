@@ -40,13 +40,12 @@
 
 <script setup>
 import { ref, watch } from 'vue';
-import { hasServer } from '@/modules/core/hasServer.mjs';
 
 const props = defineProps({
   meta: { type: Object, default: () => ({}) }
 });
 
-const canEdit = hasServer();
+const canEdit = true;
 
 const emit = defineEmits(['update:meta', 'autosave']);
 

@@ -114,9 +114,8 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';
-import { hasServer } from '@/modules/core/hasServer.mjs';
 
-const canEdit = hasServer();
+const canEdit = true;
 
 const props = defineProps({
   data: { type: Object, default: () => ({}) },

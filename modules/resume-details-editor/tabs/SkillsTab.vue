@@ -42,16 +42,16 @@
           </div>
           <div v-if="sortedSkills.length >= 2" class="rde-skills-merge-row">
             <label for="rde-skills-merge-from" class="rde-sr-only">Skill to merge away</label>
-            <select id="rde-skills-merge-from" name="mergeFrom" v-model="mergeFromKey" class="rde-select rde-merge-select" title="Skill to merge away" :disabled="!canEdit">
+            <select id="rde-skills-merge-from" name="mergeFrom" v-model="mergeFromKey" class="rde-select rde-merge-select" title="Skill to merge away" :disabled="!canPersistToServer">
               <option value="" disabled>Merge skill</option>
               <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillDisplayName(s.id, s) }}</option>
             </select>
             <label for="rde-skills-merge-to" class="rde-sr-only">Keep this skill</label>
-            <select id="rde-skills-merge-to" name="mergeTo" v-model="mergeToKey" class="rde-select rde-merge-select" title="Keep this skill (canonical skillID)" :disabled="!canEdit">
+            <select id="rde-skills-merge-to" name="mergeTo" v-model="mergeToKey" class="rde-select rde-merge-select" title="Keep this skill (canonical skillID)" :disabled="!canPersistToServer">
               <option value="" disabled>To skill</option>
               <option v-for="s in sortedSkills" :key="s.id" :value="s.id">{{ skillDisplayName(s.id, s) }}</option>
             </select>
-            <button type="button" class="rde-btn merge" :disabled="!canEdit || !canMerge" title="Replace the first skill with the second everywhere" @click="mergeSkills">
+            <button type="button" class="rde-btn merge" :disabled="!canPersistToServer || !canMerge" title="Replace the first skill with the second everywhere" @click="mergeSkills">
               Merge
             </button>
           </div>
@@ -124,7 +124,7 @@
             type="text"
             class="rde-input rde-skill-edit-input"
             :aria-label="`Edit ${editingSkillId}`"
-            :disabled="!canEdit"
+            :disabled="!canPersistToServer"
             @keydown.enter="saveEditSkill"
           />
         </div>
@@ -141,7 +141,7 @@
             ref="editSaveBtnRef"
             type="button"
             class="rde-btn edit-save"
-            :disabled="!canEdit"
+            :disabled="!canPersistToServer"
             @click="saveEditSkill"
           >
             Save
@@ -164,7 +164,8 @@ import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
 import { filterSkillsBySearchQuery } from '@/modules/utils/skillSearch.mjs';
 
-const canEdit = hasServer();
+const canPersistToServer = hasServer();
+const canEdit = true;
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -485,6 +486,7 @@ function toggle(id) {
 async function toggleAndAutosave(id) {
   if (!canEdit) return;
   toggle(id);
+  if (!canPersistToServer) return;
   await saveForCurrentJob();
 }
 
@@ -511,7 +513,7 @@ function addNewSkill() {
 }
 
 function startEditSkill(skill) {
-  if (!canEdit) return;
+  if (!canPersistToServer) return;
   editingSkillId.value = skill.id;
   editingSkillName.value = skill.name;
   nextTick(() => {
@@ -529,7 +531,7 @@ function cancelEditSkill() {
 }
 
 async function saveEditSkill() {
-  if (!canEdit) return
+  if (!canPersistToServer) return
   const oldKey = editingSkillId.value;
   const newName = (editingSkillName.value || '').trim();
   if (!oldKey || !newName) {
@@ -570,7 +572,7 @@ async function saveEditSkill() {
 }
 
 async function mergeSkills() {
-  if (!canEdit) return
+  if (!canPersistToServer) return
   const from = mergeFromKey.value;
   const to = mergeToKey.value;
   if (!from || !to || from === to || !props.resumeId || props.resumeId === 'default') return;
@@ -623,19 +625,42 @@ function patchJobRowLocal(jobIndex, skillIDs, descriptionIfWork) {
 
 /** @returns {Promise<boolean>} true if saved or nothing to save; false if save failed */
 async function saveForCurrentJob() {
-  if (!canEdit) return true;
   const idx = jobIndexLocal.value;
   if (idx == null || !props.resumeId || props.resumeId === 'default') return true;
+  const selectedSet = selected.value;
+  const skillIDs = [...selectedSet];
+  const newSkills = skillIDs.filter(id => !initialSkillKeys.value.has(id));
+  const jobRow = jobs.value[idx];
+  const rawDesc = String(jobRow?.Description ?? jobRow?.description ?? '');
+  const alignedDesc = !isEducationDerivedJob(jobRow)
+    ? filterDescriptionBracketsToSkillSelection(rawDesc, selectedSet, skills.value)
+    : rawDesc;
+  let nextSkills = skills.value;
+  if (newSkills.length) {
+    nextSkills = { ...skills.value };
+    for (const n of newSkills) {
+      if (!nextSkills[n]) nextSkills[n] = { name: n };
+    }
+    skills.value = nextSkills;
+    initialSkillKeys.value = new Set(Object.keys(nextSkills));
+  }
+  patchJobRowLocal(
+    idx,
+    skillIDs,
+    isEducationDerivedJob(jobRow) ? undefined : alignedDesc
+  );
+  selected.value = getSelectedSkillIdsForJob(jobs.value[idx], nextSkills);
+  if (!canPersistToServer) {
+    emit('saved', {
+      jobIndex: idx,
+      skillIDs,
+      jobSkills: jobSkillsRecordFromMap(skillIDs, nextSkills),
+      sessionOnly: true,
+    });
+    return true;
+  }
   saving.value = true;
   try {
-    const selectedSet = selected.value;
-    const skillIDs = [...selectedSet];
-    const newSkills = skillIDs.filter(id => !initialSkillKeys.value.has(id));
-    const jobRow = jobs.value[idx];
-    const rawDesc = String(jobRow?.Description ?? jobRow?.description ?? '');
-    const alignedDesc = !isEducationDerivedJob(jobRow)
-      ? filterDescriptionBracketsToSkillSelection(rawDesc, selectedSet, skills.value)
-      : rawDesc;
     if (isEducationDerivedJob(jobRow)) {
       const ek = educationKeyOf(jobRow);
       if (!ek) throw new Error('Education row has no educationKey.');
@@ -646,21 +671,6 @@ async function saveForCurrentJob() {
         await api.updateJob(props.resumeId, idx, { Description: alignedDesc });
       }
     }
-    let nextSkills = skills.value;
-    if (newSkills.length) {
-      nextSkills = { ...skills.value };
-      for (const n of newSkills) {
-        if (!nextSkills[n]) nextSkills[n] = { name: n };
-      }
-      skills.value = nextSkills;
-      initialSkillKeys.value = new Set(Object.keys(nextSkills));
-    }
-    patchJobRowLocal(
-      idx,
-      skillIDs,
-      isEducationDerivedJob(jobRow) ? undefined : alignedDesc
-    );
-    selected.value = getSelectedSkillIdsForJob(jobs.value[idx], nextSkills);
     emit('saved', {
       jobIndex: idx,
       skillIDs,

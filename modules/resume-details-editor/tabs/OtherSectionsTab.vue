@@ -91,7 +91,6 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { DEFAULT_OTHER_SECTIONS } from '../constants.mjs';
-import { hasServer } from '@/modules/core/hasServer.mjs';
 import ContactFields from './fields/ContactFields.vue';
 import CertificationItem from './fields/CertificationItem.vue';
 import WebsiteItem from './fields/WebsiteItem.vue';
@@ -101,7 +100,7 @@ const props = defineProps({
   data: { type: Object, default: () => ({}) }
 });
 
-const canEdit = hasServer();
+const canEdit = true;
 
 const emit = defineEmits(['update:data', 'autosave']);
 

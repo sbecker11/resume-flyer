@@ -171,7 +171,7 @@
           <button
             type="button"
             class="rde-btn add-job"
-            :disabled="!canEdit || saving || !props.resumeId || props.resumeId === 'default'"
+            :disabled="!canPersistToServer || saving || !props.resumeId || props.resumeId === 'default'"
             @click="onAddJob"
           >
             Add Job
@@ -179,7 +179,7 @@
           <button
             type="button"
             class="rde-btn delete-job"
-            :disabled="!canEdit || saving || selectedJob == null || !props.resumeId || props.resumeId === 'default'"
+            :disabled="!canPersistToServer || saving || selectedJob == null || !props.resumeId || props.resumeId === 'default'"
             @click="openDeleteJobConfirm"
           >
             Delete Job
@@ -250,7 +250,8 @@ import {
   firstWorkJobMergedIndex,
 } from '@/modules/data/ResumeJob.mjs';
 
-const canEdit = hasServer();
+const canPersistToServer = hasServer();
+const canEdit = true;
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -564,14 +565,19 @@ function jobOptionLabel(job, pos) {
 
 /** @returns {Promise<boolean>} true if saved or nothing to save; false if save failed */
 async function saveCurrentJob() {
-  if (!canEdit) return true;
   const idx = jobIndexLocal.value;
   if (idx == null || !props.resumeId || props.resumeId === 'default') return true;
   if (isEducationDerivedJob(jobs.value[idx])) return true;
+  const { start, end } = toStartEnd(local.value);
+  const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
+  jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
+  if (!canPersistToServer) {
+    emit('saved', { sessionOnly: true });
+    return true;
+  }
   if (saving.value) return true;
   saving.value = true;
   try {
-    const { start, end } = toStartEnd(local.value);
     const patch = {};
     if (local.value.employer) patch.employer = local.value.employer;
     if (local.value.title) patch.role = local.value.title;
@@ -580,9 +586,6 @@ async function saveCurrentJob() {
     if (local.value.Description) patch.Description = local.value.Description;
     if (Object.keys(patch).length === 0) return true;
     await api.updateJob(props.resumeId, idx, patch);
-    // Replace job in array so Jobs dropdown option label updates (employer/title) reactively
-    const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
-    jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
     emit('saved');
     return true;
   } catch (err) {
@@ -693,7 +696,7 @@ async function openSkillsForCurrentJob() {
   const idx = jobIndexLocal.value;
   if (idx == null) return;
   // Auto-save job before switching to Skills.
-  if (canEdit) {
+  if (canPersistToServer) {
     const ok = await saveCurrentJob();
     if (!ok) return;
   }
@@ -705,7 +708,7 @@ async function goToPreviousJob() {
   const list = workMergedIndices.value;
   const pos = currentWorkDropdownPosition();
   if (pos <= 0) return;
-  if (canEdit) {
+  if (canPersistToServer) {
     const ok = await saveCurrentJob();
     if (!ok) return;
   }
@@ -719,7 +722,7 @@ async function goToNextJob() {
   const list = workMergedIndices.value;
   const pos = currentWorkDropdownPosition();
   if (pos < 0 || pos >= list.length - 1) return;
-  if (canEdit) {
+  if (canPersistToServer) {
     const ok = await saveCurrentJob();
     if (!ok) return;
   }
@@ -772,7 +775,7 @@ async function confirmDeleteJob() {
 }
 
 async function onAddJob() {
-  if (!canEdit || saving.value || !props.resumeId || props.resumeId === 'default') return;
+  if (!canPersistToServer || saving.value || !props.resumeId || props.resumeId === 'default') return;
   const idx = jobIndexAsNumber();
   const afterIndex = idx == null ? -1 : idx;
   saving.value = true;

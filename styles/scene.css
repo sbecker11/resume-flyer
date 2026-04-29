@@ -475,9 +475,15 @@ body .biz-resume-div.selected a,
 .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
 .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
 .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon,
+.appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
+.appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
+.appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon,
 #resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
 #resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
-#resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon {
+#resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon,
+#resume-container .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
+#resume-container .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
+#resume-container .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon {
     filter: invert(1);
 }
 .skill-resume-div.hovered[data-icon-set-hovered-variant="white"] .url-icon,

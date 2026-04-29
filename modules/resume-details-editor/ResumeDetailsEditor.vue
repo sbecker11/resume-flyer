@@ -15,8 +15,8 @@
           <div class="rde-subtitle">{{ resumeId }}</div>
         </div>
 
-        <div v-if="!canEdit" class="rde-static-mode-banner" role="status">
-          View only — editing requires a local server.
+        <div v-if="!canPersistToServer" class="rde-static-mode-banner" role="status">
+          Static mode: edits are allowed, but saves are session-local only (not persisted to backend).
         </div>
 
         <div class="rde-tabs" role="tablist" aria-label="Resume details sections">
@@ -110,15 +110,18 @@
           >
             {{ reparsing ? 'Reparsing…' : 'Reparse…' }}
           </button>
-          <button
-            type="button"
-            class="rde-btn save"
-            @click="save"
-            :disabled="saveButtonDisabled"
-            :title="saveButtonTitle"
-          >
-            {{ saving ? 'Saving…' : 'Save' }}
-          </button>
+          <div class="rde-save-wrap">
+            <button
+              type="button"
+              class="rde-btn save"
+              @click="save"
+              :disabled="saveButtonDisabled"
+              :title="saveButtonTitle"
+            >
+              {{ saving ? 'Saving…' : 'Save' }}
+            </button>
+            <div v-if="!canPersistToServer && !saving" class="rde-save-session-hint">session only</div>
+          </div>
         </div>
 
         <!-- Resize handles: edges and corner (no top to avoid conflicting with drag) -->
@@ -177,7 +180,8 @@ const otherSections = shallowRef({});
 const education = shallowRef({});
 const saving = ref(false);
 const reparsing = ref(false);
-const canEdit = hasServer();
+const canPersistToServer = hasServer();
+const canEdit = true;
 const reloadNonce = ref(0);
 /** Passed to EducationTab to scroll/highlight an entry (from Jobs tab "Skills" on education row or external open). */
 const educationScrollKey = ref('');
@@ -722,18 +726,18 @@ const canReparse = computed(() => {
   return Boolean(props.resumeId && props.resumeId !== 'default');
 });
 
-const saveButtonDisabled = computed(() => saving.value || !canEdit);
+const saveButtonDisabled = computed(() => saving.value);
 const saveButtonTitle = computed(() => {
-  if (!canEdit) return 'Save requires a server with the resume API (not available on static hosting).';
+  if (!canPersistToServer) return 'Save changes for this session only (no backend write in static mode).';
   if (saving.value) return 'Saving in progress…';
   return 'Save pending changes and close';
 });
 
 const reparseButtonDisabled = computed(
-  () => saving.value || reparsing.value || !canEdit || !canReparse.value
+  () => saving.value || reparsing.value || !canPersistToServer || !canReparse.value
 );
 const reparseButtonTitle = computed(() => {
-  if (!canEdit) return 'Reparse requires a server with the resume API.';
+  if (!canPersistToServer) return 'Reparse requires a server with the resume API.';
   if (saving.value) return 'Wait until save finishes.';
   if (reparsing.value) return 'Reparsing in progress…';
   if (!canReparse.value) return 'Select a saved resume (not the default placeholder) to reparse.';
@@ -749,9 +753,9 @@ watch(
     fieldAutosaving.value = false;
     otherSectionsAutosaving.value = false;
     if (!open) return;
-    if (!canEdit) {
+    if (!canPersistToServer) {
       console.warn(
-        '[ResumeDetailsEditor] Save and Reparse are disabled: no API server (e.g. static / GitHub Pages hosting).'
+        '[ResumeDetailsEditor] Static mode: editing is enabled, but persistence is session-local only and reparse is disabled.'
       );
     } else if (!props.resumeId || props.resumeId === 'default') {
       console.warn(
@@ -766,7 +770,7 @@ function onMetaUpdate(updates) {
 }
 
 async function onMetaAutosave() {
-  if (!canEdit) return;
+  if (!canPersistToServer) return;
   if (!props.resumeId || props.resumeId === 'default') return;
   if (fieldAutosaving.value) return;
   if (!pendingMeta.value) return;
@@ -793,7 +797,7 @@ function onOtherSectionsUpdate(data) {
 }
 
 async function onOtherSectionsAutosave(snapshot) {
-  if (!canEdit) return;
+  if (!canPersistToServer) return;
   if (!props.resumeId || props.resumeId === 'default') return;
   if (otherSectionsAutosaving.value) return;
   if (!snapshot || typeof snapshot !== 'object') return;
@@ -818,7 +822,7 @@ function onEducationUpdate(data) {
 }
 
 async function onEducationAutosave() {
-  if (!canEdit) return;
+  if (!canPersistToServer) return;
   if (!props.resumeId || props.resumeId === 'default') return;
   if (fieldAutosaving.value) return;
   if (pendingEducation.value === null) return;
@@ -887,7 +891,7 @@ async function selectTab(nextId) {
     activeTab.value = nextId;
     return;
   }
-  if (!canEdit) {
+  if (!canPersistToServer) {
     activeTab.value = nextId;
     return;
   }
@@ -932,7 +936,7 @@ function cancel() {
 }
 
 async function reparse() {
-  if (!canEdit) {
+  if (!canPersistToServer) {
     console.warn('[ResumeDetailsEditor] reparse: ignored (no API server).');
     return;
   }
@@ -997,12 +1001,14 @@ async function reparse() {
 }
 
 async function save() {
-  if (!canEdit) {
-    console.warn('[ResumeDetailsEditor] save: ignored (no API server).');
-    return;
-  }
   if (!props.resumeId || props.resumeId === 'default') {
     console.warn('[ResumeDetailsEditor] save: ignored (invalid resumeId).');
+    return;
+  }
+  if (!canPersistToServer) {
+    alert('Data changes are only stored in this session - not to the backend.');
+    emit('saved', { sessionOnly: true });
+    emit('close');
     return;
   }
   saving.value = true;
@@ -1175,9 +1181,21 @@ async function save() {
 .rde-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: flex-start;
   gap: 8px;
   padding: 12px var(--rde-inner-padding-x);
   border-top: 1px solid rgba(255,255,255,0.1);
+}
+.rde-save-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.rde-save-session-hint {
+  font-size: 0.68rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.65);
 }
 .rde-btn {
   padding: 6px 18px;
