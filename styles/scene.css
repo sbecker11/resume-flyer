@@ -695,6 +695,9 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     margin: 0;
     flex: 1 1 auto;
     min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .biz-card-div .resume-section-title-wrap .biz-details-edit-btn,
 .biz-resume-div .resume-section-title-wrap .biz-details-edit-btn {
