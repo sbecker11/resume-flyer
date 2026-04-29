@@ -84,9 +84,9 @@ export function markFocusedSkillLinkForJob(jobNumber, skillSlug) {
             container.querySelectorAll(`.biz-card-skill-title.${FOCUSED_SKILL_LINK_CLASS}`).forEach((el) => {
                 el.classList.remove(FOCUSED_SKILL_LINK_CLASS);
             });
-            const firstMatch = container.querySelector(`.biz-card-skill-title[data-skill-name="${escSkill}"]`);
-            if (firstMatch) {
-                firstMatch.classList.add(FOCUSED_SKILL_LINK_CLASS);
+            const matches = container.querySelectorAll(`.biz-card-skill-title[data-skill-name="${escSkill}"]`);
+            if (matches.length) {
+                matches.forEach((el) => el.classList.add(FOCUSED_SKILL_LINK_CLASS));
                 appliedAny = true;
             }
         });
