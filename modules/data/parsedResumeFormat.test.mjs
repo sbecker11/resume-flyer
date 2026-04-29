@@ -142,8 +142,9 @@ describe('parsedResumeFormat (parsed-resume format conformance)', () => {
       const raw = parseMjsExport(FIXTURE_SKILLS_MJS, 'skills');
       validateSkills(raw);
       const skills = normalizeParserSkills(raw);
-      expect(skills).toHaveProperty('Python');
-      expect(skills).toHaveProperty('AWS');
+      expect(skills).toHaveProperty('python');
+      expect(skills).toHaveProperty('aws');
+      expect(skills.python).toHaveProperty('name', 'Python');
     });
 
     it('categories pipeline succeeds with spec-compliant fixture', () => {

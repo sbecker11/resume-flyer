@@ -114,7 +114,7 @@ describe('parsedResumeAdapter', () => {
             expect(result).toEqual(skills);
         });
 
-        it('should convert new format (ID-keyed with name property) to name-keyed', () => {
+        it('should preserve slug-keyed maps with name property as canonical', () => {
             const skills = {
                 'skill-1': { name: 'JavaScript', url: 'https://js.org', img: 'js.png' },
                 'skill-2': { name: 'Python', url: 'https://python.org' }
@@ -122,13 +122,10 @@ describe('parsedResumeAdapter', () => {
 
             const result = normalizeParserSkills(skills);
 
-            expect(result).toEqual({
-                'JavaScript': { url: 'https://js.org', img: 'js.png' },
-                'Python': { url: 'https://python.org', img: undefined }
-            });
+            expect(result).toEqual(skills);
         });
 
-        it('should trim whitespace from skill names', () => {
+        it('should preserve keys even when skill names contain whitespace', () => {
             const skills = {
                 'skill-1': { name: '  JavaScript  ', url: 'https://js.org' },
                 'skill-2': { name: '\tPython\n' }
@@ -136,11 +133,11 @@ describe('parsedResumeAdapter', () => {
 
             const result = normalizeParserSkills(skills);
 
-            expect(result).toHaveProperty('JavaScript');
-            expect(result).toHaveProperty('Python');
+            expect(result).toHaveProperty('skill-1');
+            expect(result).toHaveProperty('skill-2');
         });
 
-        it('should skip skills with empty names', () => {
+        it('should preserve slug keys even when names are empty', () => {
             const skills = {
                 'skill-1': { name: '   ', url: 'https://example.com' },
                 'skill-2': { name: 'JavaScript', url: 'https://js.org' }
@@ -148,7 +145,7 @@ describe('parsedResumeAdapter', () => {
 
             const result = normalizeParserSkills(skills);
 
-            expect(Object.keys(result)).toEqual(['JavaScript']);
+            expect(Object.keys(result)).toEqual(['skill-1', 'skill-2']);
         });
 
         it('should treat skills without name property as legacy format', () => {
@@ -163,7 +160,7 @@ describe('parsedResumeAdapter', () => {
             expect(result).toEqual(skills);
         });
 
-        it('should not overwrite existing skill names (first wins)', () => {
+        it('should preserve duplicate names when keys differ', () => {
             const skills = {
                 'skill-1': { name: 'JavaScript', url: 'https://first.com' },
                 'skill-2': { name: 'JavaScript', url: 'https://second.com' }
@@ -171,7 +168,8 @@ describe('parsedResumeAdapter', () => {
 
             const result = normalizeParserSkills(skills);
 
-            expect(result['JavaScript'].url).toBe('https://first.com');
+            expect(result['skill-1'].url).toBe('https://first.com');
+            expect(result['skill-2'].url).toBe('https://second.com');
         });
 
         it('should handle empty skills object', () => {
@@ -185,9 +183,7 @@ describe('parsedResumeAdapter', () => {
 
             const result = normalizeParserSkills(skills);
 
-            expect(result).toEqual({
-                'JavaScript': { url: undefined, img: undefined }
-            });
+            expect(result).toEqual(skills);
         });
     });
 

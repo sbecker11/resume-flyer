@@ -16,6 +16,8 @@ interface ImportMetaEnv {
   readonly S3_REGION?: string;
   /** @deprecated Legacy; use S3_PALETTES_JSONL_KEY */
   readonly S3_COLOR_PALETTES_OBJECT_KEY?: string;
+  /** Base URL prefix for external skill definition links (skill-info-modal). */
+  readonly VITE_SKILL_INFO_SOURCE_BASE_URL?: string;
 }
 
 declare module '*.vue' {

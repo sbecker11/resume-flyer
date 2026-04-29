@@ -1123,7 +1123,7 @@ export function updateContrastForBrightness(element) {
     }
 }
 
-export function applySelectedStateColorsToElement(element) {
+function applySelectedStateColorsToElement(element) {
     const selectedBgColor = element.getAttribute('data-background-color-selected');
     const selectedFgColor = element.getAttribute('data-foreground-color-selected');
     

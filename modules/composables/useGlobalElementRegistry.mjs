@@ -19,7 +19,7 @@ const stats = ref({
   queryCount: 0
 })
 
-export function useGlobalElementRegistry() {
+function useGlobalElementRegistry() {
   // Core registry functions
   function registerElement(key, element) {
     if (!element) {
@@ -266,7 +266,7 @@ export function createGlobalElementRegistry() {
 }
 
 // Provider function for dependency injection (now uses global instance)
-export function provideGlobalElementRegistry() {
+function provideGlobalElementRegistry() {
   // Check if global registry exists first
   if (typeof window !== 'undefined' && window.globalElementRegistry) {
     provide(GLOBAL_ELEMENT_REGISTRY_KEY, window.globalElementRegistry)

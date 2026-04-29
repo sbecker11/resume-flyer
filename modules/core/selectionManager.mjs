@@ -735,4 +735,3 @@ class SelectionManager {
 
 // Create and export singleton
 export const selectionManager = new SelectionManager();
-export default selectionManager;

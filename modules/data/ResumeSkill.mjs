@@ -1,7 +1,7 @@
 /**
  * Skill entry from resume skills.json / API (extensible for future fields).
  */
-export class ResumeSkill {
+class ResumeSkill {
   /**
    * @param {string} id - Canonical key in the skills map
    * @param {Record<string, unknown>} [data]

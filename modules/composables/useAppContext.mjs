@@ -6,12 +6,12 @@ import { provide, inject, ref, reactive, computed } from 'vue'
 // Dependency injection keys
 export const APP_CONTEXT_KEY = Symbol('AppContext')
 export const FOCAL_POINT_KEY = Symbol('FocalPoint')
-export const AIM_POINT_KEY = Symbol('AimPoint')
+const AIM_POINT_KEY = Symbol('AimPoint')
 export const BULLS_EYE_KEY = Symbol('BullsEye')
-export const SCENE_CONTAINER_KEY = Symbol('SceneContainer')
-export const SELECTION_MANAGER_KEY = Symbol('SelectionManager')
-export const COLOR_PALETTE_KEY = Symbol('ColorPalette')
-export const TIMELINE_KEY = Symbol('Timeline')
+const SCENE_CONTAINER_KEY = Symbol('SceneContainer')
+const SELECTION_MANAGER_KEY = Symbol('SelectionManager')
+const COLOR_PALETTE_KEY = Symbol('ColorPalette')
+const TIMELINE_KEY = Symbol('Timeline')
 
 // App-wide context provider (replaces IM initialization)
 export function provideAppContext() {

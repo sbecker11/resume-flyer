@@ -181,4 +181,4 @@ function useTimeline() {
     };
 }
 
-export { initialize, reinitialize, useTimeline }; 
+export { initialize, useTimeline };

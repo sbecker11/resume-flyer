@@ -4,7 +4,7 @@
  */
 
 /** @param {string} name @param {Record<string, { name?: string }>} skillsMap */
-export function resolveSkillKey(name, skillsMap) {
+function resolveSkillKey(name, skillsMap) {
   if (!name || !skillsMap || typeof skillsMap !== 'object') return null;
   if (skillsMap[name]) return name;
   const entry = Object.entries(skillsMap).find(([, s]) => s && (s.name === name || s.name === name.trim()));
@@ -12,7 +12,7 @@ export function resolveSkillKey(name, skillsMap) {
 }
 
 /** @param {unknown} description @param {Record<string, unknown>} skillsMap */
-export function skillKeysFromDescription(description, skillsMap) {
+function skillKeysFromDescription(description, skillsMap) {
   if (!description || typeof description !== 'string' || !skillsMap || typeof skillsMap !== 'object') return [];
   const out = [];
   const seen = new Set();

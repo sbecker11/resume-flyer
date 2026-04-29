@@ -4,15 +4,15 @@
 import { provide, inject, ref, type InjectionKey, type Ref } from 'vue'
 
 // Define injection keys with proper typing
-export const BULLS_EYE_KEY: InjectionKey<any> = Symbol('bullsEye')
-export const RESUME_LIST_CONTROLLER_KEY: InjectionKey<any> = Symbol('resumeListController')
-export const RESUME_ITEMS_CONTROLLER_KEY: InjectionKey<any> = Symbol('resumeItemsController')
-export const FOCAL_POINT_KEY: InjectionKey<any> = Symbol('focalPoint')
-export const APP_STATE_KEY: InjectionKey<any> = Symbol('appState')
-export const DEBUG_FUNCTIONS_KEY: InjectionKey<DebugFunctions> = Symbol('debugFunctions')
+const BULLS_EYE_KEY: InjectionKey<any> = Symbol('bullsEye')
+const RESUME_LIST_CONTROLLER_KEY: InjectionKey<any> = Symbol('resumeListController')
+const RESUME_ITEMS_CONTROLLER_KEY: InjectionKey<any> = Symbol('resumeItemsController')
+const FOCAL_POINT_KEY: InjectionKey<any> = Symbol('focalPoint')
+const APP_STATE_KEY: InjectionKey<any> = Symbol('appState')
+const DEBUG_FUNCTIONS_KEY: InjectionKey<DebugFunctions> = Symbol('debugFunctions')
 
 // Type definitions for better type safety
-export interface DebugFunctions {
+interface DebugFunctions {
   testResumeSystem: () => void
   checkResumeDivs: () => void
   testScrolling: () => void
@@ -22,7 +22,7 @@ export interface DebugFunctions {
   renderAllCDivs: () => void
 }
 
-export interface GlobalServices {
+interface GlobalServices {
   bullsEye: any
   resumeListController: any
   resumeItemsController: any
@@ -81,7 +81,7 @@ export function useResumeListController() {
   return controllerRef.value
 }
 
-export function useResumeItemsController() {
+function useResumeItemsController() {
   const controller = inject(RESUME_ITEMS_CONTROLLER_KEY)
   if (!controller) {
     console.warn('[GlobalServices] Resume items controller not available')
@@ -99,7 +99,7 @@ export function useFocalPointService() {
   return focalPoint
 }
 
-export function useAppStateService() {
+function useAppStateService() {
   const appState = inject(APP_STATE_KEY)
   if (!appState) {
     console.warn('[GlobalServices] App state service not available')
@@ -118,7 +118,7 @@ export function useDebugFunctions() {
 }
 
 // Utility to replace window object access with inject pattern
-export function useGlobalServices(): Partial<GlobalServices> {
+function useGlobalServices(): Partial<GlobalServices> {
   return {
     bullsEye: useBullsEyeService(),
     resumeListController: useResumeListController(),

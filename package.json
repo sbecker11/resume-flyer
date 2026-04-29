@@ -45,31 +45,16 @@
     "sync-color-palette-utils-ts": "node scripts/sync-color-palette-utils-ts.mjs"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@notionhq/client": "^2.2.15",
-    "@vueuse/core": "^13.4.0",
-    "@xstate/vue": "^3.0.0",
-    "airtable": "^0.12.2",
     "color-palette-utils-ts": "file:./color-palette-utils-ts",
     "cors": "^2.8.5",
-    "d3": "^7.9.0",
-    "d3-sankey": "^0.12.3",
-    "dayjs": "^1.11.10",
     "dotenv": "^17.1.0",
-    "exceljs": "^4.4.0",
     "express": "^4.21.2",
-    "googleapis": "^140.0.1",
-    "log4js": "^6.9.1",
+    "mitt": "^3.0.1",
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
-    "openai": "^4.86.1",
-    "pinia": "^2.1.7",
-    "puppeteer": "^22.13.1",
-    "sanitize-filename": "^1.6.3",
-    "xstate": "^5.16.0"
+    "sanitize-filename": "^1.6.3"
   },
   "devDependencies": {
-    "@types/multer": "^1.4.11",
     "@types/node": "^25.3.5",
     "@vitejs/plugin-vue": "^5.0.5",
     "@vitest/coverage-v8": "^4.0.18",

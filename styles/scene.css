@@ -686,12 +686,19 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
 .biz-resume-div .resume-section-title-wrap {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
     margin: 0 0 6px 0;
 }
 .biz-card-div .resume-section-title-wrap h4,
 .biz-resume-div .resume-section-title-wrap h4 {
     margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.biz-card-div .resume-section-title-wrap .biz-details-edit-btn,
+.biz-resume-div .resume-section-title-wrap .biz-details-edit-btn {
+    margin-left: auto;
 }
 
 .biz-details-role {
@@ -972,8 +979,7 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
     position: absolute;
     inset: 0;
     background: rgba(0,0,0,0.5);
-    /* backdrop click intentionally does nothing — close via × only */
-    pointer-events: none;
+    pointer-events: auto;
 }
 .skill-info-modal-box {
     position: relative;
@@ -1064,13 +1070,16 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
 .skill-info-associated-biz-list li {
     margin: 2px 0;
 }
-.skill-info-associated-biz-list a {
+.skill-info-associated-biz-list a,
+.skill-info-source-link {
     color: inherit;
     text-decoration: underline;
     cursor: pointer;
 }
 .skill-info-associated-biz-list a:hover,
-.skill-info-associated-biz-list a:focus-visible {
+.skill-info-associated-biz-list a:focus-visible,
+.skill-info-source-link:hover,
+.skill-info-source-link:focus-visible {
     opacity: 0.85;
 }
 /* Strong highlight when jumping from skill card back-arrow or skill modal job link:

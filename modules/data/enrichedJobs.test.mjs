@@ -89,18 +89,17 @@ describe('enrichedJobs', () => {
     expect(jobs[0]['job-skills']).toHaveProperty('Python');
   });
 
-  it('ignores [brackets] that are not in skills map', () => {
+  it('throws on unresolved [brackets] not found in skills map', () => {
     const rawJobs = [{ index: 0, Description: 'Used [UnknownSkill].' }];
-    const jobs = enrichJobsWithSkills(rawJobs, {});
-    expect(jobs[0].references).toEqual([]);
-    expect(jobs[0]['job-skills']).toEqual({});
+    expect(() => enrichJobsWithSkills(rawJobs, {})).toThrow('[enrichJobFromDescription] Unresolved bracketed term "[UnknownSkill]"');
   });
 
   it('detects unbracketed skill occurrences in description', () => {
     const rawJobs = [{ index: 0, Description: 'Used Python in production.' }];
     const skills = { Python: { url: 'https://python.org', img: '' } };
     const jobs = enrichJobsWithSkills(rawJobs, skills);
-    expect(jobs[0].references).toContain('<a href="https://python.org">[Python]</a>');
+    // Unbracketed scan updates job-skills; references are only for explicit bracketed terms.
+    expect(jobs[0].references).toEqual([]);
     expect(jobs[0]['job-skills']).toHaveProperty('Python');
   });
 

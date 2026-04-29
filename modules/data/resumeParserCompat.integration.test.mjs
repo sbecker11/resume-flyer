@@ -60,16 +60,16 @@ describe('resume-parser compatibility (integration)', () => {
       expect(jobs).toHaveLength(2);
       expect(jobs[0].jobID).toBe('0');
       expect(jobs[1].jobID).toBe('1');
-      expect(skills.Python).toEqual({ url: 'https://python.org', img: '' });
-      expect(skills.AWS).toEqual({ url: 'https://aws.amazon.com', img: '' });
+      expect(skills.python).toEqual({ name: 'Python', url: 'https://python.org', img: '' });
+      expect(skills.aws).toEqual({ name: 'AWS', url: 'https://aws.amazon.com', img: '', categoryIDs: ['cloud'], jobIDs: [0, 1] });
 
       const enriched = enrichJobsWithSkills(jobs, skills);
       expect(enriched).toHaveLength(2);
       expect(enriched[0].references).toHaveLength(2);
-      expect(enriched[0]['job-skills']).toHaveProperty('Python');
-      expect(enriched[0]['job-skills']).toHaveProperty('AWS');
+      expect(enriched[0]['job-skills']).toHaveProperty('python');
+      expect(enriched[0]['job-skills']).toHaveProperty('aws');
       expect(enriched[1].references).toHaveLength(1);
-      expect(enriched[1]['job-skills']).toHaveProperty('Python');
+      expect(enriched[1]['job-skills']).toHaveProperty('python');
     });
   });
 

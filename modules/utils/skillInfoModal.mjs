@@ -23,6 +23,16 @@ const SKILL_BIZ_LINK_JOB_ATTR = 'data-job-number';
 const SKILL_BIZ_LINK_SKILL_ATTR = 'data-skill-name';
 const FOCUSED_SKILL_LINK_CLASS = 'skill-link-focused-from-modal';
 const SOURCE_BIZ_BACKLINK_CLASS = 'biz-back-link-source';
+const DEFAULT_SKILL_INFO_SOURCE_BASE_URL = 'http://wikipedia.com/wiki/';
+
+function buildSkillInfoSourceUrl(slug, displayName) {
+    const configuredBase = String(import.meta?.env?.VITE_SKILL_INFO_SOURCE_BASE_URL || '').trim();
+    const baseUrl = configuredBase || DEFAULT_SKILL_INFO_SOURCE_BASE_URL;
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    const term = String(slug || displayName || '').trim();
+    if (!term) return normalizedBase;
+    return `${normalizedBase}${encodeURIComponent(term)}`;
+}
 
 // Single global delegated listener — survives any innerHTML replacement on cards.
 let _delegateInstalled = false;
@@ -182,8 +192,12 @@ function getOrCreateModal() {
     `;
     document.body.appendChild(modal);
 
-    // Close only via the close button (backdrop click intentionally does nothing)
+    // Close via close button or by clicking outside the modal box (backdrop).
     modal.querySelector('.skill-info-modal-close').addEventListener('click', () => closeModal(modal));
+    modal.querySelector('.skill-info-modal-backdrop').addEventListener('click', () => closeModal(modal));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal(modal);
+    });
 
     return modal;
 }
@@ -318,8 +332,9 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
             return;
         }
         const { summary } = await res.json();
+        const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
         setModalContent(modal, displayName || slug,
-            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')}</p>${bizLinksHtml}`);
+            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')} <span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${sourceUrl}</a>)</span></p>${bizLinksHtml}`);
     } catch (e) {
         setModalContent(modal, displayName || slug,
             `<span class="skill-info-error">Network error: ${e.message}</span>${bizLinksHtml}`);
