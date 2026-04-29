@@ -15,7 +15,7 @@ import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
-import { openSkillInfoModal } from '@/modules/utils/skillInfoModal.mjs';
+import { openSkillInfoModal, markFocusedSkillLinkForJob } from '@/modules/utils/skillInfoModal.mjs';
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -387,6 +387,8 @@ function removeSkillCardFromResumeListing() {
 }
 function goToJob(jobNumber) {
   selectionManager?.selectCard({ type: 'biz', jobNumber }, 'ResumeContainer.skillCardJobClick');
+  const slug = selectedSkillCard.value?.skillName;
+  if (slug) markFocusedSkillLinkForJob(jobNumber, slug);
 }
 
 // --- Resume Details Editor state ---
@@ -663,7 +665,10 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
       e.preventDefault();
       e.stopPropagation();
       const jobNum = parseInt(btn.getAttribute('data-job-number'), 10);
-      if (!Number.isNaN(jobNum)) selectionManager?.selectCard({ type: 'biz', jobNumber: jobNum }, 'ResumeContainer.appendedCopyBackLink');
+      if (!Number.isNaN(jobNum)) {
+        selectionManager?.selectCard({ type: 'biz', jobNumber: jobNum }, 'ResumeContainer.appendedCopyBackLink');
+        markFocusedSkillLinkForJob(jobNum, skillSlug);
+      }
     });
   });
   // Hover: keep scene skill-card-div and resume skill-resume-div in sync (same as biz pair)
@@ -1790,6 +1795,33 @@ function onResumeSkillCardClick(event) {
 /* Force all nested children to have transparent backgrounds */
 .biz-resume-div .biz-resume-details-div * {
     background-color: transparent !important;
+}
+
+/* Beats the rule above (* loses to two classes): inverted chip from skill modal / skill-card back-arrow */
+.biz-resume-div .biz-resume-details-div .biz-card-skill-title.skill-link-focused-from-modal {
+    border-radius: 16px;
+    padding: 2px 6px;
+    margin: -2px -2px;
+    box-sizing: border-box;
+    background-color: var(
+        --data-link-color-selected,
+        var(--data-link-color, var(--data-foreground-color-selected, var(--data-foreground-color, currentColor)))
+    ) !important;
+    color: var(
+        --data-background-color-selected,
+        var(--data-background-color, var(--data-frame-background-color, #fff))
+    ) !important;
+    font-weight: 700;
+    opacity: 1 !important;
+}
+.biz-resume-div .biz-resume-details-div .biz-card-skill-title.skill-link-focused-from-modal * {
+    color: inherit !important;
+}
+
+/* Parent wrappers use opacity < 1; restore full strength for the inverted chip (matches scene). */
+.skills-list .skills-text:has(.skill-link-focused-from-modal),
+.description-content .job-description-item:has(.skill-link-focused-from-modal) {
+    opacity: 1;
 }
 
 /* Close button styling - positioned at top right */

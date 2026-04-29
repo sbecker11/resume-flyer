@@ -1016,8 +1016,34 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
 .skill-info-associated-biz-list a:focus-visible {
     opacity: 0.85;
 }
-.biz-card-skill-title.skill-link-focused-from-modal {
+/* Strong highlight when jumping from skill card back-arrow or skill modal job link:
+   invert the skill-link foreground vs the selected biz card face (same vars as .clone / .selected). */
+.biz-card-div .biz-card-skill-title.skill-link-focused-from-modal,
+.biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal,
+body .biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal,
+#resume-container .biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal,
+#resume-content-listing .biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal {
+    border-radius: 16px;
+    padding: 2px 6px;
+    margin: -2px -2px;
+    box-sizing: border-box;
+    background-color: var(
+        --data-link-color-selected,
+        var(--data-link-color, var(--data-foreground-color-selected, var(--data-foreground-color, currentColor)))
+    );
+    color: var(
+        --data-background-color-selected,
+        var(--data-background-color, var(--data-frame-background-color, #fff))
+    ) !important;
     font-weight: 700;
+    opacity: 1 !important;
+}
+.biz-card-div .biz-card-skill-title.skill-link-focused-from-modal *,
+.biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal *,
+body .biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal *,
+#resume-container .biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal *,
+#resume-content-listing .biz-resume-div .biz-card-skill-title.skill-link-focused-from-modal * {
+    color: inherit !important;
 }
 .skill-info-loading,
 .skill-info-error {

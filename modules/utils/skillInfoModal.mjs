@@ -70,7 +70,7 @@ function clearFocusedSkillLinkClass() {
     });
 }
 
-function markFocusedSkillLinkForJob(jobNumber, skillSlug) {
+export function markFocusedSkillLinkForJob(jobNumber, skillSlug) {
     clearFocusedSkillLinkClass();
     const escJob = CSS.escape(String(jobNumber));
     const escSkill = CSS.escape(String(skillSlug));

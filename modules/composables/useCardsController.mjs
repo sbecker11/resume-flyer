@@ -28,6 +28,7 @@ import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElem
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
+import { markFocusedSkillLinkForJob } from '@/modules/utils/skillInfoModal.mjs'
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/')
     let base = envBase
@@ -1057,6 +1058,7 @@ export function useCardsController() {
                     const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN
                     if (!Number.isNaN(jobNum)) {
                         selectionManager.selectCard({ type: 'biz', jobNumber: jobNum }, 'CardsController.skillCardBizTitleClick')
+                        markFocusedSkillLinkForJob(jobNum, skillName)
                     }
                 }
                 return
@@ -2131,6 +2133,8 @@ export function useCardsController() {
                     const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN
                     if (!Number.isNaN(jobNum)) {
                         selectionManager.selectCard({ type: 'biz', jobNumber: jobNum }, 'CardsController.skillCardCloneBizTitleClick')
+                        const slug = clone.getAttribute('data-skill-name') || ''
+                        if (slug) markFocusedSkillLinkForJob(jobNum, slug)
                     }
                 }
                 return
