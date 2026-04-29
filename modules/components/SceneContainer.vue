@@ -234,6 +234,7 @@ const autoScroll = useSceneAutoScroll(
 )
 const { autoscrollDirection } = autoScroll
 
+
 // Event handlers
 const handleSceneContainerClick = (event) => {
   console.log('[SceneContainer] Scene container clicked:', event)
@@ -272,6 +273,7 @@ onUnmounted(() => {
   if (sceneContentScrollTimeoutId) clearTimeout(sceneContentScrollTimeoutId)
   autoScroll.teardown()
 })
+
 
 // Expose refs to parent if needed
 defineExpose({
@@ -424,6 +426,7 @@ defineExpose({
 }
 
 /* .viewer-label styling consolidated in AppContent.vue */
+
 
 /* Auto-scroll zone GIF overlays: top-right and bottom-right of scene container */
 .autoscroll-gif {

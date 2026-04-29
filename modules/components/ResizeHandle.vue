@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, type Ref, type ComputedRef } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, type Ref, type ComputedRef } from 'vue';
 // useAimPoint removed during Vue 3 migration cleanup
 import { FOCALPOINT_MODES } from '@/modules/composables/useFocalPointVue3.mjs';
 import { useAppStore } from '@/modules/stores/appStore.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useAppState } from '@/modules/composables/useAppState';
+import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
 import type { ResizeHandleProps, ResizeHandleEmits } from '@/modules/types/components';
 import { useBullsEyeService } from '@/modules/core/globalServices';
+import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import Scene3DSettings from './Scene3DSettings.vue';
 
@@ -204,6 +206,10 @@ const isHovering = ref(false);
 const isSteppingHovering = ref(false);
 const isLayoutHovering = ref(false);
 const hasJustClicked = ref(false); // Track if we just clicked (to maintain hover state)
+const skillSearchOpen = ref(false);
+const skillSearchQuery = ref('');
+const skillSearchInputRef = ref<HTMLInputElement | null>(null);
+const searchMode = ref<'skill' | 'job'>('skill');
 
 /** Tooltip visible only on mouse hover over the tri-state button. */
 const showFocalTriStateTooltip = computed(() => isHovering.value);
@@ -338,6 +344,88 @@ function handleResizeHandleClick(event: MouseEvent): void {
   // Prevent resize handle clicks from propagating to parent containers
   event.stopPropagation();
 }
+
+type SkillSearchOption = { kind: 'skill'; id: string; label: string; sublabel: string };
+type JobSearchOption = { kind: 'job'; id: number; label: string; sublabel: string };
+type SearchOption = SkillSearchOption | JobSearchOption;
+
+const filteredSearchOptions = computed<SearchOption[]>(() => {
+  const q = skillSearchQuery.value.trim().toLowerCase();
+  if (searchMode.value === 'skill') {
+    const skillsData = getGlobalJobsDependency().getSkillsData() || {};
+    const cards = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]'));
+    const options = cards
+      .map((el) => {
+        const slug = String(el.getAttribute('data-skill-name') || '').trim();
+        if (!slug || !el.id) return null;
+        const display = skillsData[slug]?.name || slug;
+        return { kind: 'skill', id: el.id, label: display, sublabel: slug } as SkillSearchOption;
+      })
+      .filter((v): v is SkillSearchOption => Boolean(v))
+      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+    if (!q) return options;
+    return options.filter((opt) =>
+      opt.label.toLowerCase().includes(q) || opt.sublabel.toLowerCase().includes(q)
+    );
+  }
+
+  const cards = Array.from(document.querySelectorAll('.biz-card-div[id^="biz-card-div-"]:not(.clone)'));
+  const options = cards
+    .map((el) => {
+      const rawJob = String(el.getAttribute('data-job-number') || '').trim();
+      const jobNumber = Number.parseInt(rawJob, 10);
+      if (!Number.isFinite(jobNumber)) return null;
+      const employer = String(el.getAttribute('data-employer') || '').trim();
+      const role = String(el.getAttribute('data-role') || '').trim();
+      const label = employer || `Job ${jobNumber}`;
+      const sublabel = role || 'Job';
+      return { kind: 'job', id: jobNumber, label, sublabel } as JobSearchOption;
+    })
+    .filter((v): v is JobSearchOption => Boolean(v))
+    .sort((a, b) => a.id - b.id);
+  if (!q) return options;
+  return options.filter((opt) =>
+    opt.label.toLowerCase().includes(q) || opt.sublabel.toLowerCase().includes(q)
+  );
+});
+
+function openSkillSearch(event: MouseEvent): void {
+  event.stopPropagation();
+  skillSearchOpen.value = true;
+  nextTick(() => skillSearchInputRef.value?.focus());
+}
+
+function closeSkillSearch(): void {
+  skillSearchOpen.value = false;
+}
+
+function selectSearchResult(option: SearchOption): void {
+  if (!option) return;
+  const sm = selectionManager || (window as any)?.resumeFlyer?.selectionManager;
+  if (!sm?.selectCard) return;
+  if (option.kind === 'skill') {
+    sm.selectCard({ type: 'skill', skillCardId: option.id }, 'ResizeHandle.skillSearch');
+    const sceneEl = document.getElementById(option.id);
+    if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+  } else {
+    sm.selectCard({ type: 'biz', jobNumber: option.id }, 'ResizeHandle.jobSearch');
+    const sceneEl = document.getElementById(`biz-card-div-${option.id}`) || document.getElementById(`biz-card-div-${option.id}-clone`);
+    if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+  }
+  closeSkillSearch();
+}
+
+function selectFirstMatch(): void {
+  const first = filteredSearchOptions.value[0];
+  if (first) selectSearchResult(first);
+}
+
+watch(skillSearchOpen, (open) => {
+  if (!open) {
+    skillSearchQuery.value = '';
+    searchMode.value = 'skill';
+  }
+});
 </script>
 
 <template>
@@ -404,6 +492,67 @@ function handleResizeHandleClick(event: MouseEvent): void {
                     :title="stepCount === 1 ? 'Free dragging (no steps)' : `Stepping: ${stepCount} steps`">{{ displayStepCount }}</button>
             <Scene3DSettings />
             <button :id="stepRightButton.id" class="toggle-circle" @click.stop="stepRightButton.action" :disabled="stepRightButton.disabled" :title="stepRightButton.title">{{ stepRightButton.icon }}</button>
+            <button
+              id="skill-search-toggle"
+              type="button"
+              class="toggle-circle"
+              title="Find skill in scene"
+              aria-label="Find skill in scene"
+              @click.stop="openSkillSearch"
+            ><span class="skill-search-icon" aria-hidden="true">🔍</span></button>
+        </div>
+        <div
+          v-if="skillSearchOpen"
+          class="skill-search-modal-overlay"
+          @mousedown.stop.prevent
+          @click.self="closeSkillSearch"
+        >
+          <div
+            class="skill-search-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Skill search"
+            @mousedown.stop
+            @click.stop
+          >
+            <div class="skill-search-modal-header">
+              <strong>Find skill</strong>
+              <button type="button" class="skill-search-close" aria-label="Close skill search" @click="closeSkillSearch">×</button>
+            </div>
+            <div class="skill-search-mode-row" role="radiogroup" aria-label="Search type">
+              <label class="skill-search-mode-option">
+                <input v-model="searchMode" type="radio" value="skill" />
+                Skill
+              </label>
+              <label class="skill-search-mode-option">
+                <input v-model="searchMode" type="radio" value="job" />
+                Job
+              </label>
+            </div>
+            <input
+              ref="skillSearchInputRef"
+              v-model="skillSearchQuery"
+              type="text"
+              class="skill-search-input"
+              :placeholder="searchMode === 'job' ? 'Type employer or role...' : 'Type skill name...'"
+              @keydown.enter.prevent="selectFirstMatch"
+            />
+            <div class="skill-search-results">
+              <button
+                v-for="item in filteredSearchOptions"
+                :key="`${item.kind}-${item.id}`"
+                type="button"
+                class="skill-search-result-item"
+                @click="selectSearchResult(item)"
+              >
+                <span class="skill-search-result-title">{{ item.label }}</span>
+                <span class="skill-search-result-sub">{{ item.sublabel }}</span>
+              </button>
+              <div v-if="!filteredSearchOptions.length" class="skill-search-empty">
+                No matching {{ searchMode === 'job' ? 'jobs' : 'skills' }}.
+              </div>
+            </div>
+          </div>
         </div>
     </div>
 </template>
@@ -606,5 +755,115 @@ function handleResizeHandleClick(event: MouseEvent): void {
     border-color: #666;
     transform: scale(0.95);
     pointer-events: none;
+}
+
+#skill-search-toggle {
+    font-size: 12px;
+}
+
+#skill-search-toggle .skill-search-icon {
+    display: inline-block;
+    font-size: 12px;
+    line-height: 1;
+    transform: translateY(-0.5px);
+}
+
+.skill-search-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10030;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 48px;
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.skill-search-modal {
+    width: min(340px, calc(100vw - 24px));
+    max-height: min(460px, calc(100vh - 24px));
+    overflow: hidden;
+    background: #161b22;
+    color: #f7f7f7;
+    font-family: Arial, sans-serif;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-search-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+}
+
+.skill-search-close {
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.skill-search-input {
+    margin: 0 10px 8px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #3e4a57;
+    background: #0f141a;
+    color: #fff;
+}
+
+.skill-search-mode-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 10px 6px;
+    font-size: 13px;
+}
+
+.skill-search-mode-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.skill-search-results {
+    overflow: auto;
+    padding: 0 6px 8px;
+}
+
+.skill-search-result-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.skill-search-result-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.skill-search-result-title {
+    font-weight: 600;
+}
+
+.skill-search-result-sub {
+    font-size: 12px;
+    opacity: 0.78;
+}
+
+.skill-search-empty {
+    padding: 8px;
+    opacity: 0.7;
 }
 </style> 
