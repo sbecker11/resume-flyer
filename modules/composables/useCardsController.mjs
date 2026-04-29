@@ -1032,7 +1032,7 @@ export function useCardsController() {
         skillCard.style.filter = filters.get_filterStr_from_z(sceneZ)
         const backIconUrl = basePathJoin('static_content/icons/anchors/icons8-back-16-black.png')
         const backIconsHtml = referencingBizCardIds.map(bizCardId => {
-            return `<span class="skill-card-biz-title skill-card-back-icon" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; display: inline-flex;"><img class="back-icon" src="${backIconUrl}" alt="" width="16" height="16" aria-hidden="true"></span>`
+            return `<span class="skill-card-biz-title skill-card-back-icon biz-back-link" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; display: inline-flex;"><img class="back-icon" src="${backIconUrl}" alt="" width="16" height="16" aria-hidden="true"></span>`
         }).join('')
         const yearsHtml = totalYears > 0
             ? `<span class="skill-card-years">(${totalYears} yr${totalYears !== 1 ? 's' : ''} exp.)</span>`
@@ -1050,7 +1050,7 @@ export function useCardsController() {
         skillCard.addEventListener('click', (e) => {
             e.stopPropagation()
             if (e.target.closest('.skill-info-modal-btn')) return  // handled by global delegate in skillInfoModal.mjs
-            const bizTitleEl = e.target.closest('.skill-card-biz-title')
+            const bizTitleEl = e.target.closest('.biz-back-link')
             if (bizTitleEl && selectionManager) {
                 const bizCardId = bizTitleEl.getAttribute('data-biz-card-id')
                 if (bizCardId) {
@@ -2125,7 +2125,7 @@ export function useCardsController() {
             if (!selectionManager) return
 
             // Back arrow inside selected skill card clone
-            const bizTitleEl = e.target.closest('.skill-card-biz-title')
+            const bizTitleEl = e.target.closest('.biz-back-link')
             if (bizTitleEl) {
                 const bizCardId = bizTitleEl.getAttribute('data-biz-card-id')
                 if (bizCardId) {
