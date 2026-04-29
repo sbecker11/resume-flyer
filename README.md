@@ -4,7 +4,7 @@
 
 **Live app (GitHub Pages):** [https://sbecker11.github.io/resume-flyer/](https://sbecker11.github.io/resume-flyer/)
 
-**resume-flyer** is an interactive resume explorer. Upload a DOCX or PDF resume and it is parsed into your employment experience, education, and technical skills. You explore them as **business cards** (one per job) and **skill cards** (one per skill) in 3D or as a chronical list. Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
+**resume-flyer** is an interactive resume explorer. Upload a DOCX or PDF resume and it is parsed into your employment experience, education, and technical skills. You explore them as **business cards** (one per job) and **skill cards** (one per skill) in 3D or as a chronological list. Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
 
 ### High-level functionality
 
@@ -16,7 +16,7 @@
 - **palette-image-source-preview** — When the current palette has a source image, use the 🖼️ control next to the palette dropdown to open a modal and preview the source image that was sampled to create the color swatches.
 - **resume-details-editor** — Modal to edit resume-level and job-level data across tabs: **Meta**, **Other sections**, **Education**, **Resume jobs**, and **Job skills**.
 - **job-details-editor** — Edit each job’s employer, title, dates, and description from the resume-details-editor Jobs tab.
-- **job-skills-selector** — Assign or change skills per job (JobSkillEditor); skills are merged with parser-extracted job-skills and shown on the resume list.
+- **job-skills-selector** — Assign or change skills per job in the Resume Details editor; skills are merged with parser-extracted job-skills and shown on the resume list.
 - **resume-print** — Build a printable HTML resume from the current in-memory data and open it in a new tab (Print button in the resume header).
 
 #### Additional features
@@ -33,6 +33,7 @@ Additional capabilities you may use alongside the items above include:
 - **attention highlighting** — Hover and selection state coordinates the resume list, timeline, badges, and 3D cards so the item in focus is easy to spot across views.
 - **business / skill linkages** — Selecting a job highlights its skills (and vice versa where applicable); skill badges and card clones stay in sync with the active job and assigned skills.
 - **scene vertical auto-scroll** — When the focal point sits in following or dragging mode and the effective focal position moves beyond the visible scene band, the scene view scrolls vertically to keep context on screen.
+- **skill definition source links** — Skill definition popups include an external source URL. Configure the source prefix with `VITE_SKILL_INFO_SOURCE_BASE_URL` (default in `.env.example` is Wikipedia-style `http://wikipedia.com/wiki/`).
 
 ### Parsed resume storage contract
 

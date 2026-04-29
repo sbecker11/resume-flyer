@@ -160,6 +160,21 @@ describe('parsedResumeAdapter', () => {
             expect(result).toEqual(skills);
         });
 
+        it('should convert parser-style ID keys (non-slug) to name-keyed entries', () => {
+            const skills = {
+                'SkillID-1': { name: 'JavaScript', url: 'https://js.org', img: 'js.png' },
+                'SkillID-2': { name: 'Python', url: 'https://python.org' },
+                'SkillID-3': { name: '   ' }
+            };
+
+            const result = normalizeParserSkills(skills);
+
+            expect(result).toEqual({
+                JavaScript: { url: 'https://js.org', img: 'js.png' },
+                Python: { url: 'https://python.org', img: undefined }
+            });
+        });
+
         it('should preserve duplicate names when keys differ', () => {
             const skills = {
                 'skill-1': { name: 'JavaScript', url: 'https://first.com' },

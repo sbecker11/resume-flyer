@@ -5,6 +5,9 @@ describe('core/hasServer', () => {
     vi.resetModules();
     if (typeof window !== 'undefined') {
       delete window.hasServer;
+      delete window.enableStaticMode;
+      delete window.disableStaticMode;
+      localStorage.removeItem('forceStaticMode');
     }
   });
 
@@ -53,5 +56,35 @@ describe('core/hasServer', () => {
       writable: true,
     });
     expect(hasServer()).toBe(true);
+  });
+
+  it('returns false when forceStaticMode is enabled in localStorage', async () => {
+    localStorage.setItem('forceStaticMode', 'true');
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'http://127.0.0.1:5173', host: '127.0.0.1:5173' },
+      configurable: true,
+      writable: true,
+    });
+    const { hasServer } = await import('./hasServer.mjs');
+    expect(hasServer()).toBe(false);
+  });
+
+  it('exposes runtime toggles on window', async () => {
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'http://127.0.0.1:5173', host: '127.0.0.1:5173' },
+      configurable: true,
+      writable: true,
+    });
+    const { hasServer } = await import('./hasServer.mjs');
+    expect(hasServer()).toBe(true);
+    expect(typeof window.enableStaticMode).toBe('function');
+    expect(typeof window.disableStaticMode).toBe('function');
+
+    window.enableStaticMode();
+    expect(localStorage.getItem('forceStaticMode')).toBe('true');
+    expect(hasServer()).toBe(false);
+
+    window.disableStaticMode();
+    expect(localStorage.getItem('forceStaticMode')).toBeNull();
   });
 });

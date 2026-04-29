@@ -51,6 +51,8 @@ export default defineConfig({
         'modules/stores/appStore.mjs',
         'modules/utils/domUtils.mjs',
         'modules/utils/mathUtils.mjs',
+        // DOM-heavy modal helper with delegated listeners/innerHTML and cross-module globals.
+        'modules/utils/skillInfoModal.mjs',
         // Large default state + migrations; covered by integration. Kept in report elsewhere.
         'modules/core/stateManager.mjs',
         // Export branch unreachable for parser output format; 75% line coverage.

@@ -93,17 +93,16 @@ flowchart TD
 
     subgraph DIKeys["globalServices.ts — Injection Keys"]
         BULLS_EYE_KEY["BULLS_EYE_KEY (Symbol)"]
-        RLC_KEY["RESUME_LIST_CTRL_KEY (Symbol)"]
+        RLC_KEY["RESUME_LIST_CONTROLLER_KEY (Symbol)"]
         FOCAL_PT_KEY["FOCAL_POINT_KEY (Symbol)"]
         APP_STATE_KEY["APP_STATE_KEY (Symbol)"]
     end
 
     subgraph Provider["App.vue — Provider"]
         AppVue["App.vue\n(root component)"]
-        p1["provide(BULLS_EYE_KEY, bullsEye)"]
-        p2["provide(RESUME_LIST_CTRL_KEY, rlc)"]
-        p3["provide(FOCAL_POINT_KEY, focalPoint)"]
-        p4["provide(APP_STATE_KEY, appState)"]
+        p0["provideGlobalServices({})"]
+        p1["provideAppContext()"]
+        p2["provide('globalServiceUpdater', serviceUpdater)"]
     end
 
     subgraph Consumers["Consumer Composables (globalServices.ts)"]
@@ -135,11 +134,11 @@ flowchart TD
     createApp --> mount
     mount --> AppVue
     DIKeys --> Provider
-    AppVue --> p1 & p2 & p3 & p4
-    p1 --> useBullsEye
-    p2 --> useRLC
-    p3 --> useFP
-    p4 --> useAppCtx
+    AppVue --> p0 & p1 & p2
+    p0 --> useBullsEye
+    p0 --> useRLC
+    p0 --> useFP
+    p1 --> useAppCtx
     useBullsEye --> ResizeHandleVue
     useRLC --> ResumeContainerVue
     useFP --> useFocalPt
@@ -161,13 +160,10 @@ flowchart TD
     AppContent --> ResizeHandle["ResizeHandle.vue\n(Draggable divider)"]
     AppContent --> ResumeContainer["ResumeContainer.vue\n(Right panel)"]
     AppContent --> ResumeManager["ResumeManager.vue\n(File picker modal)"]
-    AppContent --> ColorPaletteSelector["ColorPaletteSelector.vue\n(Theme picker)"]
+    AppContent --> Scene3DSettings["Scene3DSettings.vue\n(3D controls modal)"]
 
     SceneContainer --> Timeline["Timeline.vue\n(SVG year/month ticks)"]
-    SceneContainer --> SceneContainerFooter["SceneContainerFooter.vue\n(Controls bar)"]
-    SceneContainer --> SceneViewLabel["SceneViewLabel.vue\n(% width label)"]
-
-    ResumeContainer --> ResumeContainerFooter["ResumeContainerFooter.vue\n(Controls bar)"]
+    SceneContainer --> Scene3DSettings
 
     classDef rootNode fill:#2e6b3e,stroke:#5cb85c,color:#fff
     classDef shellNode fill:#1e3a5f,stroke:#4a90d9,color:#fff
@@ -180,8 +176,7 @@ flowchart TD
     class AppContent shellNode
     class SceneContainer,Timeline sceneNode
     class ResumeContainer resumeNode
-    class ResizeHandle,ResumeManager,ColorPaletteSelector sharedNode
-    class SceneContainerFooter,SceneViewLabel,ResumeContainerFooter footerNode
+    class ResizeHandle,ResumeManager,Scene3DSettings sharedNode
 ```
 
 ---
@@ -434,7 +429,7 @@ flowchart TD
 
     subgraph BackendAPI["Backend API"]
         Server["server.mjs"]
-        Endpoints["/api/resumes\n/api/state\n/api/content"]
+        Endpoints["/api/resumes/*\n/api/state\n/api/skills/:slug/info\n/api/palette-*"]
         APIClient["resumeManagerApi.mjs"]
     end
 

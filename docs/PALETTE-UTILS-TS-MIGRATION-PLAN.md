@@ -32,7 +32,7 @@ This document plans how to replace all color-palette–related color management 
   - **Document theming:** Picks “darkest” color by `getPerceivedBrightness`, then uses `get_RGB_from_Hex` → `get_HSV_from_RGB` → darken (v, s) → `get_RGB_from_HSV` to set `--background-light` and `--background-dark`.
   - **applyPaletteToElement:** For base color at index: `getContrastingColor` (foreground), `adjustBrightness(base, factorSelected)` / `adjustBrightness(base, factorHovered)` for selected/hovered background, then `getContrastingColor` again for those states.
 - **ResumeListController.mjs, ResumeItemsController.mjs, infiniteScrollingContainer.mjs, useCardsController.mjs:** Call `applyPaletteToElement` only; no direct colorUtils.
-- **AppContent.vue, ColorPaletteSelector.vue, ResumeContainer.vue:** Use `useColorPalette()` (state + `loadPalettes`, `setCurrentPalette`, etc.); no direct colorUtils.
+- **AppContent.vue, ResumeContainer.vue:** Use `useColorPalette()` (state + `loadPalettes`, `setCurrentPalette`, etc.); no direct colorUtils.
 - **domUtils.mjs:** Imports colorUtils only; no in-file use of the color functions in the scanned lines; may re-export for other modules. Any caller using `domUtils.get_RGB_from_Hex` etc. must be switched to color-palette-utils-ts or a local adapter.
 
 ---
@@ -90,7 +90,7 @@ This document plans how to replace all color-palette–related color management 
 ### 3.5 Optional: archive and other
 
 - **archive/cssColors.mjs:** Uses `colorUtils.isHexColorString`. If we keep a colorUtils adapter, add `isHexColorString` as alias for `isHexColor`. If we remove colorUtils, update cssColors to use color-palette-utils-ts (e.g. `formatHexDisplay(HEX)` and length/regex check) or leave archive as-is if it’s not built.
-- **modules/types/index.ts, components.ts:** No code changes; they define interfaces for ColorPaletteSelector and UseColorPaletteReturn. Optional: add a type import from color-palette-utils-ts for `ExportedPalette` where we pass palette data.
+- **modules/types/index.ts, components.ts:** No required code changes; optional type alignment can use `ExportedPalette` where palette data is passed.
 
 ### 3.6 Icon set (optional)
 
@@ -115,7 +115,7 @@ This document plans how to replace all color-palette–related color management 
 | `modules/utils/domUtils.mjs` | Import from color-palette-utils-ts (or adapter); keep isHexColorString alias if used. |
 | `archive/cssColors.mjs` | Fix isHexColorString vs isHexColor; use adapter or color-palette-utils-ts if we migrate archive. |
 | ResumeListController, ResumeItemsController, infiniteScrollingContainer, useCardsController | No API change; they only call applyPaletteToElement. |
-| Vue components (AppContent, ColorPaletteSelector, ResumeContainer) | No change to useColorPalette() surface; only internals of the composable change. |
+| Vue components (AppContent, ResumeContainer) | No change to useColorPalette() surface; only internals of the composable change. |
 
 ---
 

@@ -34,9 +34,9 @@ The codebase uses **fast failure** and **consistent error reporting**: every err
 - `modules/resume/resumeSystemInitializer.mjs` – init/create failures throw; DOM not ready after retries throws.
 - `modules/composables/useCardsController.mjs` – init and palette apply throw; no fallback styling; missing selectionManager throws; all catch rethrow.
 - `modules/resume/ResumeItemsController.mjs` – create/scroll failures throw.
-- `modules/resume/ResumeListController.mjs` / `ResumeListController.timeline.mjs` – catch blocks rethrow (sort save, getSortedIndexFromOriginal, addClassItem, removeClassItem, scroll, create div).
+- `modules/resume/ResumeListController.mjs` – catch blocks rethrow (sort save, getSortedIndexFromOriginal, addClassItem, removeClassItem, scroll, create div).
 - `modules/composables/useJobsDependency.mjs` – controller init failure throws.
-- `modules/components/ColorPaletteSelector.vue` – load palettes catch rethrows.
+- `modules/components/AppContent.vue` and `modules/composables/useColorPalette.mjs` – palette load paths report and rethrow on failure.
 - `modules/components/ResizeHandle.vue` – step count update catch rethrows.
 - `modules/components/SceneContainer.vue` – init and registry register catch rethrow; inject fallback throws if no registry.
 - `modules/composables/useKeyboardNavigation.mjs` – navigation error rethrows.
