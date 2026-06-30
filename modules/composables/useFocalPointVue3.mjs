@@ -165,9 +165,22 @@ export function useFocalPoint() {
   
   const FOCAL_POINT_EDGE_MARGIN = 30
 
+  function getSceneContainerEl() {
+    const registry = getElementRegistry()
+    return (registry?.getSceneContainer?.()) || (typeof document !== 'undefined' ? document.getElementById('scene-container') : null)
+  }
+
+  /** True when client coordinates are inside the scene panel (not resume, resize handle, etc.). */
+  function isPointerInsideSceneView(clientX, clientY) {
+    const sceneContainer = getSceneContainerEl()
+    if (!sceneContainer) return false
+    const rect = sceneContainer.getBoundingClientRect()
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+  }
+
   /** Clamp point to stay within scene container padded bounds. Focal point tracks mouse but cannot leave scene. */
   function clampToLeftColumn(mouseX, mouseY) {
-    const leftColumn = typeof document !== 'undefined' && document.getElementById('scene-container')
+    const leftColumn = getSceneContainerEl()
     if (!leftColumn) {
       const w = typeof window !== 'undefined' ? window.innerWidth : 0
       const h = typeof window !== 'undefined' ? window.innerHeight : 0
@@ -197,6 +210,7 @@ export function useFocalPoint() {
   function createVanillaFollowHandler() {
     return (event) => {
       if (!focalPointElement.value) return
+      if (!isPointerInsideSceneView(event.clientX, event.clientY)) return
       lastFollowMouse.x = event.clientX
       lastFollowMouse.y = event.clientY
       if (followRafScheduled) return
@@ -215,6 +229,7 @@ export function useFocalPoint() {
   function createMouseHandler() {
     return (event) => {
       if (isDragging.value) {
+        if (!isPointerInsideSceneView(event.clientX, event.clientY)) return
         const { x, y } = clampToLeftColumn(event.clientX, event.clientY)
         setPosition(x, y, 'mouse-dragging')
         updateElementPosition()

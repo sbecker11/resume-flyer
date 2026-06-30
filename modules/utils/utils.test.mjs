@@ -279,6 +279,14 @@ describe('utils', () => {
       deepMerge(a, b);
       expect(a).toEqual({ x: 1 });
     });
+    it('replaces null nested values with objects instead of producing {}', () => {
+      const a = { selectedCard: null, layout: { scenePercentage: 50 } };
+      const b = { selectedCard: { type: 'biz', jobNumber: 8 } };
+      expect(deepMerge(a, b)).toEqual({
+        selectedCard: { type: 'biz', jobNumber: 8 },
+        layout: { scenePercentage: 50 },
+      });
+    });
   });
 
   describe('validateNumber', () => {

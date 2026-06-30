@@ -1,5 +1,6 @@
-import { AppState, saveState } from './stateManager.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
+import { persistSelectedCard } from '../utils/selectionPersistence.mjs';
+import { reportError } from '../utils/errorReporting.mjs';
 
 // Selection Manager now handles high-level orchestration
 // It should directly manage the rDiv → cDiv synchronization flow
@@ -18,7 +19,6 @@ class SelectionManager {
         this.instanceId = Math.random().toString(36).substr(2, 9); // Unique instance ID
         console.debug('[SelectionManager] Instance created');
         
-        // Load initial selection from AppState
         this.loadInitialSelection();
         
         // CRITICAL: Also add DOM content loaded validation for immediate hard-refresh detection
@@ -33,9 +33,14 @@ class SelectionManager {
     }
 
     loadInitialSelection() {
-        // Selection is content-scoped — job numbers belong to loaded resume, not app_state.
-        // No selection is restored on startup; content loads fresh each time.
+        // Restored after resume content is ready (AppContent.restoreOrSelectFirstCardWhenReady).
         setTimeout(() => this.validatePageLoadState('page-load-validation'), 1500);
+    }
+
+    _persistSelection(card) {
+        persistSelectedCard(card).catch((e) => {
+            reportError(e, '[SelectionManager] Failed to persist selection');
+        });
     }
 
     /**
@@ -75,6 +80,8 @@ class SelectionManager {
             if (typeof document !== 'undefined') document.dispatchEvent(ev);
             console.log('[SkillCard] Selected → resume listing updated', skillCardId);
         }
+
+        this._persistSelection(this.selectedCard);
     }
 
     /** @deprecated Use selectCard({ type: 'biz', jobNumber }, caller) */
@@ -172,6 +179,7 @@ class SelectionManager {
             detail: { caller }
         }));
         console.debug('[SelectionManager] selection cleared');
+        this._persistSelection(null);
     }
 
     /** Dispatch card-selected so CardsController can show the selected card's clone (only one card selected at a time) */

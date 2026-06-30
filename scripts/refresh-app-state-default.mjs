@@ -22,6 +22,7 @@ function sanitize(state) {
 
   if (out['user-settings']) {
     out['user-settings'].currentResumeId = 'default';
+    out['user-settings'].selectedCard = null;
     out['user-settings'].lastVisitedJobNumber = undefined;
     out['user-settings'].selectedJobNumber = undefined;
     out['user-settings'].selectedElementId = undefined;

@@ -85,6 +85,7 @@ import { selectionManager } from '../core/selectionManager.mjs'
 import { updateContrastForBrightness } from '../composables/useColorPalette.mjs'
 import { reportError } from '../utils/errorReporting.mjs'
 import { listVisibleSceneCardRoots } from '../utils/sceneCardVisibility.mjs'
+import { getPersistedSelectedCard, validatePersistedSelectedCard, persistSelectedCard } from '../utils/selectionPersistence.mjs'
 import { installBizSelectionFocus } from '../utils/bizSelectionFocus.mjs'
 import { listResumes } from '../api/resumeManagerApi.mjs'
 
@@ -380,31 +381,92 @@ watch(percentageVerification, (newVerification) => {
  * bullsEye recenter to apply transforms.  250 ms is a safe settle window.
  */
 /**
- * Wait until the ResumeListController scroll container has items loaded,
- * then click the First button.  Polls every 50ms up to 3s.
+ * Wait until resume list items and scene cards exist (optionally a specific skill card).
+ * Polls every 50ms up to 3s.
  */
-async function selectFirstCardWhenReady() {
+async function waitForCardsReady(persistedCard = null) {
   await nextTick()
   window.bullsEye?.recenter?.()
 
-  // Poll until both rDivs (scrollContainer.originalItems) AND cDivs exist.
-  // On first-load via initializeResumeSystem, CardsController creates cDivs asynchronously
-  // via a Vue watcher, so rDivs may be ready before cDivs are in the DOM.
   const deadline = Date.now() + 3000
   while (Date.now() < deadline) {
     const rlc = window.resumeFlyer?.resumeListController
     const items = rlc?.scrollContainer?.originalItems
     const plane = document.getElementById('scene-plane')
     const cDivCount = plane ? listVisibleSceneCardRoots(plane).length : 0
-    if (Array.isArray(items) && items.length > 0 && cDivCount > 0) break
+    const listReady = Array.isArray(items) && items.length > 0 && cDivCount > 0
+    const skillReady = persistedCard?.type !== 'skill'
+      || !!document.getElementById(persistedCard.skillCardId)
+    if (listReady && skillReady) break
     await new Promise(resolve => setTimeout(resolve, 50))
   }
 
-  // Scale settle time by resume size: 50ms per job, min 500ms, max 2000ms
   const rlcForCount = window.resumeFlyer?.resumeListController
   const jobCount = rlcForCount?.scrollContainer?.originalItems?.length ?? 0
   const settleMs = Math.min(2000, Math.max(500, jobCount * 50))
   await new Promise(resolve => setTimeout(resolve, settleMs))
+}
+
+async function waitForCardsControllerListeners(maxMs = 5000) {
+  const deadline = Date.now() + maxMs
+  while (Date.now() < deadline) {
+    if (window._cardsControllerListenersReady) return true
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  return false
+}
+
+/** Skill scene display needs a settled parallax transform + CardsController clone (resume panel does not). */
+async function ensureSkillSceneDisplayAfterRestore(card) {
+  if (card?.type !== 'skill' || !card.skillCardId) return
+  const listenersReady = await waitForCardsControllerListeners()
+  if (!listenersReady) {
+    reportError(
+      new Error('[AppContent] CardsController listeners not ready for skill scene restore'),
+      '[AppContent] Skill scene restore skipped'
+    )
+    return
+  }
+  window.dispatchEvent(new CustomEvent('focal-point-changed', { detail: {} }))
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  const apply = window.resumeFlyer?.applySceneDisplayForCard
+  if (typeof apply !== 'function') {
+    reportError(
+      new Error('[AppContent] applySceneDisplayForCard unavailable'),
+      '[AppContent] Skill scene restore skipped'
+    )
+    return
+  }
+  await apply(card, null)
+}
+
+/**
+ * Restore persisted selection when valid; otherwise select the first listing item.
+ * @returns {Promise<boolean>} true when a persisted selection was restored
+ */
+async function restoreOrSelectFirstCardWhenReady() {
+  await waitForCardsReady(getPersistedSelectedCard())
+
+  const persisted = getPersistedSelectedCard()
+  const jobs = getGlobalJobsDependency().getJobsData()
+  const valid = validatePersistedSelectedCard(persisted, jobs)
+
+  if (valid) {
+    selectionManager?.selectCard(valid, 'AppContent.restorePersistedSelection')
+    if (valid.type === 'skill') {
+      await ensureSkillSceneDisplayAfterRestore(valid)
+    }
+    return true
+  }
+
+  if (persisted) {
+    try {
+      await persistSelectedCard(null)
+    } catch (e) {
+      reportError(e, '[AppContent] Failed to clear invalid persisted selectedCard')
+    }
+  }
 
   const firstBtn = document.getElementById('resume-divs-first-btn')
   if (firstBtn) {
@@ -412,6 +474,7 @@ async function selectFirstCardWhenReady() {
   } else {
     console.warn('[AppContent] resume-divs-first-btn not found')
   }
+  return false
 }
 
 async function scrollSceneToLatestCard() {
@@ -509,7 +572,12 @@ async function handleResumeSelected(resumeId) {
 
     // STEP 3: Persist the selected resume ID to app_state and clear no-jobs flag
     noJobsLoaded.value = false
-    await updateAppState({ 'user-settings': { currentResumeId: resumeId || 'default' } }, true)
+    await updateAppState({
+      'user-settings': {
+        currentResumeId: resumeId || 'default',
+        selectedCard: null,
+      },
+    }, true)
     console.log('[AppContent] ✅ currentResumeId persisted:', resumeId || 'default')
 
     // STEP 4: Initialize or reinitialize the resume system with the new resume
@@ -535,11 +603,13 @@ async function handleResumeSelected(resumeId) {
       return
     }
 
-    // STEP 5: Auto-select the first card once layout has settled
-    await selectFirstCardWhenReady()
+    // STEP 5: Restore persisted selection, or select first when none saved
+    const restoredSelection = await restoreOrSelectFirstCardWhenReady()
 
-    // STEP 6: Scroll scene to show the most recent job card
-    await scrollSceneToLatestCard()
+    // STEP 6: Scroll scene to latest card only when no persisted selection was restored
+    if (!restoredSelection) {
+      await scrollSceneToLatestCard()
+    }
 
     console.log('[AppContent] ✅ Successfully switched to resume:', resumeId)
   } catch (error) {
@@ -658,8 +728,10 @@ onMounted(async () => {
         const startupJobs = getGlobalJobsDependency().getJobsData()
         noJobsLoaded.value = !Array.isArray(startupJobs) || startupJobs.length === 0
         if (!noJobsLoaded.value) {
-          await selectFirstCardWhenReady()
-          await scrollSceneToLatestCard()
+          const restoredSelection = await restoreOrSelectFirstCardWhenReady()
+          if (!restoredSelection) {
+            await scrollSceneToLatestCard()
+          }
           // Apply palette to all elements after DOM is built (fixes palette not applied on initial load)
           await nextTick()
           requestAnimationFrame(async () => {

@@ -281,8 +281,31 @@ watch(currentPaletteFilename, async (newFilename) => {
 
 const sortOptions = SORT_OPTIONS;
 
+const resumeListingActiveCount = ref(0);
+const canRestoreAllResumeDivs = ref(false);
+const canNavigateResumeListing = computed(() => resumeListingActiveCount.value > 0);
+const canClearResumeDivs = computed(() => resumeListingActiveCount.value > 0);
+
+function syncResumeListingControls() {
+  const controller = resumeListController || window.resumeFlyer?.resumeListController;
+  if (!controller || typeof controller.getActiveOrderedEntries !== 'function') {
+    resumeListingActiveCount.value = 0;
+    canRestoreAllResumeDivs.value = false;
+    return;
+  }
+  resumeListingActiveCount.value = controller.getActiveOrderedEntries().length;
+  canRestoreAllResumeDivs.value = typeof controller.canRestoreAllResumeDivs === 'function'
+    ? controller.canRestoreAllResumeDivs()
+    : false;
+}
+
+function onResumeListingChanged() {
+  syncResumeListingControls();
+}
+
 // Methods for buttons - these will now call the legacy controller via provide/inject
 function selectFirst() {
+  if (!canNavigateResumeListing.value) return;
   const controller = resumeListController || window.resumeFlyer?.resumeListController;
   if (controller) {
     controller.goToFirstResumeItem();
@@ -291,6 +314,7 @@ function selectFirst() {
   }
 }
 function selectLast() {
+  if (!canNavigateResumeListing.value) return;
   const controller = resumeListController || window.resumeFlyer?.resumeListController;
   if (controller) {
     controller.goToLastResumeItem();
@@ -299,6 +323,7 @@ function selectLast() {
   }
 }
 function clearAllResumeDivs() {
+  if (!canClearResumeDivs.value) return;
   const controller = resumeListController || window.resumeFlyer?.resumeListController;
   if (controller && typeof controller.clearAllResumeDivsFromListing === 'function') {
     controller.clearAllResumeDivsFromListing();
@@ -306,7 +331,17 @@ function clearAllResumeDivs() {
     console.error('[ResumeContainer] ResumeListController not available for clearAllResumeDivs!');
   }
 }
+function loadAllResumeDivs() {
+  if (!canRestoreAllResumeDivs.value) return;
+  const controller = resumeListController || window.resumeFlyer?.resumeListController;
+  if (controller && typeof controller.restoreAllResumeDivsToListing === 'function') {
+    controller.restoreAllResumeDivsToListing();
+  } else {
+    console.error('[ResumeContainer] ResumeListController not available for loadAllResumeDivs!');
+  }
+}
 function selectNext() {
+  if (!canNavigateResumeListing.value) return;
   const controller = resumeListController || window.resumeFlyer?.resumeListController;
   if (controller) {
     controller.goToNextResumeItem();
@@ -315,6 +350,7 @@ function selectNext() {
   }
 }
 function selectPrevious() {
+  if (!canNavigateResumeListing.value) return;
   const controller = resumeListController || window.resumeFlyer?.resumeListController;
   if (controller) {
     controller.goToPreviousResumeItem();
@@ -788,11 +824,12 @@ onMounted(() => {
   window.addEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
   document.addEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
   window.addEventListener('sort-rule-changed', onSortRuleChanged);
+  window.addEventListener('resume-listing-changed', onResumeListingChanged);
   window.addEventListener('app-state-loaded', onAppStateLoadedForSort);
   window.addEventListener('edit-job-skills', handleEditJobSkills);
   window.addEventListener('open-resume-details', handleOpenResumeDetails);
   document.addEventListener('keydown', handleGlobalKeyDown);
-  nextTick(() => { setTimeout(syncSortRuleKeyFromController, 100); });
+  nextTick(() => { setTimeout(() => { syncSortRuleKeyFromController(); syncResumeListingControls(); }, 100); });
   window.__resumeAppendSkillCardCopy = appendSkillCardCopyToResumeListing;
 });
 onUnmounted(() => {
@@ -804,6 +841,7 @@ onUnmounted(() => {
   window.removeEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
   document.removeEventListener('skill-resume-div-scrollIntoView', onResumeSkillCardScrollIntoView);
   window.removeEventListener('sort-rule-changed', onSortRuleChanged);
+  window.removeEventListener('resume-listing-changed', onResumeListingChanged);
   window.removeEventListener('app-state-loaded', onAppStateLoadedForSort);
   window.removeEventListener('edit-job-skills', handleEditJobSkills);
   window.removeEventListener('open-resume-details', handleOpenResumeDetails);
@@ -973,11 +1011,56 @@ function onResumeSkillCardClick(event) {
                 </select>
             </div>
             <div id="resume-divs-controls">
-                <button id="resume-divs-first-btn" @click="selectFirst" class="resume-divs-control-button">First</button>
-                <button @click="selectPrevious" class="resume-divs-control-button">Prev</button>
-                <button @click="selectNext" class="resume-divs-control-button">Next</button>
-                <button @click="selectLast" class="resume-divs-control-button">Last</button>
-                <button @click="clearAllResumeDivs" class="resume-divs-control-button">Clear</button>
+                <button
+                    id="resume-divs-first-btn"
+                    type="button"
+                    class="resume-divs-control-button"
+                    :disabled="!canNavigateResumeListing"
+                    @click="selectFirst"
+                >
+                    First
+                </button>
+                <button
+                    type="button"
+                    class="resume-divs-control-button"
+                    :disabled="!canNavigateResumeListing"
+                    @click="selectPrevious"
+                >
+                    Prev
+                </button>
+                <button
+                    type="button"
+                    class="resume-divs-control-button"
+                    :disabled="!canNavigateResumeListing"
+                    @click="selectNext"
+                >
+                    Next
+                </button>
+                <button
+                    type="button"
+                    class="resume-divs-control-button"
+                    :disabled="!canNavigateResumeListing"
+                    @click="selectLast"
+                >
+                    Last
+                </button>
+                <button
+                    type="button"
+                    class="resume-divs-control-button"
+                    :disabled="!canClearResumeDivs"
+                    @click="clearAllResumeDivs"
+                >
+                    Clear
+                </button>
+                <button
+                    type="button"
+                    class="resume-divs-control-button"
+                    :disabled="!canRestoreAllResumeDivs"
+                    title="Restore all jobs to the resume listing"
+                    @click="loadAllResumeDivs"
+                >
+                    Load all
+                </button>
             </div>
         </div>
 
@@ -1100,6 +1183,8 @@ function onResumeSkillCardClick(event) {
     overflow: hidden;
     background-color: var(--grey-darkest);
     font-family: Arial, sans-serif;
+    container-type: inline-size;
+    container-name: resume-panel;
 }
 
 #resume-content-header {
@@ -1272,50 +1357,53 @@ function onResumeSkillCardClick(event) {
     background: rgba(255, 255, 255, 0.5);
 }
 
-#resume-content-footer {
-    background-color: var(--grey-medium);
-    padding: 10px;
-    flex-shrink: 0; /* Fits children */
-}
-
 #resume-divs-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 5px;
     width: 100%;
     position: relative; /* Needed for z-index to apply */
     z-index: 100; /* High z-index to ensure it's on top of other elements */
-    flex-wrap: wrap; /* Allow wrapping for the 2x2 layout */
 }
 .resume-divs-control-button {
-    flex: 1 1 auto;
-    min-width: 60px;
-    padding: 8px 12px;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 4px;
     background-color: var(--grey-dark-6);
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
+    font-size: 0.8rem;
+    line-height: 1.15;
+    white-space: nowrap;
     transition: background-color 0.2s;
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
 }
 
-/* 2x2 layout for medium widths */
-@container (max-width: 320px) {
-    #resume-divs-controls .resume-divs-control-button {
-        flex-basis: calc(50% - 2.5px); /* 2 buttons per row, accounting for gap */
-    }
-}
-
-/* 1x4 (single column) layout for narrow widths */
-@container (max-width: 160px) {
+/* Narrow resume panel: 6 rows × 1 column */
+@container resume-panel (max-width: 159px) {
     #resume-divs-controls {
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
-.resume-divs-control-button:hover {
+/* Wide resume panel: 1 row × 6 columns */
+@container resume-panel (min-width: 480px) {
+    #resume-divs-controls {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+.resume-divs-control-button:hover:not(:disabled) {
     background-color: var(--grey-dark-7);
+}
+
+.resume-divs-control-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 /* Resume controls row - current resume indicator and resume manager button */

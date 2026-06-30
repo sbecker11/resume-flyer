@@ -141,6 +141,7 @@ function getDefaultState(): AppState {
             focalPointMode: 'locked',
             focalPoint: { x: 0, y: 0, mode: 'locked' as const },
             currentResumeId: 'default',
+            selectedCard: null,
             resume: {
                 sortRule: { field: 'startDate', direction: 'asc' }
             },
@@ -390,6 +391,12 @@ function migrateState(state: any): AppState {
     // Ensure user-settings.focalPoint exists (position + mode persistence)
     const us = state['user-settings']
     if (us) {
+        if (us.selectedCard === undefined) {
+            us.selectedCard = null
+        } else if (us.selectedCard && typeof us.selectedCard === 'object' && !us.selectedCard.type) {
+            // Repair legacy bad merge (null + object → {})
+            us.selectedCard = null
+        }
         if (!us.focalPoint) {
             us.focalPoint = { x: 0, y: 0, mode: (us.focalPointMode || 'locked').toString().toLowerCase() as 'locked' | 'following' | 'dragging' }
         } else {

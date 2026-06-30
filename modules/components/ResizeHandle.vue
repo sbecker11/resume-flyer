@@ -499,7 +499,12 @@ watch(skillSearchOpen, (open) => {
               title="Find skill in scene"
               aria-label="Find skill in scene"
               @click.stop="openSkillSearch"
-            ><span class="skill-search-icon" aria-hidden="true">🔍</span></button>
+            ><span class="skill-search-icon" aria-hidden="true">
+              <svg class="skill-search-icon-svg" viewBox="0 0 16 16" width="14" height="14" focusable="false">
+                <circle cx="6.5" cy="6.5" r="4" fill="none" stroke="currentColor" stroke-width="1.5" />
+                <line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
+            </span></button>
         </div>
         <div
           v-if="skillSearchOpen"
@@ -757,15 +762,22 @@ watch(skillSearchOpen, (open) => {
     pointer-events: none;
 }
 
-#skill-search-toggle {
-    font-size: 12px;
+#skill-search-toggle .skill-search-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    color: inherit;
 }
 
-#skill-search-toggle .skill-search-icon {
-    display: inline-block;
-    font-size: 12px;
-    line-height: 1;
-    transform: translateY(-0.5px);
+#skill-search-toggle .skill-search-icon-svg {
+    display: block;
+}
+
+#skill-search-toggle:hover {
+    background-color: white;
+    color: black;
+    border-color: black;
 }
 
 .skill-search-modal-overlay {

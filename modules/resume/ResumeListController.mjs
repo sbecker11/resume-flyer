@@ -315,6 +315,45 @@ class ResumeListController extends BaseComponent {
   }
 
   /**
+   * Restore default listing: all jobs in current sort order (clears removals and appended skill rows).
+   */
+  restoreAllResumeDivsToListing() {
+    if (!this.bizResumeDivs || !this.scrollContainer) return;
+    this.removedJobNumbers.clear();
+    const itemsController = window.resumeFlyer?.resumeItemsController;
+    if (itemsController?.dismissedJobNumbers) {
+      itemsController.dismissedJobNumbers.clear();
+    }
+    document.querySelectorAll('.biz-resume-div.r-div-removed-from-listing').forEach((el) => {
+      el.classList.remove('r-div-removed-from-listing');
+    });
+    if (this.scrollContainer.clearFooterItems) this.scrollContainer.clearFooterItems();
+    this.resumeListSelectionOrder = this.sortedIndices.map((jobNumber) => ({ type: 'biz', jobNumber }));
+    this._setItemsFromSorted();
+    if (this.getActiveOrderedEntries().length > 0) {
+      this.goToFirstResumeItem();
+    }
+  }
+
+  /** True when some jobs are hidden from the listing and can be restored via restoreAllResumeDivsToListing. */
+  canRestoreAllResumeDivs() {
+    if (!this.sortedIndices?.length) return false;
+    if (this.removedJobNumbers.size > 0) return true;
+    const bizVisible = this.getActiveOrderedEntries().filter((e) => e.type === 'biz').length;
+    return bizVisible < this.sortedIndices.length;
+  }
+
+  _emitListingChanged() {
+    const activeCount = this.getActiveOrderedEntries().length;
+    window.dispatchEvent(new CustomEvent('resume-listing-changed', {
+      detail: {
+        activeCount,
+        canRestoreAll: this.canRestoreAllResumeDivs(),
+      },
+    }));
+  }
+
+  /**
    * Ensure a job's rDiv is in the listing (if it was removed, add it back). Call before scrolling to that job.
    */
   ensureJobInListing(jobNumber) {
@@ -361,6 +400,7 @@ class ResumeListController extends BaseComponent {
       if (idx !== -1) start = idx;
     }
     this.scrollContainer.setItems(orderedNodes, start);
+    this._emitListingChanged();
   }
 
   /**
@@ -485,6 +525,7 @@ class ResumeListController extends BaseComponent {
     if (sortedDivs[startingIndex]) {
       sortedDivs[startingIndex].scrollIntoView({ behavior: 'auto', block: 'start' });
     }
+    this._emitListingChanged();
   }
 
   setupResumeListScroll() {
@@ -602,6 +643,7 @@ class ResumeListController extends BaseComponent {
     
     // Set the items in the scroll container
     this.scrollContainer.setItems(sortedDivs, startingIndex);
+    this._emitListingChanged();
     
     // Explicitly scroll to the starting index to ensure proper positioning
     this.scrollContainer.scrollToIndex(startingIndex, false); // false = no animation

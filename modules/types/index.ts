@@ -36,6 +36,11 @@ export interface SortRule {
   direction: 'asc' | 'desc';
 }
 
+/** Persisted scene/resume selection (job or skill card). */
+export type PersistedSelectedCard =
+  | { type: 'biz'; jobNumber: number }
+  | { type: 'skill'; skillCardId: string };
+
 export interface AppState {
   version: string;
   lastUpdated: string;
@@ -57,6 +62,9 @@ export interface AppState {
     focalPoint?: { x: number; y: number; mode: 'locked' | 'following' | 'dragging' };
 
     currentResumeId: string;
+
+    /** Last selected job or skill card; restored on page refresh for the current resume. */
+    selectedCard?: PersistedSelectedCard | null;
 
     resume: {
       sortRule: SortRule;

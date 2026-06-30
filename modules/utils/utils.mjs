@@ -212,12 +212,16 @@ export function validateIsPlainObject(obj) {
  * @returns {object} The merged object.
  */
 export function deepMerge(target, source) {
+    if (!isPlainObject(target)) {
+        return isPlainObject(source) ? { ...source } : (source !== undefined ? source : target);
+    }
+
     const output = { ...target };
 
-    if (isPlainObject(target) && isPlainObject(source)) {
+    if (isPlainObject(source)) {
         Object.keys(source).forEach(key => {
             if (isPlainObject(source[key])) {
-                if (!(key in target)) {
+                if (!(key in target) || !isPlainObject(target[key])) {
                     Object.assign(output, { [key]: source[key] });
                 } else {
                     output[key] = deepMerge(target[key], source[key]);

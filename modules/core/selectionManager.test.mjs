@@ -1,10 +1,16 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
 const mockSaveState = vi.fn();
-const mockAppState = { selectedJobNumber: null, lastVisitedJobNumber: null };
+const mockPersistSelectedCard = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../utils/selectionPersistence.mjs', () => ({
+  persistSelectedCard: (...args) => mockPersistSelectedCard(...args),
+  getPersistedSelectedCard: vi.fn(() => null),
+  validatePersistedSelectedCard: vi.fn(() => null),
+}));
 
 vi.mock('./stateManager.mjs', () => ({
-  AppState: mockAppState,
+  AppState: {},
   saveState: (...args) => mockSaveState(...args),
 }));
 
@@ -17,8 +23,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   mockSaveState.mockClear();
-  mockAppState.selectedJobNumber = null;
-  mockAppState.lastVisitedJobNumber = null;
+  mockPersistSelectedCard.mockClear();
   selectionManager.clearSelection('test-setup');
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
