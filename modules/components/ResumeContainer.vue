@@ -17,6 +17,7 @@ import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.
 import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
 import { openSkillInfoModal, markFocusedSkillLinkForJob, clearSourceBizBackLinkClass } from '@/modules/utils/skillInfoModal.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
+import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -633,7 +634,8 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   const list = (scroller && scroller.contentHolder) ? scroller.contentHolder : appendTarget;
   const existingCopy = list.querySelector(`.appended-skill-resume-div[data-skill-card-id="${skillCardId}"]`);
   if (existingCopy) {
-    existingCopy.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
+    const scrollport = document.getElementById('resume-content-listing');
+    scrollResumeListingElementIntoView(existingCopy, scrollport, { behavior: 'smooth' });
     return false;
   }
   const now = Date.now();
@@ -754,15 +756,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   nextTick(() => {
     syncSkillResumeDivSelection();
     const scrollport = document.getElementById('resume-content-listing');
-    if (scrollport && copy.offsetParent) {
-      const copyRect = copy.getBoundingClientRect();
-      const portRect = scrollport.getBoundingClientRect();
-      if (copyRect.bottom > portRect.bottom || copyRect.top < portRect.top) {
-        copy.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
-      }
-    } else {
-      copy.scrollIntoView({ behavior: 'smooth', block: 'end', inline: 'nearest' });
-    }
+    scrollResumeListingElementIntoView(copy, scrollport, { behavior: 'smooth' });
   });
   return true;
 }
@@ -1310,10 +1304,12 @@ function onResumeSkillCardClick(event) {
     background-color: var(--grey-medium);
     color: black; /* default for empty area; .biz-resume-div and .skill-resume-div set their own color */
     position: relative; /* Needed for the absolute positioning of items by the scroller */
-    /* 8px padding on all sides so selected rDiv box-shadow/border has room; matches cDiv selected border */
+    /* 8px padding on sides/top; bottom room for selected row box-shadow rings */
     padding-left: 8px;
     padding-right: 8px;
     padding-top: 8px;
+    padding-bottom: 12px;
+    scroll-padding-bottom: 12px;
     /* overflow is set by ResumeListScrollContainer.setupContainer() to 'auto' */
     scroll-behavior: smooth; /* Enable smooth scrolling for all scrollIntoView and scrollTo operations */
 }
@@ -1333,6 +1329,13 @@ function onResumeSkillCardClick(event) {
     flex-direction: column;
     gap: 10px;
     min-height: 0;
+}
+
+/* scrollIntoView: keep selected row outer ring inside scrollport */
+#resume-content-listing .biz-resume-div.selected,
+#resume-content-listing .skill-resume-div.selected,
+#resume-content-listing .appended-skill-resume-div.selected {
+    scroll-margin-bottom: 12px;
 }
 
 /* Custom scrollbar to match the cDiv scrollbar */

@@ -12,6 +12,7 @@ import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '.
 import { parseFlexibleDateString } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass } from '../utils/skillInfoModal.mjs';
+import { scrollResumeListingElementIntoView } from '../utils/resumeListScroll.mjs';
 // No longer directly manipulating other managers
 
 /** Open Resume Details on Resume jobs or Education tab (education-as-job rows use Education only). */
@@ -669,7 +670,8 @@ class ResumeItemsController {
                 `.appended-skill-resume-div[data-skill-card-id="${CSS.escape(card.skillCardId)}"]`
             );
             if (skillResumeDiv) {
-                skillResumeDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+                const scrollport = skillResumeDiv.closest('#resume-content-listing');
+                scrollResumeListingElementIntoView(skillResumeDiv, scrollport, { behavior: 'smooth' });
             }
         }
     }
@@ -859,10 +861,16 @@ class ResumeItemsController {
         const headerOffsetFromContainerTop = headerRect.top - containerRect.top;
         const targetScrollTop = currentScrollTop + headerOffsetFromContainerTop - COMFORTABLE_TOP_SPACING;
 
-        // Smooth scroll to the calculated position
+        // Smooth scroll to show header, then ensure full row chrome (bottom ring) is visible.
         scrollContainer.scrollTo({
-            top: Math.max(0, targetScrollTop), // Don't scroll negative
+            top: Math.max(0, targetScrollTop),
             behavior: 'smooth'
+        });
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                scrollResumeListingElementIntoView(bizResumeDiv, scrollContainer, { behavior: 'smooth' });
+            });
         });
 
         console.log(`[ResumeItemsController] Scrolled to position ${Math.round(targetScrollTop)} to show header for job ${jobNumber}`);
@@ -897,11 +905,8 @@ class ResumeItemsController {
      */
     _fallbackScrollIntoView(bizResumeDiv, jobNumber) {
         try {
-            bizResumeDiv.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start', // Position at start with some natural spacing
-                inline: 'nearest'
-            });
+            const scrollport = bizResumeDiv.closest('#resume-content-listing');
+            scrollResumeListingElementIntoView(bizResumeDiv, scrollport, { behavior: 'smooth' });
             console.log(`[ResumeItemsController] Fallback scroll successful for job ${jobNumber}`);
         } catch (error) {
             console.error(`[ResumeItemsController] Failed to scroll rDiv into view for job ${jobNumber}:`, error);

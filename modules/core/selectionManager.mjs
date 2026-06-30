@@ -1,6 +1,7 @@
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { persistSelectedCard } from '../utils/selectionPersistence.mjs';
 import { reportError } from '../utils/errorReporting.mjs';
+import { scrollResumeListingElementIntoView } from '../utils/resumeListScroll.mjs';
 
 // Selection Manager now handles high-level orchestration
 // It should directly manage the rDiv → cDiv synchronization flow
@@ -477,25 +478,10 @@ class SelectionManager {
      * STEP 2: Scroll rDiv into view
      */
     scrollRDivIntoView(jobNumber) {
-        const SCROLL_TOP_GAP = 8;
         const rDiv = document.querySelector(`[data-job-number="${jobNumber}"].biz-resume-div`);
         if (rDiv) {
             const scrollport = rDiv.closest('#resume-content-listing');
-            if (scrollport) {
-                const rDivRect = rDiv.getBoundingClientRect();
-                const portRect = scrollport.getBoundingClientRect();
-                const portPaddingTop = parseFloat(getComputedStyle(scrollport).paddingTop) || 0;
-                const innerTop = portRect.top + portPaddingTop;
-                // Only scroll if the top border edge is above or too close to the inner top edge
-                if (rDivRect.top < innerTop + SCROLL_TOP_GAP) {
-                    scrollport.scrollTo({
-                        top: scrollport.scrollTop + rDivRect.top - innerTop - SCROLL_TOP_GAP,
-                        behavior: 'smooth'
-                    });
-                }
-            } else {
-                rDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
+            scrollResumeListingElementIntoView(rDiv, scrollport, { behavior: 'smooth' });
             console.debug('[SelectionManager] rDiv scrolled into view', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ rDiv not found for scrolling job ${jobNumber}`);
