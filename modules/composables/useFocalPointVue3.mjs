@@ -83,6 +83,10 @@ export function useFocalPoint() {
   // Mouse event handling
   const mouseHandler = ref(null)
   const isMouseListenerActive = ref(false)
+
+  /** Mode pushed when pointer leaves #scene-container; restored on re-enter. */
+  const modeStackForSceneLeave = []
+  let sceneViewModeListenersAttached = false
   
   // Set template ref
   function setFocalPointElement(element) {
@@ -124,6 +128,32 @@ export function useFocalPoint() {
       // Smooth animation for other modes
       startEasing()
     }
+  }
+
+  function cancelFocalEasing() {
+    if (animationFrame.value) {
+      cancelAnimationFrame(animationFrame.value)
+      animationFrame.value = null
+    }
+  }
+
+  /** Immediate snap (no easing) — used when locking focal to bulls-eye. */
+  function snapFocalToBullsEye(source = 'bulls-eye-snap') {
+    cancelFocalEasing()
+    const el = typeof document !== 'undefined' ? document.getElementById('bulls-eye') : null
+    let pos = null
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      pos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+    } else if (bullsEye && typeof bullsEye.getPosition === 'function') {
+      pos = bullsEye.getPosition()
+    } else if (bullsEye?.x != null && bullsEye?.y != null) {
+      pos = { x: bullsEye.x, y: bullsEye.y }
+    }
+    if (!pos) return
+    targetPosition.value = { x: pos.x, y: pos.y }
+    setPosition(pos.x, pos.y, source)
+    updateElementPosition()
   }
   
   // Easing animation
@@ -170,12 +200,33 @@ export function useFocalPoint() {
     return (registry?.getSceneContainer?.()) || (typeof document !== 'undefined' ? document.getElementById('scene-container') : null)
   }
 
-  /** True when client coordinates are inside the scene panel (not resume, resize handle, etc.). */
+  function getResizeHandleEl() {
+    return typeof document !== 'undefined' ? document.getElementById('resize-handle') : null
+  }
+
+  /** Scene-side focal zone: #scene-container plus #resize-handle (not #resume-container). */
+  function isElementInSceneFocalZone(el) {
+    if (!el) return false
+    const sceneContainer = getSceneContainerEl()
+    if (sceneContainer?.contains(el)) return true
+    const resizeHandle = getResizeHandleEl()
+    return !!(resizeHandle && resizeHandle.contains(el))
+  }
+
+  function isPointInElementRect(clientX, clientY, el) {
+    if (!el) return false
+    const rect = el.getBoundingClientRect()
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+  }
+
+  /** True when pointer is over scene container or resize handle (resume panel = outside). */
   function isPointerInsideSceneView(clientX, clientY) {
     const sceneContainer = getSceneContainerEl()
-    if (!sceneContainer) return false
-    const rect = sceneContainer.getBoundingClientRect()
-    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+    if (!sceneContainer || typeof document === 'undefined') return false
+    const target = document.elementFromPoint(clientX, clientY)
+    if (target && isElementInSceneFocalZone(target)) return true
+    if (isPointInElementRect(clientX, clientY, sceneContainer)) return true
+    return isPointInElementRect(clientX, clientY, getResizeHandleEl())
   }
 
   /** Clamp point to stay within scene container padded bounds. Focal point tracks mouse but cannot leave scene. */
@@ -309,6 +360,127 @@ export function useFocalPoint() {
     mode.value = modes[nextIndex]
     console.log(`[FocalPoint] Mode cycled to: ${mode.value}`)
   }
+
+  /** Temporary mode change when leaving scene (does not persist to user-settings). */
+  function setModeTransient(newMode) {
+    store.focalPoint.mode = newMode
+    console.log(`[FocalPoint] Mode (scene leave/enter transient): ${newMode}`)
+  }
+
+  function applyOutsideSceneFocalLock() {
+    cancelFocalEasing()
+    if (mode.value !== FOCALPOINT_MODES.LOCKED) {
+      setModeTransient(FOCALPOINT_MODES.LOCKED)
+    }
+    snapFocalToBullsEye('scene-outside-locked')
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('scene-view-pointer-left', { detail: {} }))
+    }
+  }
+
+  function pushModeAndLockToBullsEyeForSceneLeave() {
+    if (modeStackForSceneLeave.length === 0 && mode.value !== FOCALPOINT_MODES.LOCKED) {
+      modeStackForSceneLeave.push(mode.value)
+    }
+    applyOutsideSceneFocalLock()
+  }
+
+  function popModeOnSceneEnter() {
+    if (modeStackForSceneLeave.length === 0) return
+    const restored = modeStackForSceneLeave.pop()
+    setModeTransient(restored)
+  }
+
+  /** null until first mousemove sample; then tracks scene-side focal zone (scene + resize handle). */
+  let pointerInsideSceneView = null
+  let sceneBoundaryMouseMoveHandler = null
+  let sceneBoundaryDocumentMouseLeaveHandler = null
+  let sceneBoundaryDocumentMouseEnterHandler = null
+
+  function leaveSceneFocalZone() {
+    if (pointerInsideSceneView === false) {
+      if (mode.value !== FOCALPOINT_MODES.LOCKED) {
+        applyOutsideSceneFocalLock()
+      }
+      return
+    }
+    pointerInsideSceneView = false
+    pushModeAndLockToBullsEyeForSceneLeave()
+  }
+
+  function syncSceneViewPointerBoundary(clientX, clientY) {
+    if (!getSceneContainerEl()) return
+    const inside = isPointerInsideSceneView(clientX, clientY)
+
+    if (pointerInsideSceneView === null) {
+      pointerInsideSceneView = inside
+      if (!inside) {
+        pushModeAndLockToBullsEyeForSceneLeave()
+      }
+      return
+    }
+
+    if (pointerInsideSceneView !== inside) {
+      pointerInsideSceneView = inside
+      if (inside) {
+        popModeOnSceneEnter()
+      } else {
+        pushModeAndLockToBullsEyeForSceneLeave()
+      }
+      return
+    }
+
+    if (!inside && mode.value !== FOCALPOINT_MODES.LOCKED) {
+      applyOutsideSceneFocalLock()
+    }
+  }
+
+  function attachSceneViewModeListeners() {
+    if (sceneViewModeListenersAttached) return !!getSceneContainerEl()
+    if (!getSceneContainerEl()) return false
+
+    sceneBoundaryMouseMoveHandler = (event) => {
+      syncSceneViewPointerBoundary(event.clientX, event.clientY)
+    }
+    sceneBoundaryDocumentMouseLeaveHandler = () => {
+      leaveSceneFocalZone()
+    }
+    sceneBoundaryDocumentMouseEnterHandler = (event) => {
+      syncSceneViewPointerBoundary(event.clientX, event.clientY)
+    }
+    document.addEventListener('mousemove', sceneBoundaryMouseMoveHandler, { passive: true })
+    document.addEventListener('mouseleave', sceneBoundaryDocumentMouseLeaveHandler)
+    document.addEventListener('mouseenter', sceneBoundaryDocumentMouseEnterHandler)
+    sceneViewModeListenersAttached = true
+    console.log('[FocalPoint] Scene view boundary tracking attached (document mousemove/leave/enter)')
+    return true
+  }
+
+  function detachSceneViewModeListeners() {
+    if (!sceneViewModeListenersAttached) return
+    if (sceneBoundaryMouseMoveHandler) {
+      document.removeEventListener('mousemove', sceneBoundaryMouseMoveHandler, { passive: true })
+      sceneBoundaryMouseMoveHandler = null
+    }
+    if (sceneBoundaryDocumentMouseLeaveHandler) {
+      document.removeEventListener('mouseleave', sceneBoundaryDocumentMouseLeaveHandler)
+      sceneBoundaryDocumentMouseLeaveHandler = null
+    }
+    if (sceneBoundaryDocumentMouseEnterHandler) {
+      document.removeEventListener('mouseenter', sceneBoundaryDocumentMouseEnterHandler)
+      sceneBoundaryDocumentMouseEnterHandler = null
+    }
+    pointerInsideSceneView = null
+    sceneViewModeListenersAttached = false
+    modeStackForSceneLeave.length = 0
+    console.log('[FocalPoint] Scene view boundary tracking detached')
+  }
+
+  function tryAttachSceneViewModeListeners() {
+    if (attachSceneViewModeListeners()) return
+    window.addEventListener('scene-container-ready', tryAttachSceneViewModeListeners, { once: true })
+    window.addEventListener('scene-plane-ready', tryAttachSceneViewModeListeners, { once: true })
+  }
   
   // Bulls-eye event listener for locked mode
   function handleBullsEyeMoved(event) {
@@ -319,6 +491,13 @@ export function useFocalPoint() {
     }
   }
   
+  // Re-lock when user changes mode via ResizeHandle (etc.) while pointer is outside scene.
+  watch(() => store.focalPoint.mode, () => {
+    if (pointerInsideSceneView === false) {
+      applyOutsideSceneFocalLock()
+    }
+  })
+
   // Watch for mode changes - restored tri-state functionality (defer DOM work so scene-container can exist)
   watch(mode, (newMode, oldMode) => {
     console.log(`[FocalPoint] Mode changed: ${oldMode} -> ${newMode}`)
@@ -338,9 +517,8 @@ export function useFocalPoint() {
         if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
         removeCrosshairCursor()
         const ready = bullsEye && (typeof bullsEye.isReady === 'function' ? bullsEye.isReady() : (bullsEye.isReady?.value ?? false))
-        const pos = bullsEye && (typeof bullsEye.getPosition === 'function' ? bullsEye.getPosition() : (bullsEye.x != null && bullsEye.y != null ? { x: bullsEye.x, y: bullsEye.y } : null))
-        if (ready && pos) {
-          setTarget(pos.x, pos.y, 'mode-locked')
+        if (ready) {
+          snapFocalToBullsEye('mode-locked')
         } else if (newMode === FOCALPOINT_MODES.LOCKED && !ready) {
           console.warn('[FocalPoint] Bulls-eye service not available via provide/inject')
         }
@@ -367,6 +545,8 @@ export function useFocalPoint() {
     // Listen for bulls-eye movement events
     window.addEventListener('bulls-eye-moved', handleBullsEyeMoved)
     console.log('[FocalPoint] Added bulls-eye-moved event listener')
+
+    nextTick(() => tryAttachSceneViewModeListeners())
     
     // Register with dependency injection
     const focalPointInstance = {
@@ -392,6 +572,7 @@ export function useFocalPoint() {
     console.log('[FocalPoint] Cleaning up')
     removeMouseListener()
     removeCrosshairCursor()
+    detachSceneViewModeListeners()
     
     // Remove bulls-eye event listener
     window.removeEventListener('bulls-eye-moved', handleBullsEyeMoved)

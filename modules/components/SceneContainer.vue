@@ -116,6 +116,9 @@ watch(sceneContainerRef, (newRef) => {
     // Register in global element registry (safely)
     try {
       getElementRegistry().registerElement('scene-container', newRef)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('scene-container-ready', { detail: {} }))
+      }
     } catch (error) {
       console.error('[SceneContainer] Registry not ready for scene-container:', error)
       throw error

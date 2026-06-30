@@ -1,10 +1,9 @@
 // modules/composables/useParallaxVue3Enhanced.mjs
 // Enhanced Vue 3 parallax composable with provide/inject support.
 //
-// ARCHITECTURE: Bizcard and skill card positions in 3D scene space are constant and fixed
-// after initialization. Motion parallax is ONLY applied here during focal-point–sensitive
-// rendering: we set transform (translateX/translateY) on cards; we never mutate left/top
-// or move elements in the scene.
+// ARCHITECTURE: Biz/skill card static placement (left/top/width/height/data-sceneZ) is fixed at init.
+// Motion parallax applies style.transform to whichever instance is renderable: the original OR its
+// prebuilt clone (never both). Selection only toggles visibility; geometry is never mutated.
 
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBullsEyeService, useFocalPointService, useDebugFunctions } from '../core/globalServices'
@@ -56,7 +55,9 @@ export function useParallaxEnhanced() {
     dv: null,
     bullsEyeCenterXSceneView: null,
     /** Cards that receive parallax (valid data-sceneZ, not clone/hasClone). When this count changes, re-apply even if dh/dv unchanged. */
-    applicableCardCount: null
+    applicableCardCount: null,
+    /** Which card roots are parallax-renderable (original vs clone swap changes this without changing count). */
+    renderableFingerprint: null
   })
   const previousSceneViewTopLeft = ref({ left: null, top: null })
   let rafScheduled = false
@@ -106,13 +107,39 @@ export function useParallaxEnhanced() {
   function hasClone(cardDiv) {
     return cardDiv.classList && cardDiv.classList.contains('hasClone')
   }
-  // Clones use SELECTED_CLONE_SCENE_Z (14, same range as cards); they are skipped here so their transform is never changed.
 
-  /** Apply projection: X = bullsEyeCenterXSceneView + parallax; Y = parallax only. Clones are skipped so their geometry is never changed. */
-  function applyParallaxToCardDiv(cardDiv, bullsEyeCenterXSceneView, dh, dv) {
+  /** True when this card root should receive parallax (visible original OR visible prebuilt clone). */
+  function isParallaxRenderable(cardDiv) {
     if (!cardDiv) return false
+    if (isClone(cardDiv)) {
+      return !cardDiv.classList.contains('clone-hidden')
+    }
     if (hasClone(cardDiv)) return false
-    if (isClone(cardDiv)) return false
+    if (cardDiv.classList.contains('force-hidden-for-clone')) return false
+    return true
+  }
+
+  /** Apply projection: X = bullsEyeCenterXSceneView + parallax; Y = parallax only. Skips hidden originals and hidden prebuilt clones. */
+  function getParallaxRenderableFingerprint(cardDivs) {
+    return cardDivs
+      .filter(isParallaxRenderable)
+      .map((div) => div.id)
+      .sort()
+      .join('|')
+  }
+
+  function invalidateParallaxDisplacementCache() {
+    previousDisplacements.value = {
+      dh: null,
+      dv: null,
+      bullsEyeCenterXSceneView: null,
+      applicableCardCount: null,
+      renderableFingerprint: null,
+    }
+  }
+
+  function applyParallaxToCardDiv(cardDiv, bullsEyeCenterXSceneView, dh, dv) {
+    if (!isParallaxRenderable(cardDiv)) return false
 
     const sceneZ = parseFloat(cardDiv.getAttribute('data-sceneZ'))
     if (isNaN(sceneZ) || sceneZ < PARALLAX_Z_MIN || sceneZ > PARALLAX_Z_MAX) return false
@@ -165,15 +192,12 @@ export function useParallaxEnhanced() {
 
     const bizCardDivs = Array.from(plane.querySelectorAll('.biz-card-div'))
     const skillCardDivs = Array.from(plane.querySelectorAll('.skill-card-div'))
+    const allCardDivs = bizCardDivs.concat(skillCardDivs)
+    const renderableFingerprint = getParallaxRenderableFingerprint(allCardDivs)
 
     let applicableCardCount = 0
-    for (const div of bizCardDivs) {
-      if (hasClone(div) || isClone(div)) continue
-      const sceneZ = parseFloat(div.getAttribute('data-sceneZ'))
-      if (!isNaN(sceneZ) && sceneZ >= PARALLAX_Z_MIN && sceneZ <= PARALLAX_Z_MAX) applicableCardCount++
-    }
-    for (const div of skillCardDivs) {
-      if (hasClone(div) || isClone(div)) continue
+    for (const div of allCardDivs) {
+      if (!isParallaxRenderable(div)) continue
       const sceneZ = parseFloat(div.getAttribute('data-sceneZ'))
       if (!isNaN(sceneZ) && sceneZ >= PARALLAX_Z_MIN && sceneZ <= PARALLAX_Z_MAX) applicableCardCount++
     }
@@ -183,7 +207,8 @@ export function useParallaxEnhanced() {
       prev.dh === dh &&
       prev.dv === dv &&
       prev.bullsEyeCenterXSceneView === bullsEyeCenterXSceneView &&
-      prev.applicableCardCount === applicableCardCount
+      prev.applicableCardCount === applicableCardCount &&
+      prev.renderableFingerprint === renderableFingerprint
 
     if (shouldSkipUpdate) {
       return
@@ -195,7 +220,12 @@ export function useParallaxEnhanced() {
     for (const div of skillCardDivs) {
       applyParallaxToCardDiv(div, bullsEyeCenterXSceneView, dh, dv)
     }
-    previousDisplacements.value = { dh, dv, bullsEyeCenterXSceneView, focal, applicableCardCount }
+    previousDisplacements.value = { dh, dv, bullsEyeCenterXSceneView, focal, applicableCardCount, renderableFingerprint }
+  }
+
+  const handleParallaxForceRefresh = () => {
+    invalidateParallaxDisplacementCache()
+    renderAllCDivs()
   }
 
   // Enhanced render function: apply parallax transforms directly
@@ -239,6 +269,7 @@ export function useParallaxEnhanced() {
     window.addEventListener('scene-width-changed', renderAllCDivs)
     window.addEventListener('resize', renderAllCDivs)
     window.addEventListener('scene-plane-ready', handleScenePlaneReady)
+    window.addEventListener('parallax-force-refresh', handleParallaxForceRefresh)
   }
 
   const removeEventListeners = () => {
@@ -247,6 +278,7 @@ export function useParallaxEnhanced() {
     window.removeEventListener('scene-width-changed', renderAllCDivs)
     window.removeEventListener('resize', renderAllCDivs)
     window.removeEventListener('scene-plane-ready', handleScenePlaneReady)
+    window.removeEventListener('parallax-force-refresh', handleParallaxForceRefresh)
   }
   
   // Service availability checks

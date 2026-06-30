@@ -33,6 +33,12 @@ import {
     markSourceBizBackLinkForSkill,
     clearSourceBizBackLinkClass
 } from '@/modules/utils/skillInfoModal.mjs'
+import {
+    provisionSceneCardCloneAtInit,
+    setSceneCardSelectionVisible,
+    hideAllSceneCardClones,
+    assertSceneCloneVisible,
+} from '@/modules/utils/sceneCardClone.mjs'
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/')
     let base = envBase
@@ -335,6 +341,8 @@ export function useCardsController() {
                 }
                 console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
                 if (window.resumeFlyer?.allDivs) window.resumeFlyer.allDivs.skillCardDivs = [...skillCardsCreated]
+
+                await provisionAllSceneCardClonesAtInit(scenePlaneEl, cards, skillCardsCreated)
 
                 // Stamp data-skill-card-id onto all biz-resume-div skill spans now that the ID map is complete
                 document.querySelectorAll('.biz-resume-div .biz-card-skill-title[data-skill-name]').forEach(span => {
@@ -1287,6 +1295,9 @@ export function useCardsController() {
                 clone.setAttribute('data-sceneZ', String(zUtils.SELECTED_CLONE_SCENE_Z))
                 return
             }
+            // LEGACY: Repositioned non-card clones on viewport change (mutated left/top geometry).
+            // Biz-card and skill-card clones must keep frozen scene geometry; see sceneCardClone.mjs.
+            /*
             try {
                 const sceneRect = scenePlaneEl.getBoundingClientRect()
                 const centerX = sceneRect.width / 2
@@ -1297,6 +1308,7 @@ export function useCardsController() {
                 console.error('[handleViewportChangedForClones] Error repositioning clone:', error)
                 throw error
             }
+            */
         })
         if (clones.length > 0) {
             console.debug('[CardsController] clones processed', clones.length)
@@ -1393,8 +1405,6 @@ export function useCardsController() {
             if (sourceBizCardId == null) clearSourceBizBackLinkClass()
             selectionManager.selectCard({ type: 'skill', skillCardId }, caller)
             if (sourceBizCardId != null) markSourceBizBackLinkForSkill(skillCardId, sourceBizCardId)
-            const sceneEl = document.getElementById(skillCardId)
-            if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
         }
     }
 
@@ -1406,51 +1416,24 @@ export function useCardsController() {
         setTimeout(() => scrollCDivHeaderIntoView(jobNumber), 100)
     }
 
-    /** Wait for parallax to apply transforms before reading card geometry for clones. */
-    async function waitForParallaxSettle() {
-        window.dispatchEvent(new CustomEvent('focal-point-changed', { detail: {} }))
-        await new Promise((resolve) => requestAnimationFrame(resolve))
-        await new Promise((resolve) => requestAnimationFrame(resolve))
-    }
-
-    /**
-     * Show the selected card in the scene (biz or skill clone). Used by card-selected and
-     * by persisted-selection restore after layout/parallax settle.
-     */
+    /** Show the selected card in the scene (biz or skill clone). Used by card-selected and persisted-selection restore. */
     async function applySceneDisplayForCard(card, previousCard = null) {
         if (!card) return
 
         if (previousCard) {
-            if (previousCard.type === 'biz') {
-                removeSpecificClone(previousCard.jobNumber)
-            } else {
-                removeSkillCardClone(previousCard.skillCardId)
-                showSkillCardOriginal(previousCard.skillCardId)
-            }
+            await setSceneCardSelected(previousCard, false)
         }
 
         if (card.type === 'biz') {
             clearSourceBizBackLinkClass()
-            // Do not hide the original here — createSelectedClone reads geometry from a visible card.
-            await createSelectedClone(card.jobNumber)
-            scrollCDivHeaderIntoViewAfterCloneVisible(card.jobNumber)
+            await setSceneCardSelected(card, true)
+            scrollSceneCardCloneIntoViewAfterVisible(createBizCardDivId(card.jobNumber))
             return
         }
 
         if (card.type === 'skill') {
-            if (previousCard?.type === 'skill' && previousCard.skillCardId !== card.skillCardId) {
-                removeSkillCardClone(previousCard.skillCardId)
-                showSkillCardOriginal(previousCard.skillCardId)
-            }
-            // Do not hide before createSkillCardClone — same parallax-settle rule as biz cards.
-            const cloneId = `${card.skillCardId}-clone`
-            if (!document.getElementById(cloneId)) {
-                await createSkillCardClone(card.skillCardId)
-            }
-            const cloneEl = document.getElementById(cloneId)
-            if (cloneEl) {
-                cloneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
-            }
+            await setSceneCardSelected(card, true)
+            scrollSceneCardCloneIntoViewAfterVisible(card.skillCardId)
         }
     }
 
@@ -1460,28 +1443,25 @@ export function useCardsController() {
         await applySceneDisplayForCard(card, previousCard)
     }
 
-    /** When the selected card is unselected (e.g. before selecting another), remove its clone and show original */
+    /** When the selected card is unselected (e.g. before selecting another), hide its clone and show original */
     function handleCardsUnselect(event) {
         const { jobNumber } = event.detail || {}
         if (jobNumber != null) {
-            removeSpecificClone(jobNumber)
+            setSceneCardSelected({ type: 'biz', jobNumber }, false)
         }
     }
 
     function handleCardsUnselectSkill(event) {
         const { skillCardId } = event.detail || {}
-        if (skillCardId) removeSkillCardClone(skillCardId)
+        if (skillCardId) {
+            setSceneCardSelected({ type: 'skill', skillCardId }, false)
+        }
     }
 
     function handleSelectionCleared(event) {
         console.log('[useCardsController] Selection cleared, hiding all clones and showing originals...')
         clearSourceBizBackLinkClass()
-        const previousCard = event.detail?.previousCard
-        if (previousCard?.type === 'skill') {
-            removeSkillCardClone(previousCard.skillCardId)
-            showSkillCardOriginal(previousCard.skillCardId)
-        }
-        removeAllClones()
+        hideAllSceneCardSelections()
         clearAllSelected()
     }
     
@@ -1663,9 +1643,9 @@ export function useCardsController() {
         }
     }
     
-    /** Run scroll only after the biz-card clone is in DOM and verified visible (avoids scene jump down-then-up). */
-    function scrollCDivHeaderIntoViewAfterCloneVisible(jobNumber) {
-        const cloneId = `biz-card-div-${jobNumber}-clone`
+    /** Run scroll only after the scene-card clone is in DOM and verified visible (avoids scene jump down-then-up). */
+    function scrollSceneCardCloneIntoViewAfterVisible(originalId) {
+        const cloneId = `${originalId}-clone`
         const maxAttempts = 20
         let attempts = 0
         function check() {
@@ -1680,7 +1660,7 @@ export function useCardsController() {
             const rect = clone.getBoundingClientRect()
             const visible = display !== 'none' && visibility !== 'hidden' && rect.height > 0
             if (visible) {
-                scrollCDivHeaderIntoView(jobNumber)
+                scrollSceneCardHeaderIntoView(originalId)
                 return
             }
             if (++attempts < maxAttempts) requestAnimationFrame(check)
@@ -1688,38 +1668,37 @@ export function useCardsController() {
         requestAnimationFrame(check)
     }
 
+    /** @deprecated Use scrollSceneCardCloneIntoViewAfterVisible(originalId) */
+    function scrollCDivHeaderIntoViewAfterCloneVisible(jobNumber) {
+        scrollSceneCardCloneIntoViewAfterVisible(createBizCardDivId(jobNumber))
+    }
+
+    function scrollSceneCardHeaderIntoView(originalId) {
+        const cloneId = `${originalId}-clone`
+        let card = document.getElementById(cloneId)
+        if (card) {
+            console.log(`[useCardsController] SCROLL: Found clone for scrolling:`, cloneId)
+        } else {
+            card = document.getElementById(originalId)
+            if (!card && originalId.startsWith('biz-card-div-')) {
+                const jobNum = parseInt(originalId.replace('biz-card-div-', ''), 10)
+                if (!Number.isNaN(jobNum)) {
+                    card = cardRegistry.getCardElement(jobNum) || document.getElementById(originalId)
+                }
+            }
+            console.log(`[useCardsController] SCROLL: No clone, using original:`, originalId, !!card)
+        }
+        if (!card) {
+            console.error(`[useCardsController] ❌ SCROLL FAILED: Scene card not found: ${originalId}`)
+            return
+        }
+        scrollSceneCardHeaderElementIntoView(card)
+    }
+
     // Enhanced cDiv header scroll function
     function scrollCDivHeaderIntoView(jobNumber) {
         console.log(`[useCardsController] 📜 SCROLL: Attempting to scroll cDiv HEADER into view for job ${jobNumber}`)
-        
-        const cardId = createBizCardDivId(jobNumber)
-        console.log(`[useCardsController] SCROLL: Looking for card with ID: ${cardId}`)
-        
-        // Check if there's a selected clone first, otherwise use original
-        const cloneId = `${cardId}-clone`
-        let card = document.getElementById(cloneId)
-        
-        if (card) {
-            console.log(`[useCardsController] SCROLL: Found CLONE for scrolling:`, cloneId)
-        } else {
-            // No clone, use original card
-            card = cardRegistry.getCardElement(jobNumber)
-            if (!card) {
-                card = document.getElementById(cardId)
-                console.log(`[useCardsController] SCROLL: No clone, using original via getElementById:`, !!card)
-            } else {
-                console.log(`[useCardsController] SCROLL: No clone, using original from registry:`, !!card)
-            }
-        }
-        
-        if (!card) {
-            console.error(`[useCardsController] ❌ SCROLL FAILED: Card not found for job ${jobNumber}`)
-            const allCards = document.querySelectorAll('.biz-card-div')
-            console.log(`[useCardsController] SCROLL: Total cards in DOM: ${allCards.length}`)
-            return
-        }
-        
-        scrollCardHeaderIntoView(card, jobNumber, 'cDiv')
+        scrollSceneCardHeaderIntoView(createBizCardDivId(jobNumber))
     }
     
     // Legacy function for backward compatibility
@@ -1743,17 +1722,8 @@ export function useCardsController() {
         scrollResumeHeaderIntoView(resumeDiv, jobNumber)
     }
     
-    // Generic card header scroll function
-    function scrollCardHeaderIntoView(card, jobNumber, type = 'cDiv') {
-        console.log(`[useCardsController] 📜 Scrolling ${type} header for job ${jobNumber}`)
-
-        // Skill cards: center in view (no gap logic needed)
-        if (type !== 'cDiv') {
-            card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
-            return
-        }
-
-        // cDiv: scroll scene-content so the card's top border is SCROLL_TOP_GAP from the inner top edge
+    // Generic scene-card header scroll (biz and skill): scroll scene-content so top border is SCROLL_TOP_GAP from inner top
+    function scrollSceneCardHeaderElementIntoView(card) {
         const SCROLL_TOP_GAP = 8
         const sceneContent = document.getElementById('scene-content')
         if (!sceneContent) return
@@ -1765,12 +1735,12 @@ export function useCardsController() {
             const innerTop = contentRect.top + paddingTop
             const target = sceneContent.scrollTop + cardRect.top - innerTop - SCROLL_TOP_GAP
             sceneContent.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
-            console.log(`[useCardsController] ✅ ${type} scrolled with ${SCROLL_TOP_GAP}px gap`)
+            console.log(`[useCardsController] ✅ Scene card scrolled with ${SCROLL_TOP_GAP}px gap`)
         }
 
-        // If card is hidden (has clone), briefly show it to get accurate rect, then hide again
-        const isHidden = card.style.display === 'none' || card.classList.contains('hasClone')
-        if (isHidden) {
+        const isHiddenOriginal = !card.classList.contains('clone') &&
+            (card.style.display === 'none' || card.classList.contains('hasClone'))
+        if (isHiddenOriginal) {
             card.style.display = 'block'
             setTimeout(() => {
                 doScroll()
@@ -1782,6 +1752,12 @@ export function useCardsController() {
         } else {
             doScroll()
         }
+    }
+
+    // Generic card header scroll function (legacy rDiv path)
+    function scrollCardHeaderIntoView(card, jobNumber, type = 'cDiv') {
+        console.log(`[useCardsController] 📜 Scrolling ${type} header for job ${jobNumber}`)
+        scrollSceneCardHeaderElementIntoView(card)
     }
     
     // Resume header scroll function
@@ -1940,82 +1916,19 @@ export function useCardsController() {
         document.querySelectorAll(`.biz-resume-div[data-job-number="${jobNumber}"] .r-div-scene-z`).forEach(el => { el.textContent = text })
     }
 
-    /** Biz-card clone: same flow as createSkillCardClone — hide original, clone, show clone. */
-    async function createSelectedClone(jobNumber) {
-        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
-        if (!scenePlaneEl) return
-        
-        let originalCard = cardRegistry.getCardElement(jobNumber) || document.getElementById(createBizCardDivId(jobNumber))
-        if (!originalCard) return
-        const cloneId = `${originalCard.id}-clone`
-        if (document.getElementById(cloneId)) return
-
-        // Parallax writes style.transform in the same turn as this event; getComputedStyle is still
-        // stale until the next frame(s). Wait two rAFs so First-button / auto-select reads the same
-        // transform as after a later rDiv click (when layout has settled).
-        await waitForParallaxSettle()
-
-        originalCard = cardRegistry.getCardElement(jobNumber) || document.getElementById(createBizCardDivId(jobNumber))
-        if (!originalCard || originalCard.classList.contains('hasClone')) return
-        if (document.getElementById(cloneId)) return
-
-        // Capture geometry from original BEFORE hiding (so computed/rect are correct)
-        const origStyle = originalCard.style
-        const origComputed = typeof window.getComputedStyle === 'function' ? window.getComputedStyle(originalCard) : null
-        const left = origStyle.left || (origComputed && origComputed.left) || '0px'
-        const top = origStyle.top || (origComputed && origComputed.top) || '0px'
-        const width = origStyle.width || (origComputed && origComputed.width) || '180px'
-        const height = origStyle.height || (origComputed && origComputed.height) || '180px'
-        const transform = origStyle.transform || (origComputed && origComputed.transform) || 'none'
-
-        originalCard.classList.add('hasClone', 'force-hidden-for-clone')
-        originalCard.style.setProperty('display', 'none', 'important')
-        originalCard.style.setProperty('visibility', 'hidden', 'important')
-        originalCard.style.setProperty('opacity', '0', 'important')
-        originalCard.style.setProperty('pointer-events', 'none', 'important')
-
-        const clone = originalCard.cloneNode(true)
-        clone.id = cloneId
-        clone.classList.add('selected', 'clone')
-        clone.classList.remove('hovered', 'hasClone')
-        clone.setAttribute('data-sceneZ', String(zUtils.SELECTED_CLONE_SCENE_Z))
-        clone.style.removeProperty('display')
-        clone.style.removeProperty('visibility')
-        clone.style.removeProperty('opacity')
-        clone.style.removeProperty('pointer-events')
-        clone.style.setProperty('display', 'flex', 'important')
-        clone.style.setProperty('visibility', 'visible', 'important')
-        clone.style.setProperty('opacity', '1', 'important')
-        clone.style.setProperty('z-index', '99', 'important')
-        clone.style.setProperty('position', 'absolute', 'important')
-        clone.style.setProperty('filter', 'none', 'important')
-        // Explicit geometry so clone is visible in same place as original
-        clone.style.setProperty('left', left, 'important')
-        clone.style.setProperty('top', top, 'important')
-        clone.style.setProperty('width', width, 'important')
-        clone.style.setProperty('height', height, 'important')
-        if (transform && transform !== 'none') clone.style.setProperty('transform', transform, 'important')
-
-        scenePlaneEl.appendChild(clone)
-        
-        updateResumeDivSceneZForJob(jobNumber)
-
-        elementRegistry.clearAllCache()
-
+    function attachBizSceneCardCloneListeners(clone, jobNumber, originalId) {
         clone.addEventListener('click', (event) => {
             event.stopPropagation()
             if (!selectionManager) return
 
-            // Pencil icons inside selected biz card clone should open editors, not toggle selection.
             if (event.target.closest('.biz-details-edit-btn')) return
 
-            // Skill title link inside selected biz card clone
             const skillTitleEl = event.target.closest('.biz-card-skill-title')
             if (skillTitleEl) {
                 selectSkillCardById(
                     skillTitleEl.getAttribute('data-skill-card-id'),
                     'CardsController.cloneSkillTitleClick',
-                    createBizCardDivId(jobNumber)
+                    originalId
                 )
                 return
             }
@@ -2037,163 +1950,17 @@ export function useCardsController() {
             selectSkillCardById(
                 skillTitleEl.getAttribute('data-skill-card-id'),
                 'CardsController.cloneSkillTitleKeydown',
-                createBizCardDivId(jobNumber)
+                originalId
             )
         })
         attachBizCardEditButtonListeners(clone, jobNumber)
-
-        // Apply color palette to clone
-        try {
-            applyPaletteToElement(clone)
-        } catch (error) {
-            console.error('[useCardsController] Could not apply palette to clone:', error)
-            throw error
-        }
-        // Re-assert visibility after palette (ensures clone stays visible)
-        clone.style.setProperty('display', 'flex', 'important')
-        clone.style.setProperty('visibility', 'visible', 'important')
-        clone.style.setProperty('opacity', '1', 'important')
-    }
-    
-    function removeAllClones() {
-        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
-        if (!scenePlaneEl) return
-        
-        // Find and remove all clones
-        const clones = scenePlaneEl.querySelectorAll('[id$="-clone"]')
-        clones.forEach(clone => {
-            clone.remove()
-        })
-        
-        // Restore original cards that were hidden (find by hasClone class)
-        const cardsWithClones = scenePlaneEl.querySelectorAll('.hasClone')
-        cardsWithClones.forEach(card => {
-            if (card.id && card.id.startsWith('biz-card-div-') && !card.id.includes('-clone')) {
-                const jobNum = card.id.replace('biz-card-div-', '')
-                updateResumeDivSceneZForJob(parseInt(jobNum, 10))
-            }
-            card.style.removeProperty('display')
-            card.style.setProperty('visibility', 'visible', 'important')
-            card.style.setProperty('opacity', '1', 'important')
-            card.style.removeProperty('pointer-events')
-            card.style.removeProperty('z-index')
-            // Remove clone-related classes
-            card.classList.remove('hasClone')
-            card.classList.remove('force-hidden-for-clone')
-        })
-        
-        // CRITICAL: Clear element registry cache after removing clones
-        elementRegistry.clearAllCache()
-        
-        console.log(`[useCardsController] ✅ Removed ${clones.length} clones and restored ${cardsWithClones.length} original cards`)
-    }
-    
-    function removeSpecificClone(jobNumber) {
-        let scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
-        if (!scenePlaneEl) return
-        
-        // Find and remove the specific clone
-        const cloneId = `biz-card-div-${jobNumber}-clone`
-        const clone = scenePlaneEl.querySelector(`#${cloneId}`)
-        if (clone) {
-            clone.remove()
-            console.log(`[useCardsController] ✅ Removed clone: ${cloneId}`)
-        }
-        
-        // Find and restore the specific original card
-        const originalId = `biz-card-div-${jobNumber}`
-        const originalCard = scenePlaneEl.querySelector(`#${originalId}`)
-        if (originalCard && originalCard.classList.contains('hasClone')) {
-            originalCard.classList.remove('hasClone')
-            originalCard.classList.remove('force-hidden-for-clone')
-            updateResumeDivSceneZForJob(jobNumber)
-            // Fully restore original card visibility (let CSS decide display mode: flex for biz, block for skill)
-            originalCard.style.removeProperty('display')
-            originalCard.style.setProperty('visibility', 'visible', 'important')
-            originalCard.style.setProperty('opacity', '1', 'important')
-            originalCard.style.removeProperty('pointer-events')
-            originalCard.style.removeProperty('z-index')
-            console.log(`[useCardsController] ✅ Restored original card: ${originalId}`)
-        }
-
-        // CRITICAL: Clear element registry cache after removing clone
-        elementRegistry.clearAllCache()
     }
 
-    /** Skill card clone: same behavior as biz card (hide original, show clone at front, no parallax) */
-    function hideSkillCardOriginal(skillCardId) {
-        const el = document.getElementById(skillCardId)
-        if (!el || !el.classList.contains('skill-card-div')) return
-        el.classList.add('hasClone')
-        el.style.setProperty('display', 'none', 'important')
-    }
-
-    function showSkillCardOriginal(skillCardId) {
-        const el = document.getElementById(skillCardId)
-        if (!el) return
-        el.classList.remove('hasClone', 'force-hidden-for-clone')
-        el.style.removeProperty('display')
-        el.style.removeProperty('visibility')
-        el.style.removeProperty('opacity')
-        el.style.removeProperty('pointer-events')
-    }
-
-    async function createSkillCardClone(skillCardId) {
-        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
-        if (!scenePlaneEl) return
-        let original = document.getElementById(skillCardId)
-        if (!original || !original.classList.contains('skill-card-div')) return
-        const cloneId = `${skillCardId}-clone`
-        if (document.getElementById(cloneId)) return
-
-        await waitForParallaxSettle()
-
-        original = document.getElementById(skillCardId)
-        if (!original || !original.classList.contains('skill-card-div')) return
-        if (document.getElementById(cloneId)) return
-        if (original.classList.contains('hasClone')) return
-
-        // Capture geometry from original BEFORE hiding (inline + computed, same as biz clone).
-        const origStyle = original.style
-        const origComputed = typeof window.getComputedStyle === 'function' ? window.getComputedStyle(original) : null
-        const left = origStyle.left || (origComputed && origComputed.left) || '0px'
-        const top = origStyle.top || (origComputed && origComputed.top) || '0px'
-        const width = origStyle.width || (origComputed && origComputed.width) || `${MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH}px`
-        const height = origStyle.height || (origComputed && origComputed.height) || (origComputed && origComputed.minHeight) || 'auto'
-        const transform = origStyle.transform || (origComputed && origComputed.transform) || 'none'
-
-        original.classList.add('hasClone', 'force-hidden-for-clone')
-        original.style.setProperty('display', 'none', 'important')
-        original.style.setProperty('visibility', 'hidden', 'important')
-        original.style.setProperty('opacity', '0', 'important')
-        original.style.setProperty('pointer-events', 'none', 'important')
-
-        const clone = original.cloneNode(true)
-        clone.id = cloneId
-        clone.classList.add('selected', 'clone')
-        clone.classList.remove('hovered', 'hasClone', 'force-hidden-for-clone')
-        clone.setAttribute('data-sceneZ', String(zUtils.SELECTED_CLONE_SCENE_Z))
-        clone.style.removeProperty('display')
-        clone.style.removeProperty('visibility')
-        clone.style.removeProperty('opacity')
-        clone.style.removeProperty('pointer-events')
-        clone.style.setProperty('display', 'flex', 'important')
-        clone.style.setProperty('visibility', 'visible', 'important')
-        clone.style.setProperty('opacity', '1', 'important')
-        clone.style.setProperty('z-index', '99', 'important')
-        clone.style.setProperty('position', 'absolute', 'important')
-        clone.style.setProperty('filter', 'none', 'important')
-        clone.style.setProperty('left', left, 'important')
-        clone.style.setProperty('top', top, 'important')
-        clone.style.setProperty('width', width, 'important')
-        if (height && height !== 'auto') clone.style.setProperty('height', height, 'important')
-        if (transform && transform !== 'none') clone.style.setProperty('transform', transform, 'important')
-
+    function attachSkillSceneCardCloneListeners(clone, skillCardId) {
         clone.addEventListener('click', (e) => {
             e.stopPropagation()
             if (!selectionManager) return
 
-            // Back arrow inside selected skill card clone
             const bizTitleEl = e.target.closest('.biz-back-link')
             if (bizTitleEl) {
                 const bizCardId = bizTitleEl.getAttribute('data-biz-card-id')
@@ -2217,32 +1984,105 @@ export function useCardsController() {
             clearSourceBizBackLinkClass()
             selectionManager.selectCard({ type: 'skill', skillCardId }, 'CardsController.skillCardCloneClick')
         })
-
-        // Append as last child of container so clone displays over everything else
-        scenePlaneEl.appendChild(clone)
-        elementRegistry.clearAllCache()
-
-        // Match biz-card clone: cloneNode copies stale palette/contrast from the hidden original;
-        // re-apply palette + brightness-aware contrast so label + icons use one resolver for selected state.
-        try {
-            await applyPaletteToElement(clone)
-            updateContrastForBrightness(clone)
-        } catch (error) {
-            reportError(error, '[useCardsController] applyPaletteToElement/updateContrastForBrightness for skill card clone', null)
-            throw error
-        }
-        clone.style.setProperty('display', 'flex', 'important')
-        clone.style.setProperty('visibility', 'visible', 'important')
-        clone.style.setProperty('opacity', '1', 'important')
     }
 
-    function removeSkillCardClone(skillCardId) {
-        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
-        if (!scenePlaneEl) return
-        const clone = document.getElementById(`${skillCardId}-clone`)
-        if (clone) clone.remove()
-        showSkillCardOriginal(skillCardId)
+    /** Provision hidden prebuilt clones for every biz and skill card (static geometry, never recreated). */
+    async function provisionAllSceneCardClonesAtInit(scenePlaneEl, bizCards, skillCards) {
+        for (let jobNumber = 0; jobNumber < bizCards.length; jobNumber++) {
+            const original = bizCards[jobNumber]
+            if (!original) continue
+            const originalId = original.id || createBizCardDivId(jobNumber)
+            const clone = provisionSceneCardCloneAtInit({
+                original,
+                cloneId: `${originalId}-clone`,
+                geometryDefaults: { width: '180px', height: '180px' },
+                selectedCloneSceneZ: zUtils.SELECTED_CLONE_SCENE_Z,
+            })
+            if (!clone) continue
+            attachBizSceneCardCloneListeners(clone, jobNumber, originalId)
+            scenePlaneEl.appendChild(clone)
+            try {
+                await applyPaletteToElement(clone)
+            } catch (error) {
+                reportError(error, `[useCardsController] palette for biz clone job ${jobNumber}`, null)
+                throw error
+            }
+        }
+
+        for (const skillCard of skillCards) {
+            if (!skillCard?.id) continue
+            const clone = provisionSceneCardCloneAtInit({
+                original: skillCard,
+                cloneId: `${skillCard.id}-clone`,
+                geometryDefaults: {
+                    width: `${MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH}px`,
+                    height: 'auto',
+                },
+                selectedCloneSceneZ: zUtils.SELECTED_CLONE_SCENE_Z,
+            })
+            if (!clone) continue
+            attachSkillSceneCardCloneListeners(clone, skillCard.id)
+            scenePlaneEl.appendChild(clone)
+            try {
+                await applyPaletteToElement(clone)
+            } catch (error) {
+                reportError(error, `[useCardsController] palette for skill clone ${skillCard.id}`, null)
+                throw error
+            }
+        }
+
         elementRegistry.clearAllCache()
+        console.debug('[CardsController] prebuilt scene card clones provisioned', {
+            biz: bizCards.length,
+            skill: skillCards.length,
+        })
+    }
+
+    /** Toggle visibility between original and its prebuilt clone (selection only — no create/remove). */
+    async function setSceneCardSelected(card, selected) {
+        if (!card) return
+        const originalId = card.type === 'biz' ? createBizCardDivId(card.jobNumber) : card.skillCardId
+        if (!originalId) return
+
+        setSceneCardSelectionVisible({
+            originalId,
+            visible: selected,
+            onHide: () => {
+                if (card.type === 'biz') {
+                    updateResumeDivSceneZForJob(card.jobNumber)
+                }
+            },
+        })
+
+        if (selected) {
+            if (card.type === 'biz') {
+                updateResumeDivSceneZForJob(card.jobNumber)
+            }
+            const clone = document.getElementById(`${originalId}-clone`)
+            if (clone) {
+                try {
+                    await applyPaletteToElement(clone)
+                } catch (error) {
+                    reportError(error, '[useCardsController] palette on scene card clone show', null)
+                    throw error
+                }
+                assertSceneCloneVisible(clone, 'flex')
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('parallax-force-refresh', { detail: {} }))
+        if (selected) {
+            window.dispatchEvent(new CustomEvent('focal-point-changed', { detail: {} }))
+        }
+
+        elementRegistry.clearAllCache()
+    }
+
+    function hideAllSceneCardSelections() {
+        const scenePlaneEl = scenePlaneElement || elementRegistry.getScenePlane()
+        hideAllSceneCardClones(scenePlaneEl)
+        elementRegistry.clearAllCache()
+        console.log('[useCardsController] ✅ Hid all scene card clones and restored originals')
     }
     
     function createYearlyGridLines(scenePlane) {

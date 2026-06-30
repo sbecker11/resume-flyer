@@ -44,6 +44,15 @@
     pointer-events: none !important;
 }
 
+/* Prebuilt clones start hidden at init; selection toggles visibility only */
+.biz-card-div.clone-hidden,
+.skill-card-div.clone-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 
 /* Override all native dark mode styles with maximum specificity */
 html[native-dark-active][native-dark-active] #scene-container,

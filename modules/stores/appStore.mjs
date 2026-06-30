@@ -147,10 +147,12 @@ export const appStoreActions = {
     schedulePersistFocalPoint()
   },
   
-  setFocalPointMode(mode) {
+  setFocalPointMode(mode, options = {}) {
     appStore.focalPoint.mode = mode
     console.log(`[AppStore] Focal point mode: ${mode}`)
-    persistFocalPoint(true) // persist mode immediately
+    if (options.persist !== false) {
+      persistFocalPoint(true) // persist mode immediately
+    }
   },
   
   // Aim point actions

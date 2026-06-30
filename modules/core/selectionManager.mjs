@@ -556,52 +556,58 @@ class SelectionManager {
 
     /**
      * STEP 4d: Show or create cDiv clone
+     * @deprecated Legacy orchestration — disabled; use CardsController + sceneCardClone.mjs (frozen original geometry).
      */
     showOrCreateJobClone(jobNumber) {
+        console.warn('[SelectionManager] showOrCreateJobClone is legacy and disabled; clones are prebuilt at CardsController init', jobNumber);
+        /*
         let clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
-        
+
         if (!clone) {
-            // Create the clone
             console.debug('[SelectionManager] creating clone', jobNumber);
             this.createJobClone(jobNumber);
             clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         }
-        
+
         if (clone) {
             clone.classList.remove('clone-hidden');
             console.debug('[SelectionManager] clone shown', jobNumber);
         } else {
             console.error(`[SelectionManager] ❌ Failed to create/show clone for job ${jobNumber}`);
         }
+        */
     }
 
     /**
      * Create a deep clone of the original cDiv positioned at bulls-eye center
+     * @deprecated Legacy — repositioned clones at bulls-eye instead of preserving static 3D geometry.
      */
     createJobClone(jobNumber) {
+        console.warn('[SelectionManager] createJobClone is legacy and disabled; use CardsController provisionAllSceneCardClonesAtInit', jobNumber);
+        /*
         const scenePlane = window.globalElementRegistry?.getScenePlane();
         const originalCard = document.getElementById(`biz-card-div-${jobNumber}`);
-        
+
         if (!scenePlane || !originalCard) {
             console.error(`[SelectionManager] ❌ Cannot create clone - missing scenePlane or originalCard`);
             return;
         }
 
-        // Create deep clone
         const clone = originalCard.cloneNode(true);
         clone.id = `${originalCard.id}-clone`;
         clone.classList.add('clone');
         clone.classList.add('selected');
-        
-        // Position at bulls-eye center initially (will be refined in Step 6)
+
+        // LEGACY geometry mutation — violated static scene placement
         clone.style.position = 'absolute';
         clone.style.left = '0px';
         clone.style.top = '50%';
         clone.style.transform = 'translate(-50%, -50%)';
         clone.style.zIndex = '1000';
-        
+
         scenePlane.appendChild(clone);
         console.debug('[SelectionManager] clone created', jobNumber);
+        */
     }
 
     /**
@@ -618,19 +624,20 @@ class SelectionManager {
 
     /**
      * STEP 6: Position clone at bulls-eye center
+     * @deprecated Legacy — moved biz-card clones to bulls-eye; violates static 3D scene geometry.
      */
     positionCloneAtSceneCenter(jobNumber) {
+        console.warn('[SelectionManager] positionCloneAtSceneCenter is legacy and disabled', jobNumber);
+        /*
         const clone = document.getElementById(`biz-card-div-${jobNumber}-clone`);
         if (!clone) {
             console.error(`[SelectionManager] ❌ Clone not found for positioning job ${jobNumber}`);
             return;
         }
 
-        // Get bulls-eye center position
         let bullsEyeCenterX = 0;
         let bullsEyeCenterY = '50%';
 
-        // Try to get bulls-eye position from single app-state object
         const bullsEyeApi = window.resumeFlyer?.bullsEye;
         if (bullsEyeApi && typeof bullsEyeApi.getPosition === 'function') {
             const bullsEyePos = bullsEyeApi.getPosition();
@@ -640,7 +647,6 @@ class SelectionManager {
             }
         }
 
-        // Fallback: try to get from bulls-eye element
         if (bullsEyeCenterX === 0) {
             const bullsEyeElement = window.globalElementRegistry?.getElement('bulls-eye');
             if (bullsEyeElement) {
@@ -654,7 +660,6 @@ class SelectionManager {
             }
         }
 
-        // Final fallback: use scene container center
         if (bullsEyeCenterX === 0) {
             const sceneContainer = window.globalElementRegistry?.getSceneContainer();
             if (sceneContainer) {
@@ -664,18 +669,18 @@ class SelectionManager {
             }
         }
 
-        // Position clone at bulls-eye center
+        // LEGACY geometry mutation — violated static scene placement
         clone.style.position = 'absolute';
         clone.style.left = `${bullsEyeCenterX}px`;
         clone.style.top = bullsEyeCenterY;
-        clone.style.transform = 'translate(-50%, -50%)'; // Center the clone on the bulls-eye
+        clone.style.transform = 'translate(-50%, -50%)';
         clone.style.zIndex = '1000';
 
         console.debug('[SelectionManager] clone positioned at bulls-eye', jobNumber);
 
-        // Store the bulls-eye position on the clone for reference
         clone._bullsEyeCenterX = bullsEyeCenterX;
         clone._bullsEyeCenterY = bullsEyeCenterY;
+        */
     }
 
     /**

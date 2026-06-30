@@ -762,8 +762,6 @@ class ResumeItemsController {
             if (sourceBizId == null) clearSourceBizBackLinkClass();
             selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeItemsController.skillTitleActivate');
             if (sourceBizId != null) markSourceBizBackLinkForSkill(skillCardId, sourceBizId);
-            const sceneEl = document.getElementById(skillCardId);
-            if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
         }
     }
 

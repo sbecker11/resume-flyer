@@ -237,11 +237,11 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
 
   function onSceneMouseLeave() {
     isMouseOverScene = false
-    if (stickyEdge) return
-    if (!autoScrollingInterval) return
-    if (autoScrollVelocity === 0) {
-      stopAutoScrolling()
-    }
+    stopAutoScrolling()
+  }
+
+  function onSceneViewPointerLeft() {
+    stopAutoScrolling()
   }
 
   function onDocumentMouseMove(e) {
@@ -273,11 +273,13 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
     boundContainer.addEventListener('mouseleave', onSceneMouseLeave)
     scrollContentEl.addEventListener('scroll', onScroll, { passive: true })
     document.addEventListener('mousemove', onDocumentMouseMove, { passive: true })
+    window.addEventListener('scene-view-pointer-left', onSceneViewPointerLeft)
     installed = true
   }
 
   function teardown() {
     if (!installed) return
+    window.removeEventListener('scene-view-pointer-left', onSceneViewPointerLeft)
     document.removeEventListener('mousemove', onDocumentMouseMove)
     if (scrollContentEl) {
       scrollContentEl.removeEventListener('scroll', onScroll)

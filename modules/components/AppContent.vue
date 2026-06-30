@@ -86,6 +86,7 @@ import { updateContrastForBrightness } from '../composables/useColorPalette.mjs'
 import { reportError } from '../utils/errorReporting.mjs'
 import { listVisibleSceneCardRoots } from '../utils/sceneCardVisibility.mjs'
 import { getPersistedSelectedCard, validatePersistedSelectedCard, persistSelectedCard } from '../utils/selectionPersistence.mjs'
+import { waitForParallaxSettle } from '../utils/sceneCardClone.mjs'
 import { installBizSelectionFocus } from '../utils/bizSelectionFocus.mjs'
 import { listResumes } from '../api/resumeManagerApi.mjs'
 
@@ -427,9 +428,7 @@ async function ensureSkillSceneDisplayAfterRestore(card) {
     )
     return
   }
-  window.dispatchEvent(new CustomEvent('focal-point-changed', { detail: {} }))
-  await new Promise((resolve) => requestAnimationFrame(resolve))
-  await new Promise((resolve) => requestAnimationFrame(resolve))
+  await waitForParallaxSettle()
   const apply = window.resumeFlyer?.applySceneDisplayForCard
   if (typeof apply !== 'function') {
     reportError(

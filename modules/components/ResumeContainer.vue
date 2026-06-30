@@ -734,8 +734,6 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     } else {
       clearSourceBizBackLinkClass();
       selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeContainer.skillResumeDivClick');
-      const sceneEl = document.getElementById(skillCardId);
-      if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
     }
   });
 
