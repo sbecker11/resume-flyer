@@ -67,6 +67,11 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
   let isMouseOverScene = false
   let boundContainer = null
   let installed = false
+  /** null until first sample; then whether pointer is over #scene-container (not resize handle / resume). */
+  let pointerInsideSceneContainer = null
+  /** Last known pointer position (document mousemove / mouseenter). */
+  let lastPointerClientX = null
+  let lastPointerClientY = null
   /** 'Top' | 'Bottom' | null — sticky edge state after mouse leaves; cleared when mouse enters center. */
   let stickyEdge = null
 
@@ -130,49 +135,113 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
     autoscrollDirection.value = AUTOSCROLL_DIRECTION.NONE
   }
 
-  function stopAutoScrolling() {
-    clearStickyEdge()
+  function isPointerInSceneContainer(clientX, clientY) {
+    const container = getSceneContainer()
+    if (!container?.isConnected) return false
+    const rect = container.getBoundingClientRect()
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+  }
+
+  /** Top/bottom autoscroll bands from pointer Y inside #scene-container. */
+  function getPointerBandInfo(clientX, clientY) {
+    const content = getSceneContent()
+    const container = getSceneContainer()
+    if (!content || !container?.isConnected || !isPointerInSceneContainer(clientX, clientY)) {
+      return { inTopZone: false, inBottomZone: false }
+    }
+    const mouseYContainerRelative = clientY - container.getBoundingClientRect().top
+    const topHeight = Math.floor(content.offsetHeight / 4)
+    const centerTop = topHeight
+    const centerBottom = topHeight * 3
+    return {
+      inTopZone: mouseYContainerRelative < centerTop,
+      inBottomZone: mouseYContainerRelative > centerBottom,
+    }
+  }
+
+  /** Show edge chevrons when pointer is in a band even if scroll motion has not started yet. */
+  function refreshChevronVisibility(clientX, clientY) {
+    if (autoScrollingInterval || stickyEdge) {
+      updateAutoscrollDirection()
+      return
+    }
+    const content = getSceneContent()
+    if (!content?.isConnected) return
+    const { inTopZone, inBottomZone } = getPointerBandInfo(clientX, clientY)
+    if (!inTopZone && !inBottomZone) return
+
+    const scrollTop = content.scrollTop
+    const maxScrollTop = Math.max(0, content.scrollHeight - content.clientHeight)
+    store.sceneView.isAutoscrolling = true
+    if (inTopZone) {
+      autoscrollDirection.value = (maxScrollTop > 0 && scrollTop <= EDGE_THRESHOLD_PX)
+        ? AUTOSCROLL_DIRECTION.TOP
+        : AUTOSCROLL_DIRECTION.UP
+      return
+    }
+    autoscrollDirection.value = (maxScrollTop > 0 && scrollTop >= maxScrollTop - EDGE_THRESHOLD_PX)
+      ? AUTOSCROLL_DIRECTION.BOTTOM
+      : AUTOSCROLL_DIRECTION.DOWN
+  }
+
+  /** Stop scroll interval/velocity without clearing edge-band chevrons (caller may refresh). */
+  function stopAutoScrollMotion() {
     if (autoScrollingInterval) {
       clearInterval(autoScrollingInterval)
       autoScrollingInterval = null
     }
     autoScrollVelocity = 0
-    store.sceneView.isAutoscrolling = false
+    oldAutoScrollVelocity = 0
     removeCursorHidden()
+  }
+
+  /** Recompute chevrons and autoscroll after pointer (re)enters #scene-container. */
+  function recomputeAutoscrollOnSceneReenter(clientX, clientY) {
+    if (!isPointerInSceneContainer(clientX, clientY)) return
+    isMouseOverScene = true
+    oldAutoScrollVelocity = 0
+    evaluateAutoScrollAtPointer(clientX, clientY, { forceVelocityUpdate: true })
+    refreshChevronVisibility(clientX, clientY)
+    requestAnimationFrame(() => {
+      if (!isPointerInSceneContainer(clientX, clientY)) return
+      refreshChevronVisibility(clientX, clientY)
+    })
+  }
+
+  function syncSceneContainerPointerBoundary(clientX, clientY) {
+    const inside = isPointerInSceneContainer(clientX, clientY)
+    if (pointerInsideSceneContainer === null) {
+      pointerInsideSceneContainer = inside
+      if (inside) {
+        recomputeAutoscrollOnSceneReenter(clientX, clientY)
+      }
+      return
+    }
+    if (pointerInsideSceneContainer !== inside) {
+      pointerInsideSceneContainer = inside
+      if (inside) {
+        recomputeAutoscrollOnSceneReenter(clientX, clientY)
+      } else {
+        isMouseOverScene = false
+        stopAutoScrolling()
+      }
+    }
+  }
+
+  function stopAutoScrolling() {
+    clearStickyEdge()
+    stopAutoScrollMotion()
+    store.sceneView.isAutoscrolling = false
     updateAutoscrollDirection()
   }
 
-  function onScroll() {
-    if (autoScrollingInterval) {
-      updateAutoscrollDirection()
-    }
-  }
-
-  function updateAutoScrollVelocity(mouseYContainerRelative, scrollEl) {
-    if (!scrollEl || !scrollEl.isConnected) return
-
-    const topHeight = Math.floor(scrollEl.offsetHeight / 4)
-    const centerTop = topHeight
-    const centerHeight = topHeight * 2
-    const centerBottom = topHeight + centerHeight
-
-    if (mouseYContainerRelative < centerTop) {
-      autoScrollVelocity = (mouseYContainerRelative - centerTop) / topHeight * MAX_AUTOSCROLL_VELOCITY
-    } else if (mouseYContainerRelative > centerBottom) {
-      autoScrollVelocity = (mouseYContainerRelative - centerBottom) / topHeight * MAX_AUTOSCROLL_VELOCITY
-    } else {
-      autoScrollVelocity = 0
-    }
-  }
-
-  function handleMouseMove(e) {
+  function evaluateAutoScrollAtPointer(clientX, clientY, { forceVelocityUpdate = false } = {}) {
     const content = getSceneContent()
     const container = getSceneContainer()
     if (!content || !container || !container.isConnected) return
 
-
     const rect = container.getBoundingClientRect()
-    const mouseYContainerRelative = e.clientY - rect.top
+    const mouseYContainerRelative = clientY - rect.top
     const topHeight = Math.floor(content.offsetHeight / 4)
     const centerTop = topHeight
     const centerBottom = topHeight * 3
@@ -192,9 +261,11 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
     updateAutoScrollVelocity(mouseYContainerRelative, content)
     applyCursorHidden()
 
-    if (Math.abs(autoScrollVelocity - oldAutoScrollVelocity) >= AUTOSCROLL_CHANGE_THRESHOLD) {
+    const velocityDelta = Math.abs(autoScrollVelocity - oldAutoScrollVelocity)
+    if (forceVelocityUpdate || velocityDelta >= AUTOSCROLL_CHANGE_THRESHOLD) {
       if (Math.abs(autoScrollVelocity) < MIN_AUTOSCROLL_VELOCITY) {
-        stopAutoScrolling()
+        stopAutoScrollMotion()
+        refreshChevronVisibility(clientX, clientY)
       } else {
         if (!autoScrollingInterval) {
           store.sceneView.isAutoscrolling = true
@@ -228,23 +299,93 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
       oldAutoScrollVelocity = autoScrollVelocity
     } else if (autoScrollingInterval) {
       updateAutoscrollDirection()
+    } else {
+      refreshChevronVisibility(clientX, clientY)
     }
   }
 
-  function onSceneMouseEnter() {
+  function handleMouseMove(e) {
+    evaluateAutoScrollAtPointer(e.clientX, e.clientY)
+    refreshChevronVisibility(e.clientX, e.clientY)
+  }
+
+  function onScroll() {
+    if (autoScrollingInterval) {
+      updateAutoscrollDirection()
+    }
+  }
+
+  function updateAutoScrollVelocity(mouseYContainerRelative, scrollEl) {
+    if (!scrollEl || !scrollEl.isConnected) return
+
+    const topHeight = Math.floor(scrollEl.offsetHeight / 4)
+    const centerTop = topHeight
+    const centerHeight = topHeight * 2
+    const centerBottom = topHeight + centerHeight
+
+    if (mouseYContainerRelative < centerTop) {
+      autoScrollVelocity = (mouseYContainerRelative - centerTop) / topHeight * MAX_AUTOSCROLL_VELOCITY
+    } else if (mouseYContainerRelative > centerBottom) {
+      autoScrollVelocity = (mouseYContainerRelative - centerBottom) / topHeight * MAX_AUTOSCROLL_VELOCITY
+    } else {
+      autoScrollVelocity = 0
+    }
+  }
+
+  function onSceneViewPointerEntered(event) {
+    const { clientX, clientY } = event.detail || {}
+    if (clientX == null || clientY == null) return
+    // Scene view = scene-container OR resize-handle; only sync container boundary (do not set inside=true on handle).
+    syncSceneContainerPointerBoundary(clientX, clientY)
+  }
+
+  function onSceneMouseEnter(e) {
+    if (e?.clientX != null && e?.clientY != null) {
+      syncSceneContainerPointerBoundary(e.clientX, e.clientY)
+      if (isPointerInSceneContainer(e.clientX, e.clientY)) {
+        recomputeAutoscrollOnSceneReenter(e.clientX, e.clientY)
+      }
+      return
+    }
     isMouseOverScene = true
   }
 
   function onSceneMouseLeave() {
+    pointerInsideSceneContainer = false
     isMouseOverScene = false
     stopAutoScrolling()
   }
 
   function onSceneViewPointerLeft() {
+    pointerInsideSceneContainer = false
+    stopAutoScrolling()
+  }
+
+  function onDocumentMouseEnter(e) {
+    if (e?.clientX == null || e?.clientY == null) return
+    lastPointerClientX = e.clientX
+    lastPointerClientY = e.clientY
+    syncSceneContainerPointerBoundary(e.clientX, e.clientY)
+    requestAnimationFrame(() => {
+      if (lastPointerClientX == null || lastPointerClientY == null) return
+      syncSceneContainerPointerBoundary(lastPointerClientX, lastPointerClientY)
+      if (isPointerInSceneContainer(lastPointerClientX, lastPointerClientY)) {
+        recomputeAutoscrollOnSceneReenter(lastPointerClientX, lastPointerClientY)
+      }
+    })
+  }
+
+  function onDocumentMouseLeave() {
+    pointerInsideSceneContainer = false
+    isMouseOverScene = false
     stopAutoScrolling()
   }
 
   function onDocumentMouseMove(e) {
+    lastPointerClientX = e.clientX
+    lastPointerClientY = e.clientY
+    syncSceneContainerPointerBoundary(e.clientX, e.clientY)
+
     if (!stickyEdge) return
     const container = getSceneContainer()
     const content = getSceneContent()
@@ -273,13 +414,19 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
     boundContainer.addEventListener('mouseleave', onSceneMouseLeave)
     scrollContentEl.addEventListener('scroll', onScroll, { passive: true })
     document.addEventListener('mousemove', onDocumentMouseMove, { passive: true })
+    document.addEventListener('mouseenter', onDocumentMouseEnter)
+    document.addEventListener('mouseleave', onDocumentMouseLeave)
     window.addEventListener('scene-view-pointer-left', onSceneViewPointerLeft)
+    window.addEventListener('scene-view-pointer-entered', onSceneViewPointerEntered)
     installed = true
   }
 
   function teardown() {
     if (!installed) return
     window.removeEventListener('scene-view-pointer-left', onSceneViewPointerLeft)
+    window.removeEventListener('scene-view-pointer-entered', onSceneViewPointerEntered)
+    document.removeEventListener('mouseenter', onDocumentMouseEnter)
+    document.removeEventListener('mouseleave', onDocumentMouseLeave)
     document.removeEventListener('mousemove', onDocumentMouseMove)
     if (scrollContentEl) {
       scrollContentEl.removeEventListener('scroll', onScroll)
@@ -293,6 +440,9 @@ export function useSceneAutoScroll(getSceneContent, getSceneContainer) {
     }
     stopAutoScrolling()
     removeCursorHidden()
+    pointerInsideSceneContainer = null
+    lastPointerClientX = null
+    lastPointerClientY = null
     installed = false
   }
 

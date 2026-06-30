@@ -424,6 +424,9 @@ export function useFocalPoint() {
       pointerInsideSceneView = inside
       if (inside) {
         popModeOnSceneEnter()
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('scene-view-pointer-entered', { detail: { clientX, clientY } }))
+        }
       } else {
         pushModeAndLockToBullsEyeForSceneLeave()
       }
