@@ -668,7 +668,7 @@ watch(skillSearchOpen, (open) => {
     word-break: normal;
 }
 
-/* 15x15 PNG; +0.5px nudge for optical center in 24px circle */
+/* 15x15 PNG; -1px vertical nudge for optical center in 24px circle */
 #tri-state-toggle {
     width: 24px;
     height: 24px;
@@ -692,7 +692,7 @@ watch(skillSearchOpen, (open) => {
     height: 15px;
     flex-shrink: 0;
     display: block;
-    transform: translate(-0.46875px, 0.5px);
+    transform: translate(-0.46875px, -1px);
 }
 
 #tri-state-toggle .tri-state-icon-img {
