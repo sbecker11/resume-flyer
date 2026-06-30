@@ -6,6 +6,8 @@ import {
   skillLabelHtml,
   skillLabelForSlug,
   labelToSlug,
+  skillYearsExperienceLabel,
+  skillYearsExperienceHtml,
 } from './skillLabel.mjs';
 
 describe('skillLabel', () => {
@@ -37,6 +39,13 @@ describe('skillLabel', () => {
     expect(skillLabelForSlug('aws', skillsData)).toBe('Amazon Web Services');
     expect(skillLabelForSlug('python', skillsData)).toBe('python');
     expect(skillLabelForSlug('missing', skillsData)).toBe('missing');
+  });
+
+  it('builds skill years experience labels for cards', () => {
+    expect(skillYearsExperienceLabel(0)).toBe('');
+    expect(skillYearsExperienceLabel(1)).toBe('(1 yr exp.)');
+    expect(skillYearsExperienceLabel(3)).toBe('(3 yrs exp.)');
+    expect(skillYearsExperienceHtml(2)).toBe('<span class="skill-card-years">(2 yrs exp.)</span>');
   });
 
   it('maps display labels back to slugs (name first, then slug fallback)', () => {

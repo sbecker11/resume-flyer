@@ -57,9 +57,9 @@ export function getDefaultState() {
                 }
             },
             rDivBorderOverrideSettings: {
-                normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
+                normal: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                hovered: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                selected: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' }
             }
         },
         color: {
@@ -168,9 +168,9 @@ function migrateState(state) {
         if (!state.theme) state.theme = {};
         if (!state.theme.rDivBorderOverrideSettings) {
             state.theme.rDivBorderOverrideSettings = {
-                normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
+                normal: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                hovered: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                selected: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' }
             };
         } else {
             // Create new objects to avoid readonly proxy issues

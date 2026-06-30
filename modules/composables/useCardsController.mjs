@@ -29,6 +29,10 @@ import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
 import {
+    renderSkillCardSceneInnerHtml,
+    renderBizCardSceneBodyHtml,
+} from '@/modules/scene/cardMarkup.mjs'
+import {
     markFocusedSkillLinkForJob,
     markSourceBizBackLinkForSkill,
     clearSourceBizBackLinkClass
@@ -759,26 +763,14 @@ export function useCardsController() {
             throw error
         }
         
-        card.innerHTML = `
-            <div class="biz-details-employer-wrap">
-                <div class="biz-details-employer">${job.employer || 'Unknown Employer'}</div>
-                <button type="button" class="biz-details-edit-btn" aria-label="Edit employer">&#9998;</button>
-            </div>
-            <div class="biz-details-role">${job.role || 'Unknown Role'}</div>
-            <div class="biz-details-dates">${datesDisplay}</div>
-            <div class="biz-details-debug-row"><span class="biz-details-id-and-hex">#${jobNumber} z:${sceneZ} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span></div>
-            ${hasSkills ? `
-            <div class="resume-skills">
-                <div class="resume-section-title-wrap">
-                    <h4>Technologies &amp; Skills</h4>
-                    <button type="button" class="biz-details-edit-btn" aria-label="Edit skills for this job">&#9998;</button>
-                </div>
-                <div class="skills-list">
-                    <span class="bullet">&bull;</span>
-                    <span class="biz-card-skill-titles skills-text"></span>
-                </div>
-            </div>` : ''}
-        `
+        card.innerHTML = renderBizCardSceneBodyHtml({
+            employer: job.employer || 'Unknown Employer',
+            role: job.role || 'Unknown Role',
+            datesDisplay,
+            jobNumber,
+            sceneZ,
+            hasSkills,
+        })
 
         attachBizCardEditButtonListeners(card, jobNumber)
 
@@ -1051,21 +1043,15 @@ export function useCardsController() {
         skillCard.style.wordBreak = 'break-word'
         skillCard.style.filter = filters.get_filterStr_from_z(sceneZ)
         const backIconUrl = basePathJoin('static_content/icons/anchors/icons8-back-16-black.png')
-        const backIconsHtml = referencingBizCardIds.map(bizCardId => {
-            return `<span class="skill-card-biz-title skill-card-back-icon biz-back-link" data-biz-card-id="${escapeHtml(bizCardId)}" style="cursor: pointer; display: inline-flex;"><img class="back-icon" src="${backIconUrl}" alt="" width="16" height="16" aria-hidden="true"></span>`
-        }).join('')
-        const yearsHtml = totalYears > 0
-            ? `<span class="skill-card-years">(${totalYears} yr${totalYears !== 1 ? 's' : ''} exp.)</span>`
-            : ''
         const skillObj = getGlobalJobsDependency().getSkillsData()[skillName]
         skillCard.setAttribute('aria-label', skillLabelText(skillName, skillObj))
-        skillCard.innerHTML = `
-            <button class="skill-info-modal-btn" data-skill-slug="${escapeHtml(skillName)}" aria-label="What is ${escapeHtml(skillObj?.name || skillName)}?">?</button>
-            <div class="skill-card-content" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; padding: 4px; box-sizing: border-box;">
-                <span class="skill-card-label">${skillLabelHtml(skillName, skillObj)}</span>
-                ${backIconsHtml ? `<div class="skill-card-back-icons" style="display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start; align-items: center;">${backIconsHtml}</div>` : ''}
-                ${yearsHtml}
-            </div>`
+        skillCard.innerHTML = renderSkillCardSceneInnerHtml({
+            skillSlug: skillName,
+            skillObj,
+            totalYears,
+            referencingBizCardIds,
+            backIconUrl,
+        })
 
         skillCard.addEventListener('click', (e) => {
             e.stopPropagation()

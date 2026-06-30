@@ -12,6 +12,13 @@
         transparent var(--scene-wedge-stop-start-pct),
         transparent var(--scene-wedge-stop-end-pct),
         var(--background-light, rgba(24, 24, 111, 1)) 100%);
+    /* Card typography tokens — scene + resume shells (see docs/CARD-VISUAL-PARITY.md) */
+    --card-biz-font-size: 12px;
+    --card-skill-font-size: 14px;
+    --card-skill-years-font-size: 12px;
+    --card-skill-content-padding: 4px;
+    --card-skill-content-gap: 4px;
+    --card-skill-back-icons-gap: 2px;
     /* Flat light band height at top/bottom of scene panel (overshoot + edge match); vh for large trackpad pull */
     --scene-overshoot-light-band: min(40vh, 320px);
     --scene-overshoot-surface: var(--background-light, rgba(24, 24, 111, 1));
@@ -107,7 +114,7 @@ body .biz-resume-div,
 /* cDiv-only layout (position, font, cursor) - border already set above */
 .biz-card-div {
     position: absolute;
-    font-size: 12px;
+    font-size: var(--card-biz-font-size, 12px);
     cursor: pointer;
     pointer-events: auto;
     font-family: Arial, sans-serif;
@@ -280,7 +287,7 @@ body .biz-resume-div.selected a,
     z-index: 10; /* Base above biz cards (JS sets 4–9) */
     font-family: Arial, sans-serif;
     font-weight: normal;
-    font-size: 14px;
+    font-size: var(--card-skill-font-size, 14px);
     padding: var(--data-normal-padding);
     border: var(--data-normal-inner-border-width) solid var(--data-normal-inner-border-color) !important;
     outline: var(--data-normal-outer-border-width) solid var(--data-normal-outer-border-color) !important;
@@ -411,7 +418,11 @@ body .biz-resume-div.selected a,
 }
 
 /* Match resume-flyer .tag-link (skill title): bold, underlined */
-.skill-card-div .skill-card-label {
+.skill-card-div .skill-card-label,
+.skill-resume-div .skill-card-label,
+.appended-skill-resume-div .skill-card-label,
+#resume-content-listing .skill-resume-div .skill-card-label,
+#resume-content-listing .appended-skill-resume-div .skill-card-label {
     display: inline-block;
     max-width: 100%;
     white-space: normal;
@@ -423,11 +434,40 @@ body .biz-resume-div.selected a,
     line-height: 1.2;
     text-align: left;
 }
+/* Inner content stack — same inset on scene skill-card-div and resume skill-resume-div */
+.skill-card-div .skill-card-content,
+.skill-resume-div .skill-card-content,
+.appended-skill-resume-div .skill-card-content,
+#resume-content-listing .skill-resume-div .skill-card-content,
+#resume-content-listing .appended-skill-resume-div .skill-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--card-skill-content-gap, 4px);
+    width: 100%;
+    padding: var(--card-skill-content-padding, 4px);
+    box-sizing: border-box;
+}
+.skill-card-div .skill-card-back-icons,
+.skill-resume-div .skill-card-back-icons,
+.appended-skill-resume-div .skill-card-back-icons,
+#resume-content-listing .skill-resume-div .skill-card-back-icons,
+#resume-content-listing .appended-skill-resume-div .skill-card-back-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--card-skill-back-icons-gap, 2px);
+    justify-content: flex-start;
+    align-items: center;
+}
 .skill-card-div .skill-card-z {
     font-size: 12px;
 }
-.skill-card-div .skill-card-years {
-    font-size: 12px;
+.skill-card-div .skill-card-years,
+.skill-resume-div .skill-card-years,
+.appended-skill-resume-div .skill-card-years,
+#resume-content-listing .skill-resume-div .skill-card-years,
+#resume-content-listing .appended-skill-resume-div .skill-card-years {
+    font-size: var(--card-skill-years-font-size, 12px);
     text-decoration: none;
     line-height: 1.2;
     white-space: nowrap;
@@ -442,7 +482,9 @@ body .biz-resume-div.selected a,
 .skill-resume-div,
 .appended-skill-resume-div,
 #resume-container .skill-resume-div,
-#resume-container .appended-skill-resume-div {
+#resume-container .appended-skill-resume-div,
+#resume-content-listing .skill-resume-div,
+#resume-content-listing .appended-skill-resume-div {
     box-sizing: border-box;
     background-color: var(--data-background-color) !important;
     color: var(--data-foreground-color) !important;
@@ -451,6 +493,16 @@ body .biz-resume-div.selected a,
     outline: var(--data-normal-outer-border-width) solid var(--data-normal-outer-border-color) !important;
     border-radius: calc(var(--data-normal-border-radius, 25px) / 2) !important;
     transition: background-color 0.2s, color 0.2s, border 0.2s, outline 0.2s;
+    font-family: Arial, sans-serif;
+    font-weight: normal;
+    font-size: var(--card-skill-font-size, 14px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    position: relative;
+    cursor: pointer;
 }
 /* Unselected hover: 2px #929292 outer, 1px #0028fb inner (match skill-card-div) */
 .skill-resume-div:not(.selected).hovered,
@@ -527,7 +579,7 @@ body .biz-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"]
 #resume-container .biz-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon {
     filter: invert(1);
 }
-/* rDiv layout: full width; close button is in header, does not affect description */
+/* rDiv layout: full width; match cDiv base typography (scene.css .biz-card-div) */
 .biz-resume-div,
 body .biz-resume-div,
 #resume-container .biz-resume-div,
@@ -538,6 +590,8 @@ body .biz-resume-div,
     margin-left: 0;
     margin-right: 0;
     box-sizing: border-box;
+    font-size: var(--card-biz-font-size, 12px);
+    font-family: Arial, sans-serif;
 }
 
 /* Hovered state – 2px #929292 outer, 1px #0028fb inner (match skill unselected hover) */
@@ -834,8 +888,8 @@ body.show-card-debug .biz-details-debug-row {
     pointer-events: auto; /* Allow mouse events to pass through for hover detection */
 }
 
-/* Lower specificity fallback for card details */
-.biz-card-details-div, .biz-resume-details-div {
+/* Lower specificity fallback for card/resume details */
+.biz-card-details-div {
     margin: 0px;
     padding: 10px;
     padding-bottom: 25px;
@@ -847,6 +901,21 @@ body.show-card-debug .biz-details-debug-row {
     box-sizing: border-box;
     word-wrap: break-word; /* Allow long words to break */
     overflow-wrap: break-word; /* Modern property for word breaking */
+    pointer-events: none;
+}
+
+/* rDiv details: no inner inset — scene cDiv puts content directly in card padding */
+.biz-resume-details-div {
+    margin: 0px;
+    padding: 0;
+    background-color: transparent !important;
+    font-family: Arial, sans-serif;
+    font-weight: normal;
+    font-size: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     pointer-events: none;
 }
 

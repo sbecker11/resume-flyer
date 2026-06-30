@@ -15,6 +15,7 @@ import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
+import { renderSkillCardResumeInnerHtml } from '@/modules/scene/cardMarkup.mjs';
 import { openSkillInfoModal, markFocusedSkillLinkForJob, clearSourceBizBackLinkClass } from '@/modules/utils/skillInfoModal.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
@@ -654,20 +655,14 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   if (skillCardId) copy.setAttribute('data-skill-card-id', skillCardId);
   const skillSlug = data.skillName;
   const skillObj = getGlobalJobsDependency().getSkillsData()[skillSlug];
-  const displayName = skillObj?.name || skillSlug;
-  copy.innerHTML = `
-    <button type="button" class="skill-info-modal-btn" data-skill-slug="${escapeHtml(skillSlug)}" aria-label="What is ${escapeHtml(displayName)}?">?</button>
-    <span class="skill-resume-div-skill-name">${skillLabelHtml(skillSlug, skillObj)}</span>
-    <div class="skill-resume-div-back-links">
-      ${(data.referencingJobNumbers || []).map(jobNum => `
-        <button type="button" class="skill-resume-div-back-link biz-back-link" aria-label="Go to job" data-job-number="${jobNum}" data-biz-card-id="${escapeHtml(createBizCardDivId(jobNum))}">
-          <img class="back-icon" src="${escapeHtml(backIconUrl)}" alt="" width="16" height="16" aria-hidden="true" />
-        </button>
-      `).join('')}
-    </div>
-    ${data.totalYearsExperience > 0 ? `<span class="skill-resume-div-years">(${data.totalYearsExperience} year${data.totalYearsExperience !== 1 ? 's' : ''} experience)</span>` : ''}
-    <button type="button" class="skill-resume-div-close" aria-label="Remove skill card from resume listing">×</button>
-  `;
+  copy.innerHTML = renderSkillCardResumeInnerHtml({
+    skillSlug,
+    skillObj,
+    totalYears: data.totalYearsExperience,
+    referencingJobNumbers: data.referencingJobNumbers || [],
+    backIconUrl,
+    bizCardIdForJob: (jobNum) => createBizCardDivId(jobNum),
+  });
 
   // ? button handled by global delegate in skillInfoModal.mjs
 
@@ -1135,22 +1130,26 @@ function onResumeSkillCardClick(event) {
                 <!-- Skill cards only appear as appended copies in the list below; top panel hidden to avoid duplicate. -->
                 <div v-if="false" id="skill-resume-divs-panel" class="skill-resume-divs-panel">
                     <div ref="resumeSkillCardRef" class="skill-resume-div" :data-color-index="selectedSkillCard?.referencingJobNumbers?.[0] ?? 0" @click="onResumeSkillCardClick">
-                        <span class="skill-resume-div-skill-name" v-html="skillLabelHtml(selectedSkillCard.skillName, getGlobalJobsDependency().getSkillsData()[selectedSkillCard.skillName])"></span>
-                        <div class="skill-resume-div-back-links">
-                            <button
-                                v-for="jobNum in selectedSkillCard.referencingJobNumbers"
-                                :key="jobNum"
-                                type="button"
-                                class="skill-resume-div-back-link biz-back-link"
-                                aria-label="Go to job"
-                                :data-job-number="jobNum"
-                                :data-biz-card-id="createBizCardDivId(jobNum)"
-                                @click="goToJob(jobNum)"
-                            >
-                                <img class="back-icon" src="/static_content/icons/anchors/icons8-back-16-black.png" alt="" width="16" height="16" aria-hidden="true" />
-                            </button>
+                        <div class="skill-card-content">
+                            <span class="skill-card-label" v-html="skillLabelHtml(selectedSkillCard.skillName, getGlobalJobsDependency().getSkillsData()[selectedSkillCard.skillName])"></span>
+                            <div v-if="selectedSkillCard.referencingJobNumbers?.length" class="skill-card-back-icons">
+                                <span
+                                    v-for="jobNum in selectedSkillCard.referencingJobNumbers"
+                                    :key="jobNum"
+                                    class="skill-card-biz-title skill-card-back-icon biz-back-link skill-resume-div-back-link"
+                                    style="cursor: pointer; display: inline-flex;"
+                                    :data-job-number="jobNum"
+                                    :data-biz-card-id="createBizCardDivId(jobNum)"
+                                    role="button"
+                                    tabindex="0"
+                                    aria-label="Go to job"
+                                    @click="goToJob(jobNum)"
+                                >
+                                    <img class="back-icon" src="/static_content/icons/anchors/icons8-back-16-black.png" alt="" width="16" height="16" aria-hidden="true" />
+                                </span>
+                            </div>
+                            <span v-if="selectedSkillCard.totalYearsExperience > 0" class="skill-card-years">({{ selectedSkillCard.totalYearsExperience }} yr{{ selectedSkillCard.totalYearsExperience !== 1 ? 's' : '' }} exp.)</span>
                         </div>
-                        <span v-if="selectedSkillCard.totalYearsExperience > 0" class="skill-resume-div-years">({{ selectedSkillCard.totalYearsExperience }} year{{ selectedSkillCard.totalYearsExperience !== 1 ? 's' : '' }} experience)</span>
                         <button type="button" class="skill-resume-div-close" aria-label="Remove skill card from resume listing" @click.prevent="removeSkillCardFromResumeListing">×</button>
                     </div>
                 </div>
@@ -1722,22 +1721,7 @@ function onResumeSkillCardClick(event) {
 /* Global styles for rDivs and skill-resume-div - not scoped to ensure they apply to dynamically created elements */
 /* Normal border/padding/outline/radius come from scene.css (shared .biz-card-div, .biz-resume-div rule). */
 
-/* skill-resume-div: layout only; padding/border/background from scene.css shared rule (synced with skill-card-div) */
-.skill-resume-div {
-    position: relative;
-    width: 100%;
-    padding: var(--data-normal-padding);
-    padding-right: 36px; /* room for close button */
-    min-height: 44px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 4px;
-    box-sizing: border-box;
-    cursor: pointer;
-}
-/* Close button: match r-div-close (circular, white bg, red border) */
+/* skill-resume-div close button — layout/typography for card shell is in scene.css */
 .skill-resume-div-close {
     position: absolute;
     top: 4px;
@@ -1763,39 +1747,7 @@ function onResumeSkillCardClick(event) {
     border-color: #f00;
     background: rgba(255, 255, 255, 0.9);
 }
-.skill-resume-div-skill-name {
-    text-align: left;
-}
-.skill-resume-div-back-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-}
-.skill-resume-div-back-link {
-    padding: 0 2px;
-    line-height: 0;
-    border: none;
-    box-shadow: none;
-    background: transparent !important;
-    background-color: transparent !important;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.skill-resume-div-back-link .back-icon {
-    display: block;
-    background: transparent !important;
-    background-color: transparent !important;
-}
-.skill-resume-div-back-link:hover {
-    opacity: 0.8;
-}
-.skill-resume-div-years {
-    font-size: 14px;
-    text-decoration: none;
-}
+
 .appended-skill-resume-div {
     flex-shrink: 0;
 }
@@ -1879,10 +1831,9 @@ function onResumeSkillCardClick(event) {
     background-color: transparent !important;
     border-radius: 25px !important;
 
-    /* Standard gap: space from edges and between sections */
+    /* Match scene cDiv: content inset comes from card padding only (no inner details wrapper inset) */
     --details-gap: 12px;
-    padding: var(--details-gap);
-    padding-top: max(0px, calc(36px - 3em)); /* leave room for close button; reduce top text gap by 3em */
+    padding: 0;
     gap: var(--details-gap);
 }
 

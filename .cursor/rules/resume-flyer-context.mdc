@@ -21,6 +21,8 @@ Use this for continuity when starting a new session. Full session history and ar
 - **Resume list**  
   Single list: job rDivs + appended skill card copies. Scroll by DOM id: `scrollToElementId('resume-' + jobNumber)`. List position/length shown in debug row. High-contrast text/icons use `getHighContrastMono` / `getHighContrastForBackground` in `modules/utils/colorUtils.mjs` (WCAG 2.x contrast, plus saturated-mid comfort white when white is still ≥3:1); readonly vendor catalog is `color-palette-utils-ts/` only.
 
+- **Card visual parity (scene vs resume)** — Shared inner HTML: `modules/scene/cardMarkup.mjs`. Shared CSS: `styles/scene.css` (not `ResumeContainer.vue` card padding/font-size). CI: `modules/scene/cardVisualEquivalency.test.mjs`. See `docs/CARD-VISUAL-PARITY.md`.
+
 ## Conventions
 
 - Prefer short, direct responses unless the task needs a long plan.

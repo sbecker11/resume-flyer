@@ -76,6 +76,31 @@ export function skillLabelHtml(slug, skill) {
 }
 
 /**
+ * Plain-text years line for skill cards: "(3 yrs exp.)"
+ *
+ * @param {number} totalYears
+ * @returns {string} empty when totalYears <= 0
+ */
+export function skillYearsExperienceLabel(totalYears) {
+    const n = Number(totalYears)
+    if (!Number.isFinite(n) || n <= 0) return ''
+    return `(${n} yr${n !== 1 ? 's' : ''} exp.)`
+}
+
+/**
+ * HTML years row for skill cards (scene + resume use the same markup).
+ *
+ * @param {number} totalYears
+ * @param {string} [className='skill-card-years']
+ * @returns {string}
+ */
+export function skillYearsExperienceHtml(totalYears, className = 'skill-card-years') {
+    const label = skillYearsExperienceLabel(totalYears)
+    if (!label) return ''
+    return `<span class="${className}">${label}</span>`
+}
+
+/**
  * Convenience one-liner: given a slug and the full skills map, return the
  * display label.  Guarantees one slug → one label as long as skills.json has
  * a single entry per slug.

@@ -917,9 +917,9 @@ export async function applyPaletteToElement(element) {
 
     // rDiv: use rDivBorderOverrideSettings for margin + border + padding, normalized so all states use same dimensions (no text shift)
     const defaultRDivOverride = {
-        normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-        hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-        selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
+        normal: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+        hovered: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+        selected: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' }
     };
     const rDivOverride = systemConstants?.theme?.rDivBorderOverrideSettings ? {
         normal: { ...defaultRDivOverride.normal, ...systemConstants.theme.rDivBorderOverrideSettings.normal },
@@ -929,11 +929,11 @@ export async function applyPaletteToElement(element) {
 
     const isRDiv = element.classList.contains('biz-resume-div');
     const n = isRDiv ? rDivOverride.normal : null;
-    // For rDiv: same padding, border width, margin-top in all states (normalized from .normal)
+    // rDiv: padding matches scene cDiv (borderSettings); override only margin-top + inner border width
     const effectiveBorderSettings = isRDiv && n ? {
-        normal: { ...borderSettings.normal, padding: n.padding, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop },
-        hovered: { ...borderSettings.hovered, padding: n.padding, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop },
-        selected: { ...borderSettings.selected, padding: n.padding, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop }
+        normal: { ...borderSettings.normal, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop },
+        hovered: { ...borderSettings.hovered, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop },
+        selected: { ...borderSettings.selected, innerBorderWidth: n.innerBorderWidth, marginTop: n.marginTop }
     } : borderSettings;
 
     // Set data attributes for all modes of the element

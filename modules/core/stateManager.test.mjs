@@ -69,7 +69,7 @@ describe('stateManager', () => {
           version: '1.2',
           theme: {
             borderSettings: { normal: { padding: '8px', innerBorderWidth: '1px', outerBorderWidth: '0px', outerBorderColor: 'transparent', borderRadius: '25px' }, hovered: {}, selected: {} },
-            rDivBorderOverrideSettings: { normal: { padding: '15px', innerBorderWidth: '1px' }, hovered: {}, selected: {} },
+            rDivBorderOverrideSettings: { normal: { padding: '8px', innerBorderWidth: '1px' }, hovered: {}, selected: {} },
           },
         }),
       });

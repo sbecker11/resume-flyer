@@ -19,6 +19,32 @@ import type { AppState, UseAppStateReturn } from '../types/index'
 import { setFromAppState as setRenderingFromAppState } from '../core/renderingConfig.mjs'
 import { hasServer } from '../core/hasServer.mjs'
 
+type FocalPointModeLower = 'locked' | 'following' | 'dragging'
+
+/** Server dev default is LOCKED; static hosts (GitHub Pages, VITE_STATIC_MODE) default to FOLLOWING. */
+function getDefaultFocalPointMode(): FocalPointModeLower {
+    return hasServer() ? 'locked' : 'following'
+}
+
+/** Apply static-host focal default when loaded state still has the server-oriented locked default. */
+function applyStaticHostFocalPointDefault(
+    state: AppState,
+    userOverrides?: AppState['user-settings']
+): void {
+    if (hasServer()) return
+    const us = state['user-settings']
+    if (!us) return
+    const savedMode = userOverrides?.focalPoint?.mode ?? userOverrides?.focalPointMode
+    if (savedMode != null) return
+    const mode = getDefaultFocalPointMode()
+    us.focalPointMode = mode
+    if (!us.focalPoint) {
+        us.focalPoint = { x: 0, y: 0, mode }
+    } else {
+        us.focalPoint.mode = mode
+    }
+}
+
 function getRuntimeBase(): string {
     const envBase = (import.meta as any)?.env?.BASE_URL || '/'
     let base = envBase
@@ -99,6 +125,7 @@ async function loadStateFromDefaultFile(): Promise<AppState | null> {
         const raw = await response.json()
         const migrated = migrateState(raw)
         const state = deepMerge(getDefaultState(), migrated)
+        applyStaticHostFocalPointDefault(state)
         validateRequiredState(state)
         return state
     } catch (e) {
@@ -138,8 +165,8 @@ function getDefaultState(): AppState {
             resizeHandle: {
                 stepCount: 4
             },
-            focalPointMode: 'locked',
-            focalPoint: { x: 0, y: 0, mode: 'locked' as const },
+            focalPointMode: getDefaultFocalPointMode(),
+            focalPoint: { x: 0, y: 0, mode: getDefaultFocalPointMode() },
             currentResumeId: 'default',
             selectedCard: null,
             resume: {
@@ -256,9 +283,9 @@ function getDefaultState(): AppState {
                     }
                 },
                 rDivBorderOverrideSettings: {
-                    normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                    hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                    selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
+                    normal: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                    hovered: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                    selected: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' }
                 }
             },
             rendering: {
@@ -290,9 +317,9 @@ function migrateState(state: any): AppState {
         if (!state.theme) state.theme = {}
         if (!state.theme.rDivBorderOverrideSettings) {
             state.theme.rDivBorderOverrideSettings = {
-                normal: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                hovered: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' },
-                selected: { padding: '15px', innerBorderWidth: '1px', marginTop: '11px' }
+                normal: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                hovered: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' },
+                selected: { padding: '8px', innerBorderWidth: '1px', marginTop: '11px' }
             }
         } else {
             // Create new objects to avoid readonly proxy issues
@@ -398,7 +425,7 @@ function migrateState(state: any): AppState {
             us.selectedCard = null
         }
         if (!us.focalPoint) {
-            us.focalPoint = { x: 0, y: 0, mode: (us.focalPointMode || 'locked').toString().toLowerCase() as 'locked' | 'following' | 'dragging' }
+            us.focalPoint = { x: 0, y: 0, mode: (us.focalPointMode || getDefaultFocalPointMode()).toString().toLowerCase() as FocalPointModeLower }
         } else {
             if (us.focalPoint.mode == null && us.focalPointMode) us.focalPoint.mode = (us.focalPointMode as string).toLowerCase() as 'locked' | 'following' | 'dragging'
         }
@@ -493,11 +520,13 @@ async function loadStateFromServer(): Promise<AppState> {
                                     'system-constants': fromDefault['system-constants']
                                 })
                                 validateRequiredState(merged)
+                                applyStaticHostFocalPointDefault(merged, saved['user-settings'])
                                 return merged
                             }
                         } catch (e) {
                             if (e instanceof Error && e.message.startsWith('[AppState]')) throw e
                         }
+                        applyStaticHostFocalPointDefault(fromDefault)
                         return fromDefault
                     }
                     try {
@@ -579,11 +608,13 @@ async function loadStateFromServer(): Promise<AppState> {
                         'system-constants': fromDefault['system-constants']
                     })
                     validateRequiredState(merged)
+                    applyStaticHostFocalPointDefault(merged, saved['user-settings'])
                     return merged
                 }
             } catch (e) {
                 if (e instanceof Error && e.message.startsWith('[AppState]')) throw e
             }
+            applyStaticHostFocalPointDefault(fromDefault)
             return fromDefault
         }
         try {
