@@ -23,6 +23,8 @@ Use this for continuity when starting a new session. Full session history and ar
 
 - **Card visual parity (scene vs resume)** — Shared inner HTML: `modules/scene/cardMarkup.mjs`. Shared CSS: `styles/scene.css` (not `ResumeContainer.vue` card padding/font-size). CI: `modules/scene/cardVisualEquivalency.test.mjs`. See `docs/CARD-VISUAL-PARITY.md`.
 
+- **Scene & resume keyboard scroll** — Pointer-first routing in `useKeyboardNavigation.mjs` + `panelKeyboardScroll.mjs`. Scene: ↑/↓ continuous autoscroll; Page Up/Down one viewport step; Home/End and Option+↑/↓ jump to edges; chevrons via `useSceneAutoScroll.mjs`. On release of Page/Home/End/Option keys, resume held ↑/↓ or hand off to mouse-band autoscroll. Resume panel: ↑/↓ list navigation only.
+
 ## Conventions
 
 - Prefer short, direct responses unless the task needs a long plan.

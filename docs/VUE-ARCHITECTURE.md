@@ -359,6 +359,23 @@ flowchart TD
     Timeline --> TimelineVue
 ```
 
+#### Scene auto-scroll & keyboard (`useSceneAutoScroll.mjs`, `useKeyboardNavigation.mjs`)
+
+| Input (scene view, pointer over `#scene-container`) | Effect |
+| --- | --- |
+| ↑ / ↓ (hold) | Continuous `#scene-content` scroll; Up/Down chevrons (Top/Bottom at limits) |
+| Page Up / Page Down | One viewport height per keypress |
+| Home / End | Scroll to top / bottom |
+| Option+↑ / Option+↓ | Same as Home / End |
+
+Pointer in the top or bottom **quarter** of `#scene-container` also drives mouse-band autoscroll (cursor hidden while scrolling). Chevron overlays reflect whichever source is active (keyboard arrow, page/edge action, interval motion, or pointer band).
+
+**Panel targeting** — `panelKeyboardScroll.mjs` picks scene vs resume from pointer `:hover` / `elementFromPoint`, not layout side. **Release handoff** — After Page/Home/End/Option keys release, held ↑/↓ resume autoscroll; otherwise pointer position re-evaluates mouse-band scroll.
+
+**Resume view** — ↑/↓ navigate the job listing via `ResumeListController` (`goToPreviousResumeItem` / `goToNextResumeItem`).
+
+Tests: `modules/composables/useSceneAutoScroll.test.mjs`, `modules/utils/panelKeyboardScroll.test.mjs`.
+
 ---
 
 ## 6. Resume Viewer System
@@ -371,7 +388,7 @@ flowchart TD
     subgraph VueSide["Vue 3 Layer"]
         ResumeContainer["ResumeContainer.vue\n(UI shell)"]
         useRLC["useResumeListController()\n(provide/inject wrapper)"]
-        useKeyNav["useKeyboardNavigation.mjs\n(↑↓ arrows, context-aware)"]
+        useKeyNav["useKeyboardNavigation.mjs\n(pointer-first ↑↓ Page Home End)"]
     end
 
     subgraph Bridge["Integration Bridge"]

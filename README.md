@@ -32,7 +32,18 @@ Additional capabilities you may use alongside the items above include:
 - **3D depth rendering** — Tune **blur**, **saturation**, and **brightness** at maximum scene depth (far Z), plus parallax scale near/far, from **3D Settings** in the color-palette menu—so cards read clearly while keeping depth cues.
 - **attention highlighting** — Hover and selection state coordinates the resume list, timeline, badges, and 3D cards so the item in focus is easy to spot across views.
 - **business / skill linkages** — Selecting a job highlights its skills (and vice versa where applicable); skill badges and card clones stay in sync with the active job and assigned skills.
-- **scene vertical auto-scroll** — When the focal point sits in following or dragging mode and the effective focal position moves beyond the visible scene band, the scene view scrolls vertically to keep context on screen.
+- **scene vertical auto-scroll** — With the pointer in the top or bottom quarter of `#scene-container`, the scene view scrolls vertically; 32×32 chevrons at the top-right and bottom-right show the active direction (Up/Down while scrolling, Top/Bottom at scroll limits). See **Scene & resume keyboard shortcuts** below.
+- **scene & resume keyboard shortcuts** — `useKeyboardNavigation.mjs` routes keys by **pointer position** (`#scene-container` / `#resize-handle` vs `#resume-container`), not screen side, so layout-toggle orientation does not matter.
+  - **Scene view** (pointer over scene):
+    - **↑ / ↓** — continuous vertical autoscroll (chevrons while held).
+    - **Page Up / Page Down** — scroll one viewport height (`#scene-content` client height) per press.
+    - **Home / End** — jump to top or bottom (smooth scroll + Top/Bottom chevrons).
+    - **Option+↑ / Option+↓** (Alt+arrow) — same as Home / End.
+  - **Resume view** (pointer over resume): **↑ / ↓** only — previous/next job in the listing (with smooth scroll-into-view).
+  - **Release handoff** — Releasing Page Up/Down, Home/End, or Option+arrow ends that action; if **↑ or ↓ is still held**, arrow autoscroll resumes; otherwise the current pointer position re-initializes mouse-band autoscroll when the cursor is in a scroll band.
+  - **Chevrons** — `useSceneAutoScroll.mjs` keeps chevron visibility in sync with held arrows, active scroll motion, sticky edges, page scroll, and pointer bands (`syncAutoscrollChevronVisibility`).
+  - **Cmd+↑/↓** — not a separate chord; treated like plain ↑/↓ when the event reaches the app.
+  - Implementation: `modules/composables/useKeyboardNavigation.mjs`, `modules/composables/useSceneAutoScroll.mjs`, `modules/utils/panelKeyboardScroll.mjs`.
 - **skill definition source links** — Skill definition popups include an external source URL. Configure the source prefix with `VITE_SKILL_INFO_SOURCE_BASE_URL` (default in `.env.example` is Wikipedia-style `http://wikipedia.com/wiki/`).
 
 ### Local dev vs static hosting (GitHub Pages)
