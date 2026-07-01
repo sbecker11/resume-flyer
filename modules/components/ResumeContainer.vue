@@ -1992,7 +1992,7 @@ function onResumeSkillCardClick(event) {
     padding: 2px 6px;
     font-size: 12px;
     background: transparent;
-    border: 1px solid rgba(255,255,255,0.3);
+    border: 1px solid transparent;
     border-radius: 4px;
     color: inherit;
     cursor: pointer;
@@ -2002,7 +2002,7 @@ function onResumeSkillCardClick(event) {
 .resume-description .biz-details-edit-btn:hover,
 .resume-skills .biz-details-edit-btn:hover {
     opacity: 1;
-    border-color: rgba(255,255,255,0.5);
+    border-color: transparent;
 }
 .resume-section-title-wrap {
     display: flex;

@@ -1,0 +1,95 @@
+[
+  {
+    "employer": "Sierra Vista Group",
+    "title": "",
+    "role": "Co-Founder & Engineering Lead",
+    "start": "2003",
+    "end": "2011",
+    "durationMonths": 97,
+    "Description": "Founded and led the engineering organization for a software consulting firm; hired, mentored, and managed a team of engineers across multiple concurrent client engagements. • Defined technical strategy, set architectural standards, and owned delivery across the full stack — balancing engineering quality with client business objectives. • Built and scaled self-serve tooling and platform infrastructure used across multiple internal product lines. • Pipeline improvements drove a 75% improvement in patient quality-of-service metrics.",
+    "educationKey": null,
+    "skillIDs": [],
+    "references": [],
+    "job-skills": {},
+    "index": 0,
+    "z-index": 1,
+    "css name": "darkforest",
+    "css RGB": "#116611",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "jobID": "0"
+  },
+  {
+    "employer": "HomePortfolio",
+    "title": "",
+    "role": "Co-Founder & CTO",
+    "start": "1996",
+    "end": "2002",
+    "durationMonths": 73,
+    "Description": "Co-founded and served as CTO of a home design e-commerce platform; led all technology decisions from founding through growth, managing engineering teams across frontend, backend, and data infrastructure. • Platform was adopted by [Autodesk] for 'Picture This Kitchen' and by the U.S. Satellite Reconnaissance Office; built foundational [3D] structure-from-images technology derived from MIT dissertation research.",
+    "educationKey": null,
+    "skillIDs": [
+      "autodesk",
+      "3d",
+      "Autodesk",
+      "3D"
+    ],
+    "references": [
+      "<a href=\"https://www.autodesk.com\">[Autodesk]</a>",
+      "<a href=\"https://www.khronos.org\">[3D]</a>"
+    ],
+    "job-skills": {
+      "Autodesk": "Autodesk",
+      "3D": "3D"
+    },
+    "index": 1,
+    "z-index": 2,
+    "css name": "darkcyan",
+    "css RGB": "#0069AC",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "jobID": "1"
+  },
+  {
+    "employer": "MIT",
+    "title": "PhD, Computer Vision / Computer Graphics",
+    "role": "PhD, Computer Vision / Computer Graphics",
+    "label": "MIT",
+    "start": "1990-09-05",
+    "end": "1997-02-15",
+    "durationMonths": 78,
+    "Description": "Dissertation: 3D structure-from-images — prior art for 3D Gaussian Splatting (predating Zwicker et al. 2001). Research adopted by Autodesk and the U.S. Satellite Reconnaissance Office.",
+    "educationKey": "0",
+    "references": [],
+    "job-skills": {
+      "Autodesk": "Autodesk",
+      "3D": "3D"
+    }
+  },
+  {
+    "employer": "Brigham Young University",
+    "title": "MS, Computer Science",
+    "role": "MS, Computer Science",
+    "label": "Brigham Young University",
+    "start": "1987-09-15",
+    "end": "1990-04-15",
+    "durationMonths": 32,
+    "Description": "",
+    "educationKey": "1",
+    "references": [],
+    "job-skills": {}
+  },
+  {
+    "employer": "Brigham Young University",
+    "title": "BS, Industrial Engineering",
+    "role": "BS, Industrial Engineering",
+    "label": "Brigham Young University",
+    "start": "1983-09-15",
+    "end": "1987-04-15",
+    "durationMonths": 44,
+    "Description": "",
+    "educationKey": "2",
+    "references": [],
+    "job-skills": {}
+  }
+]
