@@ -142,7 +142,8 @@ const { appState, updateAppState } = useAppState()
 // Vue 3 bulls-eye system (must run before useFocalPoint so global ref can be set first)
 const {
   setBullsEyeElement,
-  setSceneContainerElement
+  setSceneContainerElement,
+  recenter: recenterBullsEye,
 } = useBullsEye()
 
 // Update root-provided global service refs before useFocalPoint so inject() sees bullsEye
@@ -161,7 +162,8 @@ if (serviceUpdater) {
     isReady: () => true,
     getPosition: () => ({ x: store.bullsEye.x, y: store.bullsEye.y }),
     setBullsEyeElement,
-    setSceneContainerElement
+    setSceneContainerElement,
+    recenter: () => recenterBullsEye(),
   }
   serviceUpdater.updateServices({
     bullsEye: bullsEyeForInject,

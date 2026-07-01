@@ -134,6 +134,14 @@ describe('getFirstTabTargetForSelectedBizJob', () => {
     // Both are valid candidates; the one earlier in DOM order should win
     expect(target === cardBtn || target === rBtn).toBe(true);
   });
+
+  it('prefers rDiv when resumeOnly even if cDiv is earlier in DOM', () => {
+    vi.mocked(isVisibleSceneCardRoot).mockReturnValue(true);
+    const { btn: cardBtn } = makeCardWithButton('biz-card-div-11');
+    const { btn: rBtn } = makeRDivWithButton(11);
+    expect(getFirstTabTargetForSelectedBizJob(11, { resumeOnly: true })).toBe(rBtn);
+    expect(getFirstTabTargetForSelectedBizJob(11, { resumeOnly: true })).not.toBe(cardBtn);
+  });
 });
 
 describe('focusFirstTabTargetForSelectedBizJob', () => {

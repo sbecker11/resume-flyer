@@ -8,9 +8,8 @@ import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useAppState } from '@/modules/composables/useAppState';
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
 import type { ResizeHandleProps, ResizeHandleEmits } from '@/modules/types/components';
-import { useBullsEyeService } from '@/modules/core/globalServices';
-import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import Scene3DSettings from './Scene3DSettings.vue';
 
 // Local type definitions
@@ -43,9 +42,6 @@ const stepCount: Ref<number> = ref(1);
 const { orientation } = useLayoutToggle();
 const { updateAppState, appState } = useAppState();
 const { store, actions: appStoreActions } = useAppStore();
-
-// Use Vue 3 provide/inject instead of window.bullsEye
-const bullsEye = useBullsEyeService();
 
 // Sync stepCount from AppState (correct path: user-settings.resizeHandle.stepCount)
 watch(
@@ -102,11 +98,7 @@ async function handleStepLeft(event: MouseEvent): Promise<void> {
     await collapseLeft();
   }
   
-  // Ensure bulls-eye is recentered after step operation
-  if (bullsEye) {
-    // console.log('[ResizeHandle] Recentering bulls-eye after step left');
-    bullsEye.recenter();
-  }
+  // Bulls-eye recenters via resize-handle-changed (dispatched by collapseLeft/Right)
 }
 
 async function handleStepRight(event: MouseEvent): Promise<void> {
@@ -127,11 +119,7 @@ async function handleStepRight(event: MouseEvent): Promise<void> {
     await collapseRight();
   }
   
-  // Ensure bulls-eye is recentered after step operation
-  if (bullsEye) {
-    // console.log('[ResizeHandle] Recentering bulls-eye after step right');
-    bullsEye.recenter();
-  }
+  // Bulls-eye recenters via resize-handle-changed (dispatched by collapseLeft/Right)
 }
 
 // Step buttons for resize handle movement

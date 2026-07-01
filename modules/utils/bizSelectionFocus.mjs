@@ -4,6 +4,7 @@
  */
 
 import { isVisibleSceneCardRoot } from '@/modules/utils/sceneCardVisibility.mjs';
+import { shouldScrollResumePanel } from '@/modules/utils/panelKeyboardScroll.mjs';
 
 /**
  * @param {Element | null | undefined} el
@@ -113,11 +114,12 @@ function shouldSkipAutofocusForModal() {
 
 /**
  * @param {number} jobNumber
+ * @param {{ resumeOnly?: boolean }} [options]
  * @returns {HTMLElement | null}
  */
-export function getFirstTabTargetForSelectedBizJob(jobNumber) {
+export function getFirstTabTargetForSelectedBizJob(jobNumber, { resumeOnly = false } = {}) {
   const rDiv = getPrimaryRDivForFocus(jobNumber);
-  const cDiv = getVisibleBizCardRootForJob(jobNumber);
+  const cDiv = resumeOnly ? null : getVisibleBizCardRootForJob(jobNumber);
 
   const candidates = [];
   if (rDiv) {
@@ -142,21 +144,22 @@ export function getFirstTabTargetForSelectedBizJob(jobNumber) {
 
 /**
  * @param {number} jobNumber
+ * @param {{ resumeOnly?: boolean }} [options]
  * @returns {boolean} true if focus was applied
  */
-export function focusFirstTabTargetForSelectedBizJob(jobNumber) {
+export function focusFirstTabTargetForSelectedBizJob(jobNumber, { resumeOnly = false } = {}) {
   if (shouldSkipAutofocusForModal()) return false;
 
   const active = document.activeElement;
   const rDiv = getPrimaryRDivForFocus(jobNumber);
-  const cDiv = getVisibleBizCardRootForJob(jobNumber);
+  const cDiv = resumeOnly ? null : getVisibleBizCardRootForJob(jobNumber);
   if (active instanceof HTMLElement && active !== document.body) {
     if ((rDiv && rDiv.contains(active)) || (cDiv && cDiv.contains(active))) {
       return false;
     }
   }
 
-  const target = getFirstTabTargetForSelectedBizJob(jobNumber);
+  const target = getFirstTabTargetForSelectedBizJob(jobNumber, { resumeOnly });
   if (!target || typeof target.focus !== 'function') return false;
   try {
     target.focus();
@@ -176,8 +179,8 @@ export function installBizSelectionFocus(selectionManager) {
     return () => {};
   }
 
-  const schedule = (jobNumber) => {
-    const tryRun = () => focusFirstTabTargetForSelectedBizJob(jobNumber);
+  const schedule = (jobNumber, { resumeOnly = false } = {}) => {
+    const tryRun = () => focusFirstTabTargetForSelectedBizJob(jobNumber, { resumeOnly });
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -196,7 +199,9 @@ export function installBizSelectionFocus(selectionManager) {
   const onCardSelected = (ev) => {
     const card = ev.detail?.card;
     if (!card || card.type !== 'biz' || typeof card.jobNumber !== 'number') return;
-    schedule(card.jobNumber);
+    // Match arrow-key scroll routing (respects frozen keyboard target during ↑/↓).
+    const resumeOnly = shouldScrollResumePanel();
+    schedule(card.jobNumber, { resumeOnly });
   };
 
   target.addEventListener('card-selected', onCardSelected);

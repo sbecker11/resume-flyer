@@ -26,6 +26,7 @@ import {
 import { useCardRegistry } from '@/modules/composables/useCardRegistry.mjs'
 import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElementRegistry.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
+import { shouldScrollScenePanel } from '@/modules/utils/panelKeyboardScroll.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
 import {
@@ -1399,6 +1400,7 @@ export function useCardsController() {
     function handleJobSelected(event) {
         const { jobNumber } = event.detail || {}
         if (jobNumber == null) return
+        if (!shouldScrollScenePanel()) return
         setTimeout(() => scrollCDivHeaderIntoView(jobNumber), 100)
     }
 
@@ -1410,16 +1412,22 @@ export function useCardsController() {
             await setSceneCardSelected(previousCard, false)
         }
 
+        const scrollScene = shouldScrollScenePanel()
+
         if (card.type === 'biz') {
             clearSourceBizBackLinkClass()
             await setSceneCardSelected(card, true)
-            scrollSceneCardCloneIntoViewAfterVisible(createBizCardDivId(card.jobNumber))
+            if (scrollScene) {
+                scrollSceneCardCloneIntoViewAfterVisible(createBizCardDivId(card.jobNumber))
+            }
             return
         }
 
         if (card.type === 'skill') {
             await setSceneCardSelected(card, true)
-            scrollSceneCardCloneIntoViewAfterVisible(card.skillCardId)
+            if (scrollScene) {
+                scrollSceneCardCloneIntoViewAfterVisible(card.skillCardId)
+            }
         }
     }
 

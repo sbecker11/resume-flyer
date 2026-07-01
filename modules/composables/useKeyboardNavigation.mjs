@@ -1,112 +1,117 @@
 // modules/composables/useKeyboardNavigation.mjs
-// Vue 3 keyboard navigation composable using provide/inject
+// Vue 3 keyboard navigation — ↑/↓ scroll scene or resume panel based on pointer position.
 
 import { onMounted, onUnmounted } from 'vue'
-import { useResumeListController } from '../core/globalServices'
+import { reportError } from '../utils/errorReporting.mjs'
+import {
+  installPanelPointerTracking,
+  beginKeyboardNavigationPanel,
+  endKeyboardNavigationPanel,
+  scrollSelectedResumeListingIntoView,
+  focusResumePanelScrollport,
+  focusScenePanelScrollport,
+} from '../utils/panelKeyboardScroll.mjs'
+
+function resolveResumeListController() {
+  return window.resumeFlyer?.resumeListController ?? null
+}
 
 export function useKeyboardNavigation() {
-  // Use provide/inject instead of window.resumeListController
-  const resumeListController = useResumeListController()
-  
-  // Enhanced context detection to prevent hijacking form controls
+  installPanelPointerTracking()
+
   const isInputContext = (element) => {
     if (!element) return false
-    
+
     const tagName = element.tagName.toLowerCase()
-    const inputTypes = ['input', 'textarea', 'select', 'button']
-    
-    // Check if it's a form control
+
+    if (element.id === 'resume-content-listing' || element.id === 'scene-content') {
+      return false
+    }
+
+    const inputTypes = ['input', 'textarea', 'select']
+
     if (inputTypes.includes(tagName)) return true
-    
-    // Check if it's contenteditable
+    if (tagName === 'button' && !element.closest('#resume-divs-controls')) return true
     if (element.contentEditable === 'true') return true
-    
-    // Check if it's inside a dropdown or modal
     if (element.closest('.dropdown-menu, .modal, [role="combobox"]')) return true
-    
-    // Check for specific classes that indicate input contexts
     if (element.closest('.color-palette-dropdown, .sort-dropdown')) return true
-    
+
     return false
   }
-  
-  // Smart keyboard handler that respects context
+
   const handleKeyDown = (event) => {
     const activeElement = document.activeElement
-    
-    // Skip if we're in an input context
+
     if (isInputContext(activeElement)) {
       return
     }
-    
-    // Only handle arrow keys
+
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
       return
     }
-    
-    // Prevent default behavior only for our handled keys
+
     event.preventDefault()
-    
+
+    const resumeListController = resolveResumeListController()
     if (!resumeListController) {
-      console.warn('[KeyboardNavigation] Resume list controller not available via provide/inject')
+      console.warn('[KeyboardNavigation] Resume list controller not available')
       return
     }
-    
+
+    const scrollTarget = beginKeyboardNavigationPanel()
+
     try {
       if (event.key === 'ArrowUp') {
-        console.log('[KeyboardNavigation] Arrow Up - navigating to previous item')
         resumeListController.goToPreviousResumeItem()
-      } else if (event.key === 'ArrowDown') {
-        console.log('[KeyboardNavigation] Arrow Down - navigating to next item')
+      } else {
         resumeListController.goToNextResumeItem()
       }
+
+      requestAnimationFrame(() => {
+        if (scrollTarget === 'resume') {
+          scrollSelectedResumeListingIntoView({ behavior: 'smooth' })
+          focusResumePanelScrollport()
+        } else {
+          focusScenePanelScrollport()
+        }
+      })
     } catch (error) {
-      console.error('[KeyboardNavigation] Navigation error:', error)
+      reportError(error, '[KeyboardNavigation] Arrow key navigation failed')
       throw error
+    } finally {
+      setTimeout(() => endKeyboardNavigationPanel(), 600)
     }
   }
-  
-  // Service availability check
+
   const checkServiceAvailability = () => {
-    const isAvailable = !!resumeListController
+    const isAvailable = !!resolveResumeListController()
     console.log(`[KeyboardNavigation] Resume list controller available: ${isAvailable ? '✅' : '❌'}`)
     return isAvailable
   }
-  
-  // Initialize keyboard navigation
+
   const initialize = () => {
-    console.log('[KeyboardNavigation] Initializing Vue 3 keyboard navigation with provide/inject')
+    console.log('[KeyboardNavigation] Initializing pointer-first ↑/↓ panel scrolling')
     checkServiceAvailability()
-    
     document.addEventListener('keydown', handleKeyDown)
-    console.log('[KeyboardNavigation] ✅ Keyboard event listener attached')
   }
-  
-  // Cleanup
+
   const destroy = () => {
     document.removeEventListener('keydown', handleKeyDown)
-    console.log('[KeyboardNavigation] Keyboard event listener removed')
   }
-  
-  // Auto-setup lifecycle hooks
+
   onMounted(() => {
     initialize()
   })
-  
+
   onUnmounted(() => {
     destroy()
   })
-  
+
   return {
-    // State
     isServiceAvailable: checkServiceAvailability,
-    
-    // Methods
     initialize,
     destroy,
     handleKeyDown,
-    
-    // Service access
-    resumeListController
+    resumeListController: resolveResumeListController(),
   }
 }

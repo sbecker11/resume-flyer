@@ -13,6 +13,7 @@ import { parseFlexibleDateString } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass } from '../utils/skillInfoModal.mjs';
 import { scrollResumeListingElementIntoView } from '../utils/resumeListScroll.mjs';
+import { shouldScrollScenePanel } from '../utils/panelKeyboardScroll.mjs';
 // No longer directly manipulating other managers
 
 /** Open Resume Details on Resume jobs or Education tab (education-as-job rows use Education only). */
@@ -1009,18 +1010,22 @@ class ResumeItemsController {
             // Trigger height recalculation to accommodate visible stats div
             this._triggerHeightRecalculation('[DEBUG] ResumeItemsController.handleSelectionChanged: Triggered height recalculation');
             
-            // CRITICAL FIX: Scroll corresponding cDiv into view (scrollable element is #scene-content, not #scene-container)
+            // Scroll scene only when pointer is on the scene side (↑/↓ over resume should slide resume listing).
             if (cDiv) {
-                console.log(`[DEBUG] ResumeItemsController: Scrolling cDiv into view for job ${selectedJobNumber}`);
-                const sceneScroll = document.getElementById('scene-content');
-                if (sceneScroll) {
-                    const sceneRect = sceneScroll.getBoundingClientRect();
-                    const cDivRect = cDiv.getBoundingClientRect();
-                    const scrollTop = sceneScroll.scrollTop + (cDivRect.top - sceneRect.top) - (sceneRect.height / 2) + (cDivRect.height / 2);
-                    sceneScroll.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
-                    console.log(`[DEBUG] ResumeItemsController: Scrolled scene-content to position ${Math.round(scrollTop)} for job ${selectedJobNumber}`);
+                if (!shouldScrollScenePanel()) {
+                    console.log(`[DEBUG] ResumeItemsController: Skipping scene scroll for job ${selectedJobNumber} (resume panel active)`)
                 } else {
-                    cDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    console.log(`[DEBUG] ResumeItemsController: Scrolling cDiv into view for job ${selectedJobNumber}`)
+                    const sceneScroll = document.getElementById('scene-content')
+                    if (sceneScroll) {
+                        const sceneRect = sceneScroll.getBoundingClientRect()
+                        const cDivRect = cDiv.getBoundingClientRect()
+                        const scrollTop = sceneScroll.scrollTop + (cDivRect.top - sceneRect.top) - (sceneRect.height / 2) + (cDivRect.height / 2)
+                        sceneScroll.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
+                        console.log(`[DEBUG] ResumeItemsController: Scrolled scene-content to position ${Math.round(scrollTop)} for job ${selectedJobNumber}`)
+                    } else {
+                        cDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
                 }
             } else {
                 console.debug(`[ResumeItemsController] No cDiv for job ${selectedJobNumber} yet (scene cards may still be initializing)`);

@@ -26,6 +26,7 @@ import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import * as BizDetailsDivModule from '../scene/bizDetailsDivModule.mjs';
 import * as utils from '../utils/utils.mjs';
 import { resumeItemsController } from './ResumeItemsController.mjs';
+import { shouldScrollResumePanel } from '../utils/panelKeyboardScroll.mjs';
 
 /**
  * ResumeListController - Manages the resume list and its scroll container (wrapping list)
@@ -287,16 +288,23 @@ class ResumeListController extends BaseComponent {
   }
 
   /**
-   * Scroll the resume viewport so the element's top border edge is offsetPx from the container's inner top edge.
+   * Scroll #resume-content-listing so the element's top border edge is offsetPx from the inner top edge.
+   * Mirrors scene-content header scroll (SCROLL_TOP_GAP from scene scroll helpers).
+   * @param {{ behavior?: 'auto' | 'smooth' }} [options]
    */
-  _scrollResumeDivToTopOffset(element, offsetPx = SCROLL_TOP_GAP) {
-    const scrollport = this.resumeContentWrapper;
+  _scrollResumeDivToTopOffset(element, offsetPx = SCROLL_TOP_GAP, { behavior = 'auto' } = {}) {
+    const scrollport = this.resumeContentWrapper || document.getElementById('resume-content-listing');
     if (!scrollport || !element) return;
     const elTop = element.getBoundingClientRect().top;
     const portRect = scrollport.getBoundingClientRect();
     const portPaddingTop = parseFloat(getComputedStyle(scrollport).paddingTop) || 0;
     const innerTop = portRect.top + portPaddingTop;
-    scrollport.scrollTop += elTop - innerTop - offsetPx;
+    const targetTop = Math.max(0, scrollport.scrollTop + elTop - innerTop - offsetPx);
+    if (behavior === 'smooth' && typeof scrollport.scrollTo === 'function') {
+      scrollport.scrollTo({ top: targetTop, behavior: 'smooth' });
+    } else {
+      scrollport.scrollTop = targetTop;
+    }
   }
 
   /**
@@ -1052,6 +1060,16 @@ class ResumeListController extends BaseComponent {
     }
 
     selectionManager.selectCard(entry, 'ResumeListController.resume-divs-controls');
+
+    // Scroll resume listing when resume panel owns ↑/↓ / nav (not when pointer is over scene).
+    if (shouldScrollResumePanel()) {
+      setTimeout(() => {
+        const listEl = this._getListElementForEntry(entry);
+        if (listEl) {
+          this._scrollResumeDivToTopOffset(listEl, SCROLL_TOP_GAP, { behavior: 'smooth' });
+        }
+      }, 100);
+    }
 
     // Re-enable checkScrollBoundaries after smooth scroll completes (smooth scrolls take ~300-500ms)
     setTimeout(() => {
