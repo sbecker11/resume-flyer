@@ -148,12 +148,6 @@ function onSceneContentScroll() {
   }, SCROLL_PERSIST_DEBOUNCE_MS)
 }
 
-watch([sceneContentRef, sceneContainerRef], ([content, container]) => {
-  if (content && container) {
-    autoScroll.install()
-  }
-}, { immediate: true })
-
 watch(sceneContentRef, (newRef) => {
   if (newRef) {
     console.log('[SceneContainer] sceneContentRef became available')
@@ -237,6 +231,11 @@ const autoScroll = useSceneAutoScroll(
 )
 const { autoscrollDirection } = autoScroll
 
+watch([sceneContentRef, sceneContainerRef], ([content, container]) => {
+  if (content && container) {
+    autoScroll.install()
+  }
+}, { immediate: true })
 
 // Event handlers
 const handleSceneContainerClick = (event) => {
@@ -446,7 +445,7 @@ defineExpose({
 }
 
 .autoscroll-gif--bottom {
-  bottom: 10px; /* above viewer label; moved down 30px from 40px */
+  bottom: 42px; /* above scene-view-label */
 }
 
 .autoscroll-gif img {

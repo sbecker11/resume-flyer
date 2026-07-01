@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
     resolveArrowScrollTargetPanel,
     isPointerInsideResumeView,
@@ -114,6 +114,14 @@ describe('panelKeyboardScroll', () => {
     it('defaults to resume when pointer and active panel are unknown', () => {
         expect(getActivePanel()).toBe(null)
         expect(resolveArrowScrollTargetPanel(null, null)).toBe('resume')
+    })
+
+    it('uses CSS :hover for scene when pointer coords are unknown', () => {
+        const scene = document.getElementById('scene-container')
+        scene.matches = vi.fn((sel) => sel === ':hover')
+        setActivePanel(null)
+        expect(resolveArrowScrollTargetPanel(null, null)).toBe('scene')
+        expect(getActivePanel()).toBe('scene')
     })
 
     it('detects zones after layout-toggle swap (scene on right, resume on left)', () => {
