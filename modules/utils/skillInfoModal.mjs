@@ -4,9 +4,9 @@
  * Shared utility: fetch a skill's LLM-generated definition from the server
  * and display it in a modal overlay.
  *
- * On static hosts (GitHub Pages) the API is unavailable; the ? button is
- * hidden via CSS and openSkillInfoModal shows a "not available" message
- * instead of making a failing network request.
+ * On static hosts (GitHub Pages) the OpenAI-backed API is unavailable; the
+ * modal still opens with a Wikipedia (or configured) source link and any
+ * associated experience links — no failing network request.
  *
  * Usage:
  *   import { openSkillInfoModal } from '@/modules/utils/skillInfoModal.mjs';
@@ -72,8 +72,6 @@ function installGlobalDelegate() {
         if (!btn) return;
         e.stopPropagation();
         e.preventDefault();
-        // On static hosts the button should be hidden by CSS, but guard here too.
-        if (!hasServer()) return;
         const card = btn.closest('.skill-card-div, .skill-resume-div, .appended-skill-resume-div');
         const slug = card?.getAttribute('data-skill-name') || btn.getAttribute('data-skill-slug') || '';
         const displayName = btn.getAttribute('aria-label')?.replace(/^What is /, '').replace(/\?$/, '') || slug;
@@ -598,7 +596,11 @@ function associatedBizCardsHtml(skillCardEl) {
     const linksHtml = cards.map((biz) => {
         const employer = escapeHtml(biz.employer);
         const months = Number.isFinite(biz.months) ? biz.months : 0;
-        const label = `${employer} (${months} months)`;
+        const years = months > 0 ? Math.floor(months / 12) : 0;
+        // Hide tenure when under 1 year (matches skill-card years gating).
+        const label = years >= 1
+            ? `${employer} (${years} year${years === 1 ? '' : 's'})`
+            : employer;
         return `<li><a href="#" class="${SKILL_BIZ_LINK_CLASS}" ${SKILL_BIZ_LINK_JOB_ATTR}="${biz.jobNumber}" ${SKILL_BIZ_LINK_SKILL_ATTR}="${escapeHtml(skillSlug)}">${label}</a></li>`;
     }).join('');
     return `
@@ -618,9 +620,13 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
     const skillCardEl = resolveSkillCardElement(cardEl, slug);
     const bizLinksHtml = associatedBizCardsHtml(skillCardEl);
 
+    const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
+    const sourceLinkHtml = `<p class="skill-info-summary"><span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`;
+
     if (!hasServer()) {
+        // Static host: no OpenAI API — still show source + associated jobs.
         setModalContent(modal, displayName || slug,
-            `<span class="skill-info-error">Skill definitions are not available in the static (GitHub Pages) version of this app.</span>${bizLinksHtml}`);
+            `<p class="skill-info-summary">Open the source link for a definition. LLM summaries require the app API server.</p>${sourceLinkHtml}${bizLinksHtml}`);
         return;
     }
 
@@ -628,8 +634,6 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
 
     try {
         const res = await fetch(`/api/skills/${encodeURIComponent(slug)}/info`);
-        const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
-        const sourceLinkHtml = `<p class="skill-info-summary"><span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`;
         if (!res.ok) {
             const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
             const friendly = err.code === 'openai_credits'
@@ -645,10 +649,7 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
         setModalContent(modal, displayName || slug,
             `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')} <span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>${bizLinksHtml}`);
     } catch (e) {
-        const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
         setModalContent(modal, displayName || slug,
-            `<span class="skill-info-error">Network error: ${escapeHtml(e.message)}</span>`
-            + `<p class="skill-info-summary"><span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`
-            + bizLinksHtml);
+            `<span class="skill-info-error">Network error: ${escapeHtml(e.message)}</span>${sourceLinkHtml}${bizLinksHtml}`);
     }
 }
