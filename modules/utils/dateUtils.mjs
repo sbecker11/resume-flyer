@@ -50,8 +50,11 @@ export function isJobDateUndefined(value) {
     return value == null || String(value).trim() === '';
 }
 
+/** Full + abbreviated English month names for redacted title/date tokens. */
+const MONTH_NAME_PATTERN = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec';
+
 /**
- * True when a value is a redacted sample-resume date token (e.g. "9/XX").
+ * True when a value is a redacted sample-resume date token (e.g. "9/XX", "June 20XX").
  * @param {unknown} value
  * @returns {boolean}
  */
@@ -60,7 +63,9 @@ export function isRedactedDateToken(value) {
     const raw = String(value).trim();
     return /^\d{1,2}\s*\/\s*xx$/i.test(raw)
         || /^xx\s*\/\s*\d{1,2}$/i.test(raw)
-        || /^xx$/i.test(raw);
+        || /^xx$/i.test(raw)
+        || /^(?:19|20)?xx$/i.test(raw)
+        || new RegExp(`^(?:${MONTH_NAME_PATTERN})\\.?\\s*,?\\s*(?:19|20)?xx$`, 'i').test(raw);
 }
 
 /**
@@ -802,27 +807,49 @@ export function isPartiallyUnknownDateValue(value) {
 }
 
 /**
- * Remove unknown / partially-unknown date tokens from a card title (employer/role).
+ * Remove unknown / partially-unknown date tokens from a card title (employer/role),
+ * and strip leading list bullets / whitespace that sometimes leak from descriptions.
  * e.g. "9/XX-present Resident Assistant, Roble Hall" → "Resident Assistant, Roble Hall"
+ * e.g. "June 20XX Stanford University, Stanford, CA" → "Stanford University, Stanford, CA"
+ * e.g. "• Meet monthly with …" → "Meet monthly with …"
  * @param {unknown} text
  * @returns {string}
  */
 export function stripUnknownDatesFromTitle(text) {
     if (text == null) return '';
     let s = String(text);
+    const month = MONTH_NAME_PATTERN;
+    // Ranges: June 20XX – present, June 20XX-August 20XX
+    s = s.replace(
+        new RegExp(
+            `\\b(?:${month})\\.?\\s*,?\\s*(?:19|20)?xx\\s*[-–—]\\s*(?:(?:${month})\\.?\\s*,?\\s*(?:19|20)?xx|present|current(?:_date)?)\\b`,
+            'gi'
+        ),
+        ' '
+    );
     // Ranges: 9/XX-6/XX, 9/XX – present, 03/xx-current
     s = s.replace(
         /\b\d{1,2}\s*\/\s*xx\s*[-–—]\s*(?:\d{1,2}\s*\/\s*xx|present|current(?:_date)?)\b/gi,
         ' '
     );
-    // Lone redacted dates
+    // Lone month + redacted year: June 20XX, Jun. XX, August 19XX
+    s = s.replace(
+        new RegExp(`\\b(?:${month})\\.?\\s*,?\\s*(?:19|20)?xx\\b`, 'gi'),
+        ' '
+    );
+    // Lone redacted numeric dates
     s = s.replace(/\b\d{1,2}\s*\/\s*xx\b/gi, ' ');
     s = s.replace(/\bxx\s*\/\s*\d{1,2}\b/gi, ' ');
+    // Lone redacted years when they stand alone as date tokens
+    s = s.replace(/\b(?:19|20)xx\b/gi, ' ');
     // Explicit unknown labels
     s = s.replace(/\b(?:startDate|endDate)\s*:\s*unknown\b/gi, ' ');
     // Collapse leftover separators/whitespace
     s = s.replace(/\s{2,}/g, ' ');
     s = s.replace(/^[\s,;:|\/\-–—]+|[\s,;:|\/\-–—]+$/g, '');
+    // Leading list markers (•, -, *, etc.) + whitespace — after date cleanup so they stay at the start
+    s = s.replace(/^[\s\u00A0]*(?:[•●○▪▫▸►‣⁃·\*+\-–—]|[-*]{1,2})[\s\u00A0]*/u, '');
+    s = s.replace(/^[\s\u00A0]+/u, '');
     return s.trim();
 }
 

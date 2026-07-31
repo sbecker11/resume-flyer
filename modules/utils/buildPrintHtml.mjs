@@ -1,4 +1,4 @@
-import { formatCardDatesDisplay } from './dateUtils.mjs';
+import { formatCardDatesDisplay, stripUnknownDatesFromTitle } from './dateUtils.mjs';
 
 /**
  * buildPrintHtml.mjs
@@ -116,8 +116,8 @@ export function buildPrintHtml(jobs, skills, categories, otherSections, educatio
         return `
     <div class="job">
       <div class="job-header">
-        <span class="job-role">${escapeHtml(job.role || '')}</span>
-        <span class="job-employer">${escapeHtml(job.employer || '')}</span>
+        <span class="job-role">${escapeHtml(stripUnknownDatesFromTitle(job.role) || '')}</span>
+        <span class="job-employer">${escapeHtml(stripUnknownDatesFromTitle(job.employer) || '')}</span>
         <span class="job-dates">${escapeHtml(formatCardDatesDisplay(job.start, job.end))}</span>
       </div>
       <div class="job-desc">${bulletHtml}</div>

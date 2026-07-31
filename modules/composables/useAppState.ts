@@ -681,8 +681,18 @@ async function saveStateToServer(state: AppState): Promise<void> {
             return
         }
     } catch (error) {
-        reportError(error, '[AppState] Failed to save state to server', 'Remedy: Auto-save will be disabled for this session')
-        // For static hosting, do not rethrow here; callers (auto-save) should not crash the app.
+        // Network down / proxy refused (e.g. backend not running): stop hammering the API.
+        stateApiAvailable = false
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('resume-flyer/app_state', JSON.stringify(state))
+            }
+        } catch (_) { /* ignore */ }
+        reportError(
+            error,
+            '[AppState] Failed to save state to server',
+            'Remedy: Saved to localStorage; further server saves skipped this session'
+        )
         return
     }
 }

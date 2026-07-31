@@ -1790,7 +1790,7 @@ function onResumeSkillCardClick(event) {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    z-index: 2;
 }
 .biz-resume-div .r-div-close:hover {
     color: #f00;
@@ -1984,6 +1984,10 @@ function onResumeSkillCardClick(event) {
     min-height: fit-content;
     flex-shrink: 0;
     
+    /* Keep employer ✎ clear of absolutely-positioned .r-div-close (22px + 11px inset + gap) */
+    padding-right: calc(40px - 1em);
+    box-sizing: border-box;
+    
     /* Visual styling */
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     padding-bottom: var(--details-gap, 12px);
@@ -1996,12 +2000,16 @@ function onResumeSkillCardClick(event) {
     gap: var(--details-gap, 12px);
     flex-shrink: 0;
     margin-bottom: var(--details-gap, 12px);
+    min-width: 0;
+    max-width: 100%;
 }
 .resume-header .biz-details-employer-wrap .biz-details-employer {
     font-weight: bold;
     font-size: 16px;
     margin-bottom: 0;
     color: inherit;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 .resume-header .biz-details-edit-btn,
 .resume-description .biz-details-edit-btn,
@@ -2014,7 +2022,9 @@ function onResumeSkillCardClick(event) {
     border-radius: 4px;
     color: inherit;
     cursor: pointer;
-    opacity: 0.7;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
 }
 .resume-header .biz-details-edit-btn:hover,
 .resume-description .biz-details-edit-btn:hover,

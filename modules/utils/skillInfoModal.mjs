@@ -15,7 +15,7 @@
 
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
-import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
+import { jobTenureMonthsInclusive, stripUnknownDatesFromTitle } from '@/modules/utils/dateUtils.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
 
@@ -575,9 +575,11 @@ function getAssociatedBizCards(skillCardEl) {
         const jobNumber = parseJobNumberFromBizCardElement(bizEl);
         if (jobNumber == null || seenJobs.has(jobNumber)) continue;
         seenJobs.add(jobNumber);
-        const employer = bizEl.getAttribute('data-employer')
+        const employer = stripUnknownDatesFromTitle(
+            bizEl.getAttribute('data-employer')
             || bizEl.getAttribute('data-biz-card-title')
-            || `Job ${jobNumber}`;
+            || ''
+        ) || `Job ${jobNumber}`;
         const jobs = getGlobalJobsDependency().getJobsData();
         const job = Array.isArray(jobs) ? jobs[jobNumber] : null;
         const months = job
@@ -626,18 +628,27 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
 
     try {
         const res = await fetch(`/api/skills/${encodeURIComponent(slug)}/info`);
+        const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
+        const sourceLinkHtml = `<p class="skill-info-summary"><span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`;
         if (!res.ok) {
             const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+            const friendly = err.code === 'openai_credits'
+                ? 'Skill definition unavailable: OpenAI API credits are exhausted.'
+                : err.code === 'openai_auth'
+                    ? 'Skill definition unavailable: OpenAI API key was rejected.'
+                    : `Could not load definition: ${escapeHtml(String(err.error || res.status))}`;
             setModalContent(modal, displayName || slug,
-                `<span class="skill-info-error">Could not load definition: ${err.error || res.status}</span>${bizLinksHtml}`);
+                `<span class="skill-info-error">${friendly}</span>${sourceLinkHtml}${bizLinksHtml}`);
             return;
         }
         const { summary } = await res.json();
+        setModalContent(modal, displayName || slug,
+            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')} <span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>${bizLinksHtml}`);
+    } catch (e) {
         const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
         setModalContent(modal, displayName || slug,
-            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')} <span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${sourceUrl}</a>)</span></p>${bizLinksHtml}`);
-    } catch (e) {
-        setModalContent(modal, displayName || slug,
-            `<span class="skill-info-error">Network error: ${e.message}</span>${bizLinksHtml}`);
+            `<span class="skill-info-error">Network error: ${escapeHtml(e.message)}</span>`
+            + `<p class="skill-info-summary"><span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`
+            + bizLinksHtml);
     }
 }

@@ -551,7 +551,7 @@ export function useCardsController() {
             } else {
                 // Redacted/missing dates (e.g. "9/XX"): stack cards so scene + resume list still render
                 y = 100 + jobNumber * (MIN_BIZCARD_HEIGHT + 24)
-                console.warn(`[CardsController] Job ${jobNumber}: unparseable dates (${job.start}–${job.end}); using stack Y=${y}`)
+                console.debug(`[CardsController] Job ${jobNumber}: unparseable dates (${job.start}–${job.end}); using stack Y=${y}`)
             }
         } catch (error) {
             reportError(error, `[CardsController] Error positioning job ${jobNumber}`, `Using stacked fallback Y for job ${jobNumber}`);
@@ -601,7 +601,7 @@ export function useCardsController() {
             // Re-parse the dates for height calculation (need both start and end)
             const rawStart = job.start || job.startDate;
             if (!rawStart) {
-                console.warn(`[CardsController] Skipping height calculation for job ${jobNumber}: no start date`);
+                console.debug(`[CardsController] Skipping height calculation for job ${jobNumber}: no start date`);
                 card.style.height = `${MIN_BIZCARD_HEIGHT}px`
                 card.setAttribute('data-sceneHeight', MIN_BIZCARD_HEIGHT)
                 // fall through to card content setup below
@@ -673,7 +673,7 @@ export function useCardsController() {
                     endDiff: Math.abs(jobEndDate.getTime() - reversedEndDate.getTime()) / (1000 * 60 * 60 * 24) // days
                 })
             } else {
-                console.warn(`[CardsController] Could not calculate height for job ${jobNumber}: missing dates or timeline not ready`)
+                console.debug(`[CardsController] Could not calculate height for job ${jobNumber}: missing dates or timeline not ready`)
                 card.style.height = `${MIN_BIZCARD_HEIGHT}px`
                 card.setAttribute('data-sceneHeight', MIN_BIZCARD_HEIGHT)
             }

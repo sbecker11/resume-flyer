@@ -142,7 +142,7 @@
             </div>
           </div>
           <div class="rde-field">
-            <label class="rde-label" for="rde-jobs-description">Description</label>
+            <label class="rde-label" for="rde-jobs-description">Key Achievements</label>
             <textarea
               id="rde-jobs-description"
               name="description"

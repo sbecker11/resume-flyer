@@ -3754,7 +3754,31 @@ app.get('/api/skills/:slug/info', async (req, res) => {
         });
         if (!response.ok) {
             const body = await response.text().catch(() => '');
-            return res.status(502).json({ error: `OpenAI API error ${response.status}: ${body.slice(0, 200)}` });
+            let parsed = null;
+            try { parsed = JSON.parse(body); } catch (_) { /* raw body */ }
+            const apiMessage = parsed?.error?.message || '';
+            const apiCode = parsed?.error?.code || parsed?.error?.type || '';
+            const creditsExhausted = response.status === 429
+                || /insufficient_quota|no credits remaining|billing/i.test(`${apiCode} ${apiMessage} ${body}`);
+            if (creditsExhausted) {
+                return res.status(502).json({
+                    error: 'OpenAI API credits are exhausted. Add credits at platform.openai.com billing, or use the source link below.',
+                    code: 'openai_credits',
+                });
+            }
+            if (response.status === 401 || response.status === 403) {
+                return res.status(502).json({
+                    error: 'OpenAI API key was rejected. Check OPENAI_API_KEY on the server.',
+                    code: 'openai_auth',
+                });
+            }
+            const short = (apiMessage || body).slice(0, 160).trim();
+            return res.status(502).json({
+                error: short
+                    ? `OpenAI API error ${response.status}: ${short}`
+                    : `OpenAI API error ${response.status}`,
+                code: 'openai_upstream',
+            });
         }
         const data = await response.json();
         const summary = data.choices?.[0]?.message?.content?.trim() || '';

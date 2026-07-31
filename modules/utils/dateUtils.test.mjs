@@ -25,6 +25,7 @@ import {
   formatDateRange,
   formatCardDatesDisplay,
   stripUnknownDatesFromTitle,
+  isRedactedDateToken,
   test_dateUtils,
 } from './dateUtils.mjs';
 
@@ -334,9 +335,33 @@ describe('dateUtils', () => {
       expect(stripUnknownDatesFromTitle('9/XX-6/XX Kitchen Manager, Columbae House'))
         .toBe('Kitchen Manager, Columbae House');
     });
+    it('strips month + redacted year from titles', () => {
+      expect(stripUnknownDatesFromTitle('June 20XX Stanford University, Stanford, CA'))
+        .toBe('Stanford University, Stanford, CA');
+      expect(stripUnknownDatesFromTitle('Jun 20XX Stanford University'))
+        .toBe('Stanford University');
+      expect(stripUnknownDatesFromTitle('June 20XX – present Research Intern'))
+        .toBe('Research Intern');
+    });
     it('leaves clean titles unchanged', () => {
       expect(stripUnknownDatesFromTitle('Columbae House, Stanford University'))
         .toBe('Columbae House, Stanford University');
+    });
+    it('strips leading bullets and whitespace from titles', () => {
+      expect(stripUnknownDatesFromTitle('• Meet monthly with Stanford Graduate School of Business mentor'))
+        .toBe('Meet monthly with Stanford Graduate School of Business mentor');
+      expect(stripUnknownDatesFromTitle('  •   Kitchen Manager, Columbae House'))
+        .toBe('Kitchen Manager, Columbae House');
+      expect(stripUnknownDatesFromTitle('- Research Intern'))
+        .toBe('Research Intern');
+    });
+  });
+
+  describe('isRedactedDateToken', () => {
+    it('recognizes month + redacted year forms', () => {
+      expect(isRedactedDateToken('June 20XX')).toBe(true);
+      expect(isRedactedDateToken('9/XX')).toBe(true);
+      expect(isRedactedDateToken('2020-06')).toBe(false);
     });
   });
 

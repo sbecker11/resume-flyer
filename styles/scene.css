@@ -717,6 +717,8 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     align-items: center;
     gap: 6px;
     margin: 0 0 4px 0;
+    min-width: 0;
+    max-width: 100%;
 }
 .biz-details-employer-wrap .biz-details-employer {
     font-size: 16px;
@@ -726,6 +728,9 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     line-height: 1.2;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    /* Keep ✎ visible: long titles must shrink inside the flex row, not shove the button out */
+    flex: 1 1 auto;
+    min-width: 0;
 }
 .biz-details-employer {
     font-size: 16px;
@@ -747,6 +752,9 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     color: inherit;
     cursor: pointer;
     opacity: 0.7;
+}
+.biz-card-div .biz-details-edit-btn {
+    margin-left: 3em;
 }
 .biz-card-div .biz-details-edit-btn:hover,
 .biz-resume-div .biz-details-edit-btn:hover {
