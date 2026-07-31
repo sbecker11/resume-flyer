@@ -124,11 +124,14 @@ export function skillLabelForSlug(slug, skillsData) {
  * description, e.g. "AWS Glue"), return the canonical slug from skillsData.
  *
  * Matching is case-insensitive on skill.name first, then on slug itself.
+ * If no exact match, retries after stripping common corporate / legal suffixes
+ * (Inc., LLC, Corp., Ltd., Co., Company, Corporation) so "[Apple Inc.]" resolves
+ * to a skill named "Apple" without requiring a duplicate skills.json entry.
  * Returns null if no match — callers must treat null as a hard data error
  * (the description contains a bracketed term with no matching skill entry).
  *
- * No aliases, no fuzzy matching, no slug generation.  If this returns null,
- * fix the description or add a skill entry in skills.json.
+ * No free-form aliases or slug generation.  If this returns null, fix the
+ * description or add a skill entry in skills.json.
  *
  * @param {string} label  - bare label text, brackets already stripped
  * @param {Record<string, { name?: string }>} skillsData
@@ -136,11 +139,44 @@ export function skillLabelForSlug(slug, skillsData) {
  */
 export function labelToSlug(label, skillsData) {
     if (!label || !skillsData) return null
-    const lower = String(label).toLowerCase()
+    const exact = matchLabelToSlugExact(label, skillsData)
+    if (exact) return exact
+    const stripped = stripCorporateSuffix(label)
+    if (stripped && stripped.toLowerCase() !== String(label).trim().toLowerCase()) {
+        return matchLabelToSlugExact(stripped, skillsData)
+    }
+    return null
+}
+
+/** Common legal/corporate suffixes parsers often leave on employer-like skill tags. */
+const CORPORATE_SUFFIX_RE = /(?:\s*[,.]?\s*)?\b(?:incorporated|corporation|company|corp\.?|inc\.?|llc\.?|ltd\.?|l\.?l\.?c\.?|co\.?)\s*\.?$/i
+
+/**
+ * @param {string} label
+ * @returns {string}
+ */
+export function stripCorporateSuffix(label) {
+    let s = String(label).trim()
+    // Repeat in case of stacked suffixes (e.g. "Acme Co., Inc.")
+    for (let i = 0; i < 3; i++) {
+        const next = s.replace(CORPORATE_SUFFIX_RE, '').trim().replace(/[,\s.]+$/, '').trim()
+        if (next === s) break
+        s = next
+    }
+    return s
+}
+
+/**
+ * @param {string} label
+ * @param {Record<string, { name?: string }>} skillsData
+ * @returns {string|null}
+ */
+function matchLabelToSlugExact(label, skillsData) {
+    const lower = String(label).trim().toLowerCase()
+    if (!lower) return null
     for (const [slug, skill] of Object.entries(skillsData)) {
         if ((skill?.name || '').toLowerCase() === lower) return slug
     }
-    // fallback: match by slug itself (e.g. label === slug)
     for (const slug of Object.keys(skillsData)) {
         if (slug.toLowerCase() === lower) return slug
     }

@@ -6,7 +6,7 @@ import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
 import { applyPaletteToElement } from '@/modules/composables/useColorPalette.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useResumeListController } from '@/modules/core/globalServices';
-import { parseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
+import { tryParseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
 import { listResumes, getResumeOtherSections, getResumeEducation, getResumeData } from '@/modules/api/resumeManagerApi.mjs';
 import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
@@ -16,7 +16,7 @@ import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
 import { renderSkillCardResumeInnerHtml } from '@/modules/scene/cardMarkup.mjs';
-import { openSkillInfoModal, markFocusedSkillLinkForJob, clearSourceBizBackLinkClass } from '@/modules/utils/skillInfoModal.mjs';
+import { openSkillInfoModal, markFocusedSkillLinkForJob, markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, scrollFocusedBizCardSkillIntoViewIfCropVisible } from '@/modules/utils/skillInfoModal.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
 
@@ -390,14 +390,12 @@ function syncSkillResumeDivSelection() {
 /** Months of experience for one job (for summing). */
 function getMonthsExperience(job) {
   if (!job?.start) return 0;
-  try {
-    const start = parseFlexibleDateString(job.start);
-    const end = (job.end === 'CURRENT_DATE' || !job.end) ? new Date() : parseFlexibleDateString(job.end);
-    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
-    return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-  } catch {
-    return 0;
-  }
+  const start = tryParseFlexibleDateString(job.start);
+  const end = (job.end === 'CURRENT_DATE' || !job.end)
+    ? new Date()
+    : tryParseFlexibleDateString(job.end);
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
+  return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
 }
 const selectedSkillCard = computed(() => {
   const card = selectedCardSnapshot.value;
@@ -425,9 +423,20 @@ function removeSkillCardFromResumeListing() {
   resumeSkillCardDismissed.value = true;
 }
 function goToJob(jobNumber) {
-  selectionManager?.selectCard({ type: 'biz', jobNumber }, 'ResumeContainer.skillCardJobClick');
+  const skillCardId = selectionManager?.selectedCard?.type === 'skill'
+    ? selectionManager.selectedCard.skillCardId
+    : (selectedCardSnapshot.value?.type === 'skill' ? selectedCardSnapshot.value.skillCardId : null);
   const slug = selectedSkillCard.value?.skillName;
-  if (slug) markFocusedSkillLinkForJob(jobNumber, slug);
+  const bizCardId = createBizCardDivId(jobNumber);
+  // Highlight back-arrow first so the two-way link is visible before scroll.
+  if (skillCardId && bizCardId) {
+    markSourceBizBackLinkForSkill(skillCardId, bizCardId);
+  }
+  selectionManager?.selectCard({ type: 'biz', jobNumber }, 'ResumeContainer.skillCardJobClick');
+  if (slug) {
+    markFocusedSkillLinkForJob(jobNumber, slug);
+    scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNumber, slug);
+  }
 }
 
 // --- Resume Details Editor state ---
@@ -700,8 +709,14 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
       e.stopPropagation();
       const jobNum = parseInt(btn.getAttribute('data-job-number'), 10);
       if (!Number.isNaN(jobNum)) {
+        const bizCardId = btn.getAttribute('data-biz-card-id') || createBizCardDivId(jobNum);
+        // Highlight back-arrow first so the two-way link is visible before scroll.
+        if (skillCardId && bizCardId) {
+          markSourceBizBackLinkForSkill(skillCardId, bizCardId);
+        }
         selectionManager?.selectCard({ type: 'biz', jobNumber: jobNum }, 'ResumeContainer.appendedCopyBackLink');
         markFocusedSkillLinkForJob(jobNum, skillSlug);
+        scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNum, skillSlug);
       }
     });
   });
@@ -1844,6 +1859,9 @@ function onResumeSkillCardClick(event) {
 
 /* Beats the rule above (* loses to two classes): inverted chip from skill modal / skill-card back-arrow */
 .biz-resume-div .biz-resume-details-div .biz-card-skill-title.skill-link-focused-from-modal {
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: baseline;
     border-radius: 16px;
     padding: 2px 6px;
     margin: -2px -2px;

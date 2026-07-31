@@ -187,6 +187,55 @@ async function readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath =
     return { jobs, skills, categories };
 }
 
+const REPARSE_BACKUP_DIRNAME = '.reparse-backup';
+
+/**
+ * Move all resume-folder entries except the original document into `.reparse-backup`.
+ * On parser failure, restore with restoreReparseBackup so the folder is not left empty.
+ * @param {string} dir
+ * @param {string} keepDocName - basename of the .docx/.pdf to keep in place
+ * @returns {Promise<string>} absolute path to the backup directory
+ */
+async function stashDerivedFilesForReparse(dir, keepDocName) {
+    const backupDir = path.join(dir, REPARSE_BACKUP_DIRNAME);
+    await fs.rm(backupDir, { recursive: true, force: true });
+    await fs.mkdir(backupDir, { recursive: true });
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const ent of entries) {
+        if (ent.name === keepDocName || ent.name === REPARSE_BACKUP_DIRNAME) continue;
+        await fs.rename(path.join(dir, ent.name), path.join(backupDir, ent.name));
+    }
+    return backupDir;
+}
+
+/** Restore stashed derived files after a failed reparse. */
+async function restoreReparseBackup(dir, backupDir) {
+    if (!backupDir) return;
+    try {
+        await fs.access(backupDir);
+    } catch {
+        return;
+    }
+    const current = await fs.readdir(dir, { withFileTypes: true });
+    for (const ent of current) {
+        if (ent.name === REPARSE_BACKUP_DIRNAME) continue;
+        const lower = ent.name.toLowerCase();
+        if (lower.endsWith('.pdf') || lower.endsWith('.docx')) continue;
+        await fs.rm(path.join(dir, ent.name), { recursive: true, force: true });
+    }
+    const backed = await fs.readdir(backupDir, { withFileTypes: true });
+    for (const ent of backed) {
+        await fs.rename(path.join(backupDir, ent.name), path.join(dir, ent.name));
+    }
+    await fs.rm(backupDir, { recursive: true, force: true });
+}
+
+/** Discard backup after a successful reparse. */
+async function discardReparseBackup(backupDir) {
+    if (!backupDir) return;
+    await fs.rm(backupDir, { recursive: true, force: true });
+}
+
 /**
  * Run enrichJobsWithSkills on the current jobs+skills+education for a resume
  * folder and write the result to enriched-jobs.json.  Called automatically
@@ -1069,13 +1118,8 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
 
         const keepDocPath = path.join(dir, keepEntry.name);
 
-        // Delete everything except the original docx/pdf file.
-        // This intentionally removes meta/jobs/skills/html/etc so we always rebuild from source.
-        for (const ent of entries) {
-            if (ent.name === keepEntry.name) continue;
-            const target = path.join(dir, ent.name);
-            await fs.rm(target, { recursive: true, force: true });
-        }
+        // Stash derived files so a failed parser run can restore them (do not leave only the PDF).
+        const backupDir = await stashDerivedFilesForReparse(dir, keepEntry.name);
 
         // Re-run resume-parser into the same output directory.
         const parserModule = process.env.RESUME_PARSER_MODULE || RESUME_PARSER_PYTHON_MODULE_UNSET_ENV;
@@ -1148,59 +1192,77 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
         }
 
         let parserRunError = null;
-        for (const pythonBin of pythonBinCandidates) {
-            try {
-                await runParserWithPythonBin(pythonBin);
-                parserRunError = null;
-                break;
-            } catch (error) {
-                parserRunError = error;
-                const details = String(error?.message || error);
-                const isModuleNotFound = details.includes('ModuleNotFoundError') && details.includes('resume_parser');
-                if (isModuleNotFound) {
-                    console.error(`[ResumeReparse] Parser module missing with ${pythonBin}:`, details);
-                    console.log(`Remedy: retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
-                    continue;
+        try {
+            for (const pythonBin of pythonBinCandidates) {
+                try {
+                    await runParserWithPythonBin(pythonBin);
+                    parserRunError = null;
+                    break;
+                } catch (error) {
+                    parserRunError = error;
+                    const details = String(error?.message || error);
+                    const isModuleNotFound = details.includes('ModuleNotFoundError') && details.includes('resume_parser');
+                    if (isModuleNotFound) {
+                        console.error(`[ResumeReparse] Parser module missing with ${pythonBin}:`, details);
+                        console.log(`Remedy: retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
+                        continue;
+                    }
+                    throw error;
                 }
-                throw error;
             }
+            if (parserRunError) throw parserRunError;
+
+            // Recreate meta.json (it was stashed as part of the reparse).
+            const metadata = {
+                id,
+                displayName: existingMeta?.displayName || existingMeta?.name || id,
+                originalFilename: keepEntry.name,
+                sourceUrl: existingMeta?.sourceUrl || null,
+                sourceType: existingMeta?.sourceType || (existingMeta?.sourceUrl ? 'url' : 'upload'),
+                createdAt: new Date().toISOString(),
+                uploadedBy: existingMeta?.uploadedBy || 'user',
+                fileSize: (await fs.stat(keepDocPath)).size
+            };
+            await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
+
+            // Read and normalize parsed outputs so we can return counts.
+            const jobsPath = path.join(dir, 'jobs.json');
+            const skillsPath = path.join(dir, 'skills.json');
+            const categoriesPath = path.join(dir, 'categories.json');
+            const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
+            await discardReparseBackup(backupDir);
+            await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
+
+            res.json({
+                success: true,
+                resumeId: id,
+                displayName: metadata.displayName,
+                jobCount: jobs.length,
+                skillCount: Object.keys(skills).length,
+                metadata
+            });
+        } catch (parseError) {
+            const failedLogPath = path.join(dir, 'parser-output.log');
+            let failedLog = '';
+            try {
+                failedLog = await fs.readFile(failedLogPath, 'utf-8');
+            } catch {
+                if (parseError?.parserOutput) failedLog = String(parseError.parserOutput);
+            }
+            await restoreReparseBackup(dir, backupDir);
+            if (failedLog) {
+                await fs.writeFile(failedLogPath, failedLog, 'utf-8').catch(() => {});
+            }
+            console.log('Remedy: Restored previous jobs/skills/meta after failed reparse');
+            throw parseError;
         }
-        if (parserRunError) throw parserRunError;
-
-        // Recreate meta.json (it was deleted as part of the reparse).
-        const metadata = {
-            id,
-            displayName: existingMeta?.displayName || existingMeta?.name || id,
-            originalFilename: keepEntry.name,
-            sourceUrl: existingMeta?.sourceUrl || null,
-            sourceType: existingMeta?.sourceType || (existingMeta?.sourceUrl ? 'url' : 'upload'),
-            createdAt: new Date().toISOString(),
-            uploadedBy: existingMeta?.uploadedBy || 'user',
-            fileSize: (await fs.stat(keepDocPath)).size
-        };
-        await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
-
-        // Read and normalize parsed outputs so we can return counts.
-        const jobsPath = path.join(dir, 'jobs.json');
-        const skillsPath = path.join(dir, 'skills.json');
-        const categoriesPath = path.join(dir, 'categories.json');
-        const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
-
-        await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
-
-        res.json({
-            success: true,
-            resumeId: id,
-            displayName: metadata.displayName,
-            jobCount: jobs.length,
-            skillCount: Object.keys(skills).length,
-            metadata
-        });
     } catch (error) {
-        reportError(error, '[ResumeReparse] Failed to reparse resume folder', 'No remedy: request fails and client should retry');
+        reportError(error, '[ResumeReparse] Failed to reparse resume folder', 'Remedy: previous derived files restored when backup existed');
         res.status(500).json({
             error: 'Failed to reparse resume',
-            details: error?.message || String(error)
+            details: error?.message || String(error),
+            parserOutput: error?.parserOutput || ''
         });
     }
 });
@@ -1301,13 +1363,9 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             : null) || docLikeFiles[0];
         const keepDocPath = path.join(dir, keepEntry.name);
 
-        sendStatus('Deleting derived files...');
+        sendStatus('Stashing derived files for safe reparse...');
 
-        for (const ent of entries) {
-            if (ent.name === keepEntry.name) continue;
-            const target = path.join(dir, ent.name);
-            await fs.rm(target, { recursive: true, force: true });
-        }
+        const backupDir = await stashDerivedFilesForReparse(dir, keepEntry.name);
 
         // Prepare parser output log and stream it.
         outputFilePath = path.join(dir, 'parser-output.log');
@@ -1350,22 +1408,57 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             tailOnce(false).catch(() => {});
         }, 160);
 
-        await new Promise((resolve, reject) => {
-            child.on('close', (code) => resolve(code));
-            child.on('error', reject);
-        });
+        let exitCode = 0;
+        try {
+            exitCode = await new Promise((resolve, reject) => {
+                child.on('close', (code) => resolve(code ?? 1));
+                child.on('error', reject);
+            });
+        } catch (spawnErr) {
+            clearInterval(tailTimer);
+            outStream.end();
+            await tailOnce(true).catch(() => {});
+            const failedLog = await fs.readFile(outputFilePath, 'utf-8').catch(() => '');
+            await restoreReparseBackup(dir, backupDir);
+            if (failedLog) await fs.writeFile(outputFilePath, failedLog, 'utf-8').catch(() => {});
+            console.log('Remedy: Restored previous jobs/skills/meta after failed reparse');
+            throw spawnErr;
+        }
 
         clearInterval(tailTimer);
         await tailOnce(true);
         outStream.end();
 
+        if (exitCode !== 0) {
+            const failedLog = await fs.readFile(outputFilePath, 'utf-8').catch(() => '');
+            await restoreReparseBackup(dir, backupDir);
+            if (failedLog) await fs.writeFile(outputFilePath, failedLog, 'utf-8').catch(() => {});
+            console.log('Remedy: Restored previous jobs/skills/meta after failed reparse');
+            throw new Error(
+                `Parser exited with code ${exitCode}. ` +
+                `See parser-output.log in the resume folder for details.`
+            );
+        }
+
         // Ensure parser wrote expected output.
         const jobsPath = path.join(dir, 'jobs.json');
         const skillsPath = path.join(dir, 'skills.json');
         const categoriesPath = path.join(dir, 'categories.json');
-        const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+        let jobs;
+        let skills;
+        try {
+            ({ jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath));
+        } catch (readErr) {
+            const failedLog = await fs.readFile(outputFilePath, 'utf-8').catch(() => '');
+            await restoreReparseBackup(dir, backupDir);
+            if (failedLog) await fs.writeFile(outputFilePath, failedLog, 'utf-8').catch(() => {});
+            console.log('Remedy: Restored previous jobs/skills/meta after failed reparse');
+            throw new Error(
+                `Parser finished but jobs.json was missing or unreadable: ${readErr.message}`
+            );
+        }
 
-        // Recreate meta.json (it was deleted as part of the reparse).
+        // Recreate meta.json (it was stashed as part of the reparse).
         const metadata = {
             id,
             displayName: existingMeta?.displayName || existingMeta?.name || id,
@@ -1378,6 +1471,7 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
         };
         await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
 
+        await discardReparseBackup(backupDir);
         await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
 
         sendEvent('done', JSON.stringify({
@@ -1392,7 +1486,7 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
     } catch (e) {
         try { if (tailTimer) clearInterval(tailTimer); } catch {}
         try { await tailOnce(true); } catch {}
-        reportError(e, '[ResumeReparseStream] Failed to reparse with stream');
+        reportError(e, '[ResumeReparseStream] Failed to reparse with stream', 'Remedy: previous derived files restored when backup existed');
         sendEvent('error', JSON.stringify({ message: e instanceof Error ? e.message : String(e) }));
         res.end();
     }

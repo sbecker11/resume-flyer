@@ -9,14 +9,6 @@
       "skillCount": 80
     },
     {
-      "id": "shawn-becker-full-stack-developer-ai-ml-engineer",
-      "displayName": "SHAWN BECKER",
-      "fileName": "",
-      "createdAt": "2026-04-05T03:13:12.316Z",
-      "jobCount": 18,
-      "skillCount": 163
-    },
-    {
       "id": "yahoo-engineer",
       "displayName": "Yahoo Senior Engineer",
       "fileName": "Yahoo-Engineer.docx",
@@ -34,5 +26,5 @@
     }
   ],
   "defaultResumeId": "yahoo-seniormlengineer",
-  "generatedAt": "2026-04-29T03:28:31.888Z"
+  "generatedAt": "2026-07-31T21:02:02.093Z"
 }

@@ -40,6 +40,29 @@ export const getMonthDates = (year, month) => {
  * @returns {string} - ISO date string (YYYY-MM-DD)
  */
 export const getIsoDateString = (date) => date.toISOString().slice(0, 10);
+
+/**
+ * True when a job date field is missing (null/undefined/blank).
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isJobDateUndefined(value) {
+    return value == null || String(value).trim() === '';
+}
+
+/**
+ * True when a value is a redacted sample-resume date token (e.g. "9/XX").
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isRedactedDateToken(value) {
+    if (isJobDateUndefined(value)) return false;
+    const raw = String(value).trim();
+    return /^\d{1,2}\s*\/\s*xx$/i.test(raw)
+        || /^xx\s*\/\s*\d{1,2}$/i.test(raw)
+        || /^xx$/i.test(raw);
+}
+
 /**
  * Parse date string in YYYY-MM, YYYY-MM-DD, YYYY, "Present", or month-name forms (e.g. "Mar 2025").
  * @param {string} dateStr - Date string
@@ -51,6 +74,12 @@ export function parseFlexibleDateString(dateStr) {
     }
 
     const trimmedDateStr = dateStr.trim().toLowerCase();
+
+    // Redacted sample-resume years are not calendar dates — callers that expect
+    // soft failure should use tryParseFlexibleDateString (no throw).
+    if (isRedactedDateToken(trimmedDateStr)) {
+        throw new Error(`Invalid or unhandled date format: "${dateStr}" (redacted year).`);
+    }
 
     // Handle "Present" or "Current"
     if (trimmedDateStr === 'present' || trimmedDateStr === 'current' || trimmedDateStr === 'current_date') {
@@ -117,6 +146,25 @@ export function parseFlexibleDateString(dateStr) {
 }
 
 /**
+ * Same as parseFlexibleDateString but returns null instead of throwing
+ * (redacted years like "9/XX", blank, or other unparseable values).
+ * @param {unknown} dateStr
+ * @returns {Date|null}
+ */
+export function tryParseFlexibleDateString(dateStr) {
+    if (dateStr == null) return null;
+    const s = String(dateStr).trim();
+    if (!s) return null;
+    // Expected for sample resumes — do not throw (avoids console noise from caught exceptions).
+    if (isRedactedDateToken(s)) return null;
+    try {
+        return parseFlexibleDateString(s);
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Parse a job start/end string for tenure math. Does not throw.
  * @param {unknown} value
  * @param {{ emptyMeansNow?: boolean }} [opts] - if true, blank/null is treated as "today" (open-ended role)
@@ -134,6 +182,7 @@ export function parseJobTenureEndpoint(value, { emptyMeansNow = false } = {}) {
     if (low === 'present' || low === 'current' || low === 'current_date') {
         return new Date();
     }
+    if (isRedactedDateToken(s)) return null;
     try {
         return parseFlexibleDateString(s);
     } catch {
@@ -371,7 +420,7 @@ export function getMinMaxYears(jobs) {
     let maxYear = -Infinity;
 
     jobs.forEach(job => {
-        const startDate = parseFlexibleDateString(job.start);
+        const startDate = tryParseFlexibleDateString(job.start);
         if (startDate) {
             const startYear = startDate.getFullYear();
             if (startYear < minYear) {
@@ -382,7 +431,7 @@ export function getMinMaxYears(jobs) {
             }
         }
 
-        const endDate = parseFlexibleDateString(job.end);
+        const endDate = tryParseFlexibleDateString(job.end);
         if (endDate) {
             const endYear = endDate.getFullYear();
             if (endYear > maxYear) {
@@ -712,10 +761,10 @@ export function test_dateUtils() {
 export function formatDateRange(start, end) {
     const endRaw = String(end ?? '').trim().toLowerCase();
     const isCurrentEnd = endRaw === 'current_date' || endRaw === 'current' || endRaw === 'present';
-    const startDate = parseFlexibleDateString(start);
+    const startDate = tryParseFlexibleDateString(start);
     const endDate = isCurrentEnd
         ? new Date()
-        : parseFlexibleDateString(end);
+        : tryParseFlexibleDateString(end);
 
     if (!startDate) return "Invalid start date";
     if (!endDate) return "Invalid end date";
@@ -731,4 +780,85 @@ export function formatDateRange(start, end) {
     };
 
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+}
+
+/**
+ * True when a job date value is missing, labeled unknown, or only partially known
+ * (e.g. redacted "9/XX").
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isPartiallyUnknownDateValue(value) {
+    if (isJobDateUndefined(value)) return true;
+    if (isRedactedDateToken(value)) return true;
+    const raw = String(value).trim();
+    const lower = raw.toLowerCase();
+    if (lower === 'startdate: unknown' || lower === 'enddate: unknown') return true;
+    if (lower === 'current_date' || lower === 'current' || lower === 'present'
+        || lower.includes('present') || lower.includes('current')) {
+        return false;
+    }
+    return tryParseFlexibleDateString(raw) == null;
+}
+
+/**
+ * Remove unknown / partially-unknown date tokens from a card title (employer/role).
+ * e.g. "9/XX-present Resident Assistant, Roble Hall" → "Resident Assistant, Roble Hall"
+ * @param {unknown} text
+ * @returns {string}
+ */
+export function stripUnknownDatesFromTitle(text) {
+    if (text == null) return '';
+    let s = String(text);
+    // Ranges: 9/XX-6/XX, 9/XX – present, 03/xx-current
+    s = s.replace(
+        /\b\d{1,2}\s*\/\s*xx\s*[-–—]\s*(?:\d{1,2}\s*\/\s*xx|present|current(?:_date)?)\b/gi,
+        ' '
+    );
+    // Lone redacted dates
+    s = s.replace(/\b\d{1,2}\s*\/\s*xx\b/gi, ' ');
+    s = s.replace(/\bxx\s*\/\s*\d{1,2}\b/gi, ' ');
+    // Explicit unknown labels
+    s = s.replace(/\b(?:startDate|endDate)\s*:\s*unknown\b/gi, ' ');
+    // Collapse leftover separators/whitespace
+    s = s.replace(/\s{2,}/g, ' ');
+    s = s.replace(/^[\s,;:|\/\-–—]+|[\s,;:|\/\-–—]+$/g, '');
+    return s.trim();
+}
+
+/**
+ * Format one job date endpoint for card UI (scene + resume).
+ * Undefined → "startDate: unknown" / "endDate: unknown"; present markers → "Present";
+ * parseable → "Mon YYYY"; otherwise the raw string (e.g. redacted "9/XX").
+ * @param {unknown} value
+ * @param {'startDate'|'endDate'} label
+ * @returns {string}
+ */
+export function formatCardDateEndpoint(value, label) {
+    if (isJobDateUndefined(value)) return `${label}: unknown`;
+    const raw = String(value).trim();
+    const lower = raw.toLowerCase();
+    if (lower === 'current_date' || lower === 'current' || lower === 'present' || lower.includes('present') || lower.includes('current')) {
+        return 'Present';
+    }
+    const parsed = tryParseFlexibleDateString(raw);
+    if (parsed && !Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    }
+    return raw;
+}
+
+/**
+ * Card date line for biz/resume cards.
+ * - Both missing → '' (show nothing)
+ * - Either redacted (e.g. 9/XX) → '' (keep title block free of partial dates)
+ * - Otherwise → "Jan 2020 - Present" / "startDate: unknown - Present" / etc.
+ * @param {unknown} start
+ * @param {unknown} end
+ * @returns {string}
+ */
+export function formatCardDatesDisplay(start, end) {
+    if (isJobDateUndefined(start) && isJobDateUndefined(end)) return '';
+    if (isRedactedDateToken(start) || isRedactedDateToken(end)) return '';
+    return `${formatCardDateEndpoint(start, 'startDate')} - ${formatCardDateEndpoint(end, 'endDate')}`;
 }

@@ -1,15 +1,10 @@
+import { formatCardDatesDisplay } from './dateUtils.mjs';
+
 /**
  * buildPrintHtml.mjs
  * Generates a printable HTML resume from live in-memory data.
  * Mirrors the structure and styling of the pre-rendered resume.html files.
  */
-
-function formatDate(dateStr) {
-    if (!dateStr || dateStr === 'CURRENT_DATE') return 'Present';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-}
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -123,7 +118,7 @@ export function buildPrintHtml(jobs, skills, categories, otherSections, educatio
       <div class="job-header">
         <span class="job-role">${escapeHtml(job.role || '')}</span>
         <span class="job-employer">${escapeHtml(job.employer || '')}</span>
-        <span class="job-dates">${formatDate(job.start)} – ${formatDate(job.end)}</span>
+        <span class="job-dates">${escapeHtml(formatCardDatesDisplay(job.start, job.end))}</span>
       </div>
       <div class="job-desc">${bulletHtml}</div>
     </div>`;

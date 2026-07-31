@@ -60,4 +60,17 @@ describe('skillLabel', () => {
     expect(labelToSlug('', skillsData)).toBeNull();
     expect(labelToSlug('x', null)).toBeNull();
   });
+
+  it('resolves corporate-suffix variants to the base skill name', () => {
+    const skillsData = {
+      Apple: { name: 'Apple' },
+      acme: { name: 'Acme' },
+    };
+    expect(labelToSlug('Apple Inc.', skillsData)).toBe('Apple');
+    expect(labelToSlug('Apple Inc', skillsData)).toBe('Apple');
+    expect(labelToSlug('Acme Corp.', skillsData)).toBe('acme');
+    expect(labelToSlug('Acme LLC', skillsData)).toBe('acme');
+    // Still unresolved when no base skill exists
+    expect(labelToSlug('Kaplan Inc.', skillsData)).toBeNull();
+  });
 });

@@ -134,13 +134,12 @@ export function renderBizCardSceneBodyHtml({
                 <button type="button" class="biz-details-edit-btn" aria-label="Edit employer">&#9998;</button>
             </div>
             <div class="biz-details-role">${escapeHtml(role)}</div>
-            <div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>
+            ${datesDisplay ? `<div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>` : ''}
             <div class="biz-details-debug-row"><span class="biz-details-id-and-hex">#${escapeHtml(String(jobNumber))} z:${escapeHtml(String(sceneZ))} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span></div>
             ${hasSkills ? `
             <div class="resume-skills">
                 <div class="resume-section-title-wrap">
                     <h4>Technologies &amp; Skills</h4>
-                    <button type="button" class="biz-details-edit-btn" aria-label="Edit skills for this job">&#9998;</button>
                 </div>
                 <div class="skills-list">
                     <span class="bullet">&bull;</span>
@@ -165,7 +164,7 @@ export function renderBizResumeHeaderHtml({
                 <div class="biz-details-employer">${escapeHtml(employer)}</div>
             </div>
             <div class="biz-details-role">${escapeHtml(role)}</div>
-            <div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>
+            ${datesDisplay ? `<div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>` : ''}
         </div>
     </div>`
 }

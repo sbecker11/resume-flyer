@@ -9,11 +9,10 @@ import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '../data/ResumeJob.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
-import { parseFlexibleDateString } from '../utils/dateUtils.mjs';
+import { tryParseFlexibleDateString, formatCardDatesDisplay, stripUnknownDatesFromTitle } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass } from '../utils/skillInfoModal.mjs';
 import { scrollResumeListingElementIntoView } from '../utils/resumeListScroll.mjs';
-import { shouldScrollScenePanel } from '../utils/panelKeyboardScroll.mjs';
 // No longer directly manipulating other managers
 
 /** Open Resume Details on Resume jobs or Education tab (education-as-job rows use Education only). */
@@ -317,7 +316,7 @@ class ResumeItemsController {
         employerWrap.className = 'biz-details-employer-wrap';
         const employerDiv = document.createElement('div');
         employerDiv.className = 'biz-details-employer';
-        employerDiv.textContent = jobData.employer || 'Unknown Employer';
+        employerDiv.textContent = stripUnknownDatesFromTitle(jobData.employer) || 'Unknown Employer';
         employerWrap.appendChild(employerDiv);
         const employerEditBtn = document.createElement('button');
         employerEditBtn.type = 'button';
@@ -325,27 +324,25 @@ class ResumeItemsController {
         employerEditBtn.setAttribute('aria-label', 'Edit employer');
         employerEditBtn.textContent = '✎';
         employerEditBtn.addEventListener('click', (e) => {
-            console.log('[RDE] pencil click (employer) start', jobNumber);
             e.preventDefault();
             e.stopPropagation();
             dispatchOpenResumeDetailsFromJob(jobNumber, 'employer');
-            console.log('[RDE] pencil click (employer) dispatchEvent done');
         });
         employerWrap.appendChild(employerEditBtn);
         headerDiv.appendChild(employerWrap);
 
         const roleDiv = document.createElement('div');
         roleDiv.className = 'biz-details-role';  
-        roleDiv.textContent = jobData.role || 'Unknown Role';
+        roleDiv.textContent = stripUnknownDatesFromTitle(jobData.role) || 'Unknown Role';
         headerDiv.appendChild(roleDiv);
-
-        const startDate = this.formatDate(jobData.start);
-        const endDate = this.formatDate(jobData.end);
 
         const datesDiv = document.createElement('div');
         datesDiv.className = 'biz-details-dates';
-        datesDiv.textContent = `${startDate} - ${endDate}`;
-        headerDiv.appendChild(datesDiv);
+        const datesDisplay = formatCardDatesDisplay(jobData.start || jobData.startDate, jobData.end);
+        if (datesDisplay) {
+            datesDiv.textContent = datesDisplay;
+            headerDiv.appendChild(datesDiv);
+        }
 
         const debugRow = document.createElement('div');
         debugRow.className = 'biz-details-debug-row';
@@ -387,19 +384,6 @@ class ResumeItemsController {
             const descTitle = document.createElement('h4');
             descTitle.textContent = 'Key Achievements';
             descTitleWrap.appendChild(descTitle);
-            const descEditBtn = document.createElement('button');
-            descEditBtn.type = 'button';
-            descEditBtn.className = 'biz-details-edit-btn';
-            descEditBtn.setAttribute('aria-label', 'Edit description');
-            descEditBtn.textContent = '✎';
-            descEditBtn.addEventListener('click', (e) => {
-                console.log('[RDE] pencil click (description) start', jobNumber);
-                e.preventDefault();
-                e.stopPropagation();
-                dispatchOpenResumeDetailsFromJob(jobNumber, 'description');
-                console.log('[RDE] pencil click (description) dispatchEvent done');
-            });
-            descTitleWrap.appendChild(descEditBtn);
             descDiv.appendChild(descTitleWrap);
 
             const descContent = document.createElement('div');
@@ -424,17 +408,6 @@ class ResumeItemsController {
             const skillsTitle = document.createElement('h4');
             skillsTitle.textContent = 'Technologies & Skills';
             skillsTitleWrap.appendChild(skillsTitle);
-            const skillsEditBtn = document.createElement('button');
-            skillsEditBtn.type = 'button';
-            skillsEditBtn.className = 'biz-details-edit-btn';
-            skillsEditBtn.setAttribute('aria-label', 'Edit skills for this job');
-            skillsEditBtn.textContent = '✎';
-            skillsEditBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }));
-            });
-            skillsTitleWrap.appendChild(skillsEditBtn);
             skillsDiv.appendChild(skillsTitleWrap);
 
             const skillsList = document.createElement('div');
@@ -456,19 +429,15 @@ class ResumeItemsController {
                 month: 'short'
             });
         }
-        
-        try {
-            const date = parseFlexibleDateString(dateStr);
-            if (!isNaN(date.getTime())) {
-                return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short' 
-                });
-            }
-        } catch (e) {
-            // Fall through to return original string
+
+        const date = tryParseFlexibleDateString(dateStr);
+        if (date && !isNaN(date.getTime())) {
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short'
+            });
         }
-        
+
         return dateStr;
     }
 
@@ -606,17 +575,6 @@ class ResumeItemsController {
             const skillsTitle = document.createElement('h4');
             skillsTitle.textContent = 'Technologies & Skills';
             skillsTitleWrap.appendChild(skillsTitle);
-            const skillsEditBtn = document.createElement('button');
-            skillsEditBtn.type = 'button';
-            skillsEditBtn.className = 'biz-details-edit-btn';
-            skillsEditBtn.setAttribute('aria-label', 'Edit skills for this job');
-            skillsEditBtn.textContent = '✎';
-            skillsEditBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber: jobIndex } }));
-            });
-            skillsTitleWrap.appendChild(skillsEditBtn);
             skillsDiv.appendChild(skillsTitleWrap);
             const skillsList = document.createElement('div');
             skillsList.className = 'skills-list';
@@ -1010,26 +968,8 @@ class ResumeItemsController {
             // Trigger height recalculation to accommodate visible stats div
             this._triggerHeightRecalculation('[DEBUG] ResumeItemsController.handleSelectionChanged: Triggered height recalculation');
             
-            // Scroll scene only when pointer is on the scene side (↑/↓ over resume should slide resume listing).
-            if (cDiv) {
-                if (!shouldScrollScenePanel()) {
-                    console.log(`[DEBUG] ResumeItemsController: Skipping scene scroll for job ${selectedJobNumber} (resume panel active)`)
-                } else {
-                    console.log(`[DEBUG] ResumeItemsController: Scrolling cDiv into view for job ${selectedJobNumber}`)
-                    const sceneScroll = document.getElementById('scene-content')
-                    if (sceneScroll) {
-                        const sceneRect = sceneScroll.getBoundingClientRect()
-                        const cDivRect = cDiv.getBoundingClientRect()
-                        const scrollTop = sceneScroll.scrollTop + (cDivRect.top - sceneRect.top) - (sceneRect.height / 2) + (cDivRect.height / 2)
-                        sceneScroll.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' })
-                        console.log(`[DEBUG] ResumeItemsController: Scrolled scene-content to position ${Math.round(scrollTop)} for job ${selectedJobNumber}`)
-                    } else {
-                        cDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    }
-                }
-            } else {
-                console.debug(`[ResumeItemsController] No cDiv for job ${selectedJobNumber} yet (scene cards may still be initializing)`);
-            }
+            // Scene scroll for the matching cDiv/clone is handled by CardsController
+            // (card-selected → applySceneDisplayForCard → scrollSceneCardCloneIntoViewAfterVisible).
             
             console.log(`[DEBUG] ResumeItemsController.handleSelectionChanged: Applied 'selected' class to resume div`);
         } else {

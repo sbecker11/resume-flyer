@@ -3,6 +3,7 @@ import {
   getMonthDates,
   getIsoDateString,
   parseFlexibleDateString,
+  tryParseFlexibleDateString,
   parseJobTenureEndpoint,
   jobTenureMonthsInclusive,
   parseYearStr,
@@ -22,6 +23,8 @@ import {
   getDateDifference,
   validateIs_YYYY_MM_DD_DateString,
   formatDateRange,
+  formatCardDatesDisplay,
+  stripUnknownDatesFromTitle,
   test_dateUtils,
 } from './dateUtils.mjs';
 
@@ -87,6 +90,23 @@ describe('dateUtils', () => {
       expect(() => parseFlexibleDateString('')).toThrow(/Invalid or empty/);
       expect(() => parseFlexibleDateString('   ')).toThrow();
       expect(() => parseFlexibleDateString('invalid-date')).toThrow();
+    });
+    it('throws for redacted sample-resume years', () => {
+      expect(() => parseFlexibleDateString('9/XX')).toThrow(/redacted year/);
+      expect(() => parseFlexibleDateString('03/xx')).toThrow(/redacted year/);
+    });
+  });
+
+  describe('tryParseFlexibleDateString', () => {
+    it('returns Date for valid input', () => {
+      expect(tryParseFlexibleDateString('2023-01-15')).toBeInstanceOf(Date);
+    });
+    it('returns null for redacted or invalid dates without throwing', () => {
+      expect(tryParseFlexibleDateString('9/XX')).toBeNull();
+      expect(tryParseFlexibleDateString('03/xx')).toBeNull();
+      expect(tryParseFlexibleDateString('')).toBeNull();
+      expect(tryParseFlexibleDateString(null)).toBeNull();
+      expect(tryParseFlexibleDateString('not-a-date')).toBeNull();
     });
   });
 
@@ -286,6 +306,37 @@ describe('dateUtils', () => {
     it('handles lowercase current markers', () => {
       expect(formatDateRange('2022-01', 'current_date')).toContain('Present');
       expect(formatDateRange('2022-01', 'current')).toContain('Present');
+    });
+  });
+
+  describe('formatCardDatesDisplay', () => {
+    it('shows nothing when both start and end are undefined', () => {
+      expect(formatCardDatesDisplay(undefined, undefined)).toBe('');
+      expect(formatCardDatesDisplay('', null)).toBe('');
+    });
+    it('shows nothing when either date is redacted', () => {
+      expect(formatCardDatesDisplay('9/XX', '4/XX')).toBe('');
+      expect(formatCardDatesDisplay('2020-01', '6/XX')).toBe('');
+    });
+    it('labels only the missing endpoint when the other is known', () => {
+      expect(formatCardDatesDisplay(undefined, '2022-06')).toMatch(/^startDate: unknown - /);
+      expect(formatCardDatesDisplay('2020-01', '')).toMatch(/ - endDate: unknown$/);
+    });
+    it('formats known dates and Present', () => {
+      expect(formatCardDatesDisplay('2020-01', 'CURRENT_DATE')).toMatch(/ - Present$/);
+    });
+  });
+
+  describe('stripUnknownDatesFromTitle', () => {
+    it('strips leading redacted date ranges from titles', () => {
+      expect(stripUnknownDatesFromTitle('9/XX-present Resident Assistant, Roble Hall'))
+        .toBe('Resident Assistant, Roble Hall');
+      expect(stripUnknownDatesFromTitle('9/XX-6/XX Kitchen Manager, Columbae House'))
+        .toBe('Kitchen Manager, Columbae House');
+    });
+    it('leaves clean titles unchanged', () => {
+      expect(stripUnknownDatesFromTitle('Columbae House, Stanford University'))
+        .toBe('Columbae House, Stanford University');
     });
   });
 

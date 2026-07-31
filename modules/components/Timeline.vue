@@ -47,8 +47,8 @@
 </template>
 
 <script setup>
-import { computed, watch, onMounted } from 'vue';
-import { useTimeline, initialize } from '@/modules/composables/useTimeline.mjs';
+import { watch, onMounted } from 'vue';
+import { useTimeline } from '@/modules/composables/useTimeline.mjs';
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
 
 // Props
@@ -59,22 +59,23 @@ const props = defineProps({
   }
 });
 
-// Use timeline composable
-const { years, timelineHeight, isInitialized: timelineInitialized } = useTimeline();
+// Use timeline composable — height/years driven by resume-load bounds
+const { years, timelineHeight, reinitialize } = useTimeline();
 
-function tryInitTimeline() {
-  if (timelineInitialized.value) return;
+/**
+ * On every jobs payload change (initial load or resume switch), recompute
+ * min/max dates and apply them as Timeline SVG height + year ticks.
+ */
+function syncTimelineFromJobs() {
   const jobs = getGlobalJobsDependency().getJobsData();
-  if (Array.isArray(jobs) && jobs.length > 0) {
-    console.log('[Timeline] Initializing timeline with jobs data...');
-    initialize(jobs);
-  }
+  if (!Array.isArray(jobs) || jobs.length === 0) return;
+  reinitialize(jobs);
 }
 
-onMounted(() => tryInitTimeline());
-watch(() => getGlobalJobsDependency().jobsData, () => tryInitTimeline(), { deep: true });
+onMounted(() => syncTimelineFromJobs());
+watch(() => getGlobalJobsDependency().jobsData, () => syncTimelineFromJobs(), { deep: true });
 
-console.log('[Timeline] Component initialized with Vue composables - timelineHeight:', timelineHeight.value, 'Years array length:', years.value.length);
+console.log('[Timeline] Component ready — timelineHeight:', timelineHeight.value, 'years:', years.value.length);
 </script>
 
 <style scoped>

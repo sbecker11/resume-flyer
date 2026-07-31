@@ -2,7 +2,7 @@ import { ref, onMounted, onUnmounted, watch, inject, computed, watchEffect } fro
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs'
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs'
 import { selectionManager } from '@/modules/core/selectionManager.mjs'
-import { useTimeline, initialize } from '@/modules/composables/useTimeline.mjs'
+import { useTimeline } from '@/modules/composables/useTimeline.mjs'
 import { useColorPalette, applyPaletteToElement, updateContrastForBrightness, readyPromise } from '@/modules/composables/useColorPalette.mjs'
 import * as dateUtils from '@/modules/utils/dateUtils.mjs'
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs'
@@ -26,7 +26,6 @@ import {
 import { useCardRegistry } from '@/modules/composables/useCardRegistry.mjs'
 import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElementRegistry.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
-import { shouldScrollScenePanel } from '@/modules/utils/panelKeyboardScroll.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
 import {
@@ -36,7 +35,9 @@ import {
 import {
     markFocusedSkillLinkForJob,
     markSourceBizBackLinkForSkill,
-    clearSourceBizBackLinkClass
+    clearSourceBizBackLinkClass,
+    scrollFocusedBizCardSkillIntoViewIfCropVisible,
+    getElementVerticalExtent
 } from '@/modules/utils/skillInfoModal.mjs'
 import {
     provisionSceneCardCloneAtInit,
@@ -223,11 +224,9 @@ export function useCardsController() {
         try {
             isInitializing = true
             console.log(`🔧 [CardsController #${instanceId}] 🚀 STARTING INITIALIZATION with ${jobs.length} jobs`)
-            // Initialize timeline first
-            if (!timelineInitialized.value) {
-                console.debug('[CardsController] initializing timeline')
-                initialize(jobs)
-            }
+            // Timeline min/max (and height) must match this resume's job dates before cards are placed.
+            console.debug('[CardsController] recomputing timeline bounds from jobs')
+            timelineComposable.reinitialize(jobs)
             
             // Get the scene plane element via optimized registry. Fail-fast: no fallbacks.
             let scenePlaneEl = scenePlaneElement ?? elementRegistry.getScenePlane()
@@ -342,12 +341,22 @@ export function useCardsController() {
                         const skillsData = getGlobalJobsDependency().getSkillsData()
                         const displayNames = entries.map(e => skillLabelText(e.skillKey, skillsData[e.skillKey]))
                         expandBizCardToFitSkills(card, displayNames)
+                        updateBizCardSkillsVisibility(card)
+                    } else {
+                        updateBizCardSkillsVisibility(card)
                     }
                 }
+                // Re-check after layout (getBoundingClientRect needs painted geometry)
+                requestAnimationFrame(() => {
+                    for (const card of cards) updateBizCardSkillsVisibility(card)
+                })
                 console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
                 if (window.resumeFlyer?.allDivs) window.resumeFlyer.allDivs.skillCardDivs = [...skillCardsCreated]
 
                 await provisionAllSceneCardClonesAtInit(scenePlaneEl, cards, skillCardsCreated)
+
+                // Timeline must reach the bottom edge of the bottom-most scene card
+                extendTimelineToCoverSceneCards(scenePlaneEl)
 
                 // Stamp data-skill-card-id onto all biz-resume-div skill spans now that the ID map is complete
                 document.querySelectorAll('.biz-resume-div .biz-card-skill-title[data-skill-name]').forEach(span => {
@@ -391,6 +400,28 @@ export function useCardsController() {
      *   - Downward vertical cascade: each card in the group steps down by Y_STEP px
      * Groups of 1 are untouched.
      */
+    /**
+     * After all scene cards are placed, grow the timeline so its bottom reaches
+     * the bottom edge of the bottom-most biz/skill card (plus padding).
+     * @param {HTMLElement} scenePlaneEl
+     */
+    function extendTimelineToCoverSceneCards(scenePlaneEl) {
+        if (!scenePlaneEl) return
+        let maxBottom = 0
+        scenePlaneEl.querySelectorAll('.biz-card-div:not(.clone), .skill-card-div:not(.clone)').forEach((el) => {
+            const top = parseFloat(el.style.top) || 0
+            const height = Math.max(
+                parseFloat(el.style.height) || 0,
+                parseFloat(el.style.minHeight) || 0,
+                el.offsetHeight || 0
+            )
+            maxBottom = Math.max(maxBottom, top + height)
+        })
+        if (maxBottom > 0) {
+            timelineComposable.extendToCoverSceneBottom(maxBottom)
+        }
+    }
+
     function applyConcurrentJobOffsets(jobs, cards) {
         const X_STEP = appState.value?.['system-constants']?.cards?.concurrentJobsOffsetX ?? 35
         const Y_STEP = appState.value?.['system-constants']?.cards?.concurrentJobsOffsetY ?? 22
@@ -427,7 +458,8 @@ export function useCardsController() {
     }
 
     /**
-     * Wire cDiv pencil buttons to the same editor flows as rDiv.
+     * Wire cDiv title/employer pencil to editor flows.
+     * Description and skills pencils are intentionally omitted.
      * cloneNode(true) does not copy listeners, so this must be called for clones too.
      * @param {HTMLElement} cardEl
      * @param {number} jobNumber
@@ -450,14 +482,6 @@ export function useCardsController() {
                         detail: { tab: 'resume-jobs', jobIndex: jobNumber, focusField: 'employer' },
                     }))
                 }
-            })
-        }
-        const skillsEditBtn = cardEl.querySelector('.resume-skills .biz-details-edit-btn')
-        if (skillsEditBtn) {
-            skillsEditBtn.addEventListener('click', (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                window.dispatchEvent(new CustomEvent('edit-job-skills', { detail: { jobNumber } }))
             })
         }
     }
@@ -486,9 +510,11 @@ export function useCardsController() {
         card.className = 'biz-card-div'
         card.id = cardId
         card.setAttribute('data-job-number', jobNumber)
-        card.setAttribute('data-biz-card-title', (job.employer || job.role || `Job ${jobNumber}`).trim())
-        card.setAttribute('data-role', job.role || 'Unknown Role')
-        card.setAttribute('data-employer', job.employer || 'Unknown Employer')
+        const employerTitle = dateUtils.stripUnknownDatesFromTitle(job.employer || '') || 'Unknown Employer'
+        const roleTitle = dateUtils.stripUnknownDatesFromTitle(job.role || '') || 'Unknown Role'
+        card.setAttribute('data-biz-card-title', (employerTitle || roleTitle || `Job ${jobNumber}`).trim())
+        card.setAttribute('data-role', roleTitle)
+        card.setAttribute('data-employer', employerTitle)
         
         // Z from job "z-index" (1–3) for depth only
         const jobZIndex = (job['z-index'] != null && job['z-index'] !== '') ? parseInt(String(job['z-index']), 10) : (jobNumber % 3) + 1
@@ -502,9 +528,13 @@ export function useCardsController() {
         let y = 100 // Default fallback (set from timeline below)
         
         try {
-            // Parse job END date and get timeline position using corrected Timeline formula
-            const endDate = (job.end === "CURRENT_DATE" || !job.end) ? new Date() : dateUtils.parseFlexibleDateString(job.end)
-            if (endDate && timelineInitialized.value) {
+            // Prefer timeline Y from a parseable end date; if start (or end) is redacted
+            // (e.g. "9/XX"), stack instead so concurrent "present" jobs do not pile at today.
+            const startDate = dateUtils.tryParseFlexibleDateString(job.start || job.startDate)
+            const endDate = (job.end === "CURRENT_DATE" || !job.end)
+                ? (startDate ? new Date() : null)
+                : dateUtils.tryParseFlexibleDateString(job.end)
+            if (startDate && endDate && timelineInitialized.value) {
                 // Use Timeline's exact positioning logic like red lines - position at END date (top of cDiv)
                 const { years } = useTimeline()
                 const endYear = endDate.getFullYear()
@@ -514,16 +544,18 @@ export function useCardsController() {
                 if (endYearEntry) {
                     // Use corrected formula: y - (month+1)*16.67 + 2
                     y = endYearEntry.y - ((endMonth + 1) * 16.67) + 2
-                    // console.log(`[CardsController] Job ${jobNumber} (${job.employer}): ${job.end} → Y position: ${y}`)
                 } else {
                     console.warn(`[CardsController] Could not find year entry for job ${jobNumber} year ${endYear}`)
+                    y = 100 + jobNumber * (MIN_BIZCARD_HEIGHT + 24)
                 }
             } else {
-                console.warn(`[CardsController] Could not position job ${jobNumber}: missing end date or timeline not ready`)
+                // Redacted/missing dates (e.g. "9/XX"): stack cards so scene + resume list still render
+                y = 100 + jobNumber * (MIN_BIZCARD_HEIGHT + 24)
+                console.warn(`[CardsController] Job ${jobNumber}: unparseable dates (${job.start}–${job.end}); using stack Y=${y}`)
             }
         } catch (error) {
-            console.error(`[CardsController] Error positioning job ${jobNumber}:`, error)
-            throw error
+            reportError(error, `[CardsController] Error positioning job ${jobNumber}`, `Using stacked fallback Y for job ${jobNumber}`);
+            y = 100 + jobNumber * (MIN_BIZCARD_HEIGHT + 24)
         }
         
         // Store scene positions as data attributes (for original CardsController compatibility)
@@ -570,10 +602,14 @@ export function useCardsController() {
             const rawStart = job.start || job.startDate;
             if (!rawStart) {
                 console.warn(`[CardsController] Skipping height calculation for job ${jobNumber}: no start date`);
+                card.style.height = `${MIN_BIZCARD_HEIGHT}px`
+                card.setAttribute('data-sceneHeight', MIN_BIZCARD_HEIGHT)
                 // fall through to card content setup below
             } else {
-            const jobStartDate = dateUtils.parseFlexibleDateString(rawStart)
-            const jobEndDate = (job.end === "CURRENT_DATE" || !job.end) ? new Date() : dateUtils.parseFlexibleDateString(job.end)
+            const jobStartDate = dateUtils.tryParseFlexibleDateString(rawStart)
+            const jobEndDate = (job.end === "CURRENT_DATE" || !job.end)
+                ? new Date()
+                : dateUtils.tryParseFlexibleDateString(job.end)
             
             // Initialize scene position variables
             let sceneTop = 0;
@@ -638,10 +674,14 @@ export function useCardsController() {
                 })
             } else {
                 console.warn(`[CardsController] Could not calculate height for job ${jobNumber}: missing dates or timeline not ready`)
+                card.style.height = `${MIN_BIZCARD_HEIGHT}px`
+                card.setAttribute('data-sceneHeight', MIN_BIZCARD_HEIGHT)
             }
             } // end rawStart else
         } catch (error) {
             console.error(`[CardsController] Error calculating height for job ${jobNumber}:`, error)
+            card.style.height = `${MIN_BIZCARD_HEIGHT}px`
+            card.setAttribute('data-sceneHeight', MIN_BIZCARD_HEIGHT)
         }
 
         // Add comprehensive content including job number and description
@@ -651,18 +691,12 @@ export function useCardsController() {
             (Array.isArray(job.skillIDs) && job.skillIDs.length > 0);
         
         // Parse dates once at the top level for use throughout the function
-        const originalJobStartDate = (job.start || job.startDate) ? dateUtils.parseFlexibleDateString(job.start || job.startDate) : null
-        const originalJobEndDate = (job.end === "CURRENT_DATE" || (job.end && String(job.end).toLowerCase().includes('present')) || !job.end) ? new Date() : dateUtils.parseFlexibleDateString(job.end)
+        const originalJobStartDate = dateUtils.tryParseFlexibleDateString(job.start || job.startDate)
         const isEndPresent = !job.end || job.end === 'CURRENT_DATE' || (typeof job.end === 'string' && job.end.toLowerCase().includes('present'))
-        const formatMonthYear = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
-        const datesDisplay = (() => {
-            const startRaw = job.start || job.startDate
-            if (!startRaw) return 'N/A'
-            const startDate = dateUtils.parseFlexibleDateString(startRaw)
-            const endDate = isEndPresent ? new Date() : dateUtils.parseFlexibleDateString(job.end)
-            if (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return 'N/A'
-            return `${formatMonthYear(startDate)} - ${formatMonthYear(endDate)}`
-        })()
+        const originalJobEndDate = isEndPresent
+            ? new Date()
+            : dateUtils.tryParseFlexibleDateString(job.end)
+        const datesDisplay = dateUtils.formatCardDatesDisplay(job.start || job.startDate, job.end)
         
         // Create separate copies for positioning calculations (will be forced to day 1)
         const jobStartDate = originalJobStartDate ? new Date(originalJobStartDate) : null
@@ -760,13 +794,12 @@ export function useCardsController() {
                 }
             }
         } catch (error) {
-            console.error(`[CardsController] Could not calculate reverse dates for job ${jobNumber}:`, error)
-            throw error
+            reportError(error, `[CardsController] Could not calculate reverse dates for job ${jobNumber}`, 'Continuing card creation without reverse-date debug')
         }
         
         card.innerHTML = renderBizCardSceneBodyHtml({
-            employer: job.employer || 'Unknown Employer',
-            role: job.role || 'Unknown Role',
+            employer: employerTitle,
+            role: roleTitle,
             datesDisplay,
             jobNumber,
             sceneZ,
@@ -868,28 +901,14 @@ export function useCardsController() {
     }
 
     /**
-     * Ensure a biz card's inline height (and minHeight) is tall enough to display all
-     * skill title spans without clipping.  Call synchronously after skill entries are
-     * known, before the card is painted.
-     *
-     * @param {HTMLElement} card
-     * @param {string[]}    displayNames  - ordered list of skill display names to show
+     * Scene cards are cropped (overflow hidden, 20px bottom inset). Do not grow the card
+     * to fit skills — the skills section is shown only when ≥1 skill item remains visible
+     * inside the crop box (see updateBizCardSkillsVisibility).
+     * @param {HTMLElement} _card
+     * @param {string[]}    _displayNames
      */
-    function expandBizCardToFitSkills(card, displayNames) {
-        if (!displayNames || !displayNames.length) return
-        const cardWidth = parseFloat(card.style.width) || BIZCARD_WIDTH
-        // Fixed header content above the skills section (employer + role + dates + debug row)
-        const HEADER_H = 100
-        const BOTTOM_PAD = 12
-        const skillsH = estimateBizCardSkillsSectionHeight(displayNames, cardWidth)
-        const needed = HEADER_H + skillsH + BOTTOM_PAD
-        // Only grow, never shrink the timeline-derived height
-        const currentFixed = parseFloat(card.style.height) || 0
-        const currentMin  = parseFloat(card.style.minHeight) || 0
-        const baseline = Math.max(currentFixed, currentMin, MIN_BIZCARD_HEIGHT)
-        if (needed > baseline) {
-            card.style.minHeight = `${needed}px`
-        }
+    function expandBizCardToFitSkills(_card, _displayNames) {
+        // no-op — cropping + visibility gate replace grow-to-fit
     }
 
     /**
@@ -1064,8 +1083,11 @@ export function useCardsController() {
                     const bizEl = document.getElementById(bizCardId)
                     const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN
                     if (!Number.isNaN(jobNum)) {
+                        // Highlight back-arrow first so the two-way link is visible before scroll.
+                        markSourceBizBackLinkForSkill(skillCard.id, bizCardId)
                         selectionManager.selectCard({ type: 'biz', jobNumber: jobNum }, 'CardsController.skillCardBizTitleClick')
                         markFocusedSkillLinkForJob(jobNum, skillName)
+                        scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNum, skillName)
                     }
                 }
                 return
@@ -1222,16 +1244,37 @@ export function useCardsController() {
     }
 
     /**
-     * Hide .resume-skills if the remaining card space is too small for the h4 header + one row of skills.
-     * Uses clientHeight (available after card is in DOM with explicit style.height set).
-     * ~40px = h4 (~20px) + one skills row (~20px).
+     * Show .resume-skills only when at least one skill title is fully visible inside the
+     * card's cropped content area (card box minus 20px bottom inset). Otherwise hide the
+     * whole "Technologies & Skills" section (including the header).
+     * @param {HTMLElement} card
      */
     function updateBizCardSkillsVisibility(card) {
         const skillsEl = card.querySelector('.resume-skills')
         if (!skillsEl) return
-        if (skillsEl.clientHeight < 40) {
+
+        const items = skillsEl.querySelectorAll('.biz-card-skill-title')
+        if (!items.length) {
             skillsEl.style.display = 'none'
+            return
         }
+
+        // Ensure measurable while checking (may have been hidden earlier)
+        skillsEl.style.display = ''
+
+        const cardRect = card.getBoundingClientRect()
+        const cropBottom = cardRect.bottom - 20
+        let visibleCount = 0
+        for (const item of items) {
+            // Use all line boxes so a wrapped skill isn't treated as fully visible
+            // when only its first line sits above the crop.
+            const { top, bottom, height } = getElementVerticalExtent(item)
+            if (height > 0 && top >= cardRect.top - 0.5 && bottom <= cropBottom + 0.5) {
+                visibleCount += 1
+            }
+        }
+
+        skillsEl.style.display = visibleCount >= 1 ? '' : 'none'
     }
 
     /** Log average 3D scene-relative center.x of biz-card-divs (should be 0). Only call once after scene geometry is set; 3D scene elements are static. */
@@ -1396,45 +1439,54 @@ export function useCardsController() {
     }
 
     // Clone management: one selected card at a time
-    /** job-selected: resume list sync; scroll cDiv into view. Clone display is in handleCardSelected. */
+    /** job-selected: resume list sync only. Scene clone + scroll live in handleCardSelected. */
     function handleJobSelected(event) {
         const { jobNumber } = event.detail || {}
         if (jobNumber == null) return
-        if (!shouldScrollScenePanel()) return
-        setTimeout(() => scrollCDivHeaderIntoView(jobNumber), 100)
+    }
+
+    /**
+     * Skill-card back-arrow (and skill-info modal job link) navigations keep the inverted
+     * back-arrow highlight so it mirrors the focused T&S skill on the target biz card.
+     */
+    function isSkillToBizBackArrowSource(source) {
+        if (typeof source !== 'string') return false
+        return source.includes('skillCardBizTitle')
+            || source.includes('skillCardCloneBizTitle')
+            || source.includes('skillCardJobClick')
+            || source.includes('appendedCopyBackLink')
+            || source.includes('SkillInfoModal.bizLinkClick')
     }
 
     /** Show the selected card in the scene (biz or skill clone). Used by card-selected and persisted-selection restore. */
-    async function applySceneDisplayForCard(card, previousCard = null) {
+    async function applySceneDisplayForCard(card, previousCard = null, source = null) {
         if (!card) return
 
         if (previousCard) {
             await setSceneCardSelected(previousCard, false)
         }
 
-        const scrollScene = shouldScrollScenePanel()
-
+        // Always scroll the matching scene card into view on selection (resume or scene click).
         if (card.type === 'biz') {
-            clearSourceBizBackLinkClass()
-            await setSceneCardSelected(card, true)
-            if (scrollScene) {
-                scrollSceneCardCloneIntoViewAfterVisible(createBizCardDivId(card.jobNumber))
+            // Keep inverted back-arrow when navigating skill → biz via that arrow (two-way link).
+            if (!isSkillToBizBackArrowSource(source)) {
+                clearSourceBizBackLinkClass()
             }
+            await setSceneCardSelected(card, true)
+            scrollSceneCardCloneIntoViewAfterVisible(createBizCardDivId(card.jobNumber))
             return
         }
 
         if (card.type === 'skill') {
             await setSceneCardSelected(card, true)
-            if (scrollScene) {
-                scrollSceneCardCloneIntoViewAfterVisible(card.skillCardId)
-            }
+            scrollSceneCardCloneIntoViewAfterVisible(card.skillCardId)
         }
     }
 
     /** One selected card at a time; show its clone (biz or skill) */
     async function handleCardSelected(event) {
-        const { card, previousCard } = event.detail || {}
-        await applySceneDisplayForCard(card, previousCard)
+        const { card, previousCard, source } = event.detail || {}
+        await applySceneDisplayForCard(card, previousCard, source)
     }
 
     /** When the selected card is unselected (e.g. before selecting another), hide its clone and show original */
@@ -1962,9 +2014,14 @@ export function useCardsController() {
                     const bizEl = document.getElementById(bizCardId)
                     const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN
                     if (!Number.isNaN(jobNum)) {
-                        selectionManager.selectCard({ type: 'biz', jobNumber: jobNum }, 'CardsController.skillCardCloneBizTitleClick')
                         const slug = clone.getAttribute('data-skill-name') || ''
-                        if (slug) markFocusedSkillLinkForJob(jobNum, slug)
+                        // Highlight back-arrow first so the two-way link is visible before scroll.
+                        markSourceBizBackLinkForSkill(skillCardId, bizCardId)
+                        selectionManager.selectCard({ type: 'biz', jobNumber: jobNum }, 'CardsController.skillCardCloneBizTitleClick')
+                        if (slug) {
+                            markFocusedSkillLinkForJob(jobNum, slug)
+                            scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNum, slug)
+                        }
                     }
                 }
                 return

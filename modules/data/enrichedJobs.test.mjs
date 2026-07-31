@@ -94,6 +94,21 @@ describe('enrichedJobs', () => {
     expect(() => enrichJobsWithSkills(rawJobs, {})).toThrow('[enrichJobFromDescription] Unresolved bracketed term "[UnknownSkill]"');
   });
 
+  it('resolves [Apple Inc.] to skill named Apple without a duplicate skills entry', () => {
+    const rawJobs = [{
+      index: 0,
+      Description: 'Developed relationships with outside sponsors, such as [Apple Inc.], [Kaplan]',
+    }];
+    const skills = {
+      Apple: { name: 'Apple', url: '', img: '' },
+      kaplan: { name: 'Kaplan', url: 'https://www.kaplan.com', img: '' },
+    };
+    const jobs = enrichJobsWithSkills(rawJobs, skills);
+    expect(jobs[0]['job-skills']).toHaveProperty('Apple');
+    expect(jobs[0]['job-skills']).toHaveProperty('kaplan');
+    expect(jobs[0].references).toHaveLength(2);
+  });
+
   it('detects unbracketed skill occurrences in description', () => {
     const rawJobs = [{ index: 0, Description: 'Used Python in production.' }];
     const skills = { Python: { url: 'https://python.org', img: '' } };
