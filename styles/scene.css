@@ -1045,8 +1045,8 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
     transition: all 0.2s ease;
     z-index: 2;
 }
-/* Show on selected scene skill cards and all resume-list skill cards (including education-linked). */
-.skill-card-div.clone .skill-info-modal-btn,
+/* Show on all scene skill cards (original + selected clone) and resume-list skill cards. */
+.skill-card-div .skill-info-modal-btn,
 .skill-resume-div .skill-info-modal-btn,
 .appended-skill-resume-div .skill-info-modal-btn {
     display: flex;
