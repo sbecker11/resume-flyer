@@ -4,9 +4,9 @@
  * Shared utility: fetch a skill's LLM-generated definition from the server
  * and display it in a modal overlay.
  *
- * On static hosts (GitHub Pages) the OpenAI-backed API is unavailable; the
- * modal still opens with a Wikipedia (or configured) source link and any
- * associated experience links — no failing network request.
+ * On static hosts (GitHub Pages) or when the LLM API is unavailable, the
+ * modal still opens with a Wikipedia (or configured) link — without a
+ * "source:" label — plus any associated experience links.
  *
  * Usage:
  *   import { openSkillInfoModal } from '@/modules/utils/skillInfoModal.mjs';
@@ -317,26 +317,57 @@ function scrollSceneContentSoElementVisible(el) {
     sceneContent.scrollBy({ top: delta, behavior: 'smooth' });
 }
 
-function scrollResumeSkillTitleIntoView(jobNumber, skillSlug) {
+/**
+ * Scroll #resume-content-listing so the focused T&S skill title on the rDiv is in view.
+ * Selection’s default scroll parks the rDiv *header* at the top; for tall cards that leaves
+ * Technologies & Skills (and the focused skill) below the fold — this corrects that.
+ *
+ * @param {number|string} jobNumber
+ * @param {string} skillSlug
+ * @param {{ behavior?: 'auto' | 'smooth' }} [options]
+ * @returns {boolean} true when a matching skill title was found and scrolled
+ */
+function scrollResumeSkillTitleIntoView(jobNumber, skillSlug, { behavior = 'smooth' } = {}) {
     const escJob = CSS.escape(String(jobNumber));
     const escSkill = CSS.escape(String(skillSlug));
     const rDiv = document.querySelector(`.biz-resume-div[data-job-number="${escJob}"]`);
     const skillEl = rDiv?.querySelector(`.biz-card-skill-title[data-skill-name="${escSkill}"]`);
-    if (!skillEl) return;
+    if (!skillEl) return false;
     const scrollport = skillEl.closest('#resume-content-listing');
-    scrollResumeListingElementIntoView(skillEl, scrollport, { behavior: 'smooth' });
+    scrollResumeListingElementIntoView(skillEl, scrollport, { behavior });
+    return true;
 }
 
 /**
- * After a skill-card back-arrow selects a biz card: if that card’s T&S section is shown,
- * scroll the matching skill fully into the T&S crop window (via `.resume-skills` scrollTop),
- * then bring it into the scene/resume viewports. No-op when T&S is hidden.
+ * Retry resume skill scroll so it wins over selection’s smooth header scroll
+ * (`_scrollRDivIntoView` / `scrollResumeListingElementIntoView` on the whole rDiv).
+ */
+function scheduleScrollResumeSkillTitleIntoView(jobNumber, skillSlug) {
+    const delaysMs = [0, 80, 200, 400];
+    delaysMs.forEach((ms, i) => {
+        const behavior = i === 0 ? 'smooth' : 'auto';
+        const run = () => scrollResumeSkillTitleIntoView(jobNumber, skillSlug, { behavior });
+        if (ms === 0) {
+            requestAnimationFrame(() => requestAnimationFrame(run));
+        } else {
+            window.setTimeout(run, ms);
+        }
+    });
+}
+
+/**
+ * After a skill-card back-arrow selects a biz card:
+ * 1) Always scroll the matching skill into the resume listing viewport (even when scene T&S is hidden).
+ * 2) If the scene card’s T&S section is shown, also scroll the skill into that crop window.
  *
  * @param {number|string} jobNumber
  * @param {string} skillSlug
  */
 export function scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNumber, skillSlug) {
     if (jobNumber == null || jobNumber === '' || !skillSlug) return;
+
+    // Resume first: independent of scene crop / T&S visibility.
+    scheduleScrollResumeSkillTitleIntoView(jobNumber, skillSlug);
 
     const escSkill = CSS.escape(String(skillSlug));
     let attempts = 0;
@@ -351,6 +382,7 @@ export function scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNumber, skillS
 
         const skillsEl = card.querySelector('.resume-skills');
         if (!skillsEl || skillsEl.style.display === 'none') {
+            // Scene T&S hidden (crop) — resume listing scroll already scheduled above.
             return;
         }
 
@@ -384,27 +416,15 @@ export function scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNumber, skillS
             return;
         }
 
-        if (!isSkillTitleVisibleInBizCardCrop(skillEl, card)) {
-            // Skill taller than the clip window — still nudge scene/resume toward it.
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    scrollSceneContentSoElementVisible(skillEl);
-                    scrollResumeSkillTitleIntoView(jobNumber, skillSlug);
-                });
-            });
-            return;
-        }
-
-        // Run after selectCard's header scroll is issued so this adjustment wins.
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 scrollSkillFullyIntoSkillsSection(skillEl, skillsEl, card);
                 if (!isSkillTitleVisibleInBizCardCrop(skillEl, card)) {
                     growCardToFitFocusedSkill(skillEl, skillsEl, card);
                 }
-                if (!isSkillTitleVisibleInBizCardCrop(skillEl, card)) return;
                 scrollSceneContentSoElementVisible(skillEl);
-                scrollResumeSkillTitleIntoView(jobNumber, skillSlug);
+                // Reinforce resume scroll after scene layout settles (header scroll may still be running).
+                scrollResumeSkillTitleIntoView(jobNumber, skillSlug, { behavior: 'auto' });
             });
         });
     };
@@ -621,12 +641,11 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
     const bizLinksHtml = associatedBizCardsHtml(skillCardEl);
 
     const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
-    const sourceLinkHtml = `<p class="skill-info-summary"><span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`;
+    const sourceLinkHtml = `<p class="skill-info-summary"><span>(<a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`;
 
     if (!hasServer()) {
-        // Static host: no OpenAI API — still show source + associated jobs.
-        setModalContent(modal, displayName || slug,
-            `<p class="skill-info-summary">Open the source link for a definition. LLM summaries require the app API server.</p>${sourceLinkHtml}${bizLinksHtml}`);
+        // Static host: no OpenAI API — Wikipedia/source link + associated jobs only.
+        setModalContent(modal, displayName || slug, `${sourceLinkHtml}${bizLinksHtml}`);
         return;
     }
 
@@ -635,21 +654,14 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
     try {
         const res = await fetch(`/api/skills/${encodeURIComponent(slug)}/info`);
         if (!res.ok) {
-            const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-            const friendly = err.code === 'openai_credits'
-                ? 'Skill definition unavailable: OpenAI API credits are exhausted.'
-                : err.code === 'openai_auth'
-                    ? 'Skill definition unavailable: OpenAI API key was rejected.'
-                    : `Could not load definition: ${escapeHtml(String(err.error || res.status))}`;
-            setModalContent(modal, displayName || slug,
-                `<span class="skill-info-error">${friendly}</span>${sourceLinkHtml}${bizLinksHtml}`);
+            // No LLM summary (credits, auth, upstream) — show Wikipedia/source link only.
+            setModalContent(modal, displayName || slug, `${sourceLinkHtml}${bizLinksHtml}`);
             return;
         }
         const { summary } = await res.json();
         setModalContent(modal, displayName || slug,
-            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')} <span>(source: <a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>${bizLinksHtml}`);
+            `<p class="skill-info-summary">${summary.replace(/\n/g, '<br>')} <span>(<a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>${bizLinksHtml}`);
     } catch (e) {
-        setModalContent(modal, displayName || slug,
-            `<span class="skill-info-error">Network error: ${escapeHtml(e.message)}</span>${sourceLinkHtml}${bizLinksHtml}`);
+        setModalContent(modal, displayName || slug, `${sourceLinkHtml}${bizLinksHtml}`);
     }
 }
