@@ -7,6 +7,7 @@ import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useLayoutToggle } from '@/modules/composables/useLayoutToggle.mjs';
 import { useAppState } from '@/modules/composables/useAppState';
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
+import { usePointerDragOffset } from '@/modules/composables/usePointerDragOffset.mjs';
 import type { ResizeHandleProps, ResizeHandleEmits } from '@/modules/types/components';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
@@ -195,6 +196,32 @@ const isSteppingHovering = ref(false);
 const isLayoutHovering = ref(false);
 const hasJustClicked = ref(false); // Track if we just clicked (to maintain hover state)
 const skillSearchOpen = ref(false);
+const skillSearchModalRef = ref<HTMLElement | null>(null);
+const ignoreNextSkillSearchOverlayClick = ref(false);
+const {
+  isDragging: skillSearchDragging,
+  startPointerDrag: startSkillSearchDrag,
+  resetDragOffset: resetSkillSearchDrag,
+  topCenterTransformStyle: skillSearchTransformStyle,
+} = usePointerDragOffset({
+  anchor: 'top-center',
+  getTopInset: () => 48,
+  getModalSize: () => {
+    const el = skillSearchModalRef.value;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      return { width: r.width || 340, height: r.height || 400 };
+    }
+    return { width: 340, height: 400 };
+  },
+});
+
+watch(skillSearchDragging, (dragging, was) => {
+  if (was && !dragging) {
+    ignoreNextSkillSearchOverlayClick.value = true;
+    setTimeout(() => { ignoreNextSkillSearchOverlayClick.value = false; }, 0);
+  }
+});
 const skillSearchQuery = ref('');
 const skillSearchInputRef = ref<HTMLInputElement | null>(null);
 const searchMode = ref<'skill' | 'job'>('skill');
@@ -379,12 +406,22 @@ const filteredSearchOptions = computed<SearchOption[]>(() => {
 
 function openSkillSearch(event: MouseEvent): void {
   event.stopPropagation();
+  resetSkillSearchDrag();
   skillSearchOpen.value = true;
   nextTick(() => skillSearchInputRef.value?.focus());
 }
 
 function closeSkillSearch(): void {
   skillSearchOpen.value = false;
+  resetSkillSearchDrag();
+}
+
+function onSkillSearchOverlayClick(): void {
+  if (ignoreNextSkillSearchOverlayClick.value || skillSearchDragging.value) {
+    if (ignoreNextSkillSearchOverlayClick.value) ignoreNextSkillSearchOverlayClick.value = false;
+    return;
+  }
+  closeSkillSearch();
 }
 
 function selectSearchResult(option: SearchOption): void {
@@ -497,20 +534,25 @@ watch(skillSearchOpen, (open) => {
         <div
           v-if="skillSearchOpen"
           class="skill-search-modal-overlay"
-          @mousedown.stop.prevent
-          @click.self="closeSkillSearch"
+          @pointerdown.stop.prevent
+          @click.self="onSkillSearchOverlayClick"
         >
           <div
+            ref="skillSearchModalRef"
             class="skill-search-modal"
             role="dialog"
             aria-modal="true"
             aria-label="Skill search"
-            @mousedown.stop
+            :style="skillSearchTransformStyle"
+            @pointerdown.stop
             @click.stop
           >
-            <div class="skill-search-modal-header">
+            <div
+              class="skill-search-modal-header skill-search-drag-handle"
+              @pointerdown="startSkillSearchDrag"
+            >
               <strong>Find skill</strong>
-              <button type="button" class="skill-search-close" aria-label="Close skill search" @click="closeSkillSearch">×</button>
+              <button type="button" class="skill-search-close" aria-label="Close skill search" @click="closeSkillSearch" @pointerdown.stop>×</button>
             </div>
             <div class="skill-search-mode-row" role="radiogroup" aria-label="Search type">
               <label class="skill-search-mode-option">
@@ -772,14 +814,13 @@ watch(skillSearchOpen, (open) => {
     position: fixed;
     inset: 0;
     z-index: 10030;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 48px;
     background: rgba(0, 0, 0, 0.35);
 }
 
 .skill-search-modal {
+    position: absolute;
+    left: 50%;
+    top: 48px;
     width: min(340px, calc(100vw - 24px));
     max-height: min(460px, calc(100vh - 24px));
     overflow: hidden;
@@ -798,6 +839,12 @@ watch(skillSearchOpen, (open) => {
     align-items: center;
     justify-content: space-between;
     padding: 8px 10px;
+}
+
+.skill-search-drag-handle {
+    cursor: move;
+    user-select: none;
+    touch-action: none;
 }
 
 .skill-search-close {

@@ -15,7 +15,9 @@ import { logger } from '../utils/logger.mjs'
 
 // Parallax constants (Z 1 = far, Z 14 = close; higher scene Z = more parallax)
 const PARALLAX_X_EXAGGERATION = 0.9
-const PARALLAX_Y_EXAGGERATION = 1.0
+// Vertical focal parallax is disabled: Y motion would slide cards off the timeline
+// date ruler (Timeline is a fixed 2D overlay and must not receive parallax).
+const PARALLAX_Y_EXAGGERATION = 0
 const CLONE_Z_SCALE = 0
 // zUtils: master uses PARALLAX_SCENE_Z_*; this branch exports FLYER_PARALLAX_Z_* (same 1–14 range).
 const PARALLAX_Z_MIN = zUtils.FLYER_PARALLAX_Z_MIN
@@ -119,7 +121,7 @@ export function useParallaxEnhanced() {
     return true
   }
 
-  /** Apply projection: X = bullsEyeCenterXSceneView + parallax; Y = parallax only. Skips hidden originals and hidden prebuilt clones. */
+  /** Apply projection: X = bullsEyeCenterXSceneView + parallax; Y stays timeline-locked (no focal Y parallax). Skips hidden originals and hidden prebuilt clones. */
   function getParallaxRenderableFingerprint(cardDivs) {
     return cardDivs
       .filter(isParallaxRenderable)
@@ -149,9 +151,9 @@ export function useParallaxEnhanced() {
     const userScale = getParallaxScaleAtZ(sceneZ)
     const finalScale = baseZScale * userScale
     const displacementX = dh * finalScale
-    const displacementY = dv * finalScale
+    // Keep card tops aligned with the timeline year/month ruler (no vertical focal shift).
     const translateX = bullsEyeCenterXSceneView + displacementX
-    const translateY = displacementY
+    const translateY = 0
 
     cardDiv.style.transform = `translateX(${translateX}px) translateY(${translateY}px)`
 
@@ -186,6 +188,7 @@ export function useParallaxEnhanced() {
     // SceneView-relative X so projection works for both scene-left and scene-right (viewport .x alone is wrong when scene is on the right).
     const bullsEyeCenterXSceneView = bullsEyeCenter.x - sceneViewRect.left
     const dh = (bullsEyeCenter.x - focal.x) * PARALLAX_X_EXAGGERATION
+    // dv unused for card transforms (Y locked to timeline); kept for cache identity if focal Y changes alone.
     const dv = (bullsEyeCenter.y - focal.y) * PARALLAX_Y_EXAGGERATION
 
     // DEBUG tracking disabled for performance (was causing sluggish hover motion)

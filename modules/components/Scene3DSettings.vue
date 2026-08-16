@@ -10,8 +10,15 @@
       3D
     </button>
 
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal-3d" role="dialog" aria-labelledby="modal-3d-title">
+    <div v-if="showModal" class="modal-overlay" @click.self="onOverlayClick">
+      <div
+        ref="modalRef"
+        class="modal-3d"
+        role="dialog"
+        aria-labelledby="modal-3d-title"
+        :style="centerTransformStyle"
+        @pointerdown="onModalPointerDown"
+      >
         <h3 id="modal-3d-title" class="modal-title">3D Settings</h3>
         <div class="modal-body" v-if="renderingLimits">
           <label class="modal-row">
@@ -115,15 +122,57 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useAppState } from '../composables/useAppState.ts'
 import { useAppStore } from '../stores/appStore.mjs'
 import { FOCALPOINT_MODES } from '../composables/useFocalPointVue3.mjs'
+import { usePointerDragOffset } from '../composables/usePointerDragOffset.mjs'
 import { setFromAppState as setRenderingFromAppState, getRendering, clampRenderingValue } from '../core/renderingConfig.mjs'
 import { reportError } from '../utils/errorReporting.mjs'
 
 const { appState, updateAppState } = useAppState()
 const { store, actions: appStoreActions } = useAppStore()
+
+const modalRef = ref(null)
+const ignoreNextOverlayClick = ref(false)
+const {
+  isDragging,
+  startPointerDrag,
+  resetDragOffset,
+  centerTransformStyle,
+} = usePointerDragOffset({
+  getModalSize: () => {
+    const el = modalRef.value
+    if (el) {
+      const r = el.getBoundingClientRect()
+      return { width: r.width || 320, height: r.height || 400 }
+    }
+    return { width: 320, height: 400 }
+  },
+})
+
+function onOverlayClick() {
+  if (ignoreNextOverlayClick.value || isDragging.value) {
+    if (ignoreNextOverlayClick.value) ignoreNextOverlayClick.value = false
+    return
+  }
+  closeModal()
+}
+
+watch(isDragging, (dragging, wasDragging) => {
+  if (wasDragging && !dragging) {
+    ignoreNextOverlayClick.value = true
+    setTimeout(() => { ignoreNextOverlayClick.value = false }, 0)
+  }
+})
+
+/** Drag from anywhere on the dialog except form controls / action buttons. */
+function onModalPointerDown(e) {
+  const el = e.target
+  if (!(el instanceof Element)) return
+  if (el.closest('input, button, select, textarea, a, .switch, .focal-mode-radio, .modal-btn')) return
+  startPointerDrag(e)
+}
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/')
@@ -193,11 +242,13 @@ function openModal() {
     focalPointUiVisible: r.focalPointUiVisible !== false,
     bullsEyeUiVisible: r.bullsEyeUiVisible !== false
   }
+  resetDragOffset()
   showModal.value = true
 }
 
 function closeModal() {
   showModal.value = false
+  resetDragOffset()
 }
 
 async function save() {
@@ -265,33 +316,56 @@ async function save() {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
+  /* Above ResizeHandle (z-index: 10000) so the dialog stays interactive on top */
+  z-index: 20000;
 }
 
 .modal-3d {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
   font-family: Arial, sans-serif;
   background: rgba(30, 30, 30, 0.98);
   border: 1px solid #555;
   border-radius: 8px;
   min-width: 280px;
-  padding: 16px;
+  max-width: min(420px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: hidden;
+  padding: 0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
 }
 
 .modal-title {
-  margin: 0 0 12px 0;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 16px 16px 12px;
   font-size: 16px;
   color: white;
+  /* Keep title visible while body scrolls on small screens */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(30, 30, 30, 0.98);
 }
 
 .modal-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 16px 12px;
+  margin-bottom: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-row {
@@ -453,9 +527,13 @@ async function save() {
 }
 
 .modal-footer {
+  flex: 0 0 auto;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  padding: 12px 16px 16px;
+  background: rgba(30, 30, 30, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .modal-btn {

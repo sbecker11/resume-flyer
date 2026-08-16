@@ -9,7 +9,7 @@
       >
         <div
           class="rde-header rde-drag-handle"
-          @mousedown.prevent="startDrag"
+          @pointerdown="startDrag"
         >
           <div class="rde-title">Resume Details</div>
           <div class="rde-subtitle">{{ resumeId }}</div>
@@ -125,10 +125,10 @@
         </div>
 
         <!-- Resize handles: edges and corner (no top to avoid conflicting with drag) -->
-        <div class="rde-resize-handle rde-resize-left" @mousedown.prevent="startResize($event, 'w')" title="Resize from left" />
-        <div class="rde-resize-handle rde-resize-right" @mousedown.prevent="startResize($event, 'e')" title="Resize from right" />
-        <div class="rde-resize-handle rde-resize-bottom" @mousedown.prevent="startResize($event, 's')" title="Resize from bottom" />
-        <div class="rde-resize-handle rde-resize-corner" @mousedown.prevent="startResize($event, 'se')" title="Resize" />
+        <div class="rde-resize-handle rde-resize-left" @pointerdown="startResize($event, 'w')" title="Resize from left" />
+        <div class="rde-resize-handle rde-resize-right" @pointerdown="startResize($event, 'e')" title="Resize from right" />
+        <div class="rde-resize-handle rde-resize-bottom" @pointerdown="startResize($event, 's')" title="Resize from bottom" />
+        <div class="rde-resize-handle rde-resize-corner" @pointerdown="startResize($event, 'se')" title="Resize" />
       </div>
     </div>
   </Teleport>
@@ -596,11 +596,14 @@ function onOverlayClick() {
 }
 
 function startDrag(e) {
-  if (e.button !== 0) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
   isDragging.value = true;
   dragStart = { x: e.clientX, y: e.clientY, ox: dragOffset.value.x, oy: dragOffset.value.y };
-  document.addEventListener('mousemove', onDragMove);
-  document.addEventListener('mouseup', onDragEnd);
+  try { e.currentTarget?.setPointerCapture?.(e.pointerId); } catch (_) { /* ignore */ }
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
 }
 
 function onDragMove(e) {
@@ -617,15 +620,17 @@ function onDragMove(e) {
 }
 
 function onDragEnd() {
-  document.removeEventListener('mousemove', onDragMove);
-  document.removeEventListener('mouseup', onDragEnd);
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
   isDragging.value = false;
   ignoreNextOverlayClick.value = true;
   setTimeout(() => { ignoreNextOverlayClick.value = false; }, 0);
 }
 
 function startResize(e, direction) {
-  if (e.button !== 0) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
   isResizing.value = true;
   resizeStart = {
     x: e.clientX,
@@ -637,8 +642,10 @@ function startResize(e, direction) {
     direction,
     cornerActivated: false
   };
-  document.addEventListener('mousemove', onResizeMove);
-  document.addEventListener('mouseup', onResizeEnd);
+  try { e.currentTarget?.setPointerCapture?.(e.pointerId); } catch (_) { /* ignore */ }
+  document.addEventListener('pointermove', onResizeMove);
+  document.addEventListener('pointerup', onResizeEnd);
+  document.addEventListener('pointercancel', onResizeEnd);
 }
 
 function onResizeMove(e) {
@@ -681,8 +688,9 @@ function onResizeMove(e) {
 }
 
 function onResizeEnd() {
-  document.removeEventListener('mousemove', onResizeMove);
-  document.removeEventListener('mouseup', onResizeEnd);
+  document.removeEventListener('pointermove', onResizeMove);
+  document.removeEventListener('pointerup', onResizeEnd);
+  document.removeEventListener('pointercancel', onResizeEnd);
   isResizing.value = false;
   ignoreNextOverlayClick.value = true;
   setTimeout(() => { ignoreNextOverlayClick.value = false; }, 0);
@@ -1078,6 +1086,7 @@ async function save() {
   position: absolute;
   z-index: 1;
   background: transparent;
+  touch-action: none;
 }
 .rde-resize-left {
   left: 0;
@@ -1122,6 +1131,7 @@ async function save() {
 .rde-drag-handle {
   cursor: move;
   user-select: none;
+  touch-action: none;
 }
 .rde-title {
   font-size: 0.75rem;

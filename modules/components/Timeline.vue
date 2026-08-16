@@ -87,6 +87,8 @@ console.log('[Timeline] Component ready — timelineHeight:', timelineHeight.val
   height: 100%;
   pointer-events: none; /* Allows clicks to pass through */
   z-index: 5; /* Ensure it's visible */
+  /* Timeline is a fixed 2D date ruler — never take card parallax transforms */
+  transform: none !important;
   list-style: none !important; /* Remove any list styling */
   list-style-type: none !important;
   list-style-image: none !important;
