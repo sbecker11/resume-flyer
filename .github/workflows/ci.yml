@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install color-palette-utils-ts dependencies
+        working-directory: color-palette-utils-ts
+        run: npm ci
+
+      # Unit tests are fully mocked (no ANTHROPIC_API_KEY / AWS secrets required).
+      # If a future test needs a real key, add it as a repo secret and pass it
+      # here via `env:` rather than committing it.
+      - name: Run tests
+        run: npm test
