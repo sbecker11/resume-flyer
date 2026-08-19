@@ -251,7 +251,10 @@ export interface UseColorPaletteReturn {
   currentPaletteFilename: Ref<string | null>;
   currentPaletteName: ComputedRef<string | null>;
   currentPalette: ComputedRef<string[]>;
+  /** Global HSL-saturation multiplier for the current palette (0.0..3.0; 1.0 = no change, analogous to CSS saturate(x); in-memory only). */
+  paletteSaturationMultiplier: Ref<number>;
   setCurrentPalette: (filename: string) => Promise<void>;
+  setPaletteSaturationMultiplier: (factor: number) => void;
   loadPalettes: () => Promise<void>;
 }
 

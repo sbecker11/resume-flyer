@@ -30,7 +30,7 @@
             </span>
           </label>
           <label class="modal-row">
-            <span class="modal-row-label">Saturation at max Z (0–100%; 100% = no change)</span>
+            <span class="modal-row-label">Saturation at max Z ({{ renderingLimits.saturationAtMaxZ.min }}–{{ renderingLimits.saturationAtMaxZ.max }}%; 100% = no change)</span>
             <span class="modal-row-input-wrap">
               <input v-model.number="form.saturationAtMaxZ" type="number" :min="renderingLimits.saturationAtMaxZ.min" :max="renderingLimits.saturationAtMaxZ.max" :step="renderingLimits.saturationAtMaxZ.step" />
             </span>

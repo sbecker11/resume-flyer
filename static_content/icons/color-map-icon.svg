@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Color map">
+  <rect x="0" y="0" width="24" height="24" rx="2" fill="#333333"/>
+  <rect x="3" y="3" width="4" height="4" fill="#000000"/>
+  <rect x="10" y="3" width="4" height="4" fill="#D3D3D3"/>
+  <rect x="17" y="3" width="4" height="4" fill="#FFFFFF"/>
+  <rect x="3" y="10" width="4" height="4" fill="#FF0000"/>
+  <rect x="10" y="10" width="4" height="4" fill="#FFA500"/>
+  <rect x="17" y="10" width="4" height="4" fill="#FFFF00"/>
+  <rect x="3" y="17" width="4" height="4" fill="#008000"/>
+  <rect x="10" y="17" width="4" height="4" fill="#0000FF"/>
+  <rect x="17" y="17" width="4" height="4" fill="#800080"/>
+</svg>

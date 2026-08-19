@@ -7,8 +7,8 @@
     "linkedin": "linkedin.com/in/shawnbecker",
     "website": "github.com/sbecker11"
   },
-  "title": "Senior Software Engineer & Independent Consultant — AI/ML Engineering, Full-Stack Development & Distributed Data Platforms",
-  "summary": "Senior individual-contributor engineer with 20+ years designing and delivering full-stack, AI/ML, and data-platform systems for Fortune 500 and regulated clients. Hands-on with Java/Spring Boot, Python/PySpark, AWS (EMR, Glue, SageMaker, Bedrock), and modern GenAI tooling (LangChain, LangGraph, Spring AI), building everything from event-driven data pipelines to agentic RAG systems. Co-invented 3 NLP patents in vector-embedding recommendation systems and led a semantic product ontology spanning 700K+ products as an early technical leader. Independent-consulting engagements run under Spexture (Independent Consulting), backed by ~2.75 years of sustained platform ownership at SeniorLink (now Careforth).",
+  "title": "Senior Software Engineer & Independent Consultant | AI/ML Engineering, Full-Stack Development & Distributed Data Platforms",
+  "summary": "Senior Software, Full Stack & Data Engineer + AI/ML with 30+ years building production systems across computer vision, NLP, and modern AI/ML architectures. MIT PhD focused on Computer Vision and Computer Graphics. Co-inventor of three patents for NLP-based recommendation systems using vector embeddings.",
   "certifications": [
     {
       "name": "Scrum Master",
@@ -54,52 +54,12 @@
     {
       "label": "GitHub",
       "url": "https://github.com/sbecker11"
-    },
-    {
-      "label": "resume-parser",
-      "url": "https://github.com/sbecker11/resume-parser"
-    },
-    {
-      "label": "color-palette-maker",
-      "url": "https://github.com/sbecker11/color-palette-maker"
-    },
-    {
-      "label": "resume-flyer",
-      "url": "https://github.com/sbecker11/resume-flyer"
-    },
-    {
-      "label": "sushi-rag-app",
-      "url": "https://github.com/sbecker11/sushi-rag-app"
-    },
-    {
-      "label": "campaign-automation",
-      "url": "https://github.com/sbecker11/campaign-automation"
-    },
-    {
-      "label": "spexture-com",
-      "url": "https://github.com/sbecker11/spexture-com"
-    },
-    {
-      "label": "ecommerce-semantic-search",
-      "url": "https://github.com/sbecker11/ecommerce-semantic-search"
-    },
-    {
-      "label": "linkage-engine",
-      "url": "https://github.com/sbecker11/linkage-engine"
-    },
-    {
-      "label": "healthcare-agentic-snowflake-rag",
-      "url": "https://github.com/sbecker11/healthcare-agentic-snowflake-rag"
-    },
-    {
-      "label": "recruiting-automation",
-      "url": "https://github.com/sbecker11/recruiting-automation"
     }
   ],
   "custom_sections": [
     {
       "title": "Patents",
-      "content": "Co-invented 3 NLP patents in vector-embedding recommendation systems (developed during tenure at ClipFile)."
+      "content": "Co-inventor of three patents for NLP-based recommendation systems using vector embeddings (developed during tenure at ClipFile)."
     }
   ],
   "skills": [

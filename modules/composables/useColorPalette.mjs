@@ -12,6 +12,7 @@ import {
     contrastAnchorIconUrl,
 } from '@/modules/utils/colorUtils.mjs';
 import { getPerceivedBrightness } from '@/modules/utils/paletteHelpers.mjs';
+import { applySaturationMultiplierToPalette } from '@/modules/utils/colorSaturation.mjs';
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { complainLoudlyPaletteS3Failure } from '@/modules/utils/paletteS3LoudError.mjs';
@@ -130,6 +131,29 @@ const filenameToNameMap = ref({});
 /** Optional S3/public image URL per palette (from catalog). */
 const imagePublicUrlByPaletteName = ref({});
 const isLoading = ref(false);
+/**
+ * Global HSL-saturation multiplier applied uniformly to every color of the current palette
+ * (color-map modal "Saturation" slider), analogous to CSS filter saturate(x). 0.0..3.0;
+ * 1.0 = no change (default). In-memory only — resets to 1.0 on reload; not persisted to
+ * app_state.json (this is a live preview knob, not a rendering config value like
+ * Scene3DSettings' saturationAtMaxZ).
+ */
+const paletteSaturationMultiplier = ref(1.0);
+
+/**
+ * Single centralized place every internal reader goes through to get a palette's *rendered*
+ * colors (raw palette colors with paletteSaturationMultiplier applied). Do not read
+ * colorPalettes.value[name] directly elsewhere for rendering — route through this so the
+ * color-map modal slider affects the 3D scene, 2D resume view, and the modal's own swatches
+ * uniformly from one source of truth.
+ * @param {string} paletteName
+ * @returns {string[] | undefined}
+ */
+function getEffectivePaletteColors(paletteName) {
+    const raw = colorPalettes.value[paletteName];
+    if (!raw) return raw;
+    return applySaturationMultiplierToPalette(raw, paletteSaturationMultiplier.value);
+}
 
 /**
  * Legacy .json basenames / underscores → palette keys in S3 catalog (when names changed).
@@ -209,7 +233,7 @@ function applySceneBackgroundFromCurrentPalette() {
     const filename = currentPaletteFilename.value;
     if (!filename || typeof document === 'undefined') return;
     const paletteName = resolvePaletteNameFromFilename(filename);
-    const colorPalette = colorPalettes.value[paletteName];
+    const colorPalette = getEffectivePaletteColors(paletteName);
     if (!paletteName || !colorPalette || colorPalette.length === 0) return;
     const root = document.documentElement;
     const bgIndex = backgroundSwatchIndexByPalette.value[paletteName];
@@ -544,9 +568,22 @@ export function useColorPalette() {
 
     const currentPalette = computed(() => {
         const name = currentPaletteName.value;
-        return name ? colorPalettes.value[name] : [];
+        return name ? (getEffectivePaletteColors(name) || []) : [];
     });
-    
+
+    /**
+     * Set the global palette saturation multiplier (0.0..3.0; 1.0 = no change, analogous to CSS
+     * saturate(x)) and repaint every themed element so the 3D scene, 2D resume view, and
+     * color-map modal swatches all update live from this one source of truth (currentPalette /
+     * colorPalettes reads already route through getEffectivePaletteColors).
+     * @param {number} factor 0.0..3.0
+     */
+    function setPaletteSaturationMultiplier(factor) {
+        const n = Number(factor);
+        paletteSaturationMultiplier.value = Number.isFinite(n) ? Math.max(0.0, Math.min(3.0, n)) : 1.0;
+        applyFullPaletteInstant({ dispatchEvent: false });
+    }
+
     // Update brightness boosts (computed; not manually adjustable in 3D UI)
     async function updateBrightnessBoosts(selectedBoost, hoveredBoost) {
         const updates = {};
@@ -600,7 +637,9 @@ export function useColorPalette() {
         currentPaletteFilename,
         currentPaletteName,
         currentPalette,
+        paletteSaturationMultiplier,
         setCurrentPalette,
+        setPaletteSaturationMultiplier,
         loadPalettes,
         updateBrightnessBoosts,
         updateBorderSettings,
@@ -636,7 +675,7 @@ export function applyFullPaletteInstant(options = {}) {
     if (!appState.value || !currentPaletteFilename.value) return;
 
     const paletteName = resolvePaletteNameFromFilename(currentPaletteFilename.value);
-    const colorPalette = colorPalettes.value[paletteName];
+    const colorPalette = getEffectivePaletteColors(paletteName);
     if (!paletteName || !colorPalette?.length) return;
 
     const root = typeof document !== 'undefined' ? document.documentElement : null;
@@ -812,7 +851,7 @@ export function applyPaletteToElementSync(element, appStateSnapshot) {
         throw new Error(`Palette name not found for filename: ${currentPaletteFilename.value}`);
     }
 
-    const colorPalette = colorPalettes.value[paletteName];
+    const colorPalette = getEffectivePaletteColors(paletteName);
     if (!colorPalette) {
         throw new Error(`Color palette not found for name: ${paletteName}`);
     }

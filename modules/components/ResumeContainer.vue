@@ -19,6 +19,8 @@ import { renderSkillCardResumeInnerHtml } from '@/modules/scene/cardMarkup.mjs';
 import { openSkillInfoModal, markFocusedSkillLinkForJob, markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, scrollFocusedBizCardSkillIntoViewIfCropVisible, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '@/modules/utils/skillInfoModal.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
+import { computeColorGridLayout } from '@/modules/utils/colorGridLayout.mjs';
+import { usePointerDragOffset } from '@/modules/composables/usePointerDragOffset.mjs';
 
 function getRuntimeBase() {
   const envBase = (import.meta?.env?.BASE_URL || '/');
@@ -240,13 +242,63 @@ const {
   filenameToNameMap,
   currentPaletteFilename,
   setCurrentPalette,
-  imagePublicUrlByPaletteName
+  imagePublicUrlByPaletteName,
+  currentPalette,
+  paletteSaturationMultiplier,
+  setPaletteSaturationMultiplier
 } = useColorPalette();
 
 const currentPaletteImageUrl = computed(
   () => (currentPaletteFilename.value && imagePublicUrlByPaletteName.value?.[currentPaletteFilename.value]) || null
 );
 const showPaletteImageModal = ref(false);
+
+const paletteColorMapIconUrl = basePathJoin('static_content/icons/color-map-icon.svg');
+const currentPaletteColors = computed(() => (Array.isArray(currentPalette.value) ? currentPalette.value : []));
+const showPaletteColorMapModal = ref(false);
+/** Grid packing for the color-map modal; content area matches the source-image modal's 300x300px cap. */
+const PALETTE_COLORMAP_CONTAINER_SIZE = 300;
+const PALETTE_COLORMAP_GAP = 3;
+const PALETTE_SATURATION_MIN = 0.0;
+const PALETTE_SATURATION_MAX = 3.0;
+const paletteColorMapGridLayout = computed(() =>
+  computeColorGridLayout(currentPaletteColors.value.length, PALETTE_COLORMAP_CONTAINER_SIZE, PALETTE_COLORMAP_GAP)
+);
+const paletteSaturationSliderModel = computed({
+  get: () => paletteSaturationMultiplier.value,
+  set: (val) => setPaletteSaturationMultiplier(val)
+});
+
+/** Drag-to-move for the color-map modal; reused from Scene3DSettings' pointer-drag pattern. */
+const paletteColorMapModalRef = ref(null);
+const {
+  isDragging: isPaletteColorMapDragging,
+  startPointerDrag: startPaletteColorMapDrag,
+  resetDragOffset: resetPaletteColorMapDragOffset,
+  centerTransformStyle: paletteColorMapTransformStyle
+} = usePointerDragOffset({
+  getModalSize: () => {
+    const el = paletteColorMapModalRef.value;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      return { width: r.width || 332, height: r.height || 362 };
+    }
+    return { width: 332, height: 362 };
+  }
+});
+/** Reset drag position each time the modal is (re)opened, rather than persisting it across close/reopen. */
+watch(showPaletteColorMapModal, (isOpen, wasOpen) => {
+  if (isOpen && !wasOpen) {
+    resetPaletteColorMapDragOffset();
+  }
+});
+/** Drag from anywhere on the modal chrome except the close button and the saturation slider. */
+function onPaletteColorMapPointerDown(e) {
+  const el = e.target;
+  if (!(el instanceof Element)) return;
+  if (el.closest('.palette-colormap-modal-close, .palette-colormap-saturation-input')) return;
+  startPaletteColorMapDrag(e);
+}
 
 // Debug palette loading
 watch(orderedPaletteNames, () => {}, { immediate: true });
@@ -1026,6 +1078,15 @@ function onResumeSkillCardClick(event) {
                     >
                         🖼️
                     </button>
+                    <button
+                        type="button"
+                        class="palette-colormap-btn"
+                        :disabled="!currentPaletteColors.length"
+                        :title="currentPaletteColors.length ? 'view palette color map' : 'No colors for this palette'"
+                        @click="showPaletteColorMapModal = true"
+                    >
+                        <img :src="paletteColorMapIconUrl" alt="" width="20" height="20" aria-hidden="true" />
+                    </button>
                 </div>
             </div>
             <div id="resume-divs-sorting-container" tabindex="-1">
@@ -1148,6 +1209,68 @@ function onResumeSkillCardClick(event) {
                 :alt="'Source image for ' + (currentPaletteFilename || 'palette')"
                 class="palette-image-modal-img"
               />
+            </div>
+          </div>
+        </teleport>
+
+        <!-- Palette color map modal -->
+        <teleport to="body">
+          <div
+            v-if="showPaletteColorMapModal"
+            class="palette-colormap-modal-overlay"
+            @click.self="showPaletteColorMapModal = false"
+          >
+            <div
+              ref="paletteColorMapModalRef"
+              class="palette-colormap-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Palette color map"
+              :class="{ 'is-dragging': isPaletteColorMapDragging }"
+              :style="paletteColorMapTransformStyle"
+              @pointerdown="onPaletteColorMapPointerDown"
+            >
+              <button
+                type="button"
+                class="palette-colormap-modal-close"
+                aria-label="Close"
+                @click="showPaletteColorMapModal = false"
+              >
+                ×
+              </button>
+              <div class="palette-colormap-grid-container">
+                <div
+                  v-if="currentPaletteColors.length"
+                  class="palette-colormap-grid"
+                  :style="{
+                    gridTemplateColumns: `repeat(${paletteColorMapGridLayout.cols}, ${paletteColorMapGridLayout.squareSize}px)`,
+                    gridAutoRows: `${paletteColorMapGridLayout.squareSize}px`,
+                  }"
+                >
+                  <div
+                    v-for="(color, i) in currentPaletteColors"
+                    :key="i"
+                    class="palette-colormap-swatch"
+                    :style="{ backgroundColor: color }"
+                  ></div>
+                </div>
+                <div v-else class="palette-colormap-empty">No colors available for this palette.</div>
+              </div>
+              <div class="palette-colormap-saturation-row">
+                <label class="palette-colormap-saturation-label" for="palette-colormap-saturation-input">
+                  Saturation: {{ paletteSaturationMultiplier.toFixed(1) }}×
+                </label>
+                <input
+                  id="palette-colormap-saturation-input"
+                  v-model.number="paletteSaturationSliderModel"
+                  type="range"
+                  :min="PALETTE_SATURATION_MIN"
+                  :max="PALETTE_SATURATION_MAX"
+                  step="0.1"
+                  class="palette-colormap-saturation-input"
+                  aria-label="Saturation multiplier"
+                />
+              </div>
             </div>
           </div>
         </teleport>
@@ -1541,6 +1664,142 @@ function onResumeSkillCardClick(event) {
     width: auto;
     height: auto;
     object-fit: contain;
+}
+
+.palette-colormap-btn {
+    flex: 0 0 32px;
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    background: var(--grey-dark-6);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.palette-colormap-btn img {
+    display: block;
+    border-radius: 2px;
+}
+.palette-colormap-btn:hover:not(:disabled) {
+    background: var(--grey-dark-7);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+.palette-colormap-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Palette color map modal — same overlay/chrome as the source-image modal (.palette-image-modal-*).
+   Grid container is a fixed 300x300px; total modal height grows by 30px (+padding) to fit the
+   saturation slider row below it without cramping the grid. */
+.palette-colormap-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Above ResizeHandle (z-index: 10000); align with about-modal-overlay / palette-image-modal-overlay */
+    z-index: 25000;
+}
+.palette-colormap-modal {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: rgba(30, 30, 30, 0.98);
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    /* 300px grid + 16px*2 padding + 30px for the saturation control below the grid */
+    height: 362px;
+    /* Draggable via usePointerDragOffset (pointerdown on chrome outside close btn / slider); touch-action: none avoids scroll interference while dragging. */
+    cursor: grab;
+    touch-action: none;
+}
+.palette-colormap-modal.is-dragging {
+    cursor: grabbing;
+}
+.palette-colormap-modal-close,
+.palette-colormap-saturation-input {
+    touch-action: auto;
+}
+/* Same as .palette-image-modal-close (circular, white bg, red border) */
+.palette-colormap-modal-close {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    left: auto;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+    color: #c00;
+    background: #fff;
+    border: 1px solid #c00;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    font-family: Arial, sans-serif;
+}
+.palette-colormap-modal-close:hover {
+    color: #f00;
+    border-color: #f00;
+    background: rgba(255, 255, 255, 0.9);
+}
+.palette-colormap-grid-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 300px;
+    width: 300px;
+    height: 300px;
+    max-width: 300px;
+    max-height: 300px;
+    background-color: var(--grey-medium);
+}
+.palette-colormap-grid {
+    display: grid;
+    gap: 3px;
+}
+.palette-colormap-swatch {
+    box-sizing: border-box;
+    border: 1px solid #fff;
+}
+.palette-colormap-empty {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    text-align: center;
+    padding: 0 16px;
+}
+.palette-colormap-saturation-row {
+    flex: 0 0 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 6px;
+}
+.palette-colormap-saturation-label {
+    flex: 0 0 auto;
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+}
+.palette-colormap-saturation-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    accent-color: #0088cc;
 }
 
 #resume-divs-sorting-container {

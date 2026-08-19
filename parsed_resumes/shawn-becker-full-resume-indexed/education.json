@@ -2,25 +2,25 @@
   "0": {
     "index": 0,
     "degree": "PhD, Media Arts & Sciences, Computer Vision, Digital Signal Processing",
-    "institution": "Massachusetts Institute of Technology (MIT)  \u2014  1990 - 1997",
-    "start": "1990/01/01",
-    "end": "1997/12/31",
+    "institution": "Massachusetts Institute of Technology (MIT)  —  1990 - 1997",
+    "start": "1990-01-01",
+    "end": "1997-12-31",
     "description": ""
   },
   "1": {
     "index": 1,
     "degree": "MS, Computer Science, Computer Graphics, Medical Imaging",
-    "institution": "Brigham Young University  \u2014  1987 - 1990",
-    "start": "1987/01/01",
-    "end": "1990/12/31",
+    "institution": "Brigham Young University  —  1987 - 1990",
+    "start": "1987-01-01",
+    "end": "1990-12-31",
     "description": ""
   },
   "2": {
     "index": 2,
     "degree": "BS, Design Engineering Technology, CAD/CAM/CAE",
-    "institution": "Brigham Young University  \u2014  1983 - 1987",
-    "start": "1983/01/01",
-    "end": "1987/12/31",
+    "institution": "Brigham Young University  —  1983 - 1987",
+    "start": "1983-01-01",
+    "end": "1987-12-31",
     "description": ""
   }
 }

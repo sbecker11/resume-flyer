@@ -3,18 +3,17 @@
     "index": 0,
     "role": "Independent Consultant — Senior Software Engineer / Data Engineer",
     "employer": "Spexture (Independent Consulting)",
-    "start": "11/2019",
+    "start": "07/2025",
     "end": "CURRENT_DATE",
     "z-index": 1,
     "css name": "darkforest",
     "css RGB": "#116611",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting [AI]/[ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting [AI]/[ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting [AI]/[ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting [AI]/[ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting [AI]/[ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Governance.",
+    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Governance.",
     "outlineIndex": "1",
     "skillIDs": [
-      "ai",
-      "ml",
+      "ai-ml",
       "devops",
       "mlops"
     ]
@@ -65,11 +64,11 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
+    "Description": "• [React] app generating color palettes via [K-means clustering] with [CIEDE2000] perceptual color distance.",
     "outlineIndex": "1.1.2",
     "skillIDs": [
       "react",
-      "k-means",
+      "k-means-clustering",
       "ciede2000"
     ]
   },
@@ -104,13 +103,14 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [FastMCP] + [LangChain] [LCEL] RAG server with [ChromaDB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "• [FastMCP] + [LangChain] [LCEL] [RAG] server with [ChromaDB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "outlineIndex": "1.1.4",
     "skillIDs": [
       "react",
       "fastmcp",
       "langchain",
       "lcel",
+      "rag",
       "chromadb",
       "postgresql"
     ]
@@ -187,9 +187,10 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "• [Java 21] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [Aurora PostgreSQL Serverless v2] + [Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "• [Java 21] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [Aurora PostgreSQL Serverless v2] + [Bedrock]; 149 tests, 94.5% instruction coverage.",
     "outlineIndex": "1.1.8",
     "skillIDs": [
+      "rag",
       "spring-boot",
       "java-21",
       "spring-ai",
@@ -208,9 +209,10 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
+    "Description": "• [LangGraph] corrective-[RAG] on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
     "outlineIndex": "1.1.9",
     "skillIDs": [
+      "rag",
       "langgraph",
       "snowflake-cortex-search",
       "mlflow",
@@ -222,7 +224,7 @@
     "role": "Portfolio Project: recruiting-automation",
     "employer": "recruiting-automation",
     "start": "07/2026",
-    "end": "08/2026",
+    "end": "CURRENT_DATE",
     "z-index": 3,
     "css name": "darkcyan",
     "css RGB": "#008b8b",
@@ -254,7 +256,7 @@
   },
   "13": {
     "index": 13,
-    "role": "Client Engagement: Adobe",
+    "role": "Consultant — Python Backend / SEO Platform",
     "employer": "Adobe",
     "start": "03/2025",
     "end": "07/2025",
@@ -274,7 +276,7 @@
   },
   "14": {
     "index": 14,
-    "role": "Client Engagement: Fannie Mae",
+    "role": "Consultant — Data Engineer",
     "employer": "Fannie Mae",
     "start": "02/2024",
     "end": "07/2024",
@@ -300,7 +302,7 @@
   },
   "15": {
     "index": 15,
-    "role": "Client Engagement: Cigna",
+    "role": "Consultant — Data / Platform Engineer",
     "employer": "Cigna",
     "start": "05/2023",
     "end": "12/2023",
@@ -309,12 +311,13 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Automated [CyberArk PAM] mutual-[TLS] credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.3",
     "skillIDs": [
       "jira",
       "agile",
       "cyberark-pam",
+      "tls",
       "kafka",
       "airflow",
       "xray",
@@ -323,7 +326,7 @@
   },
   "16": {
     "index": 16,
-    "role": "Client Engagement: Warner Bros. Games",
+    "role": "Consultant — Data Engineer",
     "employer": "Warner Bros. Games",
     "start": "09/2022",
     "end": "03/2023",
@@ -349,7 +352,7 @@
   },
   "17": {
     "index": 17,
-    "role": "Client Engagement: Angel Studios",
+    "role": "Consultant — ML / Data Engineer",
     "employer": "Angel Studios",
     "start": "11/2021",
     "end": "09/2022",
@@ -358,12 +361,13 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Delivered [PyTorch] CNN models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.5",
     "skillIDs": [
       "jira",
       "agile",
       "pytorch",
+      "cnn",
       "sagemaker",
       "looker",
       "snowflake"
@@ -371,7 +375,7 @@
   },
   "18": {
     "index": 18,
-    "role": "Client Engagement: Greenseed LLC",
+    "role": "Consultant — Data Architect",
     "employer": "Greenseed LLC",
     "start": "01/2020",
     "end": "11/2021",
@@ -388,7 +392,7 @@
   },
   "19": {
     "index": 19,
-    "role": "Client Engagement: NuSkin",
+    "role": "Consultant — Full-Stack Engineer",
     "employer": "NuSkin",
     "start": "11/2019",
     "end": "11/2020",
@@ -479,7 +483,7 @@
   },
   "23": {
     "index": 23,
-    "role": "Co-founder and Technical Lead",
+    "role": "Co-founder — Technical Lead",
     "employer": "Sierra Vista Group",
     "start": "12/2002",
     "end": "12/2011",
