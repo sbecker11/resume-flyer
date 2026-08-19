@@ -7,7 +7,9 @@ import {
     getHighlightColor,
     formatHexDisplay,
     hexToRgb,
-    rgbToHex
+    rgbToHex,
+    isLightForegroundHex,
+    contrastAnchorIconUrl,
 } from '@/modules/utils/colorUtils.mjs';
 import { getPerceivedBrightness } from '@/modules/utils/paletteHelpers.mjs';
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs';
@@ -80,7 +82,7 @@ function paletteStaticFileUrl(filename) {
 }
 
 /** Base path for contrast icons (url/back/img); must contain icons8-{url,back,img}-16-black.png. */
-const ICON_BASE = basePathJoin('static_content/icons');
+const ICON_BASE = basePathJoin('static_content/icons/anchors');
 
 /**
  * Single source of truth for text/icon contrast against a background color.
@@ -507,55 +509,24 @@ export function useColorPalette() {
             }
             
             currentPaletteFilename.value = filename;
-            
-            // Update appState with new palette selection
-            await updateAppState({
+
+            // Paint first (sync, all elements including hidden), then persist without blocking UI.
+            applyFullPaletteInstant({
+                previousFilename,
+                paletteName: map[filename] || filename,
+                dispatchEvent: true,
+            });
+
+            void updateAppState({
                 "user-settings": {
                     theme: {
                         colorPalette: filename
                     }
                 }
+            }).catch((e) => {
+                reportError(e, '[ColorPalette] Failed to persist palette selection');
+                throw e;
             });
-            
-            getElementRegistry()?.clearAllCache();
-            
-            // Reapply palette to all elements using optimized element registry
-            const registry = getElementRegistry();
-            const elements = (registry && registry.getAllElementsWithColorIndex) ? registry.getAllElementsWithColorIndex() : [];
-            for (const element of elements) {
-                await applyPaletteToElement(element);
-            }
-            
-            // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
-            const allRDivs = (registry && registry.getAllBizResumeDivs) ? registry.getAllBizResumeDivs() : [];
-            for (const rDiv of allRDivs) {
-                if (rDiv.hasAttribute('data-color-index')) {
-                    await applyPaletteToElement(rDiv);
-                }
-            }
-            
-            const allCDivs = (registry && registry.getAllBizCardDivs) ? registry.getAllBizCardDivs() : [];
-            const clones = allCDivs.filter(cDiv => cDiv.id.includes('-clone'));
-            console.log(`[ColorPalette] 🔍 Found ${allCDivs.length} total cDivs, ${clones.length} are clones`);
-            if (clones.length > 0) {
-                console.log(`[ColorPalette] 📋 Clone IDs:`, clones.map(c => c.id));
-            }
-            
-            for (const cDiv of allCDivs) {
-                if (cDiv.hasAttribute('data-color-index')) {
-                    console.log(`[ColorPalette] 🎨 Applying palette to ${cDiv.id} (${cDiv.id.includes('-clone') ? 'CLONE' : 'original'})`);
-                    await applyPaletteToElement(cDiv);
-                }
-            }
-            
-            // Dispatch event for components that need to respond to palette changes
-            window.dispatchEvent(new CustomEvent('color-palette-changed', {
-                detail: { 
-                    filename,
-                    paletteName: map[filename] || filename,
-                    previousFilename: previousFilename
-                }
-            }));
             
         } else if (filename) {
             reportError(
@@ -594,29 +565,7 @@ export function useColorPalette() {
             });
         }
         
-        const registry = getElementRegistry();
-        registry?.clearAllCache?.();
-        
-        // Reapply palette to all elements using optimized element registry
-        const elements = registry?.getAllElementsWithColorIndex?.() || [];
-        for (const element of elements) {
-            await applyPaletteToElement(element);
-        }
-        
-        // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
-        const allRDivs = registry?.getAllBizResumeDivs?.() || [];
-        for (const rDiv of allRDivs) {
-            if (rDiv.hasAttribute('data-color-index')) {
-                await applyPaletteToElement(rDiv);
-            }
-        }
-        
-        const allCDivs = registry?.getAllBizCardDivs?.() || [];
-        for (const cDiv of allCDivs) {
-            if (cDiv.hasAttribute('data-color-index')) {
-                await applyPaletteToElement(cDiv);
-            }
-        }
+        applyFullPaletteInstant({ dispatchEvent: false });
     }
 
     // Function to update border settings
@@ -631,102 +580,13 @@ export function useColorPalette() {
             });
         }
         
-        const registry = getElementRegistry();
-        registry?.clearAllCache?.();
-        
-        // Reapply palette to all elements using optimized element registry
-        const elements = registry?.getAllElementsWithColorIndex?.() || [];
-        for (const element of elements) {
-            await applyPaletteToElement(element);
-        }
-        
-        // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
-        const allRDivs = registry?.getAllBizResumeDivs?.() || [];
-        for (const rDiv of allRDivs) {
-            if (rDiv.hasAttribute('data-color-index')) {
-                await applyPaletteToElement(rDiv);
-            }
-        }
-        
-        const allCDivs = registry?.getAllBizCardDivs?.() || [];
-        for (const cDiv of allCDivs) {
-            if (cDiv.hasAttribute('data-color-index')) {
-                await applyPaletteToElement(cDiv);
-            }
-        }
+        applyFullPaletteInstant({ dispatchEvent: false });
     }
 
-    // Color palette filename watcher - handles document-level theming
-    watch(currentPaletteFilename, async (newFilename) => {
-        if (!newFilename) return;
-
-        const paletteName = resolvePaletteNameFromFilename(newFilename);
-        const colorPalette = colorPalettes.value[paletteName];
-
-        // Wait for both filename mapping and palette data to be loaded
-        if (!paletteName || !colorPalette || colorPalette.length === 0) return;
-
-        // Apply scene view background (--background-light, --background-dark) from current palette
-        applySceneBackgroundFromCurrentPalette();
-
-        const registry = getElementRegistry();
-        registry?.clearAllCache?.();
-        
-        // Update elements with data-color-index using optimized element registry
-        const elements = registry?.getAllElementsWithColorIndex?.() || [];
-        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${elements.length} elements with data-color-index to update`);
-        
-        for (const element of elements) {
-            const paletteColorIndexAttr = element.getAttribute("data-color-index");
-            if (paletteColorIndexAttr === null || isNaN(parseInt(paletteColorIndexAttr, 10))) continue;
-            
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating element ${element.id || element.className} with color index ${paletteColorIndexAttr}`);
-            
-            // Use the applyPaletteToElement function to set all data attributes
-            await applyPaletteToElement(element);
-            
-            // Check if colors were actually applied
-            const bgColor = element.getAttribute('data-background-color');
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Element ${element.id || element.className} background color set to: ${bgColor}`);
-        }
-        
-        // Apply palette to ALL rDivs and cDivs (including clones) using optimized queries
-        const allRDivs = registry?.getAllBizResumeDivs?.() || [];
-        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allRDivs.length} rDivs to check for color updates`);
-        for (const rDiv of allRDivs) {
-            if (rDiv.hasAttribute('data-color-index')) {
-                window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating rDiv ${rDiv.id} with color index ${rDiv.getAttribute('data-color-index')}`);
-                await applyPaletteToElement(rDiv);
-            }
-        }
-        
-        const allCDivs = registry?.getAllBizCardDivs?.() || [];
-        window.CONSOLE_LOG_IGNORE(`[ColorPalette] Found ${allCDivs.length} cDivs to check for color updates`);
-        for (const cDiv of allCDivs) {
-            if (cDiv.hasAttribute('data-color-index')) {
-                window.CONSOLE_LOG_IGNORE(`[ColorPalette] Updating cDiv ${cDiv.id} with color index ${cDiv.getAttribute('data-color-index')}`);
-                await applyPaletteToElement(cDiv);
-                
-                // Check current styling state
-                const computedStyle = window.getComputedStyle(cDiv);
-                const bgColor = cDiv.getAttribute('data-background-color');
-                window.CONSOLE_LOG_IGNORE(`[ColorPalette] cDiv ${cDiv.id} - data-background-color: ${bgColor}, computed background-color: ${computedStyle.backgroundColor}`);
-            }
-        }
-
-        // After updating all palette data, refresh the current visual state of all elements
-
-    }, { immediate: true }); // Run this watcher as soon as the composable is used
-
-    // Additional watcher to trigger palette application when colorPalettes are loaded
+    // Re-apply when palette color data finishes loading (e.g. catalog refresh).
     watch(colorPalettes, () => {
-        // Trigger palette application when palettes are loaded and we have a current filename
         if (currentPaletteFilename.value) {
-            window.CONSOLE_LOG_IGNORE(`[ColorPalette] Palettes loaded, re-applying current palette: ${currentPaletteFilename.value}`);
-            // Re-trigger the main watcher by setting the filename again
-            const filename = currentPaletteFilename.value;
-            currentPaletteFilename.value = null;
-            currentPaletteFilename.value = filename;
+            applyFullPaletteInstant({ dispatchEvent: false });
         }
     }, { deep: true });
 
@@ -751,102 +611,218 @@ export function useColorPalette() {
 /**
  * Apply the current palette to all elements that have data-color-index (cDivs, rDivs, skill cards).
  * Call after initial DOM build (cards + resume list) so palette is applied on first load.
- * @param {{ clearAllCache?: () => void, getAllElementsWithColorIndex?: () => HTMLElement[] }} [registry] - optional; uses window.globalElementRegistry if not provided
+ * @param {{ clearAllCache?: () => void }} [registry] - optional; uses window.globalElementRegistry if not provided
  */
 export async function applyCurrentPaletteToAllElements(registry = null) {
     await readyPromise;
     if (!currentPaletteFilename.value) return;
     const reg = registry || (typeof window !== 'undefined' && window.globalElementRegistry);
-    if (!reg?.clearAllCache) return;
-    reg.clearAllCache();
+    reg?.clearAllCache?.();
+    applyFullPaletteInstant({ dispatchEvent: true, previousFilename: null });
+}
+
+/** Every themed element in the document (visible, hidden, clones, listing copies). */
+function collectAllThemedElements() {
+    if (typeof document === 'undefined') return [];
+    return Array.from(document.querySelectorAll('[data-color-index]'));
+}
+
+/**
+ * Single synchronous pass: scene background + every [data-color-index] element + interaction-state refresh.
+ * @param {{ dispatchEvent?: boolean, previousFilename?: string|null, paletteName?: string }} [options]
+ */
+export function applyFullPaletteInstant(options = {}) {
+    const { appState } = useAppState();
+    if (!appState.value || !currentPaletteFilename.value) return;
+
+    const paletteName = resolvePaletteNameFromFilename(currentPaletteFilename.value);
+    const colorPalette = colorPalettes.value[paletteName];
+    if (!paletteName || !colorPalette?.length) return;
+
+    const root = typeof document !== 'undefined' ? document.documentElement : null;
+    root?.classList.add('palette-swapping');
+
     applySceneBackgroundFromCurrentPalette();
-    const elements = reg.getAllElementsWithColorIndex?.() || [];
-    for (const element of elements) {
-        const paletteColorIndexAttr = element.getAttribute('data-color-index');
-        if (paletteColorIndexAttr === null || isNaN(parseInt(paletteColorIndexAttr, 10))) continue;
+
+    if (typeof window !== 'undefined' && window.globalElementRegistry?.clearAllCache) {
+        window.globalElementRegistry.clearAllCache();
+    }
+
+    const snapshot = appState.value;
+    for (const element of collectAllThemedElements()) {
         try {
-            await applyPaletteToElement(element);
+            applyPaletteToElementSync(element, snapshot);
         } catch (err) {
-            console.warn('[ColorPalette] applyCurrentPaletteToAllElements:', element.id || element.className, err);
+            reportError(
+                err,
+                `[ColorPalette] applyFullPaletteInstant: ${element.id || element.className || 'element'}`,
+                null
+            );
         }
     }
-    const filename = currentPaletteFilename.value;
-    const paletteName = resolvePaletteNameFromFilename(filename);
-    if (typeof window !== 'undefined') {
+
+    refreshVisualStateAfterPaletteChange();
+    root?.classList.remove('palette-swapping');
+
+    if (options.dispatchEvent !== false && typeof window !== 'undefined') {
+        const filename = currentPaletteFilename.value;
         window.dispatchEvent(new CustomEvent('color-palette-changed', {
-            detail: { filename, paletteName, previousFilename: null }
+            detail: {
+                filename,
+                paletteName: options.paletteName ?? paletteName,
+                previousFilename: options.previousFilename ?? null,
+            },
         }));
     }
 }
 
+/** Re-sync inline hover CSS vars on a biz scene card from its data-* attributes (matches useCardsController applyHoverStylesToCard). */
+function syncBizCardHoverStyleVarsFromAttributes(card) {
+    if (!card || card.classList.contains('clone')) return;
+
+    const pairs = [
+        ['--data-background-color-hovered', 'data-background-color-hovered'],
+        ['--data-foreground-color-hovered', 'data-foreground-color-hovered'],
+        ['--data-hovered-padding', 'data-hovered-padding'],
+        ['--data-hovered-inner-border-width', 'data-hovered-inner-border-width'],
+        ['--data-hovered-inner-border-color', 'data-hovered-inner-border-color'],
+        ['--data-hovered-outer-border-width', 'data-hovered-outer-border-width'],
+        ['--data-hovered-outer-border-color', 'data-hovered-outer-border-color'],
+        ['--data-hovered-border-radius', 'data-hovered-border-radius'],
+    ];
+    for (const [prop, attr] of pairs) {
+        const val = card.getAttribute(attr);
+        if (val) card.style.setProperty(prop, val);
+    }
+    card.style.setProperty('filter', 'none', 'important');
+}
+
 /**
- * Applies the current color palette to a specific HTML element.
- * Calculates and sets data attributes for all color states (normal, selected, hovered).
- * Palette swatch index comes from element’s data-color-index: biz cards use their job ID;
- * skill cards use the job ID of the first job that referenced that skill (same index → same colors).
- * @param {HTMLElement} element The element to apply the palette colors to.
+ * Foreground hex already chosen for this card state (same CSS vars that paint the label text).
  */
-export async function applyPaletteToElement(element) {
-    if (!element) throw new Error('applyPaletteToElement: element is required');
+function getSkillCardForegroundHex(card) {
+    const isClone = card.classList.contains('clone');
+    const isSelected = card.classList.contains('selected');
+    const isHovered = !isClone && !isSelected && card.classList.contains('hovered');
 
-    // Ensure palettes are loaded (e.g. when switching resume before palette UI has been shown)
-    await readyPromise;
+    const cssVar = isClone || isSelected
+        ? '--data-foreground-color-selected'
+        : isHovered
+            ? '--data-foreground-color-hovered'
+            : '--data-foreground-color';
+    const attr = isClone || isSelected
+        ? 'data-foreground-color-selected'
+        : isHovered
+            ? 'data-foreground-color-hovered'
+            : 'data-foreground-color';
 
-    // Access the centralized app state
-    const { appState } = useAppState();
+    return formatHexDisplay(
+        card.style.getPropertyValue(cssVar).trim()
+        || card.getAttribute(attr)
+        || ''
+    );
+}
 
-    // Wait for palettes to be loaded before applying
-    if (isLoading.value) {
-        await readyPromise;
+/**
+ * Skill-card back arrows mirror label text: read --data-foreground-color* and invert black PNG when light.
+ */
+export function syncSkillCardBackLinkPresentation(card) {
+    if (!card) return;
+    const isSkillShell =
+        card.classList.contains('skill-card-div')
+        || card.classList.contains('skill-resume-div')
+        || card.classList.contains('appended-skill-resume-div');
+    if (!isSkillShell) return;
+
+    const fgHex = getSkillCardForegroundHex(card);
+    if (!fgHex) return;
+
+    const lightText = isLightForegroundHex(fgHex);
+    card.classList.toggle('skill-fg-light', lightText);
+
+    const variant = lightText ? 'white' : 'black';
+    const blackBackUrl = contrastAnchorIconUrl(ICON_BASE, 'back', 'black');
+    card.querySelectorAll('.skill-card-back-icons .back-icon').forEach((icon) => {
+        if (icon.getAttribute('src') !== blackBackUrl) {
+            icon.setAttribute('src', blackBackUrl);
+        }
+        icon.setAttribute('data-skill-icon-variant', variant);
+        icon.style.setProperty('filter', lightText ? 'invert(1)' : 'none');
+    });
+}
+
+/** Re-sync every skill shell (scene + resume copies). */
+export function syncAllSkillCardBackLinkPresentations() {
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll('.skill-card-div, .skill-resume-div, .appended-skill-resume-div').forEach(syncSkillCardBackLinkPresentation);
+}
+
+/**
+ * After palette data attributes / CSS vars are updated, re-apply interaction-state styling
+ * so hovered cards, depth-filtered cards, and resume rows match without requiring a new mouseenter.
+ */
+export function refreshVisualStateAfterPaletteChange() {
+    if (typeof document === 'undefined') return;
+
+    document.querySelectorAll('.biz-card-div.hovered:not(.clone)').forEach(syncBizCardHoverStyleVarsFromAttributes);
+
+    document.querySelectorAll('.biz-card-div:not(.clone), .skill-card-div:not(.clone)').forEach((card) => {
+        if (!card.hasAttribute('data-sceneZ')) return;
+        if (card.classList.contains('hovered')) return;
+        updateContrastForBrightness(card);
+    });
+
+    document.querySelectorAll('.skill-card-div.clone').forEach((clone) => {
+        updateContrastForBrightness(clone);
+    });
+
+    const sm = typeof window !== 'undefined' ? window.resumeFlyer?.selectionManager : null;
+    const hoveredJob = sm?.getHoveredJobNumber?.();
+    if (hoveredJob != null && sm?.eventTarget) {
+        sm.eventTarget.dispatchEvent(new CustomEvent('job-hovered', { detail: { jobNumber: hoveredJob } }));
+        sm.eventTarget.dispatchEvent(new CustomEvent('hoverChanged', {
+            detail: { hoveredJobNumber: hoveredJob, caller: 'refreshVisualStateAfterPaletteChange' },
+        }));
     }
 
-    // Ensure appState is available
-    if (!appState.value) {
-        console.warn('[applyPaletteToElement] ❌ AppState not loaded, skipping palette application');
-        console.warn('[applyPaletteToElement] appState.value:', appState.value);
-        throw new Error('AppState not available for palette application');
-    }
-    
-    // console.log('[applyPaletteToElement] AppState available, checking palettes...');
-    // console.log('[applyPaletteToElement] appState.value.color:', appState.value.color);
+    document.querySelectorAll('.skill-card-div, .skill-resume-div, .appended-skill-resume-div').forEach(syncSkillCardBackLinkPresentation);
+}
 
-    // Use a data-attribute for the palette color index, assuming it's set on the element
+/**
+ * Applies the current color palette to a specific HTML element (synchronous).
+ * @param {HTMLElement} element
+ * @param {object} appStateSnapshot - merged AppState (not the readonly proxy)
+ */
+export function applyPaletteToElementSync(element, appStateSnapshot) {
+    if (!element) throw new Error('applyPaletteToElementSync: element is required');
+    if (!appStateSnapshot) throw new Error('AppState not available for palette application');
+
     const paletteColorIndexAttr = element.getAttribute('data-color-index');
-
-    // If the attribute is not set or is not a valid number,
-    // this element has not been configured for color theming
     if (paletteColorIndexAttr === null || isNaN(parseInt(paletteColorIndexAttr, 10))) {
-        console.warn(`[applyPaletteToElement] ❌ Element missing or invalid data-color-index: "${paletteColorIndexAttr}"`);
         throw new Error(`Element missing data-color-index attribute`);
     }
     const paletteColorIndex = parseInt(paletteColorIndexAttr, 10);
 
-    // Get the palette name from the filename
     if (!currentPaletteFilename.value) {
         throw new Error('No palette filename set; cannot apply palette');
     }
 
-    let paletteName = resolvePaletteNameFromFilename(currentPaletteFilename.value);
+    const paletteName = resolvePaletteNameFromFilename(currentPaletteFilename.value);
     if (!paletteName) {
         throw new Error(`Palette name not found for filename: ${currentPaletteFilename.value}`);
     }
 
-    // Get palette from the reactive colorPalettes (loaded dynamically, not stored in appState)
     const colorPalette = colorPalettes.value[paletteName];
     if (!colorPalette) {
-        console.error(`[applyPaletteToElement] Color palette not found for name: ${paletteName}`);
-        console.error(`[applyPaletteToElement] Available palettes:`, Object.keys(colorPalettes.value || {}));
-        console.error(`[applyPaletteToElement] Requested palette name: ${paletteName}`);
         throw new Error(`Color palette not found for name: ${paletteName}`);
     }
 
-    // Calculate base colors (colorUtils: LCH-based highlight, high-contrast text + icons from single call)
     const backgroundColor = formatHexDisplay(colorPalette[paletteColorIndex % colorPalette.length]) || colorPalette[paletteColorIndex % colorPalette.length];
     const normalStyle = resolveTextAndIconStyle(backgroundColor);
     const foregroundColor = normalStyle.textColor;
     const normalIconSet = normalStyle.iconSet;
 
-    const systemConstants = appState.value["system-constants"];
+    const systemConstants = appStateSnapshot["system-constants"];
     // Selected: single knob 135 → L >= floor(100/1.35) darken (L'=L/1.35), else brighten (L'=L*1.35).
     const selectedHighlightPercent = systemConstants?.theme?.selectedHighlightPercent ?? 135;
     const selectedBrightenRatio = selectedHighlightPercent / 100;
@@ -875,7 +851,7 @@ export async function applyPaletteToElement(element) {
     const hoveredForegroundColor = hoveredStyle.textColor;
     const hoveredIconSet = hoveredStyle.iconSet;
 
-    const borderRadius = appState.value.theme?.borderRadius || '25px';
+    const borderRadius = appStateSnapshot.theme?.borderRadius || '25px';
 
     // Same padding and border width in all states so text does not shift on hover/select
     const defaultBorderSettings = {
@@ -993,8 +969,11 @@ export async function applyPaletteToElement(element) {
     element.style.setProperty('--data-icon-set-variant', normalIconSet.variant);
     // Set as HTML attribute so CSS attribute selectors fire for all element types
     element.setAttribute('data-icon-set-variant', normalIconSet.variant);
-    // Clear any stale per-icon inline filter; state selectors should control icon contrast.
-    element.querySelectorAll('.back-icon, .url-icon, .img-icon').forEach(icon => {
+    // Clear description icon filters; skill-card back icons sync below.
+    element.querySelectorAll('.url-icon, .img-icon').forEach(icon => {
+        icon.style.removeProperty('filter');
+    });
+    element.querySelectorAll('.skill-card-back-icons .back-icon').forEach(icon => {
         icon.style.removeProperty('filter');
     });
     element.style.setProperty('--data-icon-set-hovered-url', `url(${hoveredIconSet.url})`);
@@ -1040,13 +1019,40 @@ export async function applyPaletteToElement(element) {
     if (hexNormalEl) hexNormalEl.textContent = backgroundColor;
     if (hexHighlightedEl) hexHighlightedEl.textContent = selectedBackgroundColor;
 
-    // Apply inline styles. cDiv, clone, and rDiv use CSS vars only so normal/hovered/selected control both background and text (no inline background or color).
-    const useCssVarsOnly = element.classList.contains('biz-card-div') || element.classList.contains('biz-resume-div');
+    // Cards and resume rows use CSS vars only so normal/hovered/selected control background and text (no inline background or color).
+    const useCssVarsOnly =
+        element.classList.contains('biz-card-div')
+        || element.classList.contains('biz-resume-div')
+        || element.classList.contains('skill-card-div')
+        || element.classList.contains('skill-resume-div')
+        || element.classList.contains('appended-skill-resume-div');
     if (!useCssVarsOnly) {
         element.style.backgroundColor = backgroundColor;
         element.style.color = foregroundColor;
     }
+
+    syncSkillCardBackLinkPresentation(element);
     // For useCssVarsOnly, color comes from CSS (var(--data-foreground-color), -hovered, -selected) so clone and rDiv selected states match
+}
+
+/**
+ * Applies the current color palette to a specific HTML element (async wrapper; waits for palette catalog).
+ * @param {HTMLElement} element The element to apply the palette colors to.
+ */
+export async function applyPaletteToElement(element) {
+    if (!element) throw new Error('applyPaletteToElement: element is required');
+
+    await readyPromise;
+    if (isLoading.value) {
+        await readyPromise;
+    }
+
+    const { appState } = useAppState();
+    if (!appState.value) {
+        throw new Error('AppState not available for palette application');
+    }
+
+    applyPaletteToElementSync(element, appState.value);
 }
 
 /**
@@ -1059,18 +1065,24 @@ export function updateContrastForBrightness(element) {
     if (!rawBg || !rawBg.startsWith('#')) return
 
     const sceneZ = parseFloat(element.getAttribute('data-sceneZ'))
-    if (isNaN(sceneZ)) return
+    const isSkillShell =
+        element.classList.contains('skill-card-div')
+        || element.classList.contains('skill-resume-div')
+        || element.classList.contains('appended-skill-resume-div')
+    if (Number.isNaN(sceneZ) && !isSkillShell) return
 
-    // Brightness from same filter as rendering (computed)
-    // brightness() CSS filter: 1.0 = full, <1.0 = darker
     const rgb = hexToRgb(rawBg)
     if (!rgb) return
 
-    // Import brightness value inline to avoid circular deps — matches filters.get_brightness_value_from_z
-    // brightness is stored as a CSS filter string; read it from style.filter instead
-    const filterStr = element.style.filter || ''
-    const brightnessMatch = filterStr.match(/brightness\((\d+(?:\.\d+)?)%\)/)
-    const brightness = brightnessMatch ? parseFloat(brightnessMatch[1]) / 100 : 1.0
+    // Clone/hover paint at full brightness (CSS filter:none); don't read stale Z filter from style.filter.
+    const isClone = element.classList.contains('clone')
+    const isHovered = element.classList.contains('hovered') && !isClone
+    let brightness = 1.0
+    if (!isClone && !isHovered && !Number.isNaN(sceneZ)) {
+        const filterStr = element.style.filter || ''
+        const brightnessMatch = filterStr.match(/brightness\((\d+(?:\.\d+)?)%\)/)
+        brightness = brightnessMatch ? parseFloat(brightnessMatch[1]) / 100 : 1.0
+    }
 
     const effectiveRgb = {
         r: Math.min(255, Math.round(rgb.r * brightness)),
@@ -1112,8 +1124,11 @@ export function updateContrastForBrightness(element) {
     element.style.setProperty('--data-link-color-hovered', hoveredStyle.linkColor)
     element.style.setProperty('--data-link-color-selected', selectedStyle.linkColor)
 
-    // Clear stale inline filter so selected/hovered state selectors can control icon contrast.
-    element.querySelectorAll('.back-icon, .url-icon, .img-icon').forEach(icon => {
+    // Clear stale inline filter on description icons; skill-card back icons re-sync below.
+    element.querySelectorAll('.url-icon, .img-icon').forEach(icon => {
+        icon.style.removeProperty('filter')
+    })
+    element.querySelectorAll('.skill-card-back-icons .back-icon').forEach(icon => {
         icon.style.removeProperty('filter')
     })
 
@@ -1121,6 +1136,8 @@ export function updateContrastForBrightness(element) {
     if (!isBizOrRDiv) {
         element.style.color = normalStyle.textColor
     }
+
+    syncSkillCardBackLinkPresentation(element)
 }
 
 function applySelectedStateColorsToElement(element) {

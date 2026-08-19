@@ -15,6 +15,35 @@
       />
     </div>
     <div class="rde-field">
+      <label class="rde-top-label" for="rde-meta-original-path">Original resume path</label>
+      <input
+        id="rde-meta-original-path"
+        name="originalPath"
+        v-model="local.originalPath"
+        type="text"
+        class="rde-input rde-input-path"
+        placeholder="Paste full path to the source .docx or .pdf"
+        spellcheck="false"
+        autocomplete="off"
+        :disabled="!canEdit"
+        @blur="requestAutosave"
+      />
+    </div>
+    <div class="rde-field">
+      <label class="rde-top-label" for="rde-meta-parsed-folder">Parsed resume folder</label>
+      <input
+        id="rde-meta-parsed-folder"
+        name="parsedFolderPath"
+        type="text"
+        class="rde-input rde-input-path"
+        :value="meta.parsedFolderPath || ''"
+        placeholder="(unavailable — reopen Details after the server reloads)"
+        readonly
+        spellcheck="false"
+        tabindex="0"
+      />
+    </div>
+    <div class="rde-field">
       <label class="rde-top-label" for="rde-meta-file-name">Resume File name</label>
       <input
         id="rde-meta-file-name"
@@ -51,16 +80,22 @@ const emit = defineEmits(['update:meta', 'autosave']);
 
 const local = ref({
   displayName: props.meta.displayName ?? '',
-  fileName: props.meta.fileName ?? ''
+  fileName: props.meta.fileName ?? '',
+  originalPath: props.meta.originalPath ?? ''
 });
 
 watch(() => props.meta, (m) => {
   local.value.displayName = m?.displayName ?? '';
   local.value.fileName = m?.fileName ?? '';
+  local.value.originalPath = m?.originalPath ?? '';
 }, { immediate: true });
 
 watch(local, (l) => {
-  emit('update:meta', { displayName: l.displayName, fileName: l.fileName });
+  emit('update:meta', {
+    displayName: l.displayName,
+    fileName: l.fileName,
+    originalPath: l.originalPath,
+  });
 }, { deep: true });
 
 function requestAutosave() {
@@ -82,6 +117,7 @@ function formatDate(iso) {
 .rde-field { margin-bottom: 12px; }
 .rde-label { display: block; font-size: 0.7rem; text-transform: none; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
 .rde-input { width: 100%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 6px 10px; color: #e0e0e0; font-size: 0.9rem; box-sizing: border-box; }
+.rde-input-path { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.8rem; }
 .rde-input:disabled { opacity: 0.4; cursor: default; }
 .rde-readonly { margin-top: 10px; font-size: 0.8rem; color: rgba(255,255,255,0.4); }
 .rde-value { margin-left: 6px; }

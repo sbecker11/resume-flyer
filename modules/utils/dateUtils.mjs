@@ -132,6 +132,16 @@ export function parseFlexibleDateString(dateStr) {
         }
     }
 
+    // Try MM/YYYY or M/YYYY (resume-parser job dates)
+    match = trimmedDateStr.match(/^(\d{1,2})\/(\d{4})$/);
+    if (match) {
+        const month = parseInt(match[1], 10);
+        const year = parseInt(match[2], 10);
+        if (month >= 1 && month <= 12 && year >= 1000 && year <= 9999) {
+            return new Date(year, month - 1, 1);
+        }
+    }
+
     // Try YYYY
     match = trimmedDateStr.match(/^(\d{4})$/);
     if (match) {

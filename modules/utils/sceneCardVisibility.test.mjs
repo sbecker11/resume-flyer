@@ -4,6 +4,9 @@ import {
   isVisibleSceneCardRoot,
   listVisibleSceneCardRoots,
   compareSceneCardsTopLeft,
+  hideSceneCardsForListingClear,
+  showSceneCardsAfterListingRestore,
+  SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS,
 } from './sceneCardVisibility.mjs';
 
 /** Create a minimal fake Element with classList and nodeType */
@@ -73,6 +76,10 @@ describe('isVisibleSceneCardRoot', () => {
 
   it('returns false when clone-hidden', () => {
     expect(isVisibleSceneCardRoot(makeEl(['biz-card-div', 'clone-hidden']))).toBe(false);
+  });
+
+  it('returns false when scene-hidden-for-listing-clear', () => {
+    expect(isVisibleSceneCardRoot(makeEl(['biz-card-div', 'scene-hidden-for-listing-clear']))).toBe(false);
   });
 
   it('returns false when display is none', () => {
@@ -167,5 +174,49 @@ describe('compareSceneCardsTopLeft', () => {
     const b = cardAt(10.9, 50);
     // |dy| = 0.5 <= 1, so falls through to left comparison
     expect(compareSceneCardsTopLeft(a, b)).toBeLessThan(0);
+  });
+});
+
+describe('hide/show scene cards for listing clear', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div id="scene-plane">
+        <div class="biz-card-div" id="biz-1"></div>
+        <div class="biz-card-div clone clone-hidden" id="biz-1-clone"></div>
+        <div class="skill-card-div" id="skill-1"></div>
+        <div class="timeline-label">2024</div>
+      </div>
+    `;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('hides biz and skill cards but not timeline chrome', () => {
+    const plane = document.getElementById('scene-plane');
+    const hidden = hideSceneCardsForListingClear(plane);
+    expect(hidden).toBe(3);
+    expect(document.getElementById('biz-1').classList.contains(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS)).toBe(true);
+    expect(document.getElementById('biz-1-clone').classList.contains(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS)).toBe(true);
+    expect(document.getElementById('skill-1').classList.contains(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS)).toBe(true);
+    expect(plane.querySelector('.timeline-label').classList.contains(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS)).toBe(false);
+  });
+
+  it('restore removes the listing-clear class and leaves clone-hidden intact', () => {
+    const plane = document.getElementById('scene-plane');
+    hideSceneCardsForListingClear(plane);
+    const restored = showSceneCardsAfterListingRestore(plane);
+    expect(restored).toBe(3);
+    expect(document.getElementById('biz-1').classList.contains(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS)).toBe(false);
+    expect(document.getElementById('biz-1-clone').classList.contains('clone-hidden')).toBe(true);
+    expect(document.getElementById('biz-1-clone').classList.contains(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS)).toBe(false);
+    expect(document.getElementById('biz-1').style.display).toBe('');
+  });
+
+  it('returns 0 when scene-plane is missing', () => {
+    document.body.innerHTML = '';
+    expect(hideSceneCardsForListingClear(null)).toBe(0);
+    expect(showSceneCardsAfterListingRestore(null)).toBe(0);
   });
 });

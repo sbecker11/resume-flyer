@@ -1,0 +1,26 @@
+{
+  "0": {
+    "index": 0,
+    "degree": "PhD, Media Arts & Sciences, Computer Vision, Digital Signal Processing",
+    "institution": "Massachusetts Institute of Technology (MIT)  —  1990 - 1997",
+    "start": "1990-01-01",
+    "end": "1997-12-31",
+    "description": ""
+  },
+  "1": {
+    "index": 1,
+    "degree": "MS, Computer Science, Computer Graphics, Medical Imaging",
+    "institution": "Brigham Young University  —  1987 - 1990",
+    "start": "1987-01-01",
+    "end": "1990-12-31",
+    "description": ""
+  },
+  "2": {
+    "index": 2,
+    "degree": "BS, Design Engineering Technology, CAD/CAM/CAE",
+    "institution": "Brigham Young University  —  1983 - 1987",
+    "start": "1983-01-01",
+    "end": "1987-12-31",
+    "description": "Licenses & certifications • Cambridge, MA • Provo, UT • Provo, UT • Scrum Master: 2024 • PyTorch: 2024 • Data Engineering with DBT: 2024 • Docker: 2023 • Kubernetes: 2023 • Machine Learning - Stanford Online: 2022 • Neural Networks & CNNs: 2022 • Key skills • Machine Learning & AI: AI/ML, GenAI, AI Agents, Computer Vision, NLP, CNNs • Frameworks & Libraries: PyTorch, LangChain, LLM APIs (OpenAI, Anthropic) • Data Engineering: Data Pipelines, Vector DBs (ChromaDB, Pinecone), SageMaker • DevOps & Infrastructure: Docker, Kubernetes"
+  }
+}

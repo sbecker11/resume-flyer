@@ -1,4 +1,46 @@
 /* Styles for UI controls */
+
+/*
+ * Resize-handle white rings — global (index.html), not Vue scoped.
+ * Scoped SFC styles can fail to re-inject on hard refresh; these rules must persist.
+ */
+#resize-handle.resize-handle {
+  width: 28px !important;
+  min-width: 28px !important;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+#resize-handle .toggle-circle-ring,
+.scene-3d-settings .toggle-circle-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ffffff !important;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+#resize-handle .toggle-circle-ring.ring-disabled {
+  border-color: #666666 !important;
+}
+
+#resize-handle .toggle-circle-ring.ring-hover,
+.scene-3d-settings .toggle-circle-ring.ring-hover {
+  border-color: #000000 !important;
+}
+
+#resize-handle .toggle-circle,
+#resize-handle #scene-3d-button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: none !important;
+  box-sizing: border-box;
+}
+
 .toggle-collapse-button {
   width: 20px;
   height: 20px;

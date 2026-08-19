@@ -1,0 +1,123 @@
+{
+  "contact": {
+    "name": "Shawn Becker",
+    "email": "shawn.becker@spexture.com",
+    "phone": "857-891-0896",
+    "location": "Lehi, UT",
+    "linkedin": "linkedin.com/in/shawnbecker",
+    "website": "github.com/sbecker11"
+  },
+  "title": "Senior Software Engineer & Independent Consultant — AI/ML Engineering, Full-Stack Development & Distributed Data Platforms",
+  "summary": "Senior individual-contributor engineer with 20+ years designing and delivering full-stack, AI/ML, and data-platform systems for Fortune 500 and regulated clients. Hands-on with Java/Spring Boot, Python/PySpark, AWS (EMR, Glue, SageMaker, Bedrock), and modern GenAI tooling (LangChain, LangGraph, Spring AI), building everything from event-driven data pipelines to agentic RAG systems. Co-invented 3 NLP patents in vector-embedding recommendation systems and led a semantic product ontology spanning 700K+ products as an early technical leader. Independent-consulting engagements run under Spexture (Independent Consulting), backed by ~2.75 years of sustained platform ownership at SeniorLink (now Careforth).",
+  "certifications": [
+    {
+      "name": "Scrum Master",
+      "url": "",
+      "description": "2024"
+    },
+    {
+      "name": "PyTorch",
+      "url": "",
+      "description": "2024"
+    },
+    {
+      "name": "Data Engineering with DBT",
+      "url": "",
+      "description": "2024"
+    },
+    {
+      "name": "Docker",
+      "url": "",
+      "description": "2023"
+    },
+    {
+      "name": "Kubernetes",
+      "url": "",
+      "description": "2023"
+    },
+    {
+      "name": "Machine Learning",
+      "url": "",
+      "description": "Stanford Online 2022"
+    },
+    {
+      "name": "Neural Networks & CNNs",
+      "url": "",
+      "description": "2022"
+    }
+  ],
+  "websites": [
+    {
+      "label": "LinkedIn",
+      "url": "https://linkedin.com/in/shawnbecker"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/sbecker11"
+    },
+    {
+      "label": "resume-parser",
+      "url": "https://github.com/sbecker11/resume-parser"
+    },
+    {
+      "label": "color-palette-maker",
+      "url": "https://github.com/sbecker11/color-palette-maker"
+    },
+    {
+      "label": "resume-flyer",
+      "url": "https://github.com/sbecker11/resume-flyer"
+    },
+    {
+      "label": "sushi-rag-app",
+      "url": "https://github.com/sbecker11/sushi-rag-app"
+    },
+    {
+      "label": "campaign-automation",
+      "url": "https://github.com/sbecker11/campaign-automation"
+    },
+    {
+      "label": "spexture-com",
+      "url": "https://github.com/sbecker11/spexture-com"
+    },
+    {
+      "label": "ecommerce-semantic-search",
+      "url": "https://github.com/sbecker11/ecommerce-semantic-search"
+    },
+    {
+      "label": "linkage-engine",
+      "url": "https://github.com/sbecker11/linkage-engine"
+    },
+    {
+      "label": "healthcare-agentic-snowflake-rag",
+      "url": "https://github.com/sbecker11/healthcare-agentic-snowflake-rag"
+    },
+    {
+      "label": "recruiting-automation",
+      "url": "https://github.com/sbecker11/recruiting-automation"
+    }
+  ],
+  "custom_sections": [
+    {
+      "title": "Patents",
+      "content": "Co-invented 3 NLP patents in vector-embedding recommendation systems (developed during tenure at ClipFile)."
+    }
+  ],
+  "skills": [
+    "AI/ML",
+    "GenAI",
+    "AI Agents",
+    "Computer Vision",
+    "NLP",
+    "CNNs",
+    "PyTorch",
+    "LangChain",
+    "LLM APIs OpenAI",
+    "LLM APIs Anthropic",
+    "Data Pipelines",
+    "Vector DBs ChromaDB",
+    "Vector DBs Pinecone",
+    "SageMaker",
+    "Docker",
+    "Kubernetes"
+  ]
+}

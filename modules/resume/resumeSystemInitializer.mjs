@@ -10,6 +10,7 @@
  */
 import { resumeListController } from './ResumeListController.mjs';
 import { resumeItemsController } from '../resume/ResumeItemsController.mjs';
+import { ResumeListScrollContainer } from './resumeListScrollContainer.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { setJobColorIndex } from '../utils/paletteHelpers.mjs';
@@ -21,10 +22,6 @@ import { setJobColorIndex } from '../utils/paletteHelpers.mjs';
  * @returns {Promise<boolean>} true if successful
  */
 export async function buildResumeListFromCards(bizCardDivs) {
-    if (!bizCardDivs?.length) {
-        console.warn('[ResumeSystemInitializer] buildResumeListFromCards: no cards provided');
-        return false;
-    }
     const app = window.resumeFlyer;
     if (!app) throw new Error('[ResumeSystemInitializer] buildResumeListFromCards: window.resumeFlyer not set');
     const rlc = app.resumeListController;
@@ -36,6 +33,23 @@ export async function buildResumeListFromCards(bizCardDivs) {
     if (!listEl) {
         throw new Error('[ResumeSystemInitializer] buildResumeListFromCards: resume list element not available');
     }
+
+    rlc.removedJobNumbers?.clear?.();
+    rlc.resumeListSelectionOrder = [];
+
+    if (!bizCardDivs?.length) {
+        console.warn('[ResumeSystemInitializer] buildResumeListFromCards: no cards — clearing resume list');
+        while (listEl.firstChild) listEl.firstChild.remove();
+        rlc.bizResumeDivs = [];
+        ric.bizResumeDivs = [];
+        if (app.allDivs) {
+            app.allDivs.bizResumeDivs = [];
+            app.allDivs.skillResumeDivs = [];
+        }
+        ResumeListScrollContainer.reset?.();
+        return false;
+    }
+
     console.debug('[ResumeSystemInitializer] building resume list from', bizCardDivs.length, 'cards');
     while (listEl.firstChild) listEl.firstChild.remove();
     const resumeDivs = await ric.createAllBizResumeDivs(bizCardDivs);
@@ -59,7 +73,7 @@ export async function buildResumeListFromCards(bizCardDivs) {
     if (Array.isArray(currentJobs) && currentJobs.length > 0) {
         rlc.initialize(currentJobs);
     }
-    rlc.sortedIndices = Array.from({ length: resumeDivs.length }, (_, i) => i);
+    rlc.sortedIndices = Array.from({ length: (currentJobs?.length ?? resumeDivs.filter(Boolean).length) }, (_, i) => i);
     rlc.reinitialize(resumeDivs);
     console.debug('[ResumeSystemInitializer] resume list built:', resumeDivs.length, 'items');
     return true;
@@ -125,7 +139,7 @@ export async function initializeResumeSystem(resumeId = null) {
         
         // Wait for DOM elements to be available (retry with delays)
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 50;
         
         const waitForDOMElements = async () => {
             while (attempts < maxAttempts) {

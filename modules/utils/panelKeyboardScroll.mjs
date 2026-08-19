@@ -162,6 +162,42 @@ function focusPanelScrollport(panel) {
     }
 }
 
+/** Background scrollport clicks (deselect) should not leave a focus ring on the whole panel. */
+function shouldFocusScrollportOnMousedown(target) {
+    if (!target || target === document.body || target === document.documentElement) return false
+    if (target.closest(
+        '.biz-card-div, .skill-card-div, .biz-resume-div, .skill-resume-div, .appended-skill-resume-div, button, a, input, textarea, select, [role="button"]'
+    )) {
+        return true
+    }
+    const bareBackgroundIds = new Set([
+        'scene-content',
+        'scene-plane',
+        'resume-content-listing',
+        'resume-content-div',
+        'resume-content-div-list',
+    ])
+    if (bareBackgroundIds.has(target.id)) return false
+    if (target.closest('#scene-content, #resume-content-listing') && !target.closest('.biz-card-div, .skill-card-div, .biz-resume-div, .skill-resume-div, .appended-skill-resume-div')) {
+        return false
+    }
+    return true
+}
+
+/** @param {'scene' | 'resume'} panel */
+export function blurPanelScrollport(panel) {
+    const el = panel === 'resume' ? getResumeListingScrollport() : getSceneContentScrollport()
+    if (el && document.activeElement === el) {
+        el.blur()
+    }
+}
+
+/** Blur both panel scrollports (e.g. after selection cleared). */
+export function blurActivePanelScrollports() {
+    blurPanelScrollport('resume')
+    blurPanelScrollport('scene')
+}
+
 function bindPanelContainerListeners() {
     const bindings = [
         ['resume-container', 'resume'],
@@ -183,7 +219,9 @@ function bindPanelContainerListeners() {
         el.addEventListener('mousedown', (e) => {
             recordPointer(e.clientX, e.clientY)
             activePanel = panel
-            focusPanelScrollport(panel)
+            if (shouldFocusScrollportOnMousedown(e.target)) {
+                focusPanelScrollport(panel)
+            }
         })
     }
     const listing = getResumeListingScrollport()
@@ -192,7 +230,9 @@ function bindPanelContainerListeners() {
         listing.addEventListener('mousedown', (e) => {
             recordPointer(e.clientX, e.clientY)
             activePanel = 'resume'
-            focusPanelScrollport('resume')
+            if (shouldFocusScrollportOnMousedown(e.target)) {
+                focusPanelScrollport('resume')
+            }
         })
     }
     const sceneContent = getSceneContentScrollport()
@@ -201,7 +241,9 @@ function bindPanelContainerListeners() {
         sceneContent.addEventListener('mousedown', (e) => {
             recordPointer(e.clientX, e.clientY)
             activePanel = 'scene'
-            focusPanelScrollport('scene')
+            if (shouldFocusScrollportOnMousedown(e.target)) {
+                focusPanelScrollport('scene')
+            }
         })
     }
 }
@@ -322,6 +364,15 @@ export function shouldScrollScenePanel(clientX = lastPointerClientX, clientY = l
 export function shouldScrollResumePanel(clientX = lastPointerClientX, clientY = lastPointerClientY) {
     if (keyboardScrollTargetPanel) return keyboardScrollTargetPanel === 'resume'
     return resolveArrowScrollTargetPanel(clientX, clientY) === 'resume'
+}
+
+/**
+ * Whether selecting a card should scroll the matching scene card into view.
+ * Pointer-over-resume must not block this — clicking an rDiv should still bring its cDiv into view.
+ * Skip only while keyboard ↑/↓ is driving the resume listing (scene jump would fight list nav).
+ */
+export function shouldSyncSceneScrollOnSelection() {
+    return keyboardScrollTargetPanel !== 'resume'
 }
 
 /**

@@ -1,0 +1,133 @@
+{
+  "0": {
+    "index": 0,
+    "role": "Research Assistant",
+    "employer": "National Economic Research Associates (NERA)",
+    "start": "6/2019",
+    "end": "8/2019",
+    "z-index": 1,
+    "css name": "darkforest",
+    "css RGB": "#116611",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Worked with a team of four other researchers on cases relating to antitrust, intellectual property and labor economics.\n• Conducted quantitative and qualitative research, collected and analyzed data, created and managed [spreadsheets].",
+    "skillIDs": [
+      "spreadsheets"
+    ]
+  },
+  "1": {
+    "index": 1,
+    "role": "Summer Analyst",
+    "employer": "Galleon Group",
+    "start": "6/2018",
+    "end": "8/2018",
+    "z-index": 2,
+    "css name": "darkcyan",
+    "css RGB": "#0069AC",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Assigned to track a group of technology companies for the New York based hedge fund, Galleon Group.\n• Worked with three other analysts in collecting and analyzing relevant financial statistics.\n• Performed qualitative research to form an assessment of the current status of the companies.",
+    "skillIDs": []
+  },
+  "2": {
+    "index": 2,
+    "role": "Economics Tutor",
+    "employer": "Undergraduate Advising and Research, Stanford University",
+    "start": "6/2016",
+    "end": "5/2018",
+    "z-index": 3,
+    "css name": "darkcyan",
+    "css RGB": "#006688",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Assisted students with understanding concepts and solving problems in micro and macro economics, [econometrics] and [statistics].\n• Organized review sessions and prepared practice problems for upcoming exams.",
+    "skillIDs": [
+      "econometrics",
+      "statistics"
+    ]
+  },
+  "3": {
+    "index": 3,
+    "role": "Business Intern",
+    "employer": "American International Group (AIG)",
+    "start": "7/2017",
+    "end": "9/2017",
+    "z-index": 1,
+    "css name": "blue",
+    "css RGB": "#0000ff",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Developed a business analysis on a foreign company, located in Sri Lanka, with which AIG had recently formed a joint venture.\n• Wrote a report on Sri Lanka's insurance sector, focusing on privatization of insurance companies and on a recent merger between two insurance companies.",
+    "skillIDs": []
+  },
+  "4": {
+    "index": 4,
+    "role": "Staff Editor",
+    "employer": "Undergraduate Journal of International Relations",
+    "start": "4/2021",
+    "end": "CURRENT_DATE",
+    "z-index": 2,
+    "css name": "mediumblue",
+    "css RGB": "#4400cd",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Review and edit articles relating to capital inflows and international trade in emerging economies.\n• Help with distributing the journal to think tanks, academic institutions, and faculty and students at Stanford.",
+    "skillIDs": []
+  },
+  "5": {
+    "index": 5,
+    "role": "Program Director",
+    "employer": "SAT Success, Haas Center for Public Service",
+    "start": "5/2021",
+    "end": "CURRENT_DATE",
+    "z-index": 3,
+    "css name": "blueviolet",
+    "css RGB": "#8a2be2",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Coordinate all aspects of the tutoring program including recruitment of tutors and tutees.\n• Organize events to introduce high school students to SAT preparation and the college application process.\n• Conduct training sessions on tutoring the math and verbal sections of the SAT.",
+    "skillIDs": []
+  },
+  "6": {
+    "index": 6,
+    "role": "Staff Editor",
+    "employer": "Undergraduate Journal of Philosophy",
+    "start": "1/2020",
+    "end": "6/2020",
+    "z-index": 1,
+    "css name": "purple",
+    "css RGB": "#800080",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Evaluated, edited and helped select and compile papers for Stanford's undergraduate philosophy journal, The Dualist.\n• Focused on reviewing papers on political philosophy and ethics.",
+    "skillIDs": []
+  },
+  "7": {
+    "index": 7,
+    "role": "Completed tutorial on the Political Economy of Trade and Trade Agreements.",
+    "employer": "9/2018-9/2020 Oxford University, Oxford, England",
+    "start": "2018-01-01",
+    "end": "2020-12-31",
+    "z-index": 2,
+    "css name": "maroon",
+    "css RGB": "#800000",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "",
+    "skillIDs": []
+  },
+  "8": {
+    "index": 8,
+    "role": "Aristotle.” Academic work focused on economic ideas among major Greek philosophers, and also on",
+    "employer": "Sophomore College: Participated in intensive seminar entitled “Economic Thoughts of Plato and",
+    "start": "",
+    "end": "",
+    "z-index": 3,
+    "css name": "orangered",
+    "css RGB": "#ff4500",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "assumptions behind modern economic theory. Culminated in a paper critiquing rational choice and • preference ranking.",
+    "skillIDs": []
+  }
+}

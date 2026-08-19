@@ -5,6 +5,7 @@ import {
   educationKeyOf,
   workJobDropdownEntries,
   firstWorkJobMergedIndex,
+  isOutlineSectionJob,
 } from './ResumeJob.mjs';
 
 describe('ResumeJob', () => {
@@ -20,6 +21,9 @@ describe('ResumeJob', () => {
     expect(j.references).toEqual([]);
     expect(j['job-skills']).toEqual({});
     expect(j.isEducationDerived).toBe(false);
+    expect(j.outlineIndex).toBe('');
+    expect(j.outlineKind).toBe('job');
+    expect(j.isOutlineSection).toBe(false);
   });
 
   it('constructs with provided values', () => {
@@ -78,6 +82,22 @@ describe('ResumeJob', () => {
       expect(plain).toHaveProperty('job-skills');
       expect(plain).toHaveProperty('educationKey');
       expect(plain).toHaveProperty('durationMonths');
+    });
+
+    it('omits empty outline fields and includes section rows', () => {
+      const job = new ResumeJob({ employer: 'X' });
+      expect(job.toPlainObject()).not.toHaveProperty('outlineIndex');
+      expect(job.toPlainObject()).not.toHaveProperty('outlineKind');
+      const section = new ResumeJob({
+        employer: 'Portfolio Projects',
+        outlineIndex: '1.1',
+        outlineKind: 'section',
+      });
+      expect(section.toPlainObject()).toMatchObject({
+        employer: 'Portfolio Projects',
+        outlineIndex: '1.1',
+        outlineKind: 'section',
+      });
     });
   });
 
@@ -220,5 +240,17 @@ describe('firstWorkJobMergedIndex', () => {
       new ResumeJob({ employer: 'Work' }),
     ];
     expect(firstWorkJobMergedIndex(jobs)).toBe(1);
+  });
+});
+
+describe('isOutlineSectionJob', () => {
+  it('returns false for null/job rows', () => {
+    expect(isOutlineSectionJob(null)).toBe(false);
+    expect(isOutlineSectionJob(new ResumeJob({ employer: 'Work' }))).toBe(false);
+  });
+
+  it('returns true for section-kind rows', () => {
+    expect(isOutlineSectionJob(new ResumeJob({ outlineKind: 'section', outlineIndex: '1.1' }))).toBe(true);
+    expect(isOutlineSectionJob({ outlineKind: 'section' })).toBe(true);
   });
 });

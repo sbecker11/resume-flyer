@@ -42,13 +42,16 @@
     "test:coverage": "vitest run --config vitest.config.js --coverage && (cd color-palette-utils-ts && npm run test:coverage)",
     "parse-resume": "node scripts/run-parse-resume.mjs",
     "compliance": "node scripts/run-compliance-scan.mjs",
-    "sync-color-palette-utils-ts": "node scripts/sync-color-palette-utils-ts.mjs"
+    "sync-color-palette-utils-ts": "node scripts/sync-color-palette-utils-ts.mjs",
+    "anthropic-usage": "node scripts/anthropic-usage-report.mjs"
   },
   "dependencies": {
+    "audit": "^0.0.6",
     "color-palette-utils-ts": "file:./color-palette-utils-ts",
     "cors": "^2.8.5",
     "dotenv": "^17.1.0",
     "express": "^4.21.2",
+    "fix": "^0.0.6",
     "mitt": "^3.0.1",
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",

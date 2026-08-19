@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
-import { applyPaletteToElement } from '@/modules/composables/useColorPalette.mjs';
+import { applyPaletteToElement, syncSkillCardBackLinkPresentation } from '@/modules/composables/useColorPalette.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useResumeListController } from '@/modules/core/globalServices';
 import { tryParseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
@@ -16,7 +16,7 @@ import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
 import { renderSkillCardResumeInnerHtml } from '@/modules/scene/cardMarkup.mjs';
-import { openSkillInfoModal, markFocusedSkillLinkForJob, markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, scrollFocusedBizCardSkillIntoViewIfCropVisible } from '@/modules/utils/skillInfoModal.mjs';
+import { openSkillInfoModal, markFocusedSkillLinkForJob, markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, scrollFocusedBizCardSkillIntoViewIfCropVisible, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '@/modules/utils/skillInfoModal.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
 
@@ -158,7 +158,11 @@ async function printResume() {
 
 // When no jobs are loaded: open Manage modal if resumes exist, otherwise Upload modal
 watch(() => props.noJobsLoaded, async (val) => {
-  if (!val) return;
+  if (!val) {
+    isManageModalOpen.value = false;
+    isUploadModalOpen.value = false;
+    return;
+  }
   try {
     const existing = await listResumes();
     if (existing.length > 0) {
@@ -250,6 +254,7 @@ watch(currentPaletteFilename, () => {}, { immediate: true });
 
 // Sort dropdown uses string keys because native <select> cannot bind object values reliably
 const SORT_OPTIONS = [
+  { key: 'outline-asc', rule: { field: 'outline', direction: 'asc' }, text: 'Outline order' },
   { key: 'startDate-desc', rule: { field: 'startDate', direction: 'desc' }, text: 'Start Date (Newest First)' },
   { key: 'startDate-asc', rule: { field: 'startDate', direction: 'asc' }, text: 'Start Date (Oldest First)' },
   { key: 'endDate-desc', rule: { field: 'endDate', direction: 'desc' }, text: 'End Date (Newest First)' },
@@ -385,6 +390,9 @@ function syncSkillResumeDivSelection() {
     } else {
       el.classList.remove('selected');
     }
+    // .selected toggle changes which --data-foreground-color-* var paints the text;
+    // back-arrow icon variant must be recomputed every time, not just at row creation.
+    syncSkillCardBackLinkPresentation(el);
   });
 }
 /** Months of experience for one job (for summing). */
@@ -714,6 +722,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
         if (skillCardId && bizCardId) {
           markSourceBizBackLinkForSkill(skillCardId, bizCardId);
         }
+        rememberSkillCardSourceBiz(skillCardId, bizCardId);
         selectionManager?.selectCard({ type: 'biz', jobNumber: jobNum }, 'ResumeContainer.appendedCopyBackLink');
         markFocusedSkillLinkForJob(jobNum, skillSlug);
         scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNum, skillSlug);
@@ -726,14 +735,22 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     const isSelected = sel?.type === 'skill' && sel?.skillCardId === skillCardId;
     if (!isSelected) {
       copy.classList.add('hovered');
+      syncSkillCardBackLinkPresentation(copy);
       const sceneCard = document.getElementById(skillCardId) || document.getElementById(`${skillCardId}-clone`);
-      if (sceneCard?.classList.contains('skill-card-div')) sceneCard.classList.add('hovered');
+      if (sceneCard?.classList.contains('skill-card-div')) {
+        sceneCard.classList.add('hovered');
+        syncSkillCardBackLinkPresentation(sceneCard);
+      }
     }
   });
   copy.addEventListener('mouseleave', () => {
     copy.classList.remove('hovered');
+    syncSkillCardBackLinkPresentation(copy);
     const sceneCard = document.getElementById(skillCardId) || document.getElementById(`${skillCardId}-clone`);
-    if (sceneCard?.classList.contains('skill-card-div')) sceneCard.classList.remove('hovered');
+    if (sceneCard?.classList.contains('skill-card-div')) {
+      sceneCard.classList.remove('hovered');
+      syncSkillCardBackLinkPresentation(sceneCard);
+    }
   });
   // Click: same as biz-resume-div — unselected → select; selected → unselect
   copy.addEventListener('click', (e) => {
@@ -744,8 +761,10 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
       clearSourceBizBackLinkClass();
       selectionManager.clearSelection('ResumeContainer.skillResumeDivClick');
     } else {
-      clearSourceBizBackLinkClass();
+      const remembered = getRememberedSkillCardSourceBiz(skillCardId);
+      if (remembered == null) clearSourceBizBackLinkClass();
       selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeContainer.skillResumeDivClick');
+      if (remembered != null) markSourceBizBackLinkForSkill(skillCardId, remembered);
     }
   });
 
@@ -762,7 +781,11 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     rlc.notifySkillAddedToResumeListing(skillCardId);
   }
 
-  applyPaletteToElement(copy).catch((e) => console.warn('[ResumeContainer] applyPaletteToElement for appended copy:', e));
+  applyPaletteToElement(copy)
+    .then(() => {
+      syncSkillCardBackLinkPresentation(copy);
+    })
+    .catch((e) => console.warn('[ResumeContainer] applyPaletteToElement for appended copy:', e));
   nextTick(() => {
     syncSkillResumeDivSelection();
     const scrollport = document.getElementById('resume-content-listing');
@@ -1315,6 +1338,7 @@ function onResumeSkillCardClick(event) {
     flex-grow: 1;
     /* overflow-y is now controlled by the ResumeListScrollContainer */
     overflow-x: visible; /* bizCardLineItems (rDivs) must never be clipped by their container */
+    outline: none;
     background-color: var(--grey-medium);
     color: black; /* default for empty area; .biz-resume-div and .skill-resume-div set their own color */
     position: relative; /* Needed for the absolute positioning of items by the scroller */
@@ -1799,6 +1823,24 @@ function onResumeSkillCardClick(event) {
 }
 
 /* Base rDiv layout and sizing only. Spacing between items from flex container gap (ResumeListScrollContainer contentHolder). */
+.biz-resume-div.outline-section-label {
+    cursor: default;
+    background-color: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.biz-resume-div.outline-section-label .outline-section-heading {
+    font-weight: 600;
+    font-size: 0.95rem;
+    opacity: 0.92;
+}
+.biz-resume-div[data-outline-depth="1"] { padding-left: 12px; }
+.biz-resume-div[data-outline-depth="2"] { padding-left: 24px; }
+.biz-resume-div[data-outline-depth="3"] { padding-left: 36px; }
+
 .biz-resume-div {
     display: flex !important;
     flex-direction: column;

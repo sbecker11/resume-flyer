@@ -23,6 +23,8 @@ import {
     primePaletteCatalogCacheFromBundle,
 } from './modules/utils/paletteCatalogServerCache.mjs';
 import { resolvePaletteCatalogS3UrlFromRecord } from './modules/utils/paletteCatalogS3Url.mjs';
+import { getAnthropicApiKey, getParserSpawnEnv, getSkillInfoModel } from './modules/utils/anthropicEnv.mjs';
+import { callAnthropicMessages } from './modules/utils/anthropicLlm.mjs';
 import {
     RESUME_PARSER_PYTHON_MODULE_UNSET_ENV,
     RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV,
@@ -43,6 +45,13 @@ const PARSED_RESUMES_DIR = process.env.PARSED_RESUMES_DIR
         ? process.env.PARSED_RESUMES_DIR
         : path.resolve(PROJECT_ROOT, process.env.PARSED_RESUMES_DIR))
     : path.resolve(PROJECT_ROOT, 'parsed_resumes');
+
+/** Absolute folder of jobs.json / skills.json for a resume id. Not persisted in meta.json. */
+function withDerivedMetaPaths(id, meta) {
+    const folder = path.join(PARSED_RESUMES_DIR, id);
+    return { ...meta, parsedFolderPath: folder };
+}
+
 const SYNC_LOGS_DIR = path.resolve(PROJECT_ROOT, 'sync-logs');
 const SYNC_LOGS_INDEX_FILE = path.resolve(SYNC_LOGS_DIR, 'index.json');
 const EVENT_DATA_DIR = path.resolve(PROJECT_ROOT, 'event-data');
@@ -779,7 +788,7 @@ app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     if (!id || id === 'default' || jobIndex == null) {
         return res.status(400).json({ error: 'Invalid resume id or job index.' });
     }
-    const allowed = ['label', 'role', 'employer', 'start', 'end', 'Description'];
+    const allowed = ['label', 'role', 'employer', 'start', 'end', 'Description', 'outlineIndex', 'outlineKind'];
     const updates = {};
     for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -919,18 +928,18 @@ app.get('/api/resumes/:id/meta', async (req, res) => {
     const metaPath = path.join(PARSED_RESUMES_DIR, id, 'meta.json');
     try {
         const content = await fs.readFile(metaPath, 'utf-8');
-        res.json(JSON.parse(content));
+        res.json(withDerivedMetaPaths(id, JSON.parse(content)));
     } catch (e) {
         if (e.code === 'ENOENT') return res.status(404).json({ error: 'meta.json not found for this resume.' });
         throw e;
     }
 });
 
-// PATCH /api/resumes/:id/meta: Update displayName, fileName in meta.json
+// PATCH /api/resumes/:id/meta: Update displayName, fileName, originalPath in meta.json
 app.patch('/api/resumes/:id/meta', async (req, res) => {
     const { id } = req.params;
     if (!id || id === 'default') return res.status(400).json({ error: 'Cannot update meta for default resume.' });
-    const { displayName, fileName } = req.body;
+    const { displayName, fileName, originalPath } = req.body;
     const metaPath = path.join(PARSED_RESUMES_DIR, id, 'meta.json');
     try {
         let meta = {};
@@ -943,6 +952,7 @@ app.patch('/api/resumes/:id/meta', async (req, res) => {
         }
         if (displayName !== undefined) meta.displayName = displayName;
         if (fileName !== undefined) meta.fileName = fileName;
+        if (originalPath !== undefined) meta.originalPath = String(originalPath ?? '').trim();
         await atomicWriteWithLock(metaPath, JSON.stringify(meta, null, 2));
 
         // displayName affects static index ordering/default resume selection,
@@ -950,7 +960,7 @@ app.patch('/api/resumes/:id/meta', async (req, res) => {
         if (displayName !== undefined || fileName !== undefined) {
             await regenerateNonLocalResumesIndex(`resume renamed (meta update) [${id}]`);
         }
-        res.json(meta);
+        res.json(withDerivedMetaPaths(id, meta));
     } catch (err) {
         console.error('[PATCH meta]', err);
         res.status(500).json({ error: err.message });
@@ -1135,10 +1145,7 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
             'python',
         ].filter((value, idx, arr) => Boolean(value) && arr.indexOf(value) === idx);
 
-        const cleanEnv = {};
-        for (const [key, value] of Object.entries(process.env)) {
-            if (!key.includes('API')) cleanEnv[key] = value;
-        }
+        const cleanEnv = getParserSpawnEnv(process.env);
 
         async function runParserWithPythonBin(pythonBin) {
             const commandHeader = [
@@ -1217,6 +1224,8 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
                 id,
                 displayName: existingMeta?.displayName || existingMeta?.name || id,
                 originalFilename: keepEntry.name,
+                originalPath: existingMeta?.originalPath || '',
+                fileName: existingMeta?.fileName,
                 sourceUrl: existingMeta?.sourceUrl || null,
                 sourceType: existingMeta?.sourceType || (existingMeta?.sourceUrl ? 'url' : 'upload'),
                 createdAt: new Date().toISOString(),
@@ -1377,10 +1386,7 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
         const pythonBin = path.join(resumeParserProjectPath, 'venv', 'bin', 'python3');
 
-        const cleanEnv = {};
-        for (const [key, value] of Object.entries(process.env)) {
-            if (!key.includes('API')) cleanEnv[key] = value;
-        }
+        const cleanEnv = getParserSpawnEnv(process.env);
 
         const commandHeader = [
             '=== resume-parser ===',
@@ -1463,6 +1469,8 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             id,
             displayName: existingMeta?.displayName || existingMeta?.name || id,
             originalFilename: keepEntry.name,
+            originalPath: existingMeta?.originalPath || '',
+            fileName: existingMeta?.fileName,
             sourceUrl: existingMeta?.sourceUrl || null,
             sourceType: existingMeta?.sourceType || (existingMeta?.sourceUrl ? 'url' : 'upload'),
             createdAt: new Date().toISOString(),
@@ -1677,12 +1685,7 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
             'python3.11',
             'python',
         ].filter((value, idx, arr) => Boolean(value) && arr.indexOf(value) === idx);
-        const cleanEnv = {};
-        for (const [key, value] of Object.entries(process.env)) {
-            if (!key.includes('API')) {
-                cleanEnv[key] = value;
-            }
-        }
+        const cleanEnv = getParserSpawnEnv(process.env);
 
         async function runParserWithPythonBin(pythonBin) {
             console.log(`   Using parser: ${pythonBin} -m ${parserModule}`);
@@ -1939,10 +1942,7 @@ app.post('/api/resumes/upload-stream', upload.single('resume'), async (req, res)
             : path.resolve(PROJECT_ROOT, RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV);
         const pythonBin = path.join(resumeParserProjectPath, 'venv', 'bin', 'python3');
 
-        const cleanEnv = {};
-        for (const [key, value] of Object.entries(process.env)) {
-            if (!key.includes('API')) cleanEnv[key] = value;
-        }
+        const cleanEnv = getParserSpawnEnv(process.env);
 
         const commandHeader = [
             '=== resume-parser ===',
@@ -3714,7 +3714,7 @@ app.use('/static_content', express.static(path.resolve(PROJECT_ROOT, 'static_con
 
 // ---------------------------------------------------------------------------
 // GET /api/skills/:slug/info  — LLM-generated skill definition (cached)
-// Requires OPENAI_API_KEY in .env. Returns { slug, summary, cached }.
+// Requires ANTHROPIC_API_KEY in .env. Returns { slug, summary, cached }.
 // ---------------------------------------------------------------------------
 const skillInfoCache = new Map(); // in-memory; cleared on server restart
 
@@ -3726,68 +3726,21 @@ app.get('/api/skills/:slug/info', async (req, res) => {
     if (skillInfoCache.has(slug)) {
         return res.json({ slug, summary: skillInfoCache.get(slug), cached: true });
     }
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-        return res.status(503).json({ error: 'OPENAI_API_KEY not configured on server.' });
+    if (!getAnthropicApiKey()) {
+        return res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured on server.' });
     }
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                max_tokens: 300,
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'You are a concise technical reference. Answer in 2–4 sentences. No markdown, no bullet points, plain prose only.',
-                    },
-                    {
-                        role: 'user',
-                        content: `What is "${slug.replace(/-/g, ' ')}" in the context of software engineering and data engineering? Give a brief, plain-English definition suitable for a resume portfolio.`,
-                    },
-                ],
-            }),
+        const summary = await callAnthropicMessages({
+            model: getSkillInfoModel(),
+            maxTokens: 300,
+            system: 'You are a concise technical reference. Answer in 2–4 sentences. No markdown, no bullet points, plain prose only.',
+            user: `What is "${slug.replace(/-/g, ' ')}" in the context of software engineering and data engineering? Give a brief, plain-English definition suitable for a resume portfolio.`,
         });
-        if (!response.ok) {
-            const body = await response.text().catch(() => '');
-            let parsed = null;
-            try { parsed = JSON.parse(body); } catch (_) { /* raw body */ }
-            const apiMessage = parsed?.error?.message || '';
-            const apiCode = parsed?.error?.code || parsed?.error?.type || '';
-            const creditsExhausted = response.status === 429
-                || /insufficient_quota|no credits remaining|billing/i.test(`${apiCode} ${apiMessage} ${body}`);
-            if (creditsExhausted) {
-                return res.status(502).json({
-                    error: 'OpenAI API credits are exhausted. Add credits at platform.openai.com billing, or use the source link below.',
-                    code: 'openai_credits',
-                });
-            }
-            if (response.status === 401 || response.status === 403) {
-                return res.status(502).json({
-                    error: 'OpenAI API key was rejected. Check OPENAI_API_KEY on the server.',
-                    code: 'openai_auth',
-                });
-            }
-            const short = (apiMessage || body).slice(0, 160).trim();
-            return res.status(502).json({
-                error: short
-                    ? `OpenAI API error ${response.status}: ${short}`
-                    : `OpenAI API error ${response.status}`,
-                code: 'openai_upstream',
-            });
-        }
-        const data = await response.json();
-        const summary = data.choices?.[0]?.message?.content?.trim() || '';
-        if (!summary) return res.status(502).json({ error: 'Empty response from OpenAI.' });
         skillInfoCache.set(slug, summary);
         res.json({ slug, summary, cached: false });
     } catch (e) {
-        reportError(e, '[skill-info] Failed to fetch from OpenAI');
-        res.status(500).json({ error: e.message });
+        reportError(e, '[skill-info] Failed to fetch from Anthropic');
+        res.status(502).json({ error: e.message });
     }
 });
 

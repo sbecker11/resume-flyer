@@ -249,6 +249,7 @@ import {
   workJobDropdownEntries,
   firstWorkJobMergedIndex,
 } from '@/modules/data/ResumeJob.mjs';
+import { displayJobHeading } from '@/modules/utils/outlineIndex.mjs';
 
 const canPersistToServer = hasServer();
 const canEdit = true;
@@ -558,7 +559,7 @@ function onTwoDigitInput(field) {
 
 function jobOptionLabel(job, pos) {
   const title = job?.title ?? job?.role ?? job?.Role ?? '';
-  const employer = job?.employer ?? job?.Employer ?? job?.label ?? '';
+  const employer = displayJobHeading(job) || job?.employer || job?.Employer || job?.label || '';
   const parts = [employer, title].filter(Boolean);
   return parts.length ? parts.join(' -- ') : `Job ${pos + 1}`;
 }

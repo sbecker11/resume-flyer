@@ -8,6 +8,9 @@
  */
 
 import { ResumeJob } from './ResumeJob.mjs';
+import { applyOutlineFromHeading } from './applyOutlineFromHeading.mjs';
+import { expandJobsOnePerContentIndex } from './expandJobsOnePerContentIndex.mjs';
+import { parseOutlineIndex } from '../utils/outlineIndex.mjs';
 import { skillsObjectToResumeSkills } from './ResumeSkill.mjs';
 import { jobTenureMonthsInclusive } from '../utils/dateUtils.mjs';
 import { labelToSlug } from '../utils/skillLabel.mjs';
@@ -82,6 +85,8 @@ function enrichJobFromDescription(description, skillsMap, matchers) {
   while ((match = BRACKET_REGEX.exec(description)) !== null) {
     const label = match[1].trim();
     if (!label) continue;
+    // Content-index tags ([1.1.3]) are job identity, not skills.
+    if (parseOutlineIndex(label)) continue;
     const slug = labelToSlug(label, skillsMap);
     if (!slug) {
       throw new Error(
@@ -114,6 +119,7 @@ function enrichJobFromDescription(description, skillsMap, matchers) {
  */
 export function enrichJobsWithSkills(rawJobs, skills) {
   if (!Array.isArray(rawJobs)) return [];
+  const expandedJobs = expandJobsOnePerContentIndex(rawJobs);
   const skillsById = skillsObjectToResumeSkills(skills && typeof skills === 'object' ? skills : {});
   // Keep name in skillsMap so labelToSlug can resolve bracketed terms by skill.name
   const skillsMap = Object.fromEntries(
@@ -121,9 +127,16 @@ export function enrichJobsWithSkills(rawJobs, skills) {
   );
   // Build matchers once (sorted longest-first) and reuse across all jobs
   const matchers = buildSkillNameMatchers(skillsMap);
-  return rawJobs.map((job) => {
-    const rj = ResumeJob.fromPlainObject(job);
-    const { refs, jobSkills } = enrichJobFromDescription(rj.Description, skillsMap, matchers);
+  return expandedJobs.map((job) => {
+    const rj = ResumeJob.fromPlainObject(applyOutlineFromHeading(job));
+    // Education cards must not inherit skills from description text (parser often
+    // dumps Licenses / Key skills into the last degree). Skills come only from
+    // explicit skillIDs saved on the education entry.
+    let refs = [];
+    let jobSkills = {};
+    if (!rj.isEducationDerived) {
+      ({ refs, jobSkills } = enrichJobFromDescription(rj.Description, skillsMap, matchers));
+    }
     if (Array.isArray(rj.skillIDs)) {
       for (const sid of rj.skillIDs) {
         if (!jobSkills[sid] && skillsMap[sid]) {

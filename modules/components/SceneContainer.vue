@@ -311,6 +311,7 @@ defineExpose({
   width: 100%;
   height: 100%;
   max-height: var(--timeline-height, 2000px);
+  outline: none;
   overflow-y: auto;
   overflow-x: auto;
   /* Hide scrollbar for Firefox - with !important */
@@ -333,7 +334,9 @@ defineExpose({
 
 /* CRITICAL: Force hide cards with hasClone class (when their clone is displayed) */
 :deep(.biz-card-div.hasClone),
-:deep(.biz-card-div.force-hidden-for-clone) {
+:deep(.biz-card-div.force-hidden-for-clone),
+:deep(.biz-card-div.scene-hidden-for-listing-clear),
+:deep(.skill-card-div.scene-hidden-for-listing-clear) {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

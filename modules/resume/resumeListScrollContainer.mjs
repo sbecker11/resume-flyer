@@ -602,6 +602,11 @@ class ResumeListScrollContainer {
 
   static reset() {
     if (ResumeListScrollContainer.instance) {
+      try {
+        ResumeListScrollContainer.instance._resetState?.();
+      } catch (e) {
+        console.warn('[ResumeListScrollContainer] reset _resetState failed:', e);
+      }
       ResumeListScrollContainer.instance.destroy();
       ResumeListScrollContainer.instance = null;
     }

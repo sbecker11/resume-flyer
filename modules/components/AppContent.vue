@@ -97,8 +97,9 @@ let teardownBizSelectionFocus = null
 
 // Resume system initialization (to be migrated)
 import { initializeResumeSystem, testResumeSystem, checkResumeDivs, testScrolling } from '../resume/resumeSystemInitializer.mjs'
-import { registerResumeListReinit, reinitializeResumeSystem } from '../resume/resumeReinitializer.mjs'
+import { registerResumeListReinit, reinitializeResumeSystem, rebuildResumeListFromSceneCards } from '../resume/resumeReinitializer.mjs'
 import { buildResumeListFromCards } from '../resume/resumeSystemInitializer.mjs'
+import { bumpCardsInitGeneration } from '../composables/useCardsController.mjs'
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs'
 
 // Vue 3 keyboard navigation (replaces legacy keyDownModule)
@@ -522,6 +523,9 @@ async function handleResumeSelected(resumeId) {
   console.log('[AppContent] 🔄 Switching to resume:', resumeId)
 
   try {
+    // Abort any in-flight scene card init from the previous resume before clearing DOM
+    bumpCardsInitGeneration()
+
     // STEP 1: Clear all existing scene and resume elements FIRST
     console.log('[AppContent] 🧹 Clearing all scene and resume elements...')
 
@@ -550,13 +554,26 @@ async function handleResumeSelected(resumeId) {
       }
     }
 
-    // Clear resume list items
+    // Clear resume list items and list-controller state
     const resumeList = document.getElementById('resume-content-div-list')
     if (resumeList) {
       while (resumeList.firstChild) {
         resumeList.firstChild.remove()
       }
       console.log('[AppContent] ✅ Cleared resume list items')
+    }
+    const rlc = window.resumeFlyer?.resumeListController
+    if (rlc) {
+      rlc.removedJobNumbers?.clear?.()
+      rlc.resumeListSelectionOrder = []
+      rlc.bizResumeDivs = []
+      if (rlc.scrollContainer?.clearFooterItems) {
+        rlc.scrollContainer.clearFooterItems()
+      }
+    }
+    if (window.resumeFlyer?.allDivs) {
+      window.resumeFlyer.allDivs.bizResumeDivs = []
+      window.resumeFlyer.allDivs.skillResumeDivs = []
     }
 
     // Clear card registry (single app-state object)
@@ -708,6 +725,11 @@ onMounted(async () => {
     checkServices()
     console.log('[AppContent] 📊 Parallax stats:', parallaxStats.value)
     
+    // Register resume list reinit before init so card-init can rebuild the listing
+    registerResumeListReinit(async (bizCardDivs) => {
+      await buildResumeListFromCards(bizCardDivs ?? [])
+    })
+
     // PHASE 5: Resume system — load persisted resume, or show upload modal if none
     const persistedResumeId = appState.value?.['user-settings']?.currentResumeId
     const startupResumeId = await resolveStartupResumeId(persistedResumeId)
@@ -729,6 +751,7 @@ onMounted(async () => {
         const startupJobs = getGlobalJobsDependency().getJobsData()
         noJobsLoaded.value = !Array.isArray(startupJobs) || startupJobs.length === 0
         if (!noJobsLoaded.value) {
+          await rebuildResumeListFromSceneCards()
           const restoredSelection = await restoreOrSelectFirstCardWhenReady()
           if (!restoredSelection) {
             await scrollSceneToLatestCard()
@@ -744,6 +767,8 @@ onMounted(async () => {
           })
         }
       } catch (err) {
+        const startupJobs = getGlobalJobsDependency().getJobsData()
+        const jobsLoaded = Array.isArray(startupJobs) && startupJobs.length > 0
         const isNotFound = err?.message?.includes('404') ||
           err?.message?.includes('not found') ||
           err?.message?.includes('unavailable')
@@ -756,6 +781,15 @@ onMounted(async () => {
           } catch (saveErr) {
             console.warn('[AppContent] Could not persist cleared resume ID (server may be unavailable):', saveErr.message)
           }
+        } else if (jobsLoaded) {
+          reportError(err, `[AppContent] Resume list init failed for "${startupResumeId}"`, 'Remedy: Rebuilding resume listing from loaded jobs')
+          try {
+            await rebuildResumeListFromSceneCards()
+            noJobsLoaded.value = false
+          } catch (rebuildErr) {
+            reportError(rebuildErr, '[AppContent] Failed to rebuild resume listing after partial init')
+            noJobsLoaded.value = true
+          }
         } else {
           // Data or code error — keep the persisted resume ID, surface the error
           reportError(err, `[AppContent] ❌ Failed to initialize resume "${startupResumeId}"`, 'Resume ID preserved — fix the data error and reload')
@@ -763,11 +797,6 @@ onMounted(async () => {
         }
       }
     }
-
-    // Register resume list reinit: same process as initial load (buildResumeListFromCards)
-    registerResumeListReinit(async (bizCardDivs) => {
-      await buildResumeListFromCards(bizCardDivs ?? [])
-    })
 
     // PHASE 6: Service readiness logs (now ready from start)
     console.log('[AppContent] 🔧 Service readiness (pre-marked ready) ...')
@@ -936,11 +965,11 @@ watch(orientation, (newOrientation) => {
 .resize-handle {
   order: 2 !important;
   flex-shrink: 0 !important;
-  min-width: 20px !important;
+  min-width: 28px !important;
   visibility: visible !important;
   z-index: 10000;
   pointer-events: auto;
-  overflow: visible !important; /* focal-mode tooltip extends past 20px strip */
+  overflow: visible !important; /* focal-mode tooltip extends past 24px strip */
 }
 
 .resume-content {

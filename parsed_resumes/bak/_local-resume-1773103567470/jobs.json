@@ -1,0 +1,183 @@
+{
+  "0": {
+    "index": 0,
+    "role": "Resident Assistant",
+    "employer": "Roble Hall, Stanford University",
+    "start": "9/XX",
+    "end": "CURRENT_DATE",
+    "z-index": 1,
+    "css name": "darkforest",
+    "css RGB": "#116611",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Design and implement programming regarding mental health, academic resources, diversity, and career preparation, with a team of 5 other staff members\n• Oversee the wellbeing of 260 residents",
+    "skillIDs": [
+      "accounting",
+      "html",
+      "mac-and-pc-platforms",
+      "apple-inc",
+      "excel"
+    ]
+  },
+  "1": {
+    "index": 1,
+    "role": "Peer Counselor",
+    "employer": "Bridge Peer Counseling Center",
+    "start": "9/XX",
+    "end": "CURRENT_DATE",
+    "z-index": 2,
+    "css name": "darkcyan",
+    "css RGB": "#0069AC",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Counsel students with regard to their personal and academic concerns",
+    "skillIDs": []
+  },
+  "2": {
+    "index": 2,
+    "role": "Co-Chair",
+    "employer": "3rd Annual Stanford Dance Marathon, Stanford University",
+    "start": "3/XX",
+    "end": "4/XX",
+    "z-index": 3,
+    "css name": "darkcyan",
+    "css RGB": "#006688",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Selected to lead organization, planning, and management of philanthropic event\n• Directed a team of 60 undergraduates\n• Recruited a record 975 participants up from 300\n• Raised $215,000+ previous year raised $58, • Raised $215,000+ 000 for Partners In Health\n• Developed and maintained relationships with outside sponsors, such as [Apple Inc.], [Kaplan]",
+    "skillIDs": [
+      "apple-inc",
+      "kaplan"
+    ]
+  },
+  "3": {
+    "index": 3,
+    "role": "Kitchen Manager",
+    "employer": "Columbae House, Stanford University",
+    "start": "9/XX",
+    "end": "6/XX",
+    "z-index": 1,
+    "css name": "blue",
+    "css RGB": "#0000ff",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Completed weekly grocery runs and managed $150,000 annual budget\n• Reviewed daily with chefs in [Spanish] regarding menu, supplies, and resident feedback\n• Managed residents and planned house activities as a member of the staff",
+    "skillIDs": [
+      "spanish"
+    ]
+  },
+  "4": {
+    "index": 4,
+    "role": "Selection Officer",
+    "employer": "Volunteers in Latin America",
+    "start": "9/XX",
+    "end": "4/XX",
+    "z-index": 2,
+    "css name": "mediumblue",
+    "css RGB": "#4400cd",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Designed and implemented the recruiting and application process\n• Managed all advertisement, interview, and selection activities",
+    "skillIDs": []
+  },
+  "5": {
+    "index": 5,
+    "role": "Volunteer",
+    "employer": "Volunteers in Latin America",
+    "start": "6/XX",
+    "end": "9/XX",
+    "z-index": 3,
+    "css name": "blueviolet",
+    "css RGB": "#8a2be2",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Supervised 30 children, ages 9-10, daily at a center for street children\n• Created lesson plans, organized field trips and workshops",
+    "skillIDs": []
+  },
+  "6": {
+    "index": 6,
+    "role": "Tour Guide",
+    "employer": "Visitor Information Services, Stanford University",
+    "start": "9/XX",
+    "end": "CURRENT_DATE",
+    "z-index": 1,
+    "css name": "purple",
+    "css RGB": "#800080",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Lead public and private tours of Stanford University campus with emphasis on history and student life\n• Provide customer service at front desk for Undergraduate Admissions and light [accounting] work",
+    "skillIDs": [
+      "accounting"
+    ]
+  },
+  "7": {
+    "index": 7,
+    "role": "Member",
+    "employer": "Stanford Women in Business Mentoring",
+    "start": "9/XX",
+    "end": "CURRENT_DATE",
+    "z-index": 2,
+    "css name": "maroon",
+    "css RGB": "#800000",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Learn about the business world through attending various panels and workshops\n• Meet monthly with Stanford Graduate School of Business mentor",
+    "skillIDs": []
+  },
+  "8": {
+    "index": 8,
+    "role": "Marketing Intern",
+    "employer": "SearchRev Inc.",
+    "start": "6/XX",
+    "end": "8/XX",
+    "z-index": 3,
+    "css name": "orangered",
+    "css RGB": "#ff4500",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Worked closely with the Director of Marketing to help increase brand awareness and drive revenue of this internet marketing start-up\n• Oversaw trade-show planning and preparation\n• Managed national ad campaigns",
+    "skillIDs": []
+  },
+  "9": {
+    "index": 9,
+    "role": "Registration Team Leader",
+    "employer": "Stanford Alumni Association",
+    "start": "9/XX",
+    "end": "11/XX",
+    "z-index": 1,
+    "css name": "orange",
+    "css RGB": "#ffa500",
+    "css color": null,
+    "text color": "#000000",
+    "Description": "• Planned registration system as a member of a 60 person team",
+    "skillIDs": []
+  },
+  "10": {
+    "index": 10,
+    "role": "• Design and implement programming regarding mental health, academic resources, diversity, and",
+    "employer": "9/XX-present Resident Assistant, Roble Hall, Stanford University, Stanford, CA",
+    "start": "",
+    "end": "",
+    "z-index": 2,
+    "css name": "teal",
+    "css RGB": "#008080",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "career preparation, with a team of 5 other staff members • • Oversee the wellbeing of 260 residents • 9/XX-present Peer Counselor, Bridge Peer Counseling Center, Stanford, CA • • Counsel students with regard to their personal and academic concerns",
+    "skillIDs": []
+  },
+  "11": {
+    "index": 11,
+    "role": "life",
+    "employer": "• Lead public and private tours of Stanford University campus with emphasis on history, and student",
+    "start": "",
+    "end": "",
+    "z-index": 3,
+    "css name": "darkcyan",
+    "css RGB": "#008b8b",
+    "css color": null,
+    "text color": "#FFFFFF",
+    "Description": "• Provide customer service at front desk for Undergraduate Admissions and light accounting work • 9/XX-present Member, Stanford Women in Business Mentoring, Stanford, CA • • Learn about the business world through attending various panels and workshops",
+    "skillIDs": []
+  }
+}

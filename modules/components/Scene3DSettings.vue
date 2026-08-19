@@ -1,5 +1,6 @@
 <template>
   <div class="scene-3d-settings">
+    <span class="toggle-circle-ring">
     <button
       id="scene-3d-button"
       type="button"
@@ -9,6 +10,7 @@
     >
       3D
     </button>
+    </span>
 
     <div v-if="showModal" class="modal-overlay" @click.self="onOverlayClick">
       <div
@@ -289,11 +291,13 @@ async function save() {
 }
 
 #scene-3d-button {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   border-radius: 50%;
-  border: 2px solid white;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
   background-color: var(--button-bg-color, #555);
   color: var(--button-text-color, white);
   cursor: pointer;
@@ -309,7 +313,6 @@ async function save() {
 #scene-3d-button:hover {
   background-color: var(--button-text-color, white);
   color: var(--button-bg-color, #555);
-  border-color: var(--button-text-color, white);
 }
 
 .modal-overlay {

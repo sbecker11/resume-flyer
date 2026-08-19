@@ -1,0 +1,100 @@
+{
+  "apple-inc": {
+    "name": "Apple Inc.",
+    "url": "https://www.apple.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      2,
+      0
+    ]
+  },
+  "kaplan": {
+    "name": "Kaplan",
+    "url": "https://www.kaplan.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      2
+    ]
+  },
+  "spanish": {
+    "name": "Spanish",
+    "url": "https://www.cervantes.es",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      3
+    ]
+  },
+  "accounting": {
+    "name": "accounting",
+    "url": "https://www.aicpa.org",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      6,
+      0
+    ]
+  },
+  "mac-and-pc-platforms": {
+    "name": "Mac and PC platforms",
+    "url": "https://www.apple.com/mac",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "excel": {
+    "name": "Excel",
+    "url": "https://www.microsoft.com/en-us/microsoft-365/excel",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "powerpoint": {
+    "name": "PowerPoint",
+    "url": "https://www.microsoft.com/en-us/microsoft-365/powerpoint",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "html": {
+    "name": "HTML",
+    "url": "https://html.spec.whatwg.org",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "programming-language"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "javascript": {
+    "name": "JavaScript",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+    "img": "",
+    "categoryIDs": [
+      "programming-language",
+      "frontend"
+    ],
+    "jobIDs": []
+  },
+  "proficient-in-spanish": {
+    "name": "Proficient in Spanish",
+    "url": "https://www.cervantes.es",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": []
+  }
+}

@@ -57,27 +57,31 @@ describe('run-parse-resume', () => {
   });
 
   describe('getParserEnv', () => {
-    it('strips OPENAI_API_KEY, ANTHROPIC_API_KEY, LLM_PROVIDER from env', () => {
+    it('strips OPENAI_API_KEY and forwards Anthropic to resume-parser', () => {
       const env = {
         PATH: '/usr/bin',
         OPENAI_API_KEY: 'secret',
-        ANTHROPIC_API_KEY: 'other',
+        ANTHROPIC_API_KEY: 'sk-ant-test',
         LLM_PROVIDER: 'anthropic',
+        ANTHROPIC_MODEL: 'claude-sonnet-4-6',
         FOO: 'bar',
       };
       const result = getParserEnv(env);
       expect(result.PATH).toBe('/usr/bin');
       expect(result.FOO).toBe('bar');
       expect(result).not.toHaveProperty('OPENAI_API_KEY');
-      expect(result).not.toHaveProperty('ANTHROPIC_API_KEY');
-      expect(result).not.toHaveProperty('LLM_PROVIDER');
+      expect(result.ANTHROPIC_API_KEY).toBe('sk-ant-test');
+      expect(result.LLM_PROVIDER).toBe('anthropic');
+      expect(result.ANTHROPIC_MODEL).toBe('claude-sonnet-4-6');
     });
 
     it('does not mutate the original env', () => {
-      const env = { ANTHROPIC_API_KEY: 'x' };
+      const env = { ANTHROPIC_API_KEY: 'x', OPENAI_API_KEY: 'y' };
       const result = getParserEnv(env);
       expect(env.ANTHROPIC_API_KEY).toBe('x');
-      expect(result).not.toHaveProperty('ANTHROPIC_API_KEY');
+      expect(env.OPENAI_API_KEY).toBe('y');
+      expect(result.ANTHROPIC_API_KEY).toBe('x');
+      expect(result).not.toHaveProperty('OPENAI_API_KEY');
     });
   });
 });

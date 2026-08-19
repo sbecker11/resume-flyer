@@ -80,6 +80,19 @@ describe('dateUtils', () => {
       expect(d.getUTCFullYear()).toBe(2024);
       expect(d.getUTCMonth()).toBe(0);
     });
+    it('parses MM/YYYY and M/YYYY', () => {
+      const nov = parseFlexibleDateString('11/2019');
+      expect(nov.getFullYear()).toBe(2019);
+      expect(nov.getMonth()).toBe(10);
+      expect(nov.getDate()).toBe(1);
+      const mar = parseFlexibleDateString('3/2025');
+      expect(mar.getFullYear()).toBe(2025);
+      expect(mar.getMonth()).toBe(2);
+    });
+    it('rejects impossible MM/YYYY months', () => {
+      expect(() => parseFlexibleDateString('13/2019')).toThrow();
+      expect(() => parseFlexibleDateString('00/2019')).toThrow();
+    });
     it('parses Present/Current', () => {
       const d = parseFlexibleDateString('Present');
       expect(d).toBeInstanceOf(Date);

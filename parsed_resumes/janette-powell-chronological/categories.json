@@ -1,0 +1,25 @@
+{
+  "data-science": {
+    "name": "Data Science",
+    "skillIDs": [
+      "economics",
+      "statistics"
+    ]
+  },
+  "programming-language": {
+    "name": "Programming Language",
+    "skillIDs": [
+      "computer-science"
+    ]
+  },
+  "tool": {
+    "name": "Tool",
+    "skillIDs": [
+      "computer-science",
+      "mac-software-applications",
+      "pc-software-applications",
+      "microsoft-excel",
+      "microsoft-powerpoint"
+    ]
+  }
+}

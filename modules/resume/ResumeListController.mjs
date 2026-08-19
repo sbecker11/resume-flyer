@@ -27,6 +27,8 @@ import * as BizDetailsDivModule from '../scene/bizDetailsDivModule.mjs';
 import * as utils from '../utils/utils.mjs';
 import { resumeItemsController } from './ResumeItemsController.mjs';
 import { shouldScrollResumePanel } from '../utils/panelKeyboardScroll.mjs';
+import { RESUME_LISTING_CLEARED_EVENT, RESUME_LISTING_RESTORED_EVENT } from '../utils/sceneCardVisibility.mjs';
+import { compareOutlineIndex, jobsHaveOutlineIndex, outlineIndexOf, displayJobHeading } from '../utils/outlineIndex.mjs';
 
 /**
  * ResumeListController - Manages the resume list and its scroll container (wrapping list)
@@ -309,9 +311,11 @@ class ResumeListController extends BaseComponent {
 
   /**
    * Clear all resume divs from the listing (rDivs and appended skill-resume-divs). Persists until reload.
+   * Scene cards are hidden via resume-listing-cleared (Load all restores them).
    */
   clearAllResumeDivsFromListing() {
     if (!this.bizResumeDivs || !this.scrollContainer) return;
+    selectionManager.clearSelection('clearAllResumeDivsFromListing');
     this.resumeListSelectionOrder = [];
     this.sortedIndices.forEach((j) => this.removedJobNumbers.add(j));
     const itemsController = window.resumeFlyer?.resumeItemsController;
@@ -320,10 +324,12 @@ class ResumeListController extends BaseComponent {
     }
     if (this.scrollContainer.clearFooterItems) this.scrollContainer.clearFooterItems();
     this._setItemsFromSelectionOrder();
+    window.dispatchEvent(new CustomEvent(RESUME_LISTING_CLEARED_EVENT, { detail: {} }));
   }
 
   /**
    * Restore default listing: all jobs in current sort order (clears removals and appended skill rows).
+   * Scene cards are shown again via resume-listing-restored.
    */
   restoreAllResumeDivsToListing() {
     if (!this.bizResumeDivs || !this.scrollContainer) return;
@@ -338,6 +344,7 @@ class ResumeListController extends BaseComponent {
     if (this.scrollContainer.clearFooterItems) this.scrollContainer.clearFooterItems();
     this.resumeListSelectionOrder = this.sortedIndices.map((jobNumber) => ({ type: 'biz', jobNumber }));
     this._setItemsFromSorted();
+    window.dispatchEvent(new CustomEvent(RESUME_LISTING_RESTORED_EVENT, { detail: {} }));
     if (this.getActiveOrderedEntries().length > 0) {
       this.goToFirstResumeItem();
     }
@@ -539,13 +546,18 @@ class ResumeListController extends BaseComponent {
   setupResumeListScroll() {
     console.debug('[ResumeListController] setupResumeListScroll');
     
-    if (!this.bizResumeDivs || this.bizResumeDivs.length === 0) {
+    const divCount = this.bizResumeDivs?.filter?.(Boolean).length ?? 0;
+    if (divCount === 0) {
       console.debug('[ResumeListController] no bizResumeDivs');
       return;
     }
 
-    // Update sort order and build sorted divs first (needed for both wrapping and simple scroll)
-    this.updateSortedIndices();
+    // Tiered resumes: outline order when headings carry [1.1.3] tags; else keep date-based default.
+    if (jobsHaveOutlineIndex(this.originalJobsData)) {
+      this.applySortRule({ field: 'outline', direction: 'asc' }, true);
+    } else {
+      this.updateSortedIndices();
+    }
     
     // Debug the mapping before creating sortedDivs
     console.debug('[ResumeListController] sortedIndices set');
@@ -1336,7 +1348,7 @@ class ResumeListController extends BaseComponent {
       
       switch (this.currentSortRule.field) {
         case 'employer':
-          comparison = this.compareStrings(a.job.employer, b.job.employer);
+          comparison = this.compareStrings(displayJobHeading(a.job) || a.job.employer, displayJobHeading(b.job) || b.job.employer);
           break;
         case 'startDate':
           comparison = this.compareDates(a.job.start, b.job.start);
@@ -1347,6 +1359,16 @@ class ResumeListController extends BaseComponent {
         case 'role':
           comparison = this.compareStrings(a.job.role, b.job.role);
           break;
+        case 'outline': {
+          const ia = outlineIndexOf(a.job);
+          const ib = outlineIndexOf(b.job);
+          if (ia || ib) {
+            comparison = compareOutlineIndex(ia, ib);
+          } else {
+            comparison = a.index - b.index;
+          }
+          break;
+        }
         case 'original':
         default:
           comparison = a.index - b.index;
@@ -1926,26 +1948,11 @@ class ResumeListController extends BaseComponent {
   /**
    * Handle color palette changes
    */
-  async handleColorPaletteChanged(event) {
+  handleColorPaletteChanged(event) {
     const { filename, paletteName, previousFilename } = event.detail;
-    
-    console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
-    
-    // Apply new palette to all resume divs
-    if (this.bizResumeDivs) {
-      for (const div of this.bizResumeDivs) {
-        if (div) {
-          // Apply palette to the div itself and all elements with data-color-index within it
-          await applyPaletteToElement(div);
-          const colorElements = div.querySelectorAll('[data-color-index]');
-          for (const element of colorElements) {
-            await applyPaletteToElement(element);
-          }
-        }
-      }
-    }
-    
-    console.log(`[DEBUG] ResumeListController.handleColorPaletteChanged: Applied new palette to ${this.bizResumeDivs?.length || 0} resume divs`);
+    console.log(
+      `[DEBUG] ResumeListController.handleColorPaletteChanged: ${previousFilename} → ${filename} (${paletteName}) — colors applied in applyFullPaletteInstant`
+    );
   }
   
   // endregion

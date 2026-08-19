@@ -4,6 +4,10 @@
  *   WebKit overscroll reveals this behind #scene-content. Middle of the panel stays dark.
  * #scene-content: solid dark fill inside the scrollport.
  */
+html.palette-swapping,
+html.palette-swapping * {
+    transition: none !important;
+}
 :root {
     --scene-wedge-stop-start-pct: 40%;
     --scene-wedge-stop-end-pct: 60%;
@@ -44,7 +48,8 @@
 }
 
 /* Hide original cards when clones are shown — visibility only, no geometry change */
-.force-hidden-for-clone {
+.force-hidden-for-clone,
+.scene-hidden-for-listing-clear {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
@@ -82,6 +87,15 @@ html[native-dark-active] #scene-container,
     background-color: var(--scene-overshoot-mid);
 }
 
+/* Panel scrollports: keyboard routing may focus these; never show a panel-wide focus ring. */
+#scene-content:focus,
+#scene-content:focus-visible,
+#resume-content-listing:focus,
+#resume-content-listing:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 #scene-plane {
     position: relative;
     transform-style: preserve-3d;
@@ -109,7 +123,7 @@ body .biz-resume-div,
     border: var(--data-normal-inner-border-width) solid var(--data-normal-inner-border-color);
     outline: var(--data-normal-outer-border-width) solid var(--data-normal-outer-border-color);
     border-radius: var(--data-normal-border-radius);
-    transition: background-color 0.2s, color 0.2s, border 0.2s, outline 0.2s, padding 0.2s, filter 0.3s ease-out;
+    transition: background-color 0.2s, color 0.2s, padding 0.2s, filter 0.3s ease-out;
 }
 /* cDiv-only layout (position, font, cursor) - border already set above */
 .biz-card-div {
@@ -340,75 +354,46 @@ body .biz-resume-div.selected a,
 /* :not(.clone) — scene clones are always “selected”; icon invert must follow data-icon-set-selected-variant only. */
 /* :not(.hovered) — hover must use data-icon-set-hovered-variant only (normal attr often stays white). */
 .skill-card-div:not(.clone):not(.hovered)[data-icon-set-variant="white"] .url-icon,
-.skill-card-div:not(.clone):not(.hovered)[data-icon-set-variant="white"] .back-icon,
 .skill-card-div:not(.clone):not(.hovered)[data-icon-set-variant="white"] .img-icon {
     filter: invert(1);
 }
 .skill-card-div:not(.clone).hovered[data-icon-set-hovered-variant="white"] .url-icon,
-.skill-card-div:not(.clone).hovered[data-icon-set-hovered-variant="white"] .back-icon,
 .skill-card-div:not(.clone).hovered[data-icon-set-hovered-variant="white"] .img-icon {
     filter: invert(1);
 }
 .skill-card-div.clone[data-icon-set-selected-variant="white"] .url-icon,
-.skill-card-div.clone[data-icon-set-selected-variant="white"] .back-icon,
 .skill-card-div.clone[data-icon-set-selected-variant="white"] .img-icon {
     filter: invert(1);
 }
 
-/* Source-job highlight: same .biz-back-link.biz-back-link-source on scene skill-card and resume skill-row */
+/* Skill back arrows: owned by syncSkillCardBackLinkPresentation (not description-icon invert rules above) */
+.skill-card-back-icons .back-icon[data-skill-icon-variant="white"] {
+    filter: invert(1) !important;
+}
+.skill-card-back-icons .back-icon[data-skill-icon-variant="black"] {
+    filter: none !important;
+}
+
+/* Source-job highlight: black circle under the selected back arrow */
 .skill-card-div .biz-back-link.biz-back-link-source,
 .skill-card-div.clone .biz-back-link.biz-back-link-source,
+.skill-resume-div .biz-back-link.biz-back-link-source,
+.appended-skill-resume-div .biz-back-link.biz-back-link-source,
 #resume-content-listing .skill-resume-div .biz-back-link.biz-back-link-source,
 #resume-content-listing .appended-skill-resume-div .biz-back-link.biz-back-link-source,
 #resume-content-listing #resume-content-div-list .appended-skill-resume-div .biz-back-link.biz-back-link-source,
 #resume-container .skill-resume-div .biz-back-link.biz-back-link-source,
 #resume-container .appended-skill-resume-div .biz-back-link.biz-back-link-source {
-    border-radius: 10px;
+    border-radius: 50%;
     padding: 2px 4px;
     box-sizing: border-box;
-    background-color: var(
-        --data-link-color-selected,
-        var(--data-link-color, var(--data-foreground-color-selected, var(--data-foreground-color, currentColor)))
-    ) !important;
-    color: var(
-        --data-background-color-selected,
-        var(--data-background-color, var(--data-frame-background-color, #fff))
-    ) !important;
+    background-color: #000 !important;
 }
-.skill-card-div .biz-back-link.biz-back-link-source .back-icon,
-.skill-card-div.clone .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing #resume-content-div-list .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .skill-resume-div .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .appended-skill-resume-div .biz-back-link.biz-back-link-source .back-icon {
-    /* Inverted chip should swap icon polarity too (foreground <-> background). */
-    filter: none !important;
-}
-.skill-card-div:not(.clone):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.skill-card-div:not(.clone).hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.skill-card-div.clone[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.skill-resume-div.hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.appended-skill-resume-div.hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.skill-resume-div.selected[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-.appended-skill-resume-div.selected[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .skill-resume-div.hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .appended-skill-resume-div.hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .skill-resume-div.selected[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing .appended-skill-resume-div.selected[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing #resume-content-div-list .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing #resume-content-div-list .appended-skill-resume-div.hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-content-listing #resume-content-div-list .appended-skill-resume-div.selected[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .skill-resume-div.hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .appended-skill-resume-div.hovered[data-icon-set-hovered-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .skill-resume-div.selected[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon,
-#resume-container .appended-skill-resume-div.selected[data-icon-set-selected-variant="black"] .biz-back-link.biz-back-link-source .back-icon {
+/* The source circle is always solid black, so its arrow must always render white,
+   regardless of data-skill-icon-variant (which tracks the card's own text color, not this circle).
+   Specificity (4 classes) intentionally beats the .skill-card-back-icons[data-skill-icon-variant]
+   rules above so this wins whether the card's current variant is "black" or "white". */
+.skill-card-back-icons .biz-back-link.biz-back-link-source .back-icon {
     filter: invert(1) !important;
 }
 /* Skill id tag: de-emphasised monospace slug shown before the display name.
@@ -536,32 +521,24 @@ body .biz-resume-div.selected a,
    variant=white still matches on .selected and overrides black selected icons (black text + white icons bug). */
 /* :not(.hovered) — hover uses data-icon-set-hovered-variant only. */
 .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
-.skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
 .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon,
 .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
-.appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
 .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon,
 #resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
-#resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
 #resume-container .skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon,
 #resume-container .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .url-icon,
-#resume-container .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .back-icon,
 #resume-container .appended-skill-resume-div:not(.selected):not(.hovered)[data-icon-set-variant="white"] .img-icon {
     filter: invert(1);
 }
 .skill-resume-div.hovered[data-icon-set-hovered-variant="white"] .url-icon,
-.skill-resume-div.hovered[data-icon-set-hovered-variant="white"] .back-icon,
 .skill-resume-div.hovered[data-icon-set-hovered-variant="white"] .img-icon,
 .appended-skill-resume-div.hovered[data-icon-set-hovered-variant="white"] .url-icon,
-.appended-skill-resume-div.hovered[data-icon-set-hovered-variant="white"] .back-icon,
 .appended-skill-resume-div.hovered[data-icon-set-hovered-variant="white"] .img-icon {
     filter: invert(1);
 }
 .skill-resume-div.selected[data-icon-set-selected-variant="white"] .url-icon,
-.skill-resume-div.selected[data-icon-set-selected-variant="white"] .back-icon,
 .skill-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
 .appended-skill-resume-div.selected[data-icon-set-selected-variant="white"] .url-icon,
-.appended-skill-resume-div.selected[data-icon-set-selected-variant="white"] .back-icon,
 .appended-skill-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon {
     filter: invert(1);
 }

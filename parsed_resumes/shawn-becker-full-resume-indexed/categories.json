@@ -1,0 +1,295 @@
+{
+  "ai": {
+    "name": "AI",
+    "skillIDs": [
+      "ai",
+      "ml",
+      "mlops",
+      "k-means",
+      "fastmcp",
+      "langchain",
+      "lcel",
+      "chromadb",
+      "dall-e-3",
+      "pgvector",
+      "huggingface",
+      "minilm",
+      "spring-ai",
+      "bedrock",
+      "langgraph",
+      "snowflake-cortex-search",
+      "optuna",
+      "llm",
+      "pytorch",
+      "sagemaker",
+      "nlp",
+      "ai-ml",
+      "genai",
+      "ai-agents",
+      "computer-vision",
+      "cnns",
+      "llm-apis-openai",
+      "llm-apis-anthropic",
+      "vector-dbs-chromadb",
+      "vector-dbs-pinecone"
+    ]
+  },
+  "data-science": {
+    "name": "Data Science",
+    "skillIDs": [
+      "ai",
+      "ml",
+      "mlops",
+      "k-means",
+      "ciede2000",
+      "huggingface",
+      "minilm",
+      "mlflow",
+      "optuna",
+      "llm",
+      "dbt",
+      "aws-glue",
+      "glue-crawler",
+      "kafka",
+      "airflow",
+      "segment-cdp",
+      "bigquery",
+      "tableau",
+      "pytorch",
+      "looker",
+      "snowflake",
+      "pyspark",
+      "aws-emr",
+      "kinesis",
+      "parquet",
+      "redshift",
+      "nlp",
+      "ai-ml",
+      "genai",
+      "ai-agents",
+      "computer-vision",
+      "cnns",
+      "data-pipelines"
+    ]
+  },
+  "devops": {
+    "name": "DevOps",
+    "skillIDs": [
+      "devops",
+      "mlops",
+      "ecs-fargate",
+      "launchd",
+      "jira",
+      "codecommit",
+      "codebuild",
+      "codepipeline",
+      "codedeploy",
+      "cloudwatch",
+      "cyberark-pam",
+      "airflow",
+      "xray",
+      "ci-cd",
+      "flyway",
+      "data-pipelines",
+      "docker",
+      "kubernetes"
+    ]
+  },
+  "methodology": {
+    "name": "Methodology",
+    "skillIDs": [
+      "devops",
+      "rbac",
+      "rest-api",
+      "agile",
+      "ci-cd",
+      "scrum",
+      "data-pipelines"
+    ]
+  },
+  "tool": {
+    "name": "Tool",
+    "skillIDs": [
+      "docx",
+      "pdf",
+      "json",
+      "vite",
+      "dall-e-3",
+      "jwt",
+      "mlflow",
+      "launchd",
+      "gmail",
+      "jira",
+      "dbt",
+      "aws-glue",
+      "glue-crawler",
+      "codecommit",
+      "codebuild",
+      "codepipeline",
+      "codedeploy",
+      "cloudwatch",
+      "cyberark-pam",
+      "kafka",
+      "airflow",
+      "xray",
+      "segment-cdp",
+      "salesforce",
+      "shopify",
+      "google-ads",
+      "youtube",
+      "tableau",
+      "looker",
+      "rabbitmq",
+      "parquet",
+      "s3",
+      "flyway",
+      "filemaker",
+      "ms-mobile-5",
+      "windows-nt",
+      "db-design-tools",
+      "docker",
+      "kubernetes"
+    ]
+  },
+  "backend": {
+    "name": "Backend",
+    "skillIDs": [
+      "json",
+      "express-js",
+      "fastmcp",
+      "jwt",
+      "bcrypt",
+      "rbac",
+      "spring-boot",
+      "spring-ai",
+      "rest-api",
+      "dbt",
+      "kafka",
+      "fastapi",
+      "node-js",
+      "kinesis",
+      "rabbitmq",
+      "jsp",
+      "spring",
+      "nservicebus"
+    ]
+  },
+  "frontend": {
+    "name": "Frontend",
+    "skillIDs": [
+      "react",
+      "vue-3",
+      "vite",
+      "react-18",
+      "vuetify",
+      "vuelidate",
+      "jsp"
+    ]
+  },
+  "framework": {
+    "name": "Framework",
+    "skillIDs": [
+      "react",
+      "vue-3",
+      "express-js",
+      "fastmcp",
+      "langchain",
+      "lcel",
+      "react-18",
+      "spring-boot",
+      "spring-ai",
+      "langgraph",
+      "fastapi",
+      "vuetify",
+      "spring",
+      "nservicebus"
+    ]
+  },
+  "library": {
+    "name": "Library",
+    "skillIDs": [
+      "ciede2000",
+      "langchain",
+      "opencv",
+      "bcrypt",
+      "huggingface",
+      "optuna",
+      "pytorch",
+      "vuelidate",
+      "pyspark",
+      "llm-apis-openai",
+      "llm-apis-anthropic"
+    ]
+  },
+  "programming-language": {
+    "name": "Programming Language",
+    "skillIDs": [
+      "typescript",
+      "java-21",
+      "python",
+      "node-js",
+      "java",
+      "c"
+    ]
+  },
+  "database": {
+    "name": "Database",
+    "skillIDs": [
+      "chromadb",
+      "postgresql",
+      "pgvector",
+      "aurora-postgresql-serverless-v2",
+      "snowflake-cortex-search",
+      "bigquery",
+      "snowflake",
+      "redshift",
+      "flyway",
+      "dynamodb",
+      "filemaker",
+      "sql-anywhere",
+      "db-design-tools",
+      "oracle",
+      "vector-dbs-chromadb",
+      "vector-dbs-pinecone"
+    ]
+  },
+  "computer-vision": {
+    "name": "Computer Vision",
+    "skillIDs": [
+      "opencv"
+    ]
+  },
+  "cloud": {
+    "name": "Cloud",
+    "skillIDs": [
+      "ecs-fargate",
+      "aurora-postgresql-serverless-v2",
+      "bedrock",
+      "snowflake-cortex-search",
+      "aws-glue",
+      "glue-crawler",
+      "codecommit",
+      "codebuild",
+      "codepipeline",
+      "codedeploy",
+      "cloudwatch",
+      "gcp",
+      "bigquery",
+      "sagemaker",
+      "snowflake",
+      "aws-emr",
+      "kinesis",
+      "s3",
+      "redshift",
+      "dynamodb",
+      "kubernetes"
+    ]
+  },
+  "mlops": {
+    "name": "MLOps",
+    "skillIDs": [
+      "mlflow",
+      "sagemaker"
+    ]
+  }
+}

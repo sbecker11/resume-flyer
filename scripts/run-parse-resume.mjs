@@ -17,6 +17,7 @@ import {
   RESUME_PARSER_PROJECT_PATH_RELATIVE_UNSET_ENV,
 } from '../modules/config/defaultResumeParserModule.mjs';
 import { reportError } from '../modules/utils/errorReporting.mjs';
+import { getParserSpawnEnv } from '../modules/utils/anthropicEnv.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -30,16 +31,9 @@ const RESUME_PARSER_PROJECT_PATH = process.env.RESUME_PARSER_PROJECT_PATH
 const RESUME_PARSER_PYTHON_BIN = path.join(RESUME_PARSER_PROJECT_PATH, 'venv', 'bin', 'python3');
 const TIMEOUT_MS = 120_000;
 
-/** Env var names that should not be inherited so the parser uses its own .env. */
-const PARSER_STRIP_ENV_KEYS = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'LLM_PROVIDER'];
-
-/** Exported for unit tests. */
+/** Exported for unit tests — forwards Anthropic from resume-flyer .env, strips OpenAI. */
 export function getParserEnv(env = process.env) {
-  const result = { ...env };
-  for (const key of PARSER_STRIP_ENV_KEYS) {
-    delete result[key];
-  }
-  return result;
+  return getParserSpawnEnv(env);
 }
 
 function printHelp() {

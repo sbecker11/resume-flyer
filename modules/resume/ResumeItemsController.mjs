@@ -7,11 +7,12 @@ import { selectionManager } from '../core/selectionManager.mjs';
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 // import { initializationManager } from '../core/initializationManager.mjs'; // IM framework no longer used
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
-import { isEducationDerivedJob, educationKeyOf } from '../data/ResumeJob.mjs';
+import { isEducationDerivedJob, educationKeyOf, isOutlineSectionJob } from '../data/ResumeJob.mjs';
+import { displayJobHeading, outlineNestDepth } from '../utils/outlineIndex.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
 import { tryParseFlexibleDateString, formatCardDatesDisplay, stripUnknownDatesFromTitle } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
-import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass } from '../utils/skillInfoModal.mjs';
+import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '../utils/skillInfoModal.mjs';
 import { scrollResumeListingElementIntoView } from '../utils/resumeListScroll.mjs';
 // No longer directly manipulating other managers
 
@@ -169,30 +170,71 @@ class ResumeItemsController {
     async createAllBizResumeDivs(bizCardDivs) {
         window.CONSOLE_LOG_IGNORE('[ResumeItemsController] createAllBizResumeDivs called with:', bizCardDivs?.length || 0, 'cards');
         
-        if (!bizCardDivs || bizCardDivs.length === 0) {
-            console.warn("ResumeItemsController: Cannot create resume divs, no card divs provided.");
+        const jobs = getGlobalJobsDependency().getJobsData();
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+            console.warn("ResumeItemsController: Cannot create resume divs, no jobs data.");
             return [];
         }
-        
-        this.bizResumeDivs = [];
-        for (let i = 0; i < bizCardDivs.length; i++) {
-            const cardDiv = bizCardDivs[i];
-            // window.CONSOLE_LOG_IGNORE(`[ResumeItemsController] Processing card ${i}:`, cardDiv);
-            
-            if (!cardDiv) {
-                console.warn(`[ResumeItemsController] Card at index ${i} is null/undefined, skipping`);
-                continue;
+
+        const cardByJob = new Map();
+        if (bizCardDivs) {
+            for (const cardDiv of bizCardDivs) {
+                if (!cardDiv) continue;
+                const jobNumberStr = cardDiv.getAttribute('data-job-number');
+                if (!utils.isNumericString(jobNumberStr)) continue;
+                cardByJob.set(parseInt(jobNumberStr, 10), cardDiv);
             }
-            
+        }
+
+        this.bizResumeDivs = [];
+        for (let jobNumber = 0; jobNumber < jobs.length; jobNumber++) {
+            const job = jobs[jobNumber];
             try {
+                if (isOutlineSectionJob(job)) {
+                    const sectionDiv = await this.createOutlineSectionResumeDiv(jobNumber, job);
+                    this.bizResumeDivs[jobNumber] = sectionDiv;
+                    continue;
+                }
+                let cardDiv = cardByJob.get(jobNumber);
+                if (!cardDiv) {
+                    console.warn(`[ResumeItemsController] No scene card for job ${jobNumber}`);
+                    console.log('Remedy: Creating listing rDiv from job data without a scene card');
+                    cardDiv = document.createElement('div');
+                    cardDiv.setAttribute('data-job-number', String(jobNumber));
+                }
                 const resumeDiv = await this.createBizResumeDiv(cardDiv);
-                this.bizResumeDivs.push(resumeDiv);
+                this.bizResumeDivs[jobNumber] = resumeDiv;
             } catch (error) {
-                console.error(`[ResumeItemsController] Failed to create resume div for card ${i}:`, error);
+                console.error(`[ResumeItemsController] Failed to create resume div for job ${jobNumber}:`, error);
                 throw error;
             }
         }
         return this.bizResumeDivs;
+    }
+
+    async createOutlineSectionResumeDiv(jobNumber, job) {
+        const bizResumeDiv = document.createElement('div');
+        bizResumeDiv.id = this.createBizResumeDivId(jobNumber);
+        bizResumeDiv.className = 'biz-resume-div outline-section-label';
+        bizResumeDiv.setAttribute('data-job-number', String(jobNumber));
+        bizResumeDiv.setAttribute('data-outline-section', 'true');
+        const depth = outlineNestDepth(job?.outlineIndex);
+        if (depth > 0) bizResumeDiv.setAttribute('data-outline-depth', String(depth));
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'biz-resume-details-div';
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'resume-header';
+        const employerDiv = document.createElement('div');
+        employerDiv.className = 'biz-details-employer outline-section-heading';
+        employerDiv.textContent = displayJobHeading(job) || 'Section';
+        headerDiv.appendChild(employerDiv);
+        detailsDiv.appendChild(headerDiv);
+        bizResumeDiv.appendChild(detailsDiv);
+
+        // Section labels use outline-section-label CSS — no palette color index.
+        bizResumeDiv.classList.remove('hovered', 'selected');
+        return bizResumeDiv;
     }
 
     async createBizResumeDiv(bizCardDiv) {
@@ -208,6 +250,9 @@ class ResumeItemsController {
         bizResumeDiv.id = this.createBizResumeDivId(jobNumber);
         bizResumeDiv.className = 'biz-resume-div';
         bizResumeDiv.setAttribute('data-job-number', jobNumber);
+        const jobs = getGlobalJobsDependency().getJobsData();
+        const depth = outlineNestDepth(jobs[jobNumber]?.outlineIndex);
+        if (depth > 0) bizResumeDiv.setAttribute('data-outline-depth', String(depth));
         // Use card's data-color-index when present (reinit with real cards); else jobNumber (initial load with mocks)
         const colorIndex = bizCardDiv.getAttribute('data-color-index');
         bizResumeDiv.setAttribute('data-color-index', colorIndex !== null && colorIndex !== '' ? colorIndex : String(jobNumber));
@@ -720,9 +765,11 @@ class ResumeItemsController {
             clearSourceBizBackLinkClass();
             selectionManager.clearSelection('ResumeItemsController.skillTitleActivate');
         } else {
-            if (sourceBizId == null) clearSourceBizBackLinkClass();
+            const remembered = getRememberedSkillCardSourceBiz(skillCardId);
+            const source = sourceBizId ?? remembered;
+            if (source == null) clearSourceBizBackLinkClass();
             selectionManager.selectCard({ type: 'skill', skillCardId }, 'ResumeItemsController.skillTitleActivate');
-            if (sourceBizId != null) markSourceBizBackLinkForSkill(skillCardId, sourceBizId);
+            if (source != null) markSourceBizBackLinkForSkill(skillCardId, source);
         }
     }
 
@@ -929,6 +976,16 @@ class ResumeItemsController {
         }
     }
 
+    _setBizResumeDivSelected(bizResumeDiv, selected) {
+        if (!bizResumeDiv) return;
+        if (selected) {
+            bizResumeDiv.classList.remove('hovered');
+            bizResumeDiv.classList.add('selected');
+        } else {
+            bizResumeDiv.classList.remove('selected', 'hovered');
+        }
+    }
+
     handleSelectionChanged(event) {
         const { selectedJobNumber, caller } = event.detail;
         
@@ -937,16 +994,17 @@ class ResumeItemsController {
         
         window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeItemsController.handleSelectionChanged: selectedJobNumber=${selectedJobNumber}, caller=${caller}`);
         
-        // Clear previous selections first
-        this.handleSelectionCleared({ detail: { caller: 'handleSelectionChanged' } });
+        // Apply selected to target and clear others in one pass — avoid clearing the target first
+        // (that briefly showed normal white border before purple selected ring).
+        this.bizResumeDivs.forEach((div) => {
+            const jobNum = parseInt(div.getAttribute('data-job-number'), 10);
+            this._setBizResumeDivSelected(div, jobNum === selectedJobNumber);
+        });
 
         const bizResumeDiv = this.getBizResumeDivByJobNumber(selectedJobNumber);
         
         if (bizResumeDiv) {
             window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeItemsController.handleSelectionChanged: Found resume div for job ${selectedJobNumber}`);
-            bizResumeDiv.classList.add('selected');
-            
-            // Debug color matching
             const rDivColorIndex = bizResumeDiv.getAttribute('data-color-index');
             const rDivBgColor = window.getComputedStyle(bizResumeDiv).backgroundColor;
             // cDiv from rDiv ID convention: resume-10 → biz-card-div-10
@@ -958,9 +1016,6 @@ class ResumeItemsController {
             console.log(`  rDiv color-index: ${rDivColorIndex}, bg: ${rDivBgColor}`);
             console.log(`  cDiv color-index: ${cDivColorIndex}, bg: ${cDivBgColor}`);
             console.log(`  Match: ${rDivColorIndex === cDivColorIndex && rDivBgColor === cDivBgColor}`);
-            
-            // Apply selected state styling using the new system
-            bizResumeDiv.classList.add('selected');
             
             // Force browser repaint to ensure stats div visibility updates immediately
             bizResumeDiv.offsetHeight; // Reading offsetHeight forces a reflow
@@ -980,14 +1035,10 @@ class ResumeItemsController {
     handleSelectionCleared(event) {
         const { caller } = event.detail;
         this.bizResumeDivs.forEach(div => {
-            div.classList.remove('selected');
-            // Reset to normal state
-            div.classList.remove('hovered', 'selected');
-            // Force browser repaint to ensure stats div visibility updates immediately
-            div.offsetHeight; // Reading offsetHeight forces a reflow
+            this._setBizResumeDivSelected(div, false);
+            div.offsetHeight;
         });
         
-        // Trigger height recalculation to accommodate hidden stats divs
         this._triggerHeightRecalculation('[DEBUG] ResumeItemsController.handleSelectionCleared: Triggered height recalculation');
     }
 
@@ -1014,22 +1065,9 @@ class ResumeItemsController {
 
     handleColorPaletteChanged(event) {
         const { filename, paletteName, previousFilename } = event.detail;
-        
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeItemsController.handleColorPaletteChanged: Palette changed from ${previousFilename} to ${filename} (${paletteName})`);
-        
-        // Apply new palette to all resume divs and their children
-        this.bizResumeDivs.forEach(async (div) => {
-            if (div) {
-                // Apply palette to the div itself and all elements with data-color-index within it
-                await applyPaletteToElement(div);
-                const colorElements = div.querySelectorAll('[data-color-index]');
-                for (const element of colorElements) {
-                    await applyPaletteToElement(element);
-                }
-            }
-        });
-        
-        window.CONSOLE_LOG_IGNORE(`[DEBUG] ResumeItemsController.handleColorPaletteChanged: Applied new palette to ${this.bizResumeDivs.length} resume divs`);
+        window.CONSOLE_LOG_IGNORE(
+            `[DEBUG] ResumeItemsController.handleColorPaletteChanged: ${previousFilename} → ${filename} (${paletteName}) — colors applied in applyFullPaletteInstant`
+        );
     }
 
     // Static method to reset the singleton instance

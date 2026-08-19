@@ -1,30 +1,30 @@
 {
   "resumes": [
     {
-      "id": "yahoo-seniormlengineer",
-      "displayName": "Shawn Becker",
-      "fileName": "Yahoo_SeniorMLEngineer.docx",
-      "createdAt": "2026-03-25T13:04:04.000Z",
+      "id": "janette-powell-chronological",
+      "displayName": "Janette Powell",
+      "fileName": "janette-powell-chronological.pdf",
+      "createdAt": "2026-08-19T00:59:17.000Z",
+      "jobCount": 7,
+      "skillCount": 9
+    },
+    {
+      "id": "joe-student-business",
+      "displayName": "Joe Student",
+      "fileName": "joe-student-business.pdf",
+      "createdAt": "2026-08-19T01:15:51.000Z",
       "jobCount": 9,
-      "skillCount": 80
+      "skillCount": 7
     },
     {
-      "id": "yahoo-engineer",
-      "displayName": "Yahoo Senior Engineer",
-      "fileName": "Yahoo-Engineer.docx",
-      "createdAt": "2026-03-25T13:03:14.000Z",
-      "jobCount": 2,
-      "skillCount": 11
-    },
-    {
-      "id": "zapier-candidate-resume",
-      "displayName": "Zapier",
-      "fileName": "",
-      "createdAt": "2026-03-25T19:43:12.935Z",
-      "jobCount": 2,
-      "skillCount": 17
+      "id": "shawn-becker-full-resume-indexed",
+      "displayName": "Shawn Becker",
+      "fileName": "shawn-becker-full-resume-indexed.docx",
+      "createdAt": "2026-08-18T06:03:29.363Z",
+      "jobCount": 30,
+      "skillCount": 108
     }
   ],
-  "defaultResumeId": "yahoo-seniormlengineer",
-  "generatedAt": "2026-07-31T21:02:02.093Z"
+  "defaultResumeId": "janette-powell-chronological",
+  "generatedAt": "2026-08-19T01:15:52.175Z"
 }

@@ -1,0 +1,26 @@
+{
+  "contact": {
+    "name": "Joe Student",
+    "email": "jstudent@stanford.edu",
+    "phone": "(650) 555-1212",
+    "location": "P.O. Box 1234, Stanford, CA 94309",
+    "linkedin": "",
+    "website": ""
+  },
+  "title": "",
+  "summary": "",
+  "certifications": [],
+  "websites": [],
+  "custom_sections": [
+    {
+      "title": "Leadership",
+      "content": "Staff Editor, Undergraduate Journal of International Relations, Stanford, CA (4/2021-present): Review and edit articles relating to capital inflows and international trade in emerging economies. Help with distributing the journal to think tanks, academic institutions, and faculty and students at Stanford.\n\nProgram Director, SAT Success, Haas Center for Public Service, Stanford, CA (5/2021-present): Coordinate all aspects of the tutoring program including recruitment of tutors and tutees. Organize events to introduce high school students to SAT preparation and the college application process. Conduct training sessions on tutoring the math and verbal sections of the SAT.\n\nStaff Editor, Undergraduate Journal of Philosophy, Stanford, CA (1/2020-6/2020): Evaluated, edited and helped select and compile papers for Stanford's undergraduate philosophy journal, The Dualist. Focused on reviewing papers on political philosophy and ethics."
+    }
+  ],
+  "skills": [
+    "Excel",
+    "PowerPoint",
+    "FileMaker",
+    "French speaking and writing"
+  ]
+}

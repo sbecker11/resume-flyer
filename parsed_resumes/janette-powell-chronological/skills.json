@@ -1,0 +1,86 @@
+{
+  "economics": {
+    "name": "economics",
+    "url": "https://www.aeaweb.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "computer-science": {
+    "name": "computer science",
+    "url": "https://www.acm.org",
+    "img": "",
+    "categoryIDs": [
+      "programming-language",
+      "tool"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "statistics": {
+    "name": "statistics",
+    "url": "https://www.amstat.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "mac-software-applications": {
+    "name": "Mac software applications",
+    "url": "https://www.apple.com/mac/apps",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "pc-software-applications": {
+    "name": "PC software applications",
+    "url": "https://www.microsoft.com/en-us/windows/apps-and-games",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "microsoft-excel": {
+    "name": "Microsoft Excel",
+    "url": "https://www.microsoft.com/en-us/microsoft-365/excel",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "microsoft-powerpoint": {
+    "name": "Microsoft PowerPoint",
+    "url": "https://www.microsoft.com/en-us/microsoft-365/powerpoint",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "spanish-proficient": {
+    "name": "Spanish Proficient",
+    "url": "https://www.cervantes.es",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": []
+  },
+  "french-basic": {
+    "name": "French Basic",
+    "url": "https://www.institutfrancais.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": []
+  }
+}

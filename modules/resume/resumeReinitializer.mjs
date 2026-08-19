@@ -34,6 +34,30 @@ export function registerGetBizCardDivs(fn) {
 }
 
 /**
+ * Rebuild the resume listing from current scene biz-card divs (or job-count placeholders).
+ * Safe to call after cards finish init even when initializeResumeSystem ran earlier.
+ * @returns {Promise<boolean>} true when rebuild ran
+ */
+export async function rebuildResumeListFromSceneCards() {
+  if (typeof resumeListReinit !== 'function') {
+    console.warn('[resumeReinitializer] rebuildResumeListFromSceneCards: resume list reinit not registered yet');
+    return false;
+  }
+  const jobsDependency = getGlobalJobsDependency();
+  const jobs = jobsDependency.getJobsData?.() ?? [];
+  let bizCardDivs = typeof getBizCardDivs === 'function' ? getBizCardDivs() : [];
+  if ((!Array.isArray(bizCardDivs) || bizCardDivs.filter(Boolean).length === 0) && Array.isArray(jobs) && jobs.length > 0) {
+    bizCardDivs = jobs.map((_, index) => {
+      const el = document.createElement('div');
+      el.setAttribute('data-job-number', String(index));
+      return el;
+    });
+  }
+  await resumeListReinit(bizCardDivs ?? []);
+  return true;
+}
+
+/**
  * Load jobs for the given resume id and reinitialize Timeline, CardsController, and resume list.
  * @param {string | null} resumeId - Parsed resume id, or null for default (static content).
  * @returns {Promise<void>}
@@ -64,9 +88,9 @@ export async function reinitializeResumeSystem(resumeId) {
   }
 
   const bizCardDivs = typeof getBizCardDivs === 'function' ? getBizCardDivs() : [];
-  if (typeof resumeListReinit === 'function' && bizCardDivs && bizCardDivs.length > 0) {
-    await resumeListReinit(bizCardDivs);
-  } else if (!resumeListReinit) {
+  if (typeof resumeListReinit === 'function') {
+    await resumeListReinit(bizCardDivs ?? []);
+  } else {
     console.warn('[resumeReinitializer] Resume list reinit not registered');
   }
 }

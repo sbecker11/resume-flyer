@@ -787,8 +787,8 @@ async function onMetaAutosave() {
   try {
     const id = props.resumeId;
     const u = pendingMeta.value;
-    await api.updateResumeMeta(id, u);
-    meta.value = { ...meta.value, ...u };
+    const saved = await api.updateResumeMeta(id, u);
+    meta.value = { ...meta.value, ...saved };
     pendingMeta.value = null;
     emit('saved', { metaSaved: true });
   } catch (err) {
@@ -862,9 +862,9 @@ async function flushCurrentTabBeforeLeave() {
 
   if (tab === 'meta' && pendingMeta.value) {
     const u = pendingMeta.value;
-    await api.updateResumeMeta(id, u);
+    const saved = await api.updateResumeMeta(id, u);
     pendingMeta.value = null;
-    meta.value = { ...meta.value, ...u };
+    meta.value = { ...meta.value, ...saved };
     emit('saved', { metaSaved: true });
   }
   if (tab === 'other-sections' && pendingOtherSections.value !== null) {

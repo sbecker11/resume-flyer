@@ -1,0 +1,24 @@
+{
+  "tool": {
+    "name": "Tool",
+    "skillIDs": [
+      "mac-and-pc-platforms",
+      "excel",
+      "powerpoint"
+    ]
+  },
+  "frontend": {
+    "name": "Frontend",
+    "skillIDs": [
+      "html",
+      "javascript"
+    ]
+  },
+  "programming-language": {
+    "name": "Programming Language",
+    "skillIDs": [
+      "html",
+      "javascript"
+    ]
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "spreadsheets": {
+    "name": "spreadsheets",
+    "url": "https://www.microsoft.com/en-us/microsoft-365/excel",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "econometrics": {
+    "name": "econometrics",
+    "url": "https://www.econometricsociety.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "methodology"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "statistics": {
+    "name": "statistics",
+    "url": "https://www.amstat.org",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "methodology"
+    ],
+    "jobIDs": [
+      2
+    ]
+  },
+  "excel": {
+    "name": "Excel",
+    "url": "https://www.microsoft.com/en-us/microsoft-365/excel",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "powerpoint": {
+    "name": "PowerPoint",
+    "url": "https://www.microsoft.com/en-us/microsoft-365/powerpoint",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "filemaker": {
+    "name": "FileMaker",
+    "url": "https://www.claris.com/filemaker",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "french-speaking-and-writing": {
+    "name": "French speaking and writing",
+    "url": "https://www.institutfrancais.com",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": []
+  }
+}

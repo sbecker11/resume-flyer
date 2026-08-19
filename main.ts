@@ -230,7 +230,7 @@ window.LOGGING_CONTROL.init();
 window.LOG_JOB(2, 'test log on startup');
 
 // import './styles/timeline.css'; // Removed - now using Vue component
-import './styles/core.css'; // Import core styles for BullsEye and other components
+// core.css + controls.css load from index.html — do not import here (Vite HMR can strip injected copies on reload)
 // Debug scripts moved to /tmp during Vue 3 migration cleanup
 
 // Create global element registry BEFORE anything else

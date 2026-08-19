@@ -1,15 +1,16 @@
 import { ref, onMounted, onUnmounted, watch, inject, computed, watchEffect } from 'vue'
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs'
-import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs'
+import { isEducationDerivedJob, educationKeyOf, isOutlineSectionJob } from '@/modules/data/ResumeJob.mjs'
 import { selectionManager } from '@/modules/core/selectionManager.mjs'
 import { useTimeline } from '@/modules/composables/useTimeline.mjs'
-import { useColorPalette, applyPaletteToElement, updateContrastForBrightness, readyPromise } from '@/modules/composables/useColorPalette.mjs'
+import { useColorPalette, applyPaletteToElement, updateContrastForBrightness, readyPromise, syncSkillCardBackLinkPresentation, syncAllSkillCardBackLinkPresentations } from '@/modules/composables/useColorPalette.mjs'
 import * as dateUtils from '@/modules/utils/dateUtils.mjs'
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs'
 import { linearInterp } from '@/modules/utils/mathUtils.mjs'
 import * as mathUtils from '@/modules/utils/mathUtils.mjs'
 import * as zUtils from '@/modules/utils/zUtils.mjs'
 import { setJobColorIndex } from '@/modules/utils/paletteHelpers.mjs'
+import { rebuildResumeListFromSceneCards } from '@/modules/resume/resumeReinitializer.mjs'
 import * as filters from '@/modules/core/filters.mjs'
 import {
   BIZCARD_WIDTH,
@@ -26,6 +27,12 @@ import {
 import { useCardRegistry } from '@/modules/composables/useCardRegistry.mjs'
 import { injectGlobalElementRegistry } from '@/modules/composables/useGlobalElementRegistry.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
+import {
+    hideSceneCardsForListingClear,
+    showSceneCardsAfterListingRestore,
+    RESUME_LISTING_CLEARED_EVENT,
+    RESUME_LISTING_RESTORED_EVENT,
+} from '@/modules/utils/sceneCardVisibility.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
 import {
@@ -37,7 +44,9 @@ import {
     markSourceBizBackLinkForSkill,
     clearSourceBizBackLinkClass,
     scrollFocusedBizCardSkillIntoViewIfCropVisible,
-    getElementVerticalExtent
+    getElementVerticalExtent,
+    rememberSkillCardSourceBiz,
+    getRememberedSkillCardSourceBiz,
 } from '@/modules/utils/skillInfoModal.mjs'
 import {
     provisionSceneCardCloneAtInit,
@@ -45,6 +54,7 @@ import {
     hideAllSceneCardClones,
     assertSceneCloneVisible,
 } from '@/modules/utils/sceneCardClone.mjs'
+import { displayJobHeading } from '@/modules/utils/outlineIndex.mjs'
 function getRuntimeBase() {
     const envBase = (import.meta?.env?.BASE_URL || '/')
     let base = envBase
@@ -71,6 +81,19 @@ const TIMELINE_PADDING_TOP = 0;
 
 // Skill card ID counter (for unique IDs)
 let skillCardIdCounter = 0;
+
+/** Bumped on each resume switch so in-flight initializeCardsController runs abort instead of appending stale cards. */
+let cardsInitGeneration = 0;
+
+function isCardsInitStale(generation) {
+    return generation !== cardsInitGeneration;
+}
+
+/** Call before clearing scene/resume DOM on resume switch so in-flight card init aborts. */
+export function bumpCardsInitGeneration() {
+    cardsInitGeneration += 1;
+    return cardsInitGeneration;
+}
 
 // Instance counter to detect multiple instances
 let instanceCounter = 0;
@@ -203,7 +226,12 @@ export function useCardsController() {
     // Mutex lock to prevent concurrent initialization
     let isInitializing = false
 
-    async function initializeCardsController() {
+    async function initializeCardsController(initGeneration = cardsInitGeneration) {
+        if (isCardsInitStale(initGeneration)) {
+            console.debug(`[CardsController #${instanceId}] init generation ${initGeneration} stale (skipped)`)
+            return
+        }
+
         if (isInitialized.value) {
             console.debug(`[CardsController #${instanceId}] already initialized`)
             return
@@ -243,13 +271,23 @@ export function useCardsController() {
             existingSkillCards.forEach(card => card.remove())
 
             await readyPromise
+            if (isCardsInitStale(initGeneration)) {
+                console.warn(`[CardsController #${instanceId}] init aborted after palette ready (gen ${initGeneration})`)
+                return
+            }
             const cards = []
             for (let index = 0; index < jobs.length; index++) {
+                if (isCardsInitStale(initGeneration)) {
+                    console.warn(`[CardsController #${instanceId}] init aborted mid-biz-cards (gen ${initGeneration})`)
+                    cards.forEach((c) => c?.remove?.())
+                    return
+                }
                 const job = jobs[index]
+                if (isOutlineSectionJob(job)) continue
                 const card = await createBizCardDiv(job, index, scenePlaneEl)
                 if (card) {
                     scenePlaneEl.appendChild(card)
-                    cards.push(card)
+                    cards[index] = card
                     cardRegistry.registerCardElement(index, card)
                     try {
                         await applyPaletteToElement(card)
@@ -272,14 +310,14 @@ export function useCardsController() {
 
             bizCardDivs.value = cards
             const allDivs = window.resumeFlyer?.allDivs
-            if (allDivs) allDivs.bizCardDivs = [...cards]
+            if (allDivs) allDivs.bizCardDivs = cards.slice()
 
             // Build unique skills and which jobs reference each (one skill card per skill, shared by multiple biz cards)
             const allSkillNames = new Set()
             const skillToJobIndices = Object.create(null)
             for (let i = 0; i < jobs.length; i++) {
                 const job = jobs[i]
-                if (!job || !job['job-skills']) continue
+                if (!job || isOutlineSectionJob(job) || !job['job-skills']) continue
                 for (const skillName of Object.keys(job['job-skills'])) {
                     allSkillNames.add(skillName)
                     if (!skillToJobIndices[skillName]) skillToJobIndices[skillName] = []
@@ -293,6 +331,12 @@ export function useCardsController() {
             const skillCardsCreated = []
             try {
                 for (const skillName of allSkillNames) {
+                    if (isCardsInitStale(initGeneration)) {
+                        console.warn(`[CardsController #${instanceId}] init aborted mid-skill-cards (gen ${initGeneration})`)
+                        skillCardsCreated.forEach((c) => c?.remove?.())
+                        cards.forEach((c) => c?.remove?.())
+                        return
+                    }
                     const referencingJobIndices = skillToJobIndices[skillName] || []
                     const referencingBizCardIds = referencingJobIndices.map(i => createBizCardDivId(i))
                     if (referencingBizCardIds.length === 0) continue
@@ -319,6 +363,12 @@ export function useCardsController() {
                 }
                 if (skillCardsCreated.length === 0) {
                     console.warn('[CardsController] No skill cards created — resume may have no job-skills entries.')
+                }
+                if (isCardsInitStale(initGeneration)) {
+                    console.warn(`[CardsController #${instanceId}] init aborted before clone provision (gen ${initGeneration})`)
+                    skillCardsCreated.forEach((c) => c?.remove?.())
+                    cards.forEach((c) => c?.remove?.())
+                    return
                 }
                 // Each biz card: populate skill titles from skillIDs + job-skills + description brackets
                 for (let index = 0; index < cards.length; index++) {
@@ -352,6 +402,7 @@ export function useCardsController() {
                 })
                 console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
                 if (window.resumeFlyer?.allDivs) window.resumeFlyer.allDivs.skillCardDivs = [...skillCardsCreated]
+                syncAllSkillCardBackLinkPresentations()
 
                 await provisionAllSceneCardClonesAtInit(scenePlaneEl, cards, skillCardsCreated)
 
@@ -373,6 +424,13 @@ export function useCardsController() {
 
                 // Yearly grid lines removed per user request
 
+                if (isCardsInitStale(initGeneration)) {
+                    console.warn(`[CardsController #${instanceId}] init aborted before marking complete (gen ${initGeneration})`)
+                    skillCardsCreated.forEach((c) => c?.remove?.())
+                    cards.forEach((c) => c?.remove?.())
+                    scenePlaneEl.querySelectorAll('[id$="-clone"]').forEach((el) => el.remove())
+                    return
+                }
                 isInitialized.value = true
             } finally {
                 // Always log averages after geometry is set (biz + any skill cards created), even if init threw
@@ -383,14 +441,23 @@ export function useCardsController() {
             
             console.debug('[CardsController] init complete, cards:', cards.length)
 
+            try {
+                await rebuildResumeListFromSceneCards()
+            } catch (listError) {
+                reportError(listError, '[CardsController] Failed to rebuild resume listing after card init')
+                throw listError
+            }
+
         } catch (error) {
             console.error('[CardsController] Initialization failed:', error)
             isInitialized.value = false
             throw error
         } finally {
-            // CRITICAL: Release mutex lock
-            isInitializing = false
-            console.debug('[CardsController] Released initialization mutex')
+            // Release mutex only for the active generation (stale in-flight runs must not unlock a newer init)
+            if (!isCardsInitStale(initGeneration)) {
+                isInitializing = false
+                console.debug('[CardsController] Released initialization mutex')
+            }
         }
     }
 
@@ -431,6 +498,7 @@ export function useCardsController() {
         for (let i = 0; i < jobs.length; i++) {
             if (!cards[i]) continue
             const job = jobs[i]
+            if (isOutlineSectionJob(job)) continue
             const start = job.start || job.startDate || ''
             const end   = job.end   || ''
             const key   = `${start}|${end}`
@@ -1085,6 +1153,7 @@ export function useCardsController() {
                     if (!Number.isNaN(jobNum)) {
                         // Highlight back-arrow first so the two-way link is visible before scroll.
                         markSourceBizBackLinkForSkill(skillCard.id, bizCardId)
+                        rememberSkillCardSourceBiz(skillCard.id, bizCardId)
                         selectionManager.selectCard({ type: 'biz', jobNumber: jobNum }, 'CardsController.skillCardBizTitleClick')
                         markFocusedSkillLinkForJob(jobNum, skillName)
                         scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNum, skillName)
@@ -1093,34 +1162,35 @@ export function useCardsController() {
                 return
             }
             if (!selectionManager) return
-            const card = selectionManager.selectedCard
-            if (card?.type === 'skill' && card.skillCardId === skillCard.id) {
-                clearSourceBizBackLinkClass()
-                selectionManager.clearSelection('CardsController.skillCardClick')
-                return
-            }
-            clearSourceBizBackLinkClass()
-            selectionManager.selectCard({ type: 'skill', skillCardId: skillCard.id }, 'CardsController.skillCardClick')
+            selectSkillCardById(skillCard.id, 'CardsController.skillCardClick')
         })
         skillCard.addEventListener('mouseenter', () => {
             if (!selectionManager) return
             const isSelected = selectionManager.selectedCard?.type === 'skill' && selectionManager.selectedCard?.skillCardId === skillCard.id
             if (!isSelected) {
                 skillCard.classList.add('hovered')
+                syncSkillCardBackLinkPresentation(skillCard)
                 const list = document.getElementById('resume-content-div-list') || document.getElementById('resume-content-div')
                 if (list) {
                     list.querySelectorAll('.skill-resume-div, .appended-skill-resume-div').forEach((el) => {
-                        if ((el.getAttribute('data-skill-card-id') || '') === skillCard.id) el.classList.add('hovered')
+                        if ((el.getAttribute('data-skill-card-id') || '') === skillCard.id) {
+                            el.classList.add('hovered')
+                            syncSkillCardBackLinkPresentation(el)
+                        }
                     })
                 }
             }
         })
         skillCard.addEventListener('mouseleave', () => {
             skillCard.classList.remove('hovered')
+            syncSkillCardBackLinkPresentation(skillCard)
             const list = document.getElementById('resume-content-div-list') || document.getElementById('resume-content-div')
             if (list) {
                 list.querySelectorAll('.skill-resume-div, .appended-skill-resume-div').forEach((el) => {
-                    if ((el.getAttribute('data-skill-card-id') || '') === skillCard.id) el.classList.remove('hovered')
+                    if ((el.getAttribute('data-skill-card-id') || '') === skillCard.id) {
+                        el.classList.remove('hovered')
+                        syncSkillCardBackLinkPresentation(el)
+                    }
                 })
             }
             if (selectionManager) selectionManager.clearHover('CardsController.skillCardMouseleave')
@@ -1419,6 +1489,8 @@ export function useCardsController() {
             setupEventListenersFixed()
         }
         window.addEventListener('job-skills-updated', handleJobSkillsUpdated)
+        window.addEventListener(RESUME_LISTING_CLEARED_EVENT, handleResumeListingCleared)
+        window.addEventListener(RESUME_LISTING_RESTORED_EVENT, handleResumeListingRestored)
     })
     
     /**
@@ -1432,9 +1504,11 @@ export function useCardsController() {
             clearSourceBizBackLinkClass()
             selectionManager.clearSelection(caller)
         } else {
-            if (sourceBizCardId == null) clearSourceBizBackLinkClass()
+            const remembered = getRememberedSkillCardSourceBiz(skillCardId)
+            const source = sourceBizCardId ?? remembered
+            if (source == null) clearSourceBizBackLinkClass()
             selectionManager.selectCard({ type: 'skill', skillCardId }, caller)
-            if (sourceBizCardId != null) markSourceBizBackLinkForSkill(skillCardId, sourceBizCardId)
+            if (source != null) markSourceBizBackLinkForSkill(skillCardId, source)
         }
     }
 
@@ -1479,6 +1553,8 @@ export function useCardsController() {
 
         if (card.type === 'skill') {
             await setSceneCardSelected(card, true)
+            const remembered = getRememberedSkillCardSourceBiz(card.skillCardId)
+            if (remembered) markSourceBizBackLinkForSkill(card.skillCardId, remembered)
             scrollSceneCardCloneIntoViewAfterVisible(card.skillCardId)
         }
     }
@@ -1509,6 +1585,41 @@ export function useCardsController() {
         clearSourceBizBackLinkClass()
         hideAllSceneCardSelections()
         clearAllSelected()
+    }
+
+    function handleResumeListingCleared() {
+        const scenePlaneEl = scenePlaneElement
+            || elementRegistry.getScenePlane?.()
+            || document.getElementById('scene-plane')
+        if (!scenePlaneEl) {
+            reportError(
+                new Error('scene-plane not available'),
+                '[useCardsController] hide scene cards after listing clear',
+                'Listing already cleared; skipping scene hide until scene-plane exists'
+            )
+            return
+        }
+        hideAllSceneCardSelections()
+        const hidden = hideSceneCardsForListingClear(scenePlaneEl)
+        window.dispatchEvent(new CustomEvent('parallax-force-refresh', { detail: {} }))
+        console.log(`[useCardsController] Hidden ${hidden} scene cards after listing clear`)
+    }
+
+    function handleResumeListingRestored() {
+        const scenePlaneEl = scenePlaneElement
+            || elementRegistry.getScenePlane?.()
+            || document.getElementById('scene-plane')
+        if (!scenePlaneEl) {
+            reportError(
+                new Error('scene-plane not available'),
+                '[useCardsController] restore scene cards after listing restore',
+                'Listing already restored; skipping scene show until scene-plane exists'
+            )
+            return
+        }
+        const restored = showSceneCardsAfterListingRestore(scenePlaneEl)
+        window.dispatchEvent(new CustomEvent('parallax-force-refresh', { detail: {} }))
+        console.log(`[useCardsController] Restored ${restored} scene cards after listing restore`)
     }
     
     function handleJobHovered(event) {
@@ -2014,6 +2125,7 @@ export function useCardsController() {
                     const bizEl = document.getElementById(bizCardId)
                     const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN
                     if (!Number.isNaN(jobNum)) {
+                        rememberSkillCardSourceBiz(skillCardId, bizCardId)
                         const slug = clone.getAttribute('data-skill-name') || ''
                         // Highlight back-arrow first so the two-way link is visible before scroll.
                         markSourceBizBackLinkForSkill(skillCardId, bizCardId)
@@ -2027,13 +2139,7 @@ export function useCardsController() {
                 return
             }
 
-            if (selectionManager.selectedCard?.type === 'skill' && selectionManager.selectedCard.skillCardId === skillCardId) {
-                clearSourceBizBackLinkClass()
-                selectionManager.clearSelection('CardsController.skillCardCloneClick')
-                return
-            }
-            clearSourceBizBackLinkClass()
-            selectionManager.selectCard({ type: 'skill', skillCardId }, 'CardsController.skillCardCloneClick')
+            selectSkillCardById(skillCardId, 'CardsController.skillCardCloneClick')
         })
     }
 
@@ -2076,6 +2182,7 @@ export function useCardsController() {
             scenePlaneEl.appendChild(clone)
             try {
                 await applyPaletteToElement(clone)
+                updateContrastForBrightness(clone)
             } catch (error) {
                 reportError(error, `[useCardsController] palette for skill clone ${skillCard.id}`, null)
                 throw error
@@ -2083,6 +2190,7 @@ export function useCardsController() {
         }
 
         elementRegistry.clearAllCache()
+        syncAllSkillCardBackLinkPresentations()
         console.debug('[CardsController] prebuilt scene card clones provisioned', {
             biz: bizCards.length,
             skill: skillCards.length,
@@ -2113,6 +2221,8 @@ export function useCardsController() {
             if (clone) {
                 try {
                     await applyPaletteToElement(clone)
+                    updateContrastForBrightness(clone)
+                    syncSkillCardBackLinkPresentation(clone)
                 } catch (error) {
                     reportError(error, '[useCardsController] palette on scene card clone show', null)
                     throw error
@@ -2272,6 +2382,8 @@ export function useCardsController() {
         window.removeEventListener('viewport-changed', handleViewportChangedForClones)
         window.removeEventListener('resize', handleViewportChangedForClones)
         window.removeEventListener('job-skills-updated', handleJobSkillsUpdated)
+        window.removeEventListener(RESUME_LISTING_CLEARED_EVENT, handleResumeListingCleared)
+        window.removeEventListener(RESUME_LISTING_RESTORED_EVENT, handleResumeListingRestored)
     })
 
     // Make test function globally available for debugging
@@ -2439,6 +2551,12 @@ export function useCardsController() {
     async function reinitializeResumeData() {
         console.log('[CardsController] 🔄 reinitializeResumeData called')
 
+        cardsInitGeneration += 1
+        const initGeneration = cardsInitGeneration
+        skillCardIdCounter = 0
+        isInitialized.value = false
+        isInitializing = false
+
         const scenePlaneEl = scenePlaneElement ?? elementRegistry.getScenePlane()
         if (scenePlaneEl) {
             // Count before clearing
@@ -2466,17 +2584,17 @@ export function useCardsController() {
 
         cardRegistry.clearRegistry?.()
         elementRegistry?.clearAllCache?.()
-        isInitialized.value = false
-        isInitializing = false  // CRITICAL: Reset mutex to allow reinit
         bizCardDivs.value = []
         const allDivs = window.resumeFlyer?.allDivs
         if (allDivs) {
             allDivs.bizCardDivs = []
             allDivs.skillCardDivs = []
+            allDivs.bizResumeDivs = []
+            allDivs.skillResumeDivs = []
         }
 
         console.log('[CardsController] 🔄 Calling initializeCardsController...')
-        await initializeCardsController()
+        await initializeCardsController(initGeneration)
         console.log('[CardsController] ✅ reinitializeResumeData complete')
     }
 

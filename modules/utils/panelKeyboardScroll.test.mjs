@@ -9,6 +9,7 @@ import {
     getActivePanel,
     shouldScrollScenePanel,
     shouldScrollResumePanel,
+    shouldSyncSceneScrollOnSelection,
     beginKeyboardNavigationPanel,
     endKeyboardNavigationPanel,
 } from './panelKeyboardScroll.mjs'
@@ -111,6 +112,13 @@ describe('panelKeyboardScroll', () => {
         expect(shouldScrollScenePanel(null, null)).toBe(false)
     })
 
+    it('does not focus resume listing on bare background mousedown', () => {
+        const listing = document.getElementById('resume-content-listing')
+        listing.setAttribute('tabindex', '-1')
+        listing.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 1, clientY: 1 }))
+        expect(document.activeElement).not.toBe(listing)
+    })
+
     it('defaults to resume when pointer and active panel are unknown', () => {
         expect(getActivePanel()).toBe(null)
         expect(resolveArrowScrollTargetPanel(null, null)).toBe('resume')
@@ -142,8 +150,15 @@ describe('panelKeyboardScroll', () => {
         expect(target).toBe('resume')
         expect(shouldScrollScenePanel(null, null)).toBe(false)
         expect(shouldScrollResumePanel(null, null)).toBe(true)
+        expect(shouldSyncSceneScrollOnSelection()).toBe(false)
         endKeyboardNavigationPanel()
         expect(shouldScrollScenePanel(null, null)).toBe(true)
+        expect(shouldSyncSceneScrollOnSelection()).toBe(true)
+    })
+
+    it('syncs scene scroll on rDiv click even when pointer is over resume', () => {
+        expect(shouldScrollScenePanel(500, 100)).toBe(false)
+        expect(shouldSyncSceneScrollOnSelection()).toBe(true)
     })
 
     it('scrollScrollportByArrow moves scrollTop', () => {

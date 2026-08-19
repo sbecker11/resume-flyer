@@ -40,6 +40,18 @@ export class ResumeJob {
   'job-skills' = {};
 
   /**
+   * Dotted numeric path for sort/nesting only (never shown on cards/listing).
+   * @type {string}
+   */
+  outlineIndex = '';
+
+  /**
+   * `section` = listing group label that nests children; not a scene/resume card.
+   * @type {'job'|'section'}
+   */
+  outlineKind = 'job';
+
+  /**
    * @param {Record<string, unknown>} [init]
    */
   constructor(init = {}) {
@@ -67,10 +79,16 @@ export class ResumeJob {
     if (!this['job-skills'] || typeof this['job-skills'] !== 'object') this['job-skills'] = {};
     if (this.Description == null) this.Description = '';
     if (init && typeof init.description === 'string' && !this.Description) this.Description = init.description;
+    this.outlineIndex = this.outlineIndex != null ? String(this.outlineIndex).trim() : '';
+    this.outlineKind = this.outlineKind === 'section' ? 'section' : 'job';
   }
 
   get isEducationDerived() {
     return this.educationKey != null && this.educationKey !== '';
+  }
+
+  get isOutlineSection() {
+    return this.outlineKind === 'section';
   }
 
   /**
@@ -94,7 +112,7 @@ export class ResumeJob {
   }
 
   toPlainObject() {
-    return {
+    const o = {
       employer: this.employer,
       title: this.title,
       role: this.role,
@@ -108,6 +126,9 @@ export class ResumeJob {
       references: [...this.references],
       'job-skills': { ...this['job-skills'] },
     };
+    if (this.outlineIndex) o.outlineIndex = this.outlineIndex;
+    if (this.outlineKind === 'section') o.outlineKind = 'section';
+    return o;
   }
 }
 
@@ -121,6 +142,17 @@ export function isEducationDerivedJob(job) {
   const k = /** @type {{ educationKey?: unknown, __educationKey?: unknown }} */ (job).educationKey
     ?? /** @type {{ __educationKey?: unknown }} */ (job).__educationKey;
   return k != null && String(k) !== '';
+}
+
+/**
+ * Section-label rows nest children in outline sort; they are not scene or listing cards.
+ * @param {unknown} job
+ * @returns {boolean}
+ */
+export function isOutlineSectionJob(job) {
+  if (job == null || typeof job !== 'object') return false;
+  if (job instanceof ResumeJob) return job.isOutlineSection;
+  return /** @type {{ outlineKind?: unknown }} */ (job).outlineKind === 'section';
 }
 
 /**

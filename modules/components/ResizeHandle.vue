@@ -285,10 +285,12 @@ const focalTriStateIconSrc = computed(() => {
 });
 
 // CSS classes for the button
+const isSkillSearchHovering = ref(false);
+
 const buttonClasses = computed(() => {
     return [
-        displayedIconMode.value, // for mode-specific styling (font size, etc.)
-        { hovering: isHovering.value } // for hover styling (colors)
+        displayedIconMode.value,
+        { hovering: isHovering.value }
     ];
 });
 
@@ -456,8 +458,11 @@ watch(skillSearchOpen, (open) => {
 <template>
     <div id="resize-handle" class="resize-handle" @mousedown="startDrag" @click="handleResizeHandleClick">
         <div class="button-container" @click.stop @mousedown.stop>
-            <button :id="stepLeftButton.id" class="toggle-circle" @click.stop="stepLeftButton.action" :disabled="stepLeftButton.disabled" :title="stepLeftButton.title">{{ stepLeftButton.icon }}</button>
+            <span class="toggle-circle-ring" :class="{ 'ring-disabled': stepLeftButton.disabled }">
+              <button :id="stepLeftButton.id" class="toggle-circle" @click.stop="stepLeftButton.action" :disabled="stepLeftButton.disabled" :title="stepLeftButton.title">{{ stepLeftButton.icon }}</button>
+            </span>
             <div class="tri-state-wrap">
+              <span class="toggle-circle-ring" :class="{ 'ring-hover': isHovering }">
               <button id="tri-state-toggle" 
                       type="button"
                       class="toggle-circle" 
@@ -490,6 +495,7 @@ watch(skillSearchOpen, (open) => {
                   <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1" />
                 </svg>
               </button>
+              </span>
               <div
                 v-show="showFocalTriStateTooltip"
                 id="tri-state-tooltip-text"
@@ -499,6 +505,7 @@ watch(skillSearchOpen, (open) => {
                 {{ triStateFocalButtonTitle }}
               </div>
             </div>
+            <span class="toggle-circle-ring" :class="{ 'ring-hover': isLayoutHovering }">
             <button id="layout-toggle" 
                     class="toggle-circle" 
                     :class="{ 'hovering': isLayoutHovering }"
@@ -508,6 +515,8 @@ watch(skillSearchOpen, (open) => {
                     :title="`Scene is ${orientation === 'scene-left' ? 'on the left' : 'on the right'} (click to move scene ${orientation === 'scene-left' ? 'right' : 'left'})`">
                 {{ layoutButtonText }}
             </button>
+            </span>
+            <span class="toggle-circle-ring" :class="{ 'ring-hover': isSteppingHovering }">
             <button id="stepping-indicator" 
                     class="toggle-circle" 
                     :class="{ 'hovering': isSteppingHovering, 'infinity-mode': stepCount === 1 }"
@@ -515,14 +524,20 @@ watch(skillSearchOpen, (open) => {
                     @mouseenter="isSteppingHovering = true"
                     @mouseleave="isSteppingHovering = false"
                     :title="stepCount === 1 ? 'Free dragging (no steps)' : `Stepping: ${stepCount} steps`">{{ displayStepCount }}</button>
+            </span>
             <Scene3DSettings />
+            <span class="toggle-circle-ring" :class="{ 'ring-disabled': stepRightButton.disabled }">
             <button :id="stepRightButton.id" class="toggle-circle" @click.stop="stepRightButton.action" :disabled="stepRightButton.disabled" :title="stepRightButton.title">{{ stepRightButton.icon }}</button>
+            </span>
+            <span class="toggle-circle-ring" :class="{ 'ring-hover': isSkillSearchHovering }">
             <button
               id="skill-search-toggle"
               type="button"
               class="toggle-circle"
               title="Find skill in scene"
               aria-label="Find skill in scene"
+              @mouseenter="isSkillSearchHovering = true"
+              @mouseleave="isSkillSearchHovering = false"
               @click.stop="openSkillSearch"
             ><span class="skill-search-icon" aria-hidden="true">
               <svg class="skill-search-icon-svg" viewBox="0 0 16 16" width="14" height="14" focusable="false">
@@ -530,6 +545,7 @@ watch(skillSearchOpen, (open) => {
                 <line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
               </svg>
             </span></button>
+            </span>
         </div>
         <div
           v-if="skillSearchOpen"
@@ -595,12 +611,9 @@ watch(skillSearchOpen, (open) => {
 <style scoped>
 .resize-handle {
     position: relative;
-    width: 20px;
     height: 100%;
     cursor: col-resize;
     background-color: var(--resize-handle-bg-color, #444);
-    border-left: 1px solid #555;
-    border-right: 1px solid #555;
     z-index: 10000;
     display: flex;
     flex-direction: column;
@@ -639,10 +652,12 @@ watch(skillSearchOpen, (open) => {
 }
 
 .toggle-circle {
-    width: 24px;
-    height: 24px;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
-    border: 2px solid white;
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
     background-color: var(--button-bg-color, #555);
     color: var(--button-text-color, white);
     cursor: pointer;
@@ -700,12 +715,11 @@ watch(skillSearchOpen, (open) => {
 
 /* 15x15 PNG; -1px vertical nudge for optical center in 24px circle */
 #tri-state-toggle {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    min-height: 24px;
+    min-width: 0;
+    min-height: 0;
     border-radius: 50%;
-    border: 2px solid white;
+    appearance: none;
+    -webkit-appearance: none;
     background-color: rgba(0,0,0,0.5);
     background-image: none;
     cursor: pointer;
@@ -740,7 +754,40 @@ watch(skillSearchOpen, (open) => {
 /* Hover: inverted icon (black on white) via PNG variant */
 #tri-state-toggle.hovering {
     background-color: white;
-    border-color: black;
+}
+
+#stepping-indicator.hovering {
+    background-color: white;
+    color: black;
+}
+
+#layout-toggle.hovering {
+    background-color: white;
+    color: black;
+    transform: scale(1.1);
+}
+
+/* Hover effects for step buttons only */
+#step-left:hover:not(:disabled),
+#step-right:hover:not(:disabled) {
+    background-color: var(--button-text-color, white);
+    color: var(--button-bg-color, #555);
+}
+
+/* Disabled state for step buttons */
+#step-left:disabled,
+#step-right:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #444;
+    color: #999;
+    transform: scale(0.95);
+    pointer-events: none;
+}
+
+#skill-search-toggle:hover {
+    background-color: white;
+    color: black;
 }
 
 #stepping-indicator {
@@ -751,45 +798,12 @@ watch(skillSearchOpen, (open) => {
     font-size: 16px;
 }
 
-#stepping-indicator.hovering {
-    background-color: white;
-    color: black;
-    border-color: black;
-}
-
 #layout-toggle {
     font-size: 16px;
     font-weight: bold;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     line-height: 1;
     transition: all 0.2s ease;
-}
-
-#layout-toggle.hovering {
-    background-color: white;
-    color: black;
-    border-color: black;
-    transform: scale(1.1);
-}
-
-/* Hover effects for step buttons only */
-#step-left:hover:not(:disabled),
-#step-right:hover:not(:disabled) {
-    background-color: var(--button-text-color, white);
-    color: var(--button-bg-color, #555);
-    border-color: var(--button-text-color, white);
-}
-
-/* Disabled state for step buttons */
-#step-left:disabled,
-#step-right:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background-color: #444;
-    color: #999;
-    border-color: #666;
-    transform: scale(0.95);
-    pointer-events: none;
 }
 
 #skill-search-toggle .skill-search-icon {
@@ -802,12 +816,6 @@ watch(skillSearchOpen, (open) => {
 
 #skill-search-toggle .skill-search-icon-svg {
     display: block;
-}
-
-#skill-search-toggle:hover {
-    background-color: white;
-    color: black;
-    border-color: black;
 }
 
 .skill-search-modal-overlay {

@@ -8,9 +8,12 @@ import {
     getIconSetForBackgroundColor,
     getContrastIconSet,
     getHighlightColor,
+    isLightForegroundHex,
     isExportedPalette,
     parsePaletteJson,
-    normalizePaletteColors
+    normalizePaletteColors,
+    contrastAnchorIconUrl,
+    parseCssColorToRgb,
 } from './colorUtils.mjs';
 
 describe('colorUtils', () => {
@@ -82,18 +85,34 @@ describe('colorUtils', () => {
             expect(dark.textColor).toBe('#ffffff');
             expect(dark.iconSet.variant).toBe('white');
             expect(dark.iconSet.url).toContain('icons8-url-16-black.png');
+            expect(dark.iconSet.back).toContain('icons8-back-16-black.png');
         });
         it('respects iconBase option', () => {
             const { iconSet } = getHighContrastForBackground('#ffffff', {
-                iconBase: '/static_content/icons'
+                iconBase: '/static_content/icons/anchors'
             });
-            expect(iconSet.url).toBe('/static_content/icons/icons8-url-16-black.png');
+            expect(iconSet.url).toBe('/static_content/icons/anchors/icons8-url-16-black.png');
+            expect(iconSet.back).toBe('/static_content/icons/anchors/icons8-back-16-black.png');
             expect(iconSet.variant).toBe('black');
         });
         it('matches getHighContrastMono on #6c79fb (comfort → white)', () => {
             const { textColor, iconSet } = getHighContrastForBackground('#6c79fb');
             expect(textColor).toBe('#ffffff');
             expect(iconSet.variant).toBe('white');
+            expect(iconSet.back).toContain('icons8-back-16-black.png');
+        });
+    });
+
+    describe('contrastAnchorIconUrl', () => {
+        it('returns white or black PNG path', () => {
+            expect(contrastAnchorIconUrl('/icons', 'back', 'white')).toBe('/icons/icons8-back-16-white.png');
+            expect(contrastAnchorIconUrl('/icons', 'back', 'black')).toBe('/icons/icons8-back-16-black.png');
+        });
+    });
+
+    describe('parseCssColorToRgb', () => {
+        it('parses rgb() strings', () => {
+            expect(parseCssColorToRgb('rgb(255, 128, 0)')).toEqual({ r: 255, g: 128, b: 0 });
         });
     });
 
@@ -151,6 +170,13 @@ describe('colorUtils', () => {
         });
         it('returns null when JSON is not an exported palette', () => {
             expect(parsePaletteJson('{"foo":1}')).toBeNull();
+        });
+    });
+
+    describe('isLightForegroundHex', () => {
+        it('returns true for white and false for black', () => {
+            expect(isLightForegroundHex('#ffffff')).toBe(true);
+            expect(isLightForegroundHex('#000000')).toBe(false);
         });
     });
 

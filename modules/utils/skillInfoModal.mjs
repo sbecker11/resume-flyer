@@ -18,6 +18,7 @@ import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency
 import { jobTenureMonthsInclusive, stripUnknownDatesFromTitle } from '@/modules/utils/dateUtils.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
+import { syncSkillCardBackLinkPresentation } from '@/modules/composables/useColorPalette.mjs';
 
 const MODAL_ID = 'skill-info-modal';
 const SKILL_BIZ_LINK_CLASS = 'skill-info-biz-link';
@@ -432,6 +433,19 @@ export function scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNumber, skillS
     requestAnimationFrame(tryScroll);
 }
 
+/** Persist which biz card the user last navigated to via a skill-card back arrow. */
+export function rememberSkillCardSourceBiz(skillCardId, bizCardId) {
+    if (!skillCardId || !bizCardId) return;
+    const el = document.getElementById(skillCardId);
+    if (el) el.setAttribute('data-source-biz-card-id', bizCardId);
+}
+
+/** @returns {string|null} */
+export function getRememberedSkillCardSourceBiz(skillCardId) {
+    if (!skillCardId) return null;
+    return document.getElementById(skillCardId)?.getAttribute('data-source-biz-card-id') || null;
+}
+
 /** Remove “source job” highlight from all biz-back-link controls (scene skill-card + resume skill-row). */
 export function clearSourceBizBackLinkClass() {
     document.querySelectorAll(`.biz-back-link.${SOURCE_BIZ_BACKLINK_CLASS}`).forEach((el) => {
@@ -448,6 +462,7 @@ export function clearSourceBizBackLinkClass() {
  */
 export function markSourceBizBackLinkForSkill(skillCardId, bizCardId) {
     if (!skillCardId || !bizCardId) return;
+    rememberSkillCardSourceBiz(skillCardId, bizCardId);
     clearSourceBizBackLinkClass();
     const escBiz = CSS.escape(String(bizCardId));
     const escSkillCard = CSS.escape(String(skillCardId));
@@ -463,10 +478,12 @@ export function markSourceBizBackLinkForSkill(skillCardId, bizCardId) {
             if (!cardEl || !cardEl.classList.contains('skill-card-div')) continue;
             const link = cardEl.querySelector(`.biz-back-link[data-biz-card-id="${escBiz}"]`);
             if (link) link.classList.add(SOURCE_BIZ_BACKLINK_CLASS);
+            syncSkillCardBackLinkPresentation(cardEl);
         }
         document.querySelectorAll(rowSelector).forEach((row) => {
             const link = row.querySelector(`.biz-back-link[data-biz-card-id="${escBiz}"]`);
             if (link) link.classList.add(SOURCE_BIZ_BACKLINK_CLASS);
+            syncSkillCardBackLinkPresentation(row);
         });
 
         const rows = document.querySelectorAll(rowSelector);

@@ -115,9 +115,11 @@ export function useParallaxEnhanced() {
     if (!cardDiv) return false
     if (isClone(cardDiv)) {
       return !cardDiv.classList.contains('clone-hidden')
+        && !cardDiv.classList.contains('scene-hidden-for-listing-clear')
     }
     if (hasClone(cardDiv)) return false
     if (cardDiv.classList.contains('force-hidden-for-clone')) return false
+    if (cardDiv.classList.contains('scene-hidden-for-listing-clear')) return false
     return true
   }
 

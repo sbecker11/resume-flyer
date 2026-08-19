@@ -4,7 +4,7 @@ import { useAppState } from './useAppState.ts';
 import { useAppStore } from '../stores/appStore.mjs';
 import { dragStateManager } from '../core/dragStateManager.mjs';
 
-const HANDLE_WIDTH = 20;
+const HANDLE_WIDTH = 28;
 const DEFAULT_WIDTH_PERCENT = 50;
 
 // Global singleton state for resize handle
@@ -99,7 +99,7 @@ function createResizeHandleState() {
         const windowWidth = window.innerWidth;
         
         // Calculate available width (excluding ResizeHandle)
-        const handleWidth = 20;
+        const handleWidth = HANDLE_WIDTH;
         const availableWidth = windowWidth - handleWidth;
         
         // Mouse coordinate handling depends on layout orientation
@@ -488,9 +488,9 @@ export function useResizeHandle() {
   const stepCount = computed(() => _resizeHandleState.stepCount.value);
 
   const scenePercentage = computed(() => {
-    // Calculate percentage based on available space (windowWidth - 20px resize handle)
+    // Calculate percentage based on available space (windowWidth - resize handle strip)
     const windowWidth = window.innerWidth;
-    const availableWidth = windowWidth - 20; // Subtract resize handle width
+    const availableWidth = windowWidth - HANDLE_WIDTH;
     const sceneWidth = sceneWidthInPixels.value;
     const rawPercentage = availableWidth > 0 ? (sceneWidth / availableWidth) * 100 : 0;
     const finalPercentage = Math.max(0, Math.min(100, rawPercentage));
@@ -577,7 +577,7 @@ export function useResizeHandle() {
   
   // Scene container style - account for ResizeHandle width
   const sceneContainerStyle = computed(() => {
-    const handleWidth = 20; // ResizeHandle width from AppState
+    const handleWidth = HANDLE_WIDTH;
     const availableWidth = windowWidth.value - handleWidth;
     const sceneWidthPixels = (scenePercentage.value / 100) * availableWidth;
     

@@ -109,6 +109,20 @@ describe('enrichedJobs', () => {
     expect(jobs[0].references).toHaveLength(2);
   });
 
+  it('treats [1.1.1] content-index tags as distinct jobs, not skills', () => {
+    const rawJobs = [{
+      index: 0,
+      employer: 'Spexture (Independent Consulting)',
+      outlineIndex: '1',
+      start: '11/2019',
+      end: 'CURRENT_DATE',
+      Description: '• Consulting blurb.\n• [1.1.1] resume-parser — Agentic parser',
+    }];
+    const jobs = enrichJobsWithSkills(rawJobs, {});
+    expect(jobs.map((j) => j.outlineIndex)).toEqual(['1', '1.1', '1.1.1']);
+    expect(jobs.find((j) => j.outlineIndex === '1.1.1')?.employer).toBe('resume-parser');
+  });
+
   it('detects unbracketed skill occurrences in description', () => {
     const rawJobs = [{ index: 0, Description: 'Used Python in production.' }];
     const skills = { Python: { url: 'https://python.org', img: '' } };
@@ -118,23 +132,46 @@ describe('enrichedJobs', () => {
     expect(jobs[0]['job-skills']).toHaveProperty('Python');
   });
 
-  it('enriches education-derived jobs the same way (educationKey + skills from Description)', () => {
+  it('does not scan education descriptions for skill names (certs/skills dumps stay off the degree card)', () => {
+    const rawJobs = [
+      new ResumeJob({
+        employer: 'Brigham Young University',
+        title: 'BS, Design Engineering Technology',
+        role: 'BS, Design Engineering Technology',
+        Description:
+          'Licenses & certifications • Scrum Master: 2024 • PyTorch: 2024 • Key skills • Machine Learning & AI: LangChain, Docker, Kubernetes',
+        educationKey: '2',
+      }),
+    ];
+    const skills = {
+      PyTorch: { url: '', img: '' },
+      Docker: { url: '', img: '' },
+      Kubernetes: { url: '', img: '' },
+      LangChain: { url: '', img: '' },
+    };
+    const jobs = enrichJobsWithSkills(rawJobs, skills);
+    expect(jobs[0].educationKey).toBe('2');
+    expect(jobs[0].isEducationDerived).toBe(true);
+    expect(jobs[0]['job-skills']).toEqual({});
+    expect(jobs[0].references).toEqual([]);
+  });
+
+  it('still applies explicit skillIDs on education-derived jobs', () => {
     const rawJobs = [
       new ResumeJob({
         employer: 'MIT',
-        title: 'MS',
-        role: 'MS',
+        title: 'PhD',
+        role: 'PhD',
         Description: 'Thesis on [Machine Learning].',
         educationKey: '0',
+        skillIDs: ['Machine Learning'],
       }),
     ];
     const skills = { 'Machine Learning': { url: 'https://example.com/ml', img: '' } };
     const jobs = enrichJobsWithSkills(rawJobs, skills);
-    expect(jobs[0]).toBeInstanceOf(ResumeJob);
     expect(jobs[0].educationKey).toBe('0');
-    expect(jobs[0].isEducationDerived).toBe(true);
     expect(jobs[0]['job-skills']).toHaveProperty('Machine Learning');
-    expect(jobs[0].references.length).toBeGreaterThan(0);
+    expect(jobs[0].references).toEqual([]);
   });
 
   it('sets durationMonths as inclusive calendar months from start to end', () => {

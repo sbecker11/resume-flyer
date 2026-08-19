@@ -6,6 +6,10 @@
  * and the clone is shown; only one should participate in tab order.
  */
 
+export const SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS = 'scene-hidden-for-listing-clear'
+export const RESUME_LISTING_CLEARED_EVENT = 'resume-listing-cleared'
+export const RESUME_LISTING_RESTORED_EVENT = 'resume-listing-restored'
+
 /**
  * @param {Element | null | undefined} el
  * @returns {boolean}
@@ -24,6 +28,7 @@ export function isVisibleSceneCardRoot(el) {
   if (!isSceneCardRootElement(el)) return false;
   if (el.classList.contains('force-hidden-for-clone')) return false;
   if (el.classList.contains('clone-hidden')) return false;
+  if (el.classList.contains(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS)) return false;
   if (typeof getComputedStyle === 'function') {
     const cs = getComputedStyle(el);
     if (cs.display === 'none') return false;
@@ -61,4 +66,43 @@ export function compareSceneCardsTopLeft(a, b) {
   const dy = ra.top - rb.top;
   if (Math.abs(dy) > 1) return dy;
   return ra.left - rb.left;
+}
+
+function resolveScenePlane(scenePlaneEl) {
+  if (scenePlaneEl?.querySelectorAll) return scenePlaneEl;
+  if (typeof document === 'undefined') return null;
+  return document.getElementById('scene-plane');
+}
+
+/**
+ * Hide every scene biz/skill card (originals and clones) while the resume listing is cleared.
+ * Geometry is unchanged; Load all removes this class.
+ * @param {ParentNode | null | undefined} [scenePlaneEl]
+ * @returns {number} cards hidden
+ */
+export function hideSceneCardsForListingClear(scenePlaneEl) {
+  const plane = resolveScenePlane(scenePlaneEl);
+  if (!plane) return 0;
+  const cards = plane.querySelectorAll('.biz-card-div, .skill-card-div');
+  cards.forEach((el) => {
+    el.classList.add(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS);
+    el.style.setProperty('display', 'none', 'important');
+  });
+  return cards.length;
+}
+
+/**
+ * Restore scene cards after Load all. Does not show selection clones (those stay clone-hidden).
+ * @param {ParentNode | null | undefined} [scenePlaneEl]
+ * @returns {number} cards restored
+ */
+export function showSceneCardsAfterListingRestore(scenePlaneEl) {
+  const plane = resolveScenePlane(scenePlaneEl);
+  if (!plane) return 0;
+  const cards = plane.querySelectorAll(`.${SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS}`);
+  cards.forEach((el) => {
+    el.classList.remove(SCENE_HIDDEN_FOR_LISTING_CLEAR_CLASS);
+    el.style.removeProperty('display');
+  });
+  return cards.length;
 }

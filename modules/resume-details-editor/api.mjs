@@ -71,7 +71,7 @@ async function apiJson(path, options = {}) {
 
 /**
  * @param {string} resumeId
- * @returns {Promise<{ id: string, displayName: string, createdAt?: string, fileName?: string, jobCount?: number, skillCount?: number }>}
+ * @returns {Promise<{ id: string, displayName: string, createdAt?: string, fileName?: string, originalPath?: string, parsedFolderPath?: string, jobCount?: number, skillCount?: number }>}
  */
 export async function getResumeMeta(resumeId) {
     if (hasServer()) {
@@ -102,7 +102,7 @@ export async function getResumeMeta(resumeId) {
 
 /**
  * @param {string} resumeId
- * @param {{ displayName?: string, fileName?: string }} updates
+ * @param {{ displayName?: string, fileName?: string, originalPath?: string }} updates
  * @returns {Promise<Object>}
  */
 export async function updateResumeMeta(resumeId, updates) {

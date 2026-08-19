@@ -160,6 +160,40 @@ export function getHighContrastMono(hex) {
     return ratioWhite >= ratioBlack ? '#ffffff' : '#000000';
 }
 
+/** True when a foreground/text hex reads as light (e.g. white on dark card backgrounds). */
+export function isLightForegroundHex(hex) {
+    const rgb = hexToRgb(formatHexDisplay(hex));
+    if (!rgb) return false;
+    return relativeLuminanceSrgb(rgb.r, rgb.g, rgb.b) > 0.5;
+}
+
+/** @param {string} color - hex or rgb()/rgba() from getComputedStyle */
+export function parseCssColorToRgb(color) {
+    if (!color || typeof color !== 'string') return null;
+    const hex = formatHexDisplay(color.trim());
+    if (/^#[0-9a-f]{6}$/.test(hex)) {
+        return hexToRgb(hex);
+    }
+    const m = color.match(/rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)/);
+    if (!m) return null;
+    return {
+        r: Math.round(Number(m[1])),
+        g: Math.round(Number(m[2])),
+        b: Math.round(Number(m[3])),
+    };
+}
+
+/**
+ * Contrast anchor icon path (black or white PNG matching text color).
+ * @param {string} iconBase - e.g. /static_content/icons/anchors
+ * @param {'url'|'back'|'img'} iconName
+ * @param {'black'|'white'} variant
+ */
+export function contrastAnchorIconUrl(iconBase, iconName, variant) {
+    const suffix = variant === 'white' ? 'white' : 'black';
+    return `${iconBase}/icons8-${iconName}-16-${suffix}.png`;
+}
+
 /**
  * @param {string} backgroundColorHex
  * @param {{ iconBase?: string }} [options]

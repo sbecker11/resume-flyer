@@ -1,0 +1,21 @@
+{
+  "summary": "",
+  "title": "",
+  "contact": {
+    "name": "Student Name",
+    "email": "firstname.lastname@gmail.com",
+    "phone": "512‐555‐1212",
+    "location": "",
+    "linkedin": "personalized link here",
+    "website": ""
+  },
+  "certifications": [],
+  "websites": [],
+  "custom_sections": [
+    {
+      "title": "AFFILIATIONS",
+      "subtitle": "",
+      "description": ""
+    }
+  ]
+}

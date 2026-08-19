@@ -2,6 +2,7 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { persistSelectedCard } from '../utils/selectionPersistence.mjs';
 import { reportError } from '../utils/errorReporting.mjs';
 import { scrollResumeListingElementIntoView } from '../utils/resumeListScroll.mjs';
+import { blurActivePanelScrollports } from '../utils/panelKeyboardScroll.mjs';
 
 // Selection Manager now handles high-level orchestration
 // It should directly manage the rDiv → cDiv synchronization flow
@@ -180,6 +181,7 @@ class SelectionManager {
             detail: { caller }
         }));
         console.debug('[SelectionManager] selection cleared');
+        blurActivePanelScrollports();
         this._persistSelection(null);
     }
 

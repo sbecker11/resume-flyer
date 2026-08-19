@@ -1,0 +1,1456 @@
+{
+  "ai": {
+    "name": "AI",
+    "url": "https://ai.google/",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "ml": {
+    "name": "ML",
+    "url": "https://ml.berkeley.edu/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "ai"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "devops": {
+    "name": "DevOps",
+    "url": "https://aws.amazon.com/devops/",
+    "img": "",
+    "categoryIDs": [
+      "devops"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "mlops": {
+    "name": "MLOps",
+    "url": "https://ml-ops.org/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-1": {
+    "name": "1.1.1",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "docx": {
+    "name": "DOCX",
+    "url": "https://www.ecma-international.org/publications-and-standards/standards/ecma-376/",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "pdf": {
+    "name": "PDF",
+    "url": "https://www.adobe.com/acrobat/about-adobe-pdf.html",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "json": {
+    "name": "JSON",
+    "url": "https://www.json.org/",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0,
+      1
+    ]
+  },
+  "1-1-2": {
+    "name": "1.1.2",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "react": {
+    "name": "React",
+    "url": "https://react.dev/",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "k-means-clustering": {
+    "name": "K-means clustering",
+    "url": "https://scikit-learn.org/stable/modules/clustering.html#k-means",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "ml"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "ciede2000": {
+    "name": "CIEDE2000",
+    "url": "https://en.wikipedia.org/wiki/Color_difference#CIEDE2000",
+    "img": "",
+    "categoryIDs": [
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-3": {
+    "name": "1.1.3",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "vue-3": {
+    "name": "Vue 3",
+    "url": "https://vuejs.org/",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "typescript": {
+    "name": "TypeScript",
+    "url": "https://www.typescriptlang.org/",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "vite": {
+    "name": "Vite",
+    "url": "https://vitejs.dev/",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "express-js": {
+    "name": "Express.js",
+    "url": "https://expressjs.com/",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-4": {
+    "name": "1.1.4",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "fastmcp": {
+    "name": "FastMCP",
+    "url": "https://github.com/jlowin/fastmcp",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "langchain": {
+    "name": "LangChain",
+    "url": "https://www.langchain.com/",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "lcel": {
+    "name": "LCEL",
+    "url": "https://python.langchain.com/docs/concepts/lcel/",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "chromadb": {
+    "name": "ChromaDB",
+    "url": "https://www.trychroma.com/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "vector-dbs"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "postgresql": {
+    "name": "PostgreSQL",
+    "url": "https://www.postgresql.org/",
+    "img": "",
+    "categoryIDs": [
+      "database"
+    ],
+    "jobIDs": [
+      0,
+      2,
+      4
+    ]
+  },
+  "1-1-5": {
+    "name": "1.1.5",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "dall-e-3": {
+    "name": "DALL·E 3",
+    "url": "https://openai.com/dall-e-3",
+    "img": "",
+    "categoryIDs": [
+      "ai"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "opencv": {
+    "name": "OpenCV",
+    "url": "https://opencv.org/",
+    "img": "",
+    "categoryIDs": [
+      "library",
+      "computer-vision"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-6": {
+    "name": "1.1.6",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "react-18": {
+    "name": "React 18",
+    "url": "https://react.dev/",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "jwt": {
+    "name": "JWT",
+    "url": "https://jwt.io/",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "bcrypt": {
+    "name": "bcrypt",
+    "url": "https://www.npmjs.com/package/bcrypt",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "rbac": {
+    "name": "RBAC",
+    "url": "https://en.wikipedia.org/wiki/Role-based_access_control",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "methodology"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-7": {
+    "name": "1.1.7",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "spring-boot": {
+    "name": "Spring Boot",
+    "url": "https://spring.io/projects/spring-boot",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "pgvector": {
+    "name": "pgvector",
+    "url": "https://github.com/pgvector/pgvector",
+    "img": "",
+    "categoryIDs": [
+      "database"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "huggingface": {
+    "name": "HuggingFace",
+    "url": "https://huggingface.co/",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "minilm": {
+    "name": "MiniLM",
+    "url": "https://huggingface.co/microsoft/MiniLM-L12-H384-uncased",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "ml"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "ecs-fargate": {
+    "name": "ECS Fargate",
+    "url": "https://aws.amazon.com/fargate/",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "devops"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-8": {
+    "name": "1.1.8",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "java-21": {
+    "name": "Java 21",
+    "url": "https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "spring-ai": {
+    "name": "Spring AI",
+    "url": "https://spring.io/projects/spring-ai",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "aurora-postgresql-serverless-v2": {
+    "name": "Aurora PostgreSQL Serverless v2",
+    "url": "https://aws.amazon.com/rds/aurora/serverless/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "cloud"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "bedrock": {
+    "name": "Bedrock",
+    "url": "https://aws.amazon.com/bedrock/",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "ai"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-9": {
+    "name": "1.1.9",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "langgraph": {
+    "name": "LangGraph",
+    "url": "https://www.langchain.com/langgraph",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "snowflake-cortex-search": {
+    "name": "Snowflake Cortex Search",
+    "url": "https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "mlflow": {
+    "name": "MLflow",
+    "url": "https://mlflow.org/",
+    "img": "",
+    "categoryIDs": [
+      "mlops",
+      "data-science"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "optuna": {
+    "name": "Optuna",
+    "url": "https://optuna.org/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "ml"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-1-10": {
+    "name": "1.1.10",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "launchd": {
+    "name": "launchd",
+    "url": "https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "devops"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "gmail": {
+    "name": "Gmail",
+    "url": "https://mail.google.com/",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-2-1": {
+    "name": "1.2.1",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "python": {
+    "name": "Python",
+    "url": "https://www.python.org/",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "rest-api": {
+    "name": "REST API",
+    "url": "https://restfulapi.net/",
+    "img": "",
+    "categoryIDs": [
+      "backend"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "jira": {
+    "name": "Jira",
+    "url": "https://www.atlassian.com/software/jira",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "methodology"
+    ],
+    "jobIDs": [
+      0,
+      1
+    ]
+  },
+  "agile": {
+    "name": "Agile",
+    "url": "https://agilemanifesto.org/",
+    "img": "",
+    "categoryIDs": [
+      "methodology"
+    ],
+    "jobIDs": [
+      0,
+      1
+    ]
+  },
+  "1-2-2": {
+    "name": "1.2.2",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "dbt": {
+    "name": "dbt",
+    "url": "https://www.getdbt.com/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "aws-glue": {
+    "name": "AWS Glue",
+    "url": "https://aws.amazon.com/glue/",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-pipelines"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "glue-crawler": {
+    "name": "Glue Crawler",
+    "url": "https://docs.aws.amazon.com/glue/latest/dg/add-crawler.html",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-pipelines"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "codecommit": {
+    "name": "CodeCommit",
+    "url": "https://aws.amazon.com/codecommit/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "codebuild": {
+    "name": "CodeBuild",
+    "url": "https://aws.amazon.com/codebuild/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "codepipeline": {
+    "name": "CodePipeline",
+    "url": "https://aws.amazon.com/codepipeline/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "codedeploy": {
+    "name": "CodeDeploy",
+    "url": "https://aws.amazon.com/codedeploy/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "cloudwatch": {
+    "name": "CloudWatch",
+    "url": "https://aws.amazon.com/cloudwatch/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "cloud"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-2-3": {
+    "name": "1.2.3",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "cyberark-pam": {
+    "name": "CyberArk PAM",
+    "url": "https://www.cyberark.com/products/privileged-access-manager/",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "devops"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "tls": {
+    "name": "TLS",
+    "url": "https://www.ietf.org/rfc/rfc5246.txt",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "kafka": {
+    "name": "Kafka",
+    "url": "https://kafka.apache.org/",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "data-pipelines"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "airflow": {
+    "name": "Airflow",
+    "url": "https://airflow.apache.org/",
+    "img": "",
+    "categoryIDs": [
+      "data-pipelines",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "xray": {
+    "name": "Xray",
+    "url": "https://aws.amazon.com/xray/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "ci-cd": {
+    "name": "CI/CD",
+    "url": "https://about.gitlab.com/topics/ci-cd/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "methodology"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-2-4": {
+    "name": "1.2.4",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "segment-cdp": {
+    "name": "Segment CDP",
+    "url": "https://segment.com/",
+    "img": "",
+    "categoryIDs": [
+      "tool",
+      "data-pipelines"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "salesforce": {
+    "name": "Salesforce",
+    "url": "https://www.salesforce.com/",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "shopify": {
+    "name": "Shopify",
+    "url": "https://www.shopify.com/",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "google-ads": {
+    "name": "Google Ads",
+    "url": "https://ads.google.com/",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "youtube": {
+    "name": "YouTube",
+    "url": "https://www.youtube.com/",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "gcp": {
+    "name": "GCP",
+    "url": "https://cloud.google.com/",
+    "img": "",
+    "categoryIDs": [
+      "cloud"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "bigquery": {
+    "name": "BigQuery",
+    "url": "https://cloud.google.com/bigquery",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "cloud"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "fastapi": {
+    "name": "FastAPI",
+    "url": "https://fastapi.tiangolo.com/",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "tableau": {
+    "name": "Tableau",
+    "url": "https://www.tableau.com/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "tool"
+    ],
+    "jobIDs": [
+      0,
+      1
+    ]
+  },
+  "1-2-5": {
+    "name": "1.2.5",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "pytorch": {
+    "name": "PyTorch",
+    "url": "https://pytorch.org/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "library",
+      "ml"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "cnn": {
+    "name": "CNN",
+    "url": "https://en.wikipedia.org/wiki/Convolutional_neural_network",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "ml"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "sagemaker": {
+    "name": "SageMaker",
+    "url": "https://aws.amazon.com/sagemaker/",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "mlops"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "looker": {
+    "name": "Looker",
+    "url": "https://cloud.google.com/looker",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "tool"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "snowflake": {
+    "name": "Snowflake",
+    "url": "https://www.snowflake.com/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "cloud"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-2-6": {
+    "name": "1.2.6",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "1-2-7": {
+    "name": "1.2.7",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      0
+    ]
+  },
+  "node-js": {
+    "name": "Node.js",
+    "url": "https://nodejs.org/",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "framework"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "vuetify": {
+    "name": "Vuetify",
+    "url": "https://vuetifyjs.com/",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "vuelidate": {
+    "name": "Vuelidate",
+    "url": "https://vuelidate-next.netlify.app/",
+    "img": "",
+    "categoryIDs": [
+      "frontend",
+      "library"
+    ],
+    "jobIDs": [
+      0
+    ]
+  },
+  "pyspark": {
+    "name": "PySpark",
+    "url": "https://spark.apache.org/docs/latest/api/python/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "library"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "aws-emr": {
+    "name": "AWS EMR",
+    "url": "https://aws.amazon.com/emr/",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-pipelines"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "kinesis": {
+    "name": "Kinesis",
+    "url": "https://aws.amazon.com/kinesis/",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "data-pipelines"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "rabbitmq": {
+    "name": "RabbitMQ",
+    "url": "https://www.rabbitmq.com/",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "parquet": {
+    "name": "Parquet",
+    "url": "https://parquet.apache.org/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "s3": {
+    "name": "S3",
+    "url": "https://aws.amazon.com/s3/",
+    "img": "",
+    "categoryIDs": [
+      "cloud",
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "redshift": {
+    "name": "Redshift",
+    "url": "https://aws.amazon.com/redshift/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "cloud"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "flyway": {
+    "name": "Flyway",
+    "url": "https://flywaydb.org/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "tool"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "scrum": {
+    "name": "Scrum",
+    "url": "https://www.scrum.org/",
+    "img": "",
+    "categoryIDs": [
+      "methodology"
+    ],
+    "jobIDs": [
+      1
+    ]
+  },
+  "java": {
+    "name": "Java",
+    "url": "https://www.java.com/",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "jsp": {
+    "name": "JSP",
+    "url": "https://www.oracle.com/java/technologies/jspt.html",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "frontend"
+    ],
+    "jobIDs": [
+      2,
+      4,
+      5
+    ]
+  },
+  "spring": {
+    "name": "Spring",
+    "url": "https://spring.io/",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "framework"
+    ],
+    "jobIDs": [
+      2,
+      3
+    ]
+  },
+  "dynamodb": {
+    "name": "DynamoDB",
+    "url": "https://aws.amazon.com/dynamodb/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "cloud"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "nlp": {
+    "name": "NLP",
+    "url": "https://en.wikipedia.org/wiki/Natural_language_processing",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "ai"
+    ],
+    "jobIDs": [
+      3
+    ]
+  },
+  "5-6": {
+    "name": "5.6",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      4
+    ]
+  },
+  "5-4": {
+    "name": "5.4",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      4
+    ]
+  },
+  "c": {
+    "name": "C++",
+    "url": "https://isocpp.org/",
+    "img": "",
+    "categoryIDs": [
+      "programming-language"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "5-3": {
+    "name": "5.3",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      4
+    ]
+  },
+  "filemaker": {
+    "name": "FileMaker",
+    "url": "https://www.claris.com/filemaker/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "5-2": {
+    "name": "5.2",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      4
+    ]
+  },
+  "sql-anywhere": {
+    "name": "SQL Anywhere",
+    "url": "https://www.sap.com/products/technology-platform/sql-anywhere.html",
+    "img": "",
+    "categoryIDs": [
+      "database"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "nservicebus": {
+    "name": "NServiceBus",
+    "url": "https://particular.net/nservicebus",
+    "img": "",
+    "categoryIDs": [
+      "backend",
+      "library"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "ms-mobile-5": {
+    "name": "MS Mobile 5",
+    "url": "https://en.wikipedia.org/wiki/Windows_Mobile_5",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "5-1": {
+    "name": "5.1",
+    "url": "",
+    "img": "",
+    "categoryIDs": [],
+    "jobIDs": [
+      4
+    ]
+  },
+  "windows-nt": {
+    "name": "Windows NT",
+    "url": "https://en.wikipedia.org/wiki/Windows_NT",
+    "img": "",
+    "categoryIDs": [
+      "tool"
+    ],
+    "jobIDs": [
+      4
+    ]
+  },
+  "oracle": {
+    "name": "Oracle",
+    "url": "https://www.oracle.com/",
+    "img": "",
+    "categoryIDs": [
+      "database"
+    ],
+    "jobIDs": [
+      5
+    ]
+  },
+  "ai-ml": {
+    "name": "AI/ML",
+    "url": "https://cloud.google.com/products/ai",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "data-science"
+    ],
+    "jobIDs": []
+  },
+  "genai": {
+    "name": "GenAI",
+    "url": "https://cloud.google.com/ai/generative-ai",
+    "img": "",
+    "categoryIDs": [
+      "ai"
+    ],
+    "jobIDs": []
+  },
+  "ai-agents": {
+    "name": "AI Agents",
+    "url": "https://en.wikipedia.org/wiki/Intelligent_agent",
+    "img": "",
+    "categoryIDs": [
+      "ai"
+    ],
+    "jobIDs": []
+  },
+  "computer-vision": {
+    "name": "Computer Vision",
+    "url": "https://opencv.org/",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "data-science"
+    ],
+    "jobIDs": []
+  },
+  "cnns": {
+    "name": "CNNs",
+    "url": "https://en.wikipedia.org/wiki/Convolutional_neural_network",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "ml"
+    ],
+    "jobIDs": []
+  },
+  "llm-apis-openai": {
+    "name": "LLM APIs OpenAI",
+    "url": "https://platform.openai.com/docs/overview",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "library"
+    ],
+    "jobIDs": []
+  },
+  "llm-apis-anthropic": {
+    "name": "LLM APIs Anthropic",
+    "url": "https://www.anthropic.com/api",
+    "img": "",
+    "categoryIDs": [
+      "ai",
+      "library"
+    ],
+    "jobIDs": []
+  },
+  "data-pipelines": {
+    "name": "Data Pipelines",
+    "url": "https://airflow.apache.org/",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "devops"
+    ],
+    "jobIDs": []
+  },
+  "vector-dbs-chromadb": {
+    "name": "Vector DBs ChromaDB",
+    "url": "https://www.trychroma.com/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "ai"
+    ],
+    "jobIDs": []
+  },
+  "vector-dbs-pinecone": {
+    "name": "Vector DBs Pinecone",
+    "url": "https://www.pinecone.io/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "ai"
+    ],
+    "jobIDs": []
+  },
+  "docker": {
+    "name": "Docker",
+    "url": "https://www.docker.com/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": []
+  },
+  "kubernetes": {
+    "name": "Kubernetes",
+    "url": "https://kubernetes.io/",
+    "img": "",
+    "categoryIDs": [
+      "devops",
+      "tool"
+    ],
+    "jobIDs": []
+  }
+}
