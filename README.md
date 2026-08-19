@@ -78,7 +78,7 @@ The folder **`color-palette-utils-ts/`** is a **vendored copy** of the package f
 
 **Fallback:** If S3 is unset or fails with no cache, the app uses the API manifest (with server) or **`static_content/color_palettes.jsonl`**.
 
-After cloning, build the vendor package once: `cd color-palette-utils-ts && npm install && npm run build`. Root `npm test` runs app tests plus `color-palette-utils-ts` tests. Historical migration notes: `docs/PALETTE-UTILS-TS-MIGRATION-PLAN.md`.
+After cloning, build the vendor package once: `cd color-palette-utils-ts && npm install && npm run build`. Root `npm test` runs app tests plus `color-palette-utils-ts` tests. Historical migration notes: `docs/PALETTE-UTILS-TS-MIGRATION-PLAN.md`. For the coverage threshold and how it's enforced in CI, see `docs/TESTING.md`.
 
 ## 📚 Framework Documentation
 

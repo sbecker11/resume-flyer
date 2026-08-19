@@ -34,6 +34,14 @@ Files that are **excluded from coverage** (and thus not subject to the 80% rule)
 
 To meet 80% for a new or currently excluded file, add it to the include set (remove from exclude), add unit tests until line coverage is ≥ 80%, then run `npm run test:coverage`.
 
+If a file genuinely can't reasonably reach 80% (e.g. it's Vue/DOM-heavy and would need a full component-mount/jsdom harness to unit-test meaningfully), add it to `coverage.exclude` in `vitest.config.js` instead, with a one-line comment explaining why — follow the existing pattern already there (e.g. `// DOM-heavy (getComputedStyle, getClientRects, skill-card classes).` above `skillCardContrastGuard.mjs`). Prefer writing tests over excluding; only exclude when the DOM/Vue setup cost clearly outweighs the coverage gained.
+
+### CI enforcement
+
+CI (`.github/workflows/ci.yml`, job `test`, step **"Run tests with coverage"**) runs `npm run test:coverage` instead of plain `npm test`, so a pull request or push that drops any included file below 80% lines fails the build (vitest exits non-zero on a `coverage.thresholds` miss). The step **"Upload coverage report"** attaches the `coverage/` directory (including `coverage/index.html`) as a downloadable build artifact on every run (`if: always()`) so you can inspect exactly which lines are missing without reproducing locally.
+
+CI does not need `.env` to be decrypted (see `docs/SECRETS.md`) — these tests are fully mocked and never call `ANTHROPIC_API_KEY`/AWS APIs for real.
+
 ## What is tested
 
 Unit tests exist for modules that can run in Node without a browser or Vue:
