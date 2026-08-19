@@ -35,5 +35,17 @@ jobs:
       # Unit tests are fully mocked (no ANTHROPIC_API_KEY / AWS secrets required).
       # If a future test needs a real key, add it as a repo secret and pass it
       # here via `env:` rather than committing it.
-      - name: Run tests
-        run: npm test
+      #
+      # test:coverage runs the same suite plus vitest's coverage.thresholds
+      # (perFile: true, lines: 80 — see vitest.config.js), which fails the
+      # build if any covered file's line coverage regresses below 80%.
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
