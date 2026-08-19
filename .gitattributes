@@ -1,1 +1,5 @@
 *.zip filter=lfs diff=lfs merge=lfs -text
+
+# git-crypt: .env is committed encrypted-at-rest. `git-crypt unlock <key>`
+# after cloning decrypts it in the working tree. See docs/SECRETS.md.
+.env filter=git-crypt diff=git-crypt
