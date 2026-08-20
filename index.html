@@ -8,6 +8,10 @@
         initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible"
         content="ie=edge"/>
+  <!-- App is dark-themed only (no light-mode support); this hint tells Chromium-based
+       browsers' auto-dark-mode ("force dark") heuristic to skip repainting our colors.
+       See docs/TROUBLESHOOTING.md for the issue this prevents. -->
+  <meta name="color-scheme" content="dark"/>
 
   <title>Resume Flyer (local)</title>
   <!-- Base-relative so GitHub Pages (VITE_BASE /repo/) resolves correctly; avoids /favicon.ico 404 at site root -->

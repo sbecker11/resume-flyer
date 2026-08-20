@@ -4,6 +4,10 @@ reference for the #main-container to occupy the full height of the viewPort.
 */
 
 :root {
+  /* Dark-only app; belt-and-suspenders alongside the <meta name="color-scheme"> tag
+     in index.html to opt out of Chromium's auto-dark-mode ("force dark") repaint.
+     See docs/TROUBLESHOOTING.md. */
+  color-scheme: dark;
   --background-light: rgba(24, 24, 111, 1.0); 
   --background-middle: rgba(100, 100, 100, 1.0); 
   --background-dark: rgba(0, 0, 77, 1.0); 
