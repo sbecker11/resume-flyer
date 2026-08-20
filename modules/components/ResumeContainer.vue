@@ -269,13 +269,22 @@ const paletteSaturationSliderModel = computed({
   set: (val) => setPaletteSaturationMultiplier(val)
 });
 
-/** Drag-to-move for the color-map modal; reused from Scene3DSettings' pointer-drag pattern. */
+/**
+ * Drag-to-move for the color-map modal; reused from Scene3DSettings' pointer-drag pattern.
+ * Unlike Scene3DSettings' modal (position: absolute; left/top: 50%, recentered via
+ * centerTransformStyle's translate(-50%, -50%)), this modal is centered by its overlay's
+ * flex `align-items/justify-content: center` (same as .palette-image-modal). It must NOT
+ * also apply a -50%/-50% transform on top of that — doing so double-centers it (shifts it
+ * up-left by half its own size), which is what pushed its header above the viewport on
+ * shorter screens once the saturation-slider row made the modal taller. So we read the raw
+ * `dragOffset` and build a plain translate(x, y) here instead of using centerTransformStyle.
+ */
 const paletteColorMapModalRef = ref(null);
 const {
+  dragOffset: paletteColorMapDragOffset,
   isDragging: isPaletteColorMapDragging,
   startPointerDrag: startPaletteColorMapDrag,
-  resetDragOffset: resetPaletteColorMapDragOffset,
-  centerTransformStyle: paletteColorMapTransformStyle
+  resetDragOffset: resetPaletteColorMapDragOffset
 } = usePointerDragOffset({
   getModalSize: () => {
     const el = paletteColorMapModalRef.value;
@@ -286,6 +295,9 @@ const {
     return { width: 332, height: 362 };
   }
 });
+const paletteColorMapTransformStyle = computed(() => ({
+  transform: `translate(${paletteColorMapDragOffset.value.x}px, ${paletteColorMapDragOffset.value.y}px)`
+}));
 /** Reset drag position each time the modal is (re)opened, rather than persisting it across close/reopen. */
 watch(showPaletteColorMapModal, (isOpen, wasOpen) => {
   if (isOpen && !wasOpen) {
@@ -1799,7 +1811,10 @@ function onResumeSkillCardClick(event) {
 .palette-colormap-saturation-input {
     flex: 1 1 auto;
     min-width: 0;
+    box-sizing: border-box;
     accent-color: #0088cc;
+    border: 1px solid #fff;
+    border-radius: 4px;
 }
 
 #resume-divs-sorting-container {
