@@ -1,8 +1,14 @@
 # resume-flyer
 
-<img src="https://raw.githubusercontent.com/sbecker11/resume-flyer/master/static_content/movie.gif" height="420" alt="resume-flyer demo animation">
+<!-- SUMMARY:START generated from workspace-linkedin-profile/Projects.json by scripts/build_readme_header.py; edit there -->
+Vue 3 + TypeScript + Vite SPA with an Express.js backend that parses an uploaded résumé (via resume-parser) into an interactive jobs × skills 3D card explorer.
 
-**Live app (GitHub Pages):** [https://sbecker11.github.io/resume-flyer/](https://sbecker11.github.io/resume-flyer/)
+**RunMe:** [https://sbecker11.github.io/resume-flyer/](https://sbecker11.github.io/resume-flyer/)
+
+**Skills:** Vue 3 · TypeScript · JavaScript · Vite · Node.js · Express.js · Python (Programming Language) · HTML · CSS · Full-Stack Development · 3D Data Visualization · Motion Parallax / Perspective Projection · WCAG Color Contrast · Vitest · GitHub Pages · Automated Software Testing (JUnit/Jest/Vitest/PyTest)
+<!-- SUMMARY:END -->
+
+<img src="https://raw.githubusercontent.com/sbecker11/resume-flyer/master/static_content/movie.gif" height="420" alt="resume-flyer demo animation">
 
 **resume-flyer** is an interactive resume explorer. Upload a DOCX or PDF resume and it is parsed into your employment experience, education, and technical skills. You explore them as **business cards** (one per job) and **skill cards** (one per skill) in 3D or as a chronological list. Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
 
