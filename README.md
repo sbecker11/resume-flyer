@@ -1,6 +1,6 @@
 # resume-flyer
 
-<img src="https://raw.githubusercontent.com/sbecker11/resume-flyer/master/static_content/movie.gif" height="420" alt="resume-flyer demo animation">
+<a href="https://sbecker11.github.io/resume-flyer/" target="_blank" rel="noopener noreferrer"><img src="docs/readme-still.png" height="420" alt="resume-flyer jobs and skills card explorer (click to open the live app)"></a>
 
 <!-- SUMMARY:START generated from workspace-linkedin-profile/Projects.json by scripts/build_readme_header.py; edit there -->
 Vue 3 + TypeScript + Vite SPA with an Express.js backend that parses an uploaded résumé (via resume-parser) into an interactive jobs × skills 3D card explorer.
