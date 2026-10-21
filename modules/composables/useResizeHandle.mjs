@@ -541,6 +541,12 @@ export function useResizeHandle() {
   }
 
   function startDrag(event) {
+    // The skill/job search dialog is rendered inside #resize-handle. A mousedown
+    // there must not start a column resize or cancel the text field's focus.
+    const target = event?.target;
+    if (target instanceof Element && target.closest('.skill-search-modal-overlay')) {
+      return;
+    }
     if (_resizeHandleState) {
       _resizeHandleState.isDragging.value = true;
       _resizeHandleState._lastMouseMoveTime = 0; // Reset timing

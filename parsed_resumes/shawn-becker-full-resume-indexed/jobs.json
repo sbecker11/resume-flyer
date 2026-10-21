@@ -15,7 +15,49 @@
     "skillIDs": [
       "ai-ml",
       "devops",
-      "mlops"
+      "mlops",
+      "agile",
+      "ai-agents",
+      "aurora-postgresql-serverless-v2",
+      "aws-glue",
+      "bedrock",
+      "chromadb",
+      "ci-cd",
+      "ciede2000",
+      "cloudwatch",
+      "cnns",
+      "docker",
+      "docx",
+      "genai",
+      "glue-crawler",
+      "gmail",
+      "java",
+      "java-21",
+      "huggingface",
+      "jira",
+      "json",
+      "k-means-clustering",
+      "langchain",
+      "langgraph",
+      "launchd",
+      "llm",
+      "llm-apis-anthropic",
+      "llm-apis-openai",
+      "nlp",
+      "node-js",
+      "pdf",
+      "pgvector",
+      "postgresql",
+      "python",
+      "rag",
+      "react",
+      "react-18",
+      "spring",
+      "spring-ai",
+      "spring-boot",
+      "typescript",
+      "vector-dbs-chromadb",
+      "youtube"
     ]
   },
   "1": {
@@ -50,7 +92,10 @@
     "skillIDs": [
       "docx",
       "pdf",
-      "json"
+      "json",
+      "agile",
+      "python",
+      "node-js"
     ]
   },
   "3": {
@@ -173,7 +218,8 @@
       "pgvector",
       "huggingface",
       "minilm",
-      "ecs-fargate"
+      "ecs-fargate",
+      "python"
     ]
   },
   "9": {
@@ -195,7 +241,14 @@
       "java-21",
       "spring-ai",
       "aurora-postgresql-serverless-v2",
-      "bedrock"
+      "bedrock",
+      "agile",
+      "chromadb",
+      "pgvector",
+      "typescript",
+      "spring",
+      "python",
+      "node-js"
     ]
   },
   "10": {
@@ -235,7 +288,14 @@
     "skillIDs": [
       "launchd",
       "gmail",
-      "llm"
+      "llm",
+      "agile",
+      "ci-cd",
+      "node-js",
+      "python",
+      "rag",
+      "pdf",
+      "postgresql"
     ]
   },
   "12": {
@@ -438,7 +498,8 @@
       "s3",
       "redshift",
       "flyway",
-      "scrum"
+      "scrum",
+      "python"
     ]
   },
   "21": {

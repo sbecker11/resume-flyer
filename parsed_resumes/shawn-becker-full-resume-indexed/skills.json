@@ -43,7 +43,8 @@
       "tool"
     ],
     "jobIDs": [
-      2
+      2,
+      0
     ]
   },
   "pdf": {
@@ -54,7 +55,9 @@
       "tool"
     ],
     "jobIDs": [
-      2
+      2,
+      0,
+      11
     ]
   },
   "json": {
@@ -67,7 +70,8 @@
     ],
     "jobIDs": [
       2,
-      20
+      20,
+      0
     ]
   },
   "react": {
@@ -80,7 +84,8 @@
     ],
     "jobIDs": [
       3,
-      5
+      5,
+      0
     ]
   },
   "k-means-clustering": {
@@ -92,7 +97,8 @@
       "methodology"
     ],
     "jobIDs": [
-      3
+      3,
+      0
     ]
   },
   "ciede2000": {
@@ -103,7 +109,8 @@
       "data-science"
     ],
     "jobIDs": [
-      3
+      3,
+      0
     ]
   },
   "vue-3": {
@@ -127,7 +134,9 @@
       "programming-language"
     ],
     "jobIDs": [
-      4
+      4,
+      0,
+      9
     ]
   },
   "vite": {
@@ -176,7 +185,8 @@
       "data-science"
     ],
     "jobIDs": [
-      5
+      5,
+      0
     ]
   },
   "lcel": {
@@ -202,7 +212,9 @@
     "jobIDs": [
       5,
       9,
-      10
+      10,
+      0,
+      11
     ]
   },
   "chromadb": {
@@ -214,7 +226,9 @@
       "data-science"
     ],
     "jobIDs": [
-      5
+      5,
+      0,
+      9
     ]
   },
   "postgresql": {
@@ -229,7 +243,9 @@
       7,
       18,
       21,
-      24
+      24,
+      0,
+      11
     ]
   },
   "dall-e-3": {
@@ -265,7 +281,8 @@
       "framework"
     ],
     "jobIDs": [
-      7
+      7,
+      0
     ]
   },
   "jwt": {
@@ -314,7 +331,8 @@
     ],
     "jobIDs": [
       8,
-      9
+      9,
+      0
     ]
   },
   "pgvector": {
@@ -326,7 +344,9 @@
       "data-science"
     ],
     "jobIDs": [
-      8
+      8,
+      0,
+      9
     ]
   },
   "huggingface": {
@@ -338,7 +358,8 @@
       "library"
     ],
     "jobIDs": [
-      8
+      8,
+      0
     ]
   },
   "minilm": {
@@ -373,7 +394,8 @@
       "programming-language"
     ],
     "jobIDs": [
-      9
+      9,
+      0
     ]
   },
   "spring-ai": {
@@ -385,7 +407,8 @@
       "data-science"
     ],
     "jobIDs": [
-      9
+      9,
+      0
     ]
   },
   "aurora-postgresql-serverless-v2": {
@@ -397,7 +420,8 @@
       "cloud"
     ],
     "jobIDs": [
-      9
+      9,
+      0
     ]
   },
   "bedrock": {
@@ -409,7 +433,8 @@
       "data-science"
     ],
     "jobIDs": [
-      9
+      9,
+      0
     ]
   },
   "langgraph": {
@@ -421,7 +446,8 @@
       "data-science"
     ],
     "jobIDs": [
-      10
+      10,
+      0
     ]
   },
   "snowflake-cortex-search": {
@@ -470,7 +496,8 @@
       "tool"
     ],
     "jobIDs": [
-      11
+      11,
+      0
     ]
   },
   "gmail": {
@@ -481,7 +508,8 @@
       "tool"
     ],
     "jobIDs": [
-      11
+      11,
+      0
     ]
   },
   "llm": {
@@ -493,7 +521,8 @@
       "methodology"
     ],
     "jobIDs": [
-      11
+      11,
+      0
     ]
   },
   "python": {
@@ -504,7 +533,13 @@
       "programming-language"
     ],
     "jobIDs": [
-      13
+      13,
+      0,
+      2,
+      8,
+      11,
+      9,
+      20
     ]
   },
   "rest-api": {
@@ -532,7 +567,8 @@
       15,
       17,
       19,
-      20
+      20,
+      0
     ]
   },
   "agile": {
@@ -548,7 +584,11 @@
       15,
       17,
       19,
-      20
+      20,
+      0,
+      2,
+      11,
+      9
     ]
   },
   "dbt": {
@@ -572,7 +612,8 @@
       "data-science"
     ],
     "jobIDs": [
-      14
+      14,
+      0
     ]
   },
   "glue-crawler": {
@@ -584,7 +625,8 @@
       "data-science"
     ],
     "jobIDs": [
-      14
+      14,
+      0
     ]
   },
   "codecommit": {
@@ -644,7 +686,8 @@
       "cloud"
     ],
     "jobIDs": [
-      14
+      14,
+      0
     ]
   },
   "cyberark-pam": {
@@ -718,7 +761,9 @@
       "methodology"
     ],
     "jobIDs": [
-      15
+      15,
+      0,
+      11
     ]
   },
   "segment-cdp": {
@@ -774,7 +819,8 @@
       "tool"
     ],
     "jobIDs": [
-      16
+      16,
+      0
     ]
   },
   "gcp": {
@@ -897,7 +943,11 @@
       "framework"
     ],
     "jobIDs": [
-      19
+      19,
+      0,
+      2,
+      11,
+      9
     ]
   },
   "vuetify": {
@@ -1044,7 +1094,8 @@
       22,
       24,
       26,
-      29
+      29,
+      0
     ]
   },
   "jsp": {
@@ -1072,7 +1123,9 @@
     ],
     "jobIDs": [
       21,
-      22
+      22,
+      0,
+      9
     ]
   },
   "dynamodb": {
@@ -1096,7 +1149,8 @@
       "methodology"
     ],
     "jobIDs": [
-      22
+      22,
+      0
     ]
   },
   "c": {
@@ -1198,7 +1252,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "ai-agents": {
     "name": "AI Agents",
@@ -1208,7 +1264,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "computer-vision": {
     "name": "Computer Vision",
@@ -1228,7 +1286,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "llm-apis-openai": {
     "name": "LLM APIs OpenAI",
@@ -1238,7 +1298,9 @@
       "data-science",
       "library"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "llm-apis-anthropic": {
     "name": "LLM APIs Anthropic",
@@ -1248,7 +1310,9 @@
       "data-science",
       "library"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "data-pipelines": {
     "name": "Data Pipelines",
@@ -1268,7 +1332,9 @@
       "database",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "vector-dbs-pinecone": {
     "name": "Vector DBs Pinecone",
@@ -1288,7 +1354,9 @@
       "devops",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "kubernetes": {
     "name": "Kubernetes",

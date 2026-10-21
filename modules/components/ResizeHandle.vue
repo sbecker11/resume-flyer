@@ -10,6 +10,12 @@ import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency
 import { usePointerDragOffset } from '@/modules/composables/usePointerDragOffset.mjs';
 import type { ResizeHandleProps, ResizeHandleEmits } from '@/modules/types/components';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import {
+  buildJobSearchOptions,
+  buildSkillSearchOptions,
+  canonicalSkillCardId,
+  filterSearchOptionsByQuery,
+} from '@/modules/utils/skillCardIdentity.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import Scene3DSettings from './Scene3DSettings.vue';
 
@@ -370,40 +376,12 @@ const filteredSearchOptions = computed<SearchOption[]>(() => {
   const q = skillSearchQuery.value.trim().toLowerCase();
   if (searchMode.value === 'skill') {
     const skillsData = getGlobalJobsDependency().getSkillsData() || {};
-    const cards = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]'));
-    const options = cards
-      .map((el) => {
-        const slug = String(el.getAttribute('data-skill-name') || '').trim();
-        if (!slug || !el.id) return null;
-        const display = skillsData[slug]?.name || slug;
-        return { kind: 'skill', id: el.id, label: display, sublabel: slug } as SkillSearchOption;
-      })
-      .filter((v): v is SkillSearchOption => Boolean(v))
-      .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
-    if (!q) return options;
-    return options.filter((opt) =>
-      opt.label.toLowerCase().includes(q) || opt.sublabel.toLowerCase().includes(q)
-    );
+    const cards = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]:not(.clone)'));
+    return filterSearchOptionsByQuery(buildSkillSearchOptions(cards, skillsData), q);
   }
 
   const cards = Array.from(document.querySelectorAll('.biz-card-div[id^="biz-card-div-"]:not(.clone)'));
-  const options = cards
-    .map((el) => {
-      const rawJob = String(el.getAttribute('data-job-number') || '').trim();
-      const jobNumber = Number.parseInt(rawJob, 10);
-      if (!Number.isFinite(jobNumber)) return null;
-      const employer = String(el.getAttribute('data-employer') || '').trim();
-      const role = String(el.getAttribute('data-role') || '').trim();
-      const label = employer || `Job ${jobNumber}`;
-      const sublabel = role || 'Job';
-      return { kind: 'job', id: jobNumber, label, sublabel } as JobSearchOption;
-    })
-    .filter((v): v is JobSearchOption => Boolean(v))
-    .sort((a, b) => a.id - b.id);
-  if (!q) return options;
-  return options.filter((opt) =>
-    opt.label.toLowerCase().includes(q) || opt.sublabel.toLowerCase().includes(q)
-  );
+  return filterSearchOptionsByQuery(buildJobSearchOptions(cards), q);
 });
 
 function openSkillSearch(event: MouseEvent): void {
@@ -431,8 +409,10 @@ function selectSearchResult(option: SearchOption): void {
   const sm = selectionManager || (window as any)?.resumeFlyer?.selectionManager;
   if (!sm?.selectCard) return;
   if (option.kind === 'skill') {
-    sm.selectCard({ type: 'skill', skillCardId: option.id }, 'ResizeHandle.skillSearch');
-    const sceneEl = document.getElementById(option.id);
+    const skillCardId = canonicalSkillCardId(option.id);
+    if (!skillCardId) return;
+    sm.selectCard({ type: 'skill', skillCardId }, 'ResizeHandle.skillSearch');
+    const sceneEl = document.getElementById(skillCardId) || document.getElementById(`${skillCardId}-clone`);
     if (sceneEl) sceneEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
   } else {
     sm.selectCard({ type: 'biz', jobNumber: option.id }, 'ResizeHandle.jobSearch');
@@ -551,6 +531,7 @@ watch(skillSearchOpen, (open) => {
           v-if="skillSearchOpen"
           class="skill-search-modal-overlay"
           @pointerdown.stop.prevent
+          @mousedown.stop
           @click.self="onSkillSearchOverlayClick"
         >
           <div
@@ -561,6 +542,7 @@ watch(skillSearchOpen, (open) => {
             aria-label="Skill search"
             :style="skillSearchTransformStyle"
             @pointerdown.stop
+            @mousedown.stop
             @click.stop
           >
             <div

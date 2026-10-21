@@ -88,7 +88,7 @@ function buildSkillListHTML(entries) {
     const skillsData = getGlobalJobsDependency().getSkillsData()
     const spans = entries.map(({ skillKey, displayName }) => {
         const skill = skillsData[skillKey]
-        const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(skillKey)}"]`)
+        const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(skillKey)}"]:not(.clone)`)
         const idAttr = cardEl ? ` data-skill-card-id="${cardEl.id}"` : ''
         const ariaLabel = `View skill: ${skillLabelText(skillKey, skill)}`
         const innerHtml = skillLabelHtml(skillKey, skill)
@@ -539,7 +539,7 @@ class ResumeItemsController {
                         return escapeHtml(skillObj?.name || entry.slug);
                     }
                     renderedInDesc.add(entry.slug);
-                    const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(entry.slug)}"]`);
+                    const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(entry.slug)}"]:not(.clone)`);
                     const idAttr = cardEl ? ` data-skill-card-id="${cardEl.id}"` : '';
                     const ariaLabel = `View skill: ${skillLabelText(entry.slug, skillObj)}`;
                     return `<span class="biz-card-skill-title" tabindex="0" role="link" aria-label="${escapeHtml(ariaLabel)}" data-skill-name="${escapeHtml(entry.slug)}"${idAttr}>${skillLabelHtml(entry.slug, skillObj)}</span>`;
@@ -733,7 +733,7 @@ class ResumeItemsController {
             if (skillName) {
                 try {
                     const esc = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(skillName) : String(skillName).replace(/"/g, '\\"');
-                    const exact = document.querySelector(`.skill-card-div[data-skill-name="${esc}"]`);
+                    const exact = document.querySelector(`.skill-card-div[data-skill-name="${esc}"]:not(.clone)`);
                     skillCardId = exact?.id || null;
                 } catch (_) {}
 
@@ -744,7 +744,7 @@ class ResumeItemsController {
                         .replace(/[^a-z0-9]+/g, '')
                         .trim();
                     const targetNorm = normalize(skillName);
-                    const all = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]'));
+                    const all = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]:not(.clone)'));
                     const found = all.find(el => normalize(el.getAttribute('data-skill-name')) === targetNorm);
                     skillCardId = found?.id || null;
                 }

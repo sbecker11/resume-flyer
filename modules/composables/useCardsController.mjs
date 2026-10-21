@@ -35,6 +35,7 @@ import {
 } from '@/modules/utils/sceneCardVisibility.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
 import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
+import { skillCardIdBySlugFromElements, totalYearsFromDurationMonths } from '@/modules/utils/skillCardIdentity.mjs'
 import {
     renderSkillCardSceneInnerHtml,
     renderBizCardSceneBodyHtml,
@@ -188,10 +189,9 @@ export function useCardsController() {
                 if (!job) return
                 const container = card.querySelector('.biz-card-skill-titles')
                 if (!container) return
-                const liveMap = Object.create(null)
-                document.querySelectorAll('.skill-card-div[data-skill-name]').forEach(el => {
-                    liveMap[el.getAttribute('data-skill-name')] = el.id
-                })
+                const liveMap = skillCardIdBySlugFromElements(
+                    document.querySelectorAll('.skill-card-div[data-skill-name]')
+                )
                 const descriptionSlugs = new Set(Object.keys(job['job-skills'] || {}))
                 const entries = orderedSkillEntriesForBizCard(job, liveMap, descriptionSlugs)
                 if (entries.length) {
@@ -1099,14 +1099,10 @@ export function useCardsController() {
         skillCard.style.zIndex = String(skillZIndex)
 
         // Sum durationMonths across referencing jobs → ceiling to whole years
-        let totalMonths = 0
-        if (Array.isArray(referencingJobIndices) && Array.isArray(jobsData)) {
-            for (const idx of referencingJobIndices) {
-                const n = jobsData[idx]?.durationMonths
-                if (typeof n === 'number' && Number.isFinite(n) && n > 0) totalMonths += n
-            }
-        }
-        const totalYears = totalMonths > 0 ? Math.ceil(totalMonths / 12) : 0
+        const referencingJobs = (Array.isArray(referencingJobIndices) && Array.isArray(jobsData))
+            ? referencingJobIndices.map((idx) => jobsData[idx])
+            : []
+        const totalYears = totalYearsFromDurationMonths(referencingJobs)
         if (totalYears > 0) skillCard.setAttribute('data-total-years-experience', String(totalYears))
 
         const width = MEAN_CARD_WIDTH + 2 * CARD_BORDER_WIDTH
@@ -2317,10 +2313,9 @@ export function useCardsController() {
                     card.removeAttribute('data-skill-card-ids')
                 } else {
                     // Build a live skillCardIdsByName from the DOM (skill cards already in scene)
-                    const liveMap = Object.create(null)
-                    document.querySelectorAll('.skill-card-div[data-skill-name]').forEach(el => {
-                        liveMap[el.getAttribute('data-skill-name')] = el.id
-                    })
+                    const liveMap = skillCardIdBySlugFromElements(
+                        document.querySelectorAll('.skill-card-div[data-skill-name]')
+                    )
                     // Merge event data with live job data so skillIDs ordering is respected
                     const liveJob = getGlobalJobsDependency().getJobsData()[jobIndex] || {}
                     const jobLike = {
@@ -2350,7 +2345,7 @@ export function useCardsController() {
         const added = (skillIDs || []).filter(s => !(oldSkillIDs || []).includes(s))
         for (const sid of removed) {
             const skillName = (jobSkills && jobSkills[sid]) || sid
-            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]`)
+            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]:not(.clone)`)
             if (skillCardEl) {
                 const ids = (skillCardEl.getAttribute('data-referencing-biz-card-ids') || '')
                     .split(',').filter(id => id && id !== bizCardId)
@@ -2359,7 +2354,7 @@ export function useCardsController() {
         }
         for (const sid of added) {
             const skillName = (jobSkills && jobSkills[sid]) || sid
-            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]`)
+            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]:not(.clone)`)
             if (skillCardEl) {
                 const existing = (skillCardEl.getAttribute('data-referencing-biz-card-ids') || '')
                     .split(',').filter(Boolean)

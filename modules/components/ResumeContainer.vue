@@ -6,7 +6,12 @@ import { useColorPalette } from '@/modules/composables/useColorPalette.mjs';
 import { applyPaletteToElement, syncSkillCardBackLinkPresentation } from '@/modules/composables/useColorPalette.mjs';
 import { useResizeHandle } from '@/modules/composables/useResizeHandle.mjs';
 import { useResumeListController } from '@/modules/core/globalServices';
-import { tryParseFlexibleDateString } from '@/modules/utils/dateUtils.mjs';
+import {
+  canonicalSkillCardId,
+  findExistingResumeSkillCopy,
+  resolveSceneSkillCardElement,
+  resumeSkillYearsMatchingScene,
+} from '@/modules/utils/skillCardIdentity.mjs';
 import { listResumes, getResumeOtherSections, getResumeEducation, getResumeData } from '@/modules/api/resumeManagerApi.mjs';
 import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
@@ -430,7 +435,8 @@ function selectPrevious() {
   }
 }
 
-// Resume-view skill card (resume-flyer): one card with back links to referencing biz cards and total years (sum of months rounded up)
+// Resume-view skill card: one card per skill. Years match the scene card
+// (data-total-years-experience, else inclusive durationMonths).
 const selectedCardSnapshot = ref(null);
 /** When true, the skill card is removed from the resume listing container (hidden) until selection changes. */
 const resumeSkillCardDismissed = ref(false);
@@ -459,35 +465,30 @@ function syncSkillResumeDivSelection() {
     syncSkillCardBackLinkPresentation(el);
   });
 }
-/** Months of experience for one job (for summing). */
-function getMonthsExperience(job) {
-  if (!job?.start) return 0;
-  const start = tryParseFlexibleDateString(job.start);
-  const end = (job.end === 'CURRENT_DATE' || !job.end)
-    ? new Date()
-    : tryParseFlexibleDateString(job.end);
-  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
-  return (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+function referencingJobsFromBizCardIds(idsStr) {
+  if (!idsStr) return { referencingJobNumbers: [], jobs: [] };
+  const bizCardIds = idsStr.split(',').map(s => s.trim()).filter(Boolean);
+  const referencingJobNumbers = [];
+  const jobs = [];
+  const jobsList = getGlobalJobsDependency().getJobsData();
+  for (const bizCardId of bizCardIds) {
+    const bizEl = document.getElementById(bizCardId) || document.querySelector(`[id="${bizCardId}"]`);
+    const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN;
+    if (Number.isNaN(jobNum) || jobNum < 0 || !Array.isArray(jobsList) || jobNum >= jobsList.length) continue;
+    referencingJobNumbers.push(jobNum);
+    jobs.push(jobsList[jobNum]);
+  }
+  return { referencingJobNumbers, jobs };
 }
 const selectedSkillCard = computed(() => {
   const card = selectedCardSnapshot.value;
   if (card?.type !== 'skill' || typeof card.skillCardId !== 'string') return null;
-  const el = document.getElementById(card.skillCardId) || document.getElementById(`${card.skillCardId}-clone`);
+  const el = resolveSceneSkillCardElement(card.skillCardId);
   const skillName = el?.getAttribute('data-skill-name') ?? '';
   const idsStr = el?.getAttribute('data-referencing-biz-card-ids');
   if (!idsStr) return { skillName, referencingJobNumbers: [], totalYearsExperience: 0 };
-  const bizCardIds = idsStr.split(',').map(s => s.trim()).filter(Boolean);
-  const referencingJobNumbers = [];
-  let totalMonths = 0;
-  for (const bizCardId of bizCardIds) {
-    const bizEl = document.getElementById(bizCardId);
-    const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN;
-    const jobsList = getGlobalJobsDependency().getJobsData();
-    if (Number.isNaN(jobNum) || jobNum < 0 || jobNum >= jobsList.length) continue;
-    referencingJobNumbers.push(jobNum);
-    totalMonths += getMonthsExperience(jobsList[jobNum]);
-  }
-  const totalYearsExperience = totalMonths <= 0 ? 0 : Math.ceil(totalMonths / 12);
+  const { referencingJobNumbers, jobs } = referencingJobsFromBizCardIds(idsStr);
+  const totalYearsExperience = resumeSkillYearsMatchingScene(el, jobs);
   return { skillName, referencingJobNumbers, totalYearsExperience };
 });
 /** Red X: remove the skill card from the resume listing container (hide it); does not clear scene selection. */
@@ -648,17 +649,22 @@ function scrollResumeSkillCardIntoView() {
   });
 }
 
-/** Get skill card data from the scene DOM element (by skillCardId). Tries getElementById, querySelector, and inside #scene-plane. */
+/** Get skill card data from the canonical scene card (never the hidden clone). */
 function getSkillCardDataFromId(skillCardId) {
-  let el = document.getElementById(skillCardId) || document.getElementById(`${skillCardId}-clone`);
-  if (!el) {
-    el = document.querySelector(`[id="${skillCardId}"], [id="${skillCardId}-clone"]`);
+  const canonicalId = canonicalSkillCardId(skillCardId);
+  let el = resolveSceneSkillCardElement(canonicalId || skillCardId);
+  if (!el && canonicalId) {
+    el = document.querySelector(`[id="${canonicalId}"], [id="${canonicalId}-clone"]`);
   }
-  if (!el) {
+  if (!el && canonicalId) {
     const scenePlane = document.getElementById('scene-plane');
     if (scenePlane) {
-      el = scenePlane.querySelector(`[id="${skillCardId}"], [id="${skillCardId}-clone"]`) || scenePlane.querySelector(`.skill-card-div[id="${skillCardId}"], .skill-card-div[id="${skillCardId}-clone"]`);
+      el = scenePlane.querySelector(`[id="${canonicalId}"], [id="${canonicalId}-clone"]`) || scenePlane.querySelector(`.skill-card-div[id="${canonicalId}"], .skill-card-div[id="${canonicalId}-clone"]`);
     }
+  }
+  if (el?.classList?.contains('clone') && canonicalId) {
+    const original = document.getElementById(canonicalId);
+    if (original && !original.classList.contains('clone')) el = original;
   }
   if (!el) return null;
   let skillName = el.getAttribute('data-skill-name') ?? '';
@@ -667,19 +673,9 @@ function getSkillCardDataFromId(skillCardId) {
     if (label) skillName = (label.textContent || '').trim();
   }
   const idsStr = el.getAttribute('data-referencing-biz-card-ids');
-  if (!idsStr) return { skillName, referencingJobNumbers: [], totalYearsExperience: 0 };
-  const bizCardIds = idsStr.split(',').map(s => s.trim()).filter(Boolean);
-  const referencingJobNumbers = [];
-  let totalMonths = 0;
-  for (const bizCardId of bizCardIds) {
-    const bizEl = document.getElementById(bizCardId) || document.querySelector(`[id="${bizCardId}"]`);
-    const jobNum = bizEl != null ? parseInt(bizEl.getAttribute('data-job-number'), 10) : NaN;
-    const jobsList = getGlobalJobsDependency().getJobsData();
-    if (Number.isNaN(jobNum) || jobNum < 0 || jobNum >= jobsList.length) continue;
-    referencingJobNumbers.push(jobNum);
-    totalMonths += getMonthsExperience(jobsList[jobNum]);
-  }
-  const totalYearsExperience = totalMonths <= 0 ? 0 : Math.ceil(totalMonths / 12);
+  if (!idsStr) return { skillName, referencingJobNumbers: [], totalYearsExperience: resumeSkillYearsMatchingScene(el, []) };
+  const { referencingJobNumbers, jobs } = referencingJobsFromBizCardIds(idsStr);
+  const totalYearsExperience = resumeSkillYearsMatchingScene(el, jobs);
   return { skillName, referencingJobNumbers, totalYearsExperience };
 }
 
@@ -690,6 +686,8 @@ const APPEND_DEBOUNCE_MS = 500;
 
 /** Append a copy of the selected skill card (skillDiv) to the end of the resume listing and scroll it into view. If a copy is already in the list, only scroll it into view. Returns true if a new copy was appended, false if only scrolled to existing. */
 function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
+  skillCardId = canonicalSkillCardId(skillCardId);
+  if (!skillCardId) return false;
   const data = getSkillCardDataFromId(skillCardId);
   if (!data) {
     if (retryCount < 2) {
@@ -714,7 +712,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     return false;
   }
   const list = (scroller && scroller.contentHolder) ? scroller.contentHolder : appendTarget;
-  const existingCopy = list.querySelector(`.appended-skill-resume-div[data-skill-card-id="${skillCardId}"]`);
+  const existingCopy = findExistingResumeSkillCopy(list, skillCardId, data.skillName);
   if (existingCopy) {
     const scrollport = document.getElementById('resume-content-listing');
     scrollResumeListingElementIntoView(existingCopy, scrollport, { behavior: 'smooth' });
@@ -734,6 +732,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   copy.className = 'skill-resume-div appended-skill-resume-div';
   copy.setAttribute('data-color-index', String(colorIndex));
   if (skillCardId) copy.setAttribute('data-skill-card-id', skillCardId);
+  if (data.skillName) copy.setAttribute('data-skill-name', data.skillName);
   const skillSlug = data.skillName;
   const skillObj = getGlobalJobsDependency().getSkillsData()[skillSlug];
   copy.innerHTML = renderSkillCardResumeInnerHtml({
