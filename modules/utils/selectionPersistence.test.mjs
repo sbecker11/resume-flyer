@@ -38,20 +38,29 @@ describe('selectionPersistence', () => {
             expect(getPersistedSelectedCard()).toBe(null);
         });
 
-        it('returns null when user-settings.selectedCard is missing', () => {
+        it('returns null when selection refs are missing', () => {
             mockAppStateValue = { 'user-settings': {} };
             expect(getPersistedSelectedCard()).toBe(null);
         });
 
-        it('returns null when selectedCard has no type', () => {
-            mockAppStateValue = { 'user-settings': { selectedCard: { jobNumber: 1 } } };
+        it('returns null when selectedBizCard has no card-id', () => {
+            mockAppStateValue = { 'user-settings': { selectedBizCard: { jobNumber: 1 } } };
             expect(getPersistedSelectedCard()).toBe(null);
         });
 
-        it('returns the persisted card when valid', () => {
-            const card = { type: 'biz', jobNumber: 2 };
-            mockAppStateValue = { 'user-settings': { selectedCard: card } };
-            expect(getPersistedSelectedCard()).toEqual(card);
+        it('returns the biz card when both refs are stored', () => {
+            mockAppStateValue = {
+                'user-settings': {
+                    selectedBizCard: { 'card-id': 20 },
+                    selectedSkillCard: { 'card-id': 35 },
+                },
+            };
+            expect(getPersistedSelectedCard()).toEqual({ type: 'biz', jobNumber: 20 });
+        });
+
+        it('returns the skill card when only a skill ref is stored', () => {
+            mockAppStateValue = { 'user-settings': { selectedSkillCard: { 'card-id': 35 } } };
+            expect(getPersistedSelectedCard()).toEqual({ type: 'skill', skillCardId: 'skill-card-div-35' });
         });
     });
 
@@ -130,15 +139,25 @@ describe('selectionPersistence', () => {
     });
 
     describe('persistSelectedCard', () => {
-        it('calls updateAppState with the given card', async () => {
-            const card = { type: 'skill', skillCardId: 'skill-java' };
-            await persistSelectedCard(card);
-            expect(mockUpdateAppState).toHaveBeenCalledWith({ 'user-settings': { selectedCard: card } }, true);
+        it('stores a skill card id without clearing the biz card', async () => {
+            await persistSelectedCard({ type: 'skill', skillCardId: 'skill-card-div-35' });
+            expect(mockUpdateAppState).toHaveBeenCalledWith({
+                'user-settings': { selectedSkillCard: { 'card-id': 35 } },
+            }, true);
         });
 
-        it('calls updateAppState with null to clear selection', async () => {
+        it('stores a biz card id without clearing the skill card', async () => {
+            await persistSelectedCard({ type: 'biz', jobNumber: 20 });
+            expect(mockUpdateAppState).toHaveBeenCalledWith({
+                'user-settings': { selectedBizCard: { 'card-id': 20 } },
+            }, true);
+        });
+
+        it('clears both selection refs', async () => {
             await persistSelectedCard(null);
-            expect(mockUpdateAppState).toHaveBeenCalledWith({ 'user-settings': { selectedCard: null } }, true);
+            expect(mockUpdateAppState).toHaveBeenCalledWith({
+                'user-settings': { selectedBizCard: null, selectedSkillCard: null },
+            }, true);
         });
 
         it('reports and rethrows when updateAppState fails', async () => {

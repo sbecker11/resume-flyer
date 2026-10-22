@@ -466,7 +466,7 @@ async function restoreOrSelectFirstCardWhenReady() {
     try {
       await persistSelectedCard(null)
     } catch (e) {
-      reportError(e, '[AppContent] Failed to clear invalid persisted selectedCard')
+      reportError(e, '[AppContent] Failed to clear invalid persisted selection')
     }
   }
 
@@ -593,7 +593,8 @@ async function handleResumeSelected(resumeId) {
     await updateAppState({
       'user-settings': {
         currentResumeId: resumeId || 'default',
-        selectedCard: null,
+        selectedBizCard: null,
+        selectedSkillCard: null,
       },
     }, true)
     console.log('[AppContent] ✅ currentResumeId persisted:', resumeId || 'default')

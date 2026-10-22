@@ -211,6 +211,24 @@ export function validateIsPlainObject(obj) {
  * @param {object} source - The source object to merge from.
  * @returns {object} The merged object.
  */
+/**
+ * Persisted selection is one card. Drop the other card's id so a biz selection
+ * cannot keep a previous skillCardId (or the reverse) after a deep merge.
+ * @param {object|null|undefined} card
+ * @returns {object|null|undefined}
+ */
+export function canonicalSelectedCard(card) {
+    if (card == null) return card ?? null;
+    if (typeof card !== 'object') return card;
+    if (card.type === 'biz' && Number.isInteger(card.jobNumber) && card.jobNumber >= 0) {
+        return { type: 'biz', jobNumber: card.jobNumber };
+    }
+    if (card.type === 'skill' && typeof card.skillCardId === 'string' && card.skillCardId) {
+        return { type: 'skill', skillCardId: card.skillCardId };
+    }
+    return card;
+}
+
 export function deepMerge(target, source) {
     if (!isPlainObject(target)) {
         return isPlainObject(source) ? { ...source } : (source !== undefined ? source : target);

@@ -6,14 +6,46 @@ import { reportError } from './errorReporting.mjs';
  */
 
 /**
- * Read persisted selection from user-settings (via useAppState singleton).
+ * @param {unknown} stored
+ * @returns {number | null}
+ */
+export function persistedCardId(stored) {
+    const id = stored && typeof stored === 'object' ? stored['card-id'] : null;
+    if (typeof id !== 'number' || !Number.isInteger(id) || id < 0) return null;
+    return id;
+}
+
+/**
+ * @param {unknown} stored
+ * @returns {PersistedSelectedCard | null}
+ */
+export function runtimeCardFromBizRef(stored) {
+    const id = persistedCardId(stored);
+    if (id == null) return null;
+    return { type: 'biz', jobNumber: id };
+}
+
+/**
+ * @param {unknown} stored
+ * @returns {PersistedSelectedCard | null}
+ */
+export function runtimeCardFromSkillRef(stored) {
+    const id = persistedCardId(stored);
+    if (id == null) return null;
+    return { type: 'skill', skillCardId: `skill-card-div-${id}` };
+}
+
+/**
+ * Read the card to restore. A stored biz card wins when both are present so the
+ * job selection stays active; selectedSkillCard remains in app state either way.
  * @returns {PersistedSelectedCard | null}
  */
 export function getPersistedSelectedCard() {
     const { appState } = useAppState();
-    const card = appState.value?.['user-settings']?.selectedCard;
-    if (!card || typeof card !== 'object' || !card.type) return null;
-    return card;
+    const settings = appState.value?.['user-settings'];
+    return runtimeCardFromBizRef(settings?.selectedBizCard)
+        || runtimeCardFromSkillRef(settings?.selectedSkillCard)
+        || null;
 }
 
 /**
@@ -52,9 +84,34 @@ export function validatePersistedSelectedCard(card, jobsData) {
 export async function persistSelectedCard(card) {
     try {
         const { updateAppState } = useAppState();
-        await updateAppState({ 'user-settings': { selectedCard: card } }, true);
+        if (card == null) {
+            await updateAppState({
+                'user-settings': { selectedBizCard: null, selectedSkillCard: null },
+            }, true);
+            return;
+        }
+        if (card.type === 'biz') {
+            if (!Number.isInteger(card.jobNumber) || card.jobNumber < 0) {
+                throw new Error(`Cannot persist biz card jobNumber ${card.jobNumber}`);
+            }
+            await updateAppState({
+                'user-settings': { selectedBizCard: { 'card-id': card.jobNumber } },
+            }, true);
+            return;
+        }
+        if (card.type === 'skill') {
+            const match = String(card.skillCardId || '').match(/^skill-card-div-(\d+)/);
+            if (!match) {
+                throw new Error(`Cannot persist skill card id ${card.skillCardId}`);
+            }
+            await updateAppState({
+                'user-settings': { selectedSkillCard: { 'card-id': Number(match[1]) } },
+            }, true);
+            return;
+        }
+        throw new Error(`Cannot persist selected card type ${card.type}`);
     } catch (e) {
-        reportError(e, '[selectionPersistence] Failed to persist selectedCard');
+        reportError(e, '[selectionPersistence] Failed to persist selection');
         throw e;
     }
 }

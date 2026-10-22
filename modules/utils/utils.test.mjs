@@ -22,6 +22,7 @@ import {
   isNumericString,
   getNumericValue,
   isPlainObject,
+  canonicalSelectedCard,
   deepMerge,
   validateNumber,
   validateString,
@@ -286,6 +287,29 @@ describe('utils', () => {
         selectedCard: { type: 'biz', jobNumber: 8 },
         layout: { scenePercentage: 50 },
       });
+    });
+    it('keeps keys the source omits (selectedCard must be replaced, not merged)', () => {
+      const a = { selectedCard: { type: 'biz', jobNumber: 0, skillCardId: 'skill-card-div-35' } };
+      const b = { selectedCard: { type: 'biz', jobNumber: 20 } };
+      expect(deepMerge(a, b).selectedCard).toEqual({
+        type: 'biz',
+        jobNumber: 20,
+        skillCardId: 'skill-card-div-35',
+      });
+    });
+  });
+
+  describe('canonicalSelectedCard', () => {
+    it('drops skillCardId from a biz selection and jobNumber from a skill selection', () => {
+      expect(canonicalSelectedCard({ type: 'biz', jobNumber: 20, skillCardId: 'skill-card-div-35' })).toEqual({
+        type: 'biz',
+        jobNumber: 20,
+      });
+      expect(canonicalSelectedCard({ type: 'skill', skillCardId: 'skill-card-div-35', jobNumber: 0 })).toEqual({
+        type: 'skill',
+        skillCardId: 'skill-card-div-35',
+      });
+      expect(canonicalSelectedCard(null)).toBe(null);
     });
   });
 

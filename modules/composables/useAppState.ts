@@ -10,7 +10,7 @@
 
 import { ref, readonly, type Ref } from 'vue'
 // @ts-ignore - Legacy module imports with type declarations
-import { deepMerge } from '../utils/utils.mjs'
+import { canonicalSelectedCard, deepMerge } from '../utils/utils.mjs'
 // @ts-ignore - Legacy module
 import { reportError } from '../utils/errorReporting.mjs'
 // @ts-ignore - Legacy module imports with type declarations
@@ -168,7 +168,8 @@ function getDefaultState(): AppState {
             focalPointMode: getDefaultFocalPointMode(),
             focalPoint: { x: 0, y: 0, mode: getDefaultFocalPointMode() },
             currentResumeId: 'default',
-            selectedCard: null,
+            selectedBizCard: null,
+            selectedSkillCard: null,
             resume: {
                 sortRule: { field: 'startDate', direction: 'asc' }
             },
@@ -418,12 +419,19 @@ function migrateState(state: any): AppState {
     // Ensure user-settings.focalPoint exists (position + mode persistence)
     const us = state['user-settings']
     if (us) {
-        if (us.selectedCard === undefined) {
-            us.selectedCard = null
-        } else if (us.selectedCard && typeof us.selectedCard === 'object' && !us.selectedCard.type) {
-            // Repair legacy bad merge (null + object → {})
-            us.selectedCard = null
+        if (us.selectedCard && typeof us.selectedCard === 'object') {
+            const legacy = us.selectedCard
+            if (legacy.type === 'biz' && Number.isInteger(legacy.jobNumber) && legacy.jobNumber >= 0 && us.selectedBizCard == null) {
+                us.selectedBizCard = { 'card-id': legacy.jobNumber }
+            }
+            if (legacy.type === 'skill' && typeof legacy.skillCardId === 'string' && us.selectedSkillCard == null) {
+                const match = legacy.skillCardId.match(/^skill-card-div-(\d+)/)
+                if (match) us.selectedSkillCard = { 'card-id': Number(match[1]) }
+            }
         }
+        delete us.selectedCard
+        if (us.selectedBizCard === undefined) us.selectedBizCard = null
+        if (us.selectedSkillCard === undefined) us.selectedSkillCard = null
         if (!us.focalPoint) {
             us.focalPoint = { x: 0, y: 0, mode: (us.focalPointMode || getDefaultFocalPointMode()).toString().toLowerCase() as FocalPointModeLower }
         } else {
@@ -813,8 +821,37 @@ export function useAppState(): UseAppStateReturn {
         console.log('[AppState] 🔄 updateAppState called with updates:', JSON.stringify(updates, null, 2))
         console.log('[AppState] 🔄 Before merge - currentResumeId:', appState.value['user-settings']?.currentResumeId)
 
+        const userSettingsUpdate = updates?.['user-settings']
+
         // Deep merge updates immediately (UI updates are instant)
         appState.value = deepMerge(appState.value as AppState, updates)
+
+        // deepMerge keeps keys the patch omits and merges object fields. Selection refs
+        // are replaced wholesale, including null. A legacy selectedCard is moved onto
+        // selectedBizCard or selectedSkillCard and then removed.
+        if (userSettingsUpdate && appState.value?.['user-settings']) {
+            const us = appState.value['user-settings'] as AppState['user-settings'] & { selectedCard?: unknown }
+            const legacyUpdate = userSettingsUpdate as AppState['user-settings'] & { selectedCard?: { type?: string, jobNumber?: number, skillCardId?: string } | null }
+            if (Object.prototype.hasOwnProperty.call(legacyUpdate, 'selectedBizCard')) {
+                us.selectedBizCard = legacyUpdate.selectedBizCard ?? null
+            }
+            if (Object.prototype.hasOwnProperty.call(legacyUpdate, 'selectedSkillCard')) {
+                us.selectedSkillCard = legacyUpdate.selectedSkillCard ?? null
+            }
+            if (Object.prototype.hasOwnProperty.call(legacyUpdate, 'selectedCard')) {
+                const card = canonicalSelectedCard(legacyUpdate.selectedCard)
+                if (card == null) {
+                    us.selectedBizCard = null
+                    us.selectedSkillCard = null
+                } else if (card.type === 'biz') {
+                    us.selectedBizCard = { 'card-id': card.jobNumber }
+                } else if (card.type === 'skill') {
+                    const match = card.skillCardId.match(/^skill-card-div-(\d+)/)
+                    if (match) us.selectedSkillCard = { 'card-id': Number(match[1]) }
+                }
+            }
+            delete us.selectedCard
+        }
 
         console.log('[AppState] 🔄 After merge - currentResumeId:', appState.value['user-settings']?.currentResumeId)
         

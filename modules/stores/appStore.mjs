@@ -148,9 +148,11 @@ export const appStoreActions = {
   },
   
   setFocalPointMode(mode, options = {}) {
-    appStore.focalPoint.mode = mode
-    console.log(`[AppStore] Focal point mode: ${mode}`)
+    persistedFocalMode = storedModeToUpper(mode)
+    appStore.focalPoint.mode = persistedFocalMode
+    console.log(`[AppStore] Focal point mode: ${persistedFocalMode}`)
     if (options.persist !== false) {
+      focalModeHydrated = true
       persistFocalPoint(true) // persist mode immediately
     }
   },
@@ -208,23 +210,50 @@ export const appStoreActions = {
     appStore.isInitialized = true
 
     // Restore focal point from persisted state if present
-    const saved = appState.value?.['user-settings']?.focalPoint
+    const savedSettings = appState.value?.['user-settings']
+    const saved = savedSettings?.focalPoint
     if (saved) {
       if (typeof saved.x === 'number' && typeof saved.y === 'number' && (saved.x !== 0 || saved.y !== 0)) {
         appStore.focalPoint.x = saved.x
         appStore.focalPoint.y = saved.y
       }
-      if (saved.mode) {
-        const modeUpper = String(saved.mode).toUpperCase()
-        appStore.focalPoint.mode = modeUpper === 'LOCKED' ? 'LOCKED' : modeUpper === 'DRAGGING' ? 'DRAGGING' : 'FOLLOWING'
+      // focalPoint.mode is what position saves write. Prefer it over the sibling focalPointMode.
+      const modeRaw = saved.mode ?? savedSettings?.focalPointMode
+      if (modeRaw) {
+        persistedFocalMode = storedModeToUpper(modeRaw)
+        appStore.focalPoint.mode = persistedFocalMode
       }
+    } else if (savedSettings?.focalPointMode) {
+      persistedFocalMode = storedModeToUpper(savedSettings.focalPointMode)
+      appStore.focalPoint.mode = persistedFocalMode
     }
+    focalModeHydrated = true
     if (appStore.focalPoint.x === 0 && appStore.focalPoint.y === 0) {
       appStore.focalPoint.x = window.innerWidth / 2
       appStore.focalPoint.y = window.innerHeight / 2
     }
     console.log('[AppStore] Focal point initialized:', appStore.focalPoint.x, appStore.focalPoint.y, appStore.focalPoint.mode)
   }
+}
+
+// User-chosen mode. Scene-leave sets appStore.focalPoint.mode to LOCKED only for display
+// (useFocalPoint setModeTransient) and must not be what we write to app_state.json.
+let persistedFocalMode = 'FOLLOWING'
+// Position saves before initialize() would otherwise write the module default over a saved mode.
+let focalModeHydrated = false
+
+function toStoredFocalMode(mode) {
+  const upper = String(mode ?? '').toUpperCase()
+  if (upper === 'LOCKED') return 'locked'
+  if (upper === 'DRAGGING') return 'dragging'
+  return 'following'
+}
+
+function storedModeToUpper(mode) {
+  const stored = toStoredFocalMode(mode)
+  if (stored === 'locked') return 'LOCKED'
+  if (stored === 'dragging') return 'DRAGGING'
+  return 'FOLLOWING'
 }
 
 // Debounced persist for focal point position (avoid saving on every mousemove)
@@ -238,10 +267,13 @@ function schedulePersistFocalPoint() {
 }
 
 function persistFocalPoint(immediate = false) {
-  const mode = appStore.focalPoint.mode
-  const modeLower = mode === 'LOCKED' ? 'locked' : mode === 'DRAGGING' ? 'dragging' : 'following'
+  // Debounced position updates before hydration would save the default mode. An explicit
+  // setFocalPointMode (immediate) is the user's choice and is saved even before hydration.
+  if (!focalModeHydrated && !immediate) return
+  const modeLower = toStoredFocalMode(persistedFocalMode)
   updateAppState({
     'user-settings': {
+      focalPointMode: modeLower,
       focalPoint: {
         x: appStore.focalPoint.x,
         y: appStore.focalPoint.y,

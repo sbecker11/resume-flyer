@@ -41,6 +41,9 @@ export type PersistedSelectedCard =
   | { type: 'biz'; jobNumber: number }
   | { type: 'skill'; skillCardId: string };
 
+/** Stored scene card reference. card-id is the numeric suffix of biz-card-div-N or skill-card-div-N. */
+export type PersistedCardRef = { 'card-id': number };
+
 export interface AppState {
   version: string;
   lastUpdated: string;
@@ -63,8 +66,11 @@ export interface AppState {
 
     currentResumeId: string;
 
-    /** Last selected job or skill card; restored on page refresh for the current resume. */
-    selectedCard?: PersistedSelectedCard | null;
+    /** Last selected job card. card-id is the numeric suffix of biz-card-div-N. */
+    selectedBizCard?: PersistedCardRef | null;
+
+    /** Last selected skill card. card-id is the numeric suffix of skill-card-div-N. */
+    selectedSkillCard?: PersistedCardRef | null;
 
     resume: {
       sortRule: SortRule;

@@ -76,6 +76,35 @@ describe('appStore', () => {
     expect(appStore.hoveredJobNumber).toBe(null);
   });
 
+  it('persists the chosen focal mode when display mode is transiently locked', async () => {
+    vi.useFakeTimers();
+    try {
+      const { appStore, appStoreActions } = await import('./appStore.mjs');
+      appStore.focalPoint.x = 10;
+      appStore.focalPoint.y = 20;
+      appStoreActions.setFocalPointMode('FOLLOWING');
+      expect(mockUpdateAppState).toHaveBeenCalledWith({
+        'user-settings': {
+          focalPointMode: 'following',
+          focalPoint: { x: 10, y: 20, mode: 'following' },
+        },
+      }, true);
+
+      mockUpdateAppState.mockClear();
+      appStore.focalPoint.mode = 'LOCKED';
+      appStoreActions.setFocalPoint(11, 21);
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(mockUpdateAppState).toHaveBeenCalledWith({
+        'user-settings': {
+          focalPointMode: 'following',
+          focalPoint: { x: 11, y: 21, mode: 'following' },
+        },
+      }, false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('useAppStore returns store, computed, actions', async () => {
     const { useAppStore } = await import('./appStore.mjs');
     const { store, computed, actions } = useAppStore();
