@@ -1,6 +1,6 @@
 {
   "version": "1.4",
-  "lastUpdated": "2026-10-22T03:26:44.151Z",
+  "lastUpdated": "2026-10-22T03:29:09.147Z",
   "user-settings": {
     "layout": {
       "orientation": "scene-left",
@@ -19,7 +19,8 @@
     "currentResumeId": "shawn-becker-full-resume-indexed",
     "selectedCard": {
       "type": "biz",
-      "jobNumber": 0
+      "jobNumber": 20,
+      "skillCardId": "skill-card-div-35"
     },
     "resume": {
       "sortRule": {
@@ -31,7 +32,7 @@
       "colorPalette": "mitzibushi-red.json"
     },
     "scrollPositions": {
-      "sceneContentScrollTop": 28
+      "sceneContentScrollTop": 1580
     }
   },
   "system-constants": {
