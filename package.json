@@ -43,7 +43,8 @@
     "parse-resume": "node scripts/run-parse-resume.mjs",
     "compliance": "node scripts/run-compliance-scan.mjs",
     "sync-color-palette-utils-ts": "node scripts/sync-color-palette-utils-ts.mjs",
-    "anthropic-usage": "node scripts/anthropic-usage-report.mjs"
+    "anthropic-usage": "node scripts/anthropic-usage-report.mjs",
+    "store:app-state-default": "node ./scripts/store-app-state-default.mjs"
   },
   "dependencies": {
     "audit": "^0.0.6",
