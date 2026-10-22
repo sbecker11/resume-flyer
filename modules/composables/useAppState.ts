@@ -21,12 +21,12 @@ import { hasServer } from '../core/hasServer.mjs'
 
 type FocalPointModeLower = 'locked' | 'following' | 'dragging'
 
-/** Server dev default is LOCKED; static hosts (GitHub Pages, VITE_STATIC_MODE) default to FOLLOWING. */
+/** Default when no mode is saved. Local/server and static hosts both use following. An explicit saved locked | following | dragging is kept. */
 function getDefaultFocalPointMode(): FocalPointModeLower {
-    return hasServer() ? 'locked' : 'following'
+    return 'following'
 }
 
-/** Apply static-host focal default when loaded state still has the server-oriented locked default. */
+/** On static hosts, fill focal mode when the loaded state has no saved mode. No-op when a server is present, and does not replace an explicit saved mode. */
 function applyStaticHostFocalPointDefault(
     state: AppState,
     userOverrides?: AppState['user-settings']
@@ -377,11 +377,11 @@ function migrateState(state: any): AppState {
             "user-settings": {
                 layout: state.layout || { orientation: 'scene-left', scenePercentage: 50, resumePercentage: 50 },
                 resizeHandle: state.resizeHandle || { stepCount: 4 },
-                focalPointMode: state.focalPoint?.mode || 'locked',
+                focalPointMode: state.focalPoint?.mode || getDefaultFocalPointMode(),
                 focalPoint: {
                     x: state.focalPoint?.x ?? 0,
                     y: state.focalPoint?.y ?? 0,
-                    mode: (state.focalPoint?.mode || 'locked').toString().toLowerCase()
+                    mode: (state.focalPoint?.mode || getDefaultFocalPointMode()).toString().toLowerCase()
                 },
                 selectedJobNumber: state.selectedJobNumber || null,
                 lastVisitedJobNumber: state.lastVisitedJobNumber || null,

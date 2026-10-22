@@ -10,11 +10,11 @@
     "resizeHandle": {
       "stepCount": 2
     },
-    "focalPointMode": "locked",
+    "focalPointMode": "following",
     "focalPoint": {
       "x": 254.5,
       "y": 268.5,
-      "mode": "locked"
+      "mode": "following"
     },
     "currentResumeId": "shawn-becker-full-resume-indexed",
     "selectedCard": {
