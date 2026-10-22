@@ -1,16 +1,14 @@
 # resume-flyer
 
-<!-- SUMMARY:START generated from workspace-linkedin-profile/Projects.json by scripts/build_readme_header.py; edit there -->
-<a href="https://sbecker11.github.io/resume-flyer/" target="_blank" rel="noopener noreferrer"><img src="docs/readme-still.png" alt="resume-flyer jobs and skills card explorer"></a>
+**resume-flyer** is an interactive resume explorer. Upload a DOCX or PDF resume and it is parsed into your employment experience, education, and technical skills. You explore them as **business cards** (one per job) and **skill cards** (one per skill) in 3D or as a chronological list. Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
+
+<a href="https://sbecker11.github.io/resume-flyer/" target="_blank" rel="noopener noreferrer"><img src="./static_content/resume-flyer.gif" alt="resume-flyer jobs and skills card explorer"></a>
 
 Vue 3 + TypeScript + Vite SPA with an Express.js backend that parses an uploaded résumé (via resume-parser) into an interactive jobs × skills 3D card explorer.
 
 **RunMe:** [https://sbecker11.github.io/resume-flyer/](https://sbecker11.github.io/resume-flyer/)
 
 **Skills:** Vue 3 · TypeScript · JavaScript · Vite · Node.js · Express.js · Python (Programming Language) · HTML · CSS · Full-Stack Development · 3D Data Visualization · Motion Parallax / Perspective Projection · WCAG Color Contrast · Vitest · GitHub Pages · Automated Software Testing (JUnit/Jest/Vitest/PyTest)
-<!-- SUMMARY:END -->
-
-**resume-flyer** is an interactive resume explorer. Upload a DOCX or PDF resume and it is parsed into your employment experience, education, and technical skills. You explore them as **business cards** (one per job) and **skill cards** (one per skill) in 3D or as a chronological list. Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
 
 ### High-level functionality
 
@@ -56,14 +54,14 @@ Additional capabilities you may use alongside the items above include:
 
 Features differ when the app runs with backend APIs (local dev) versus static hosting (no backend):
 
-| Feature | Local dev (server available) | Static hosting (GitHub Pages) |
-|---|---|---|
-| Resume upload + parse (`DOCX`/`PDF`) | ✅ Available (`/api/resumes/upload*`) | ❌ Unavailable |
-| Resume reparse | ✅ Available (`/api/resumes/:id/reparse*`) | ❌ Unavailable |
-| Skill definition `?` modal content | ✅ Available (`/api/skills/:slug/info`) | ❌ Unavailable (`?` button hidden) |
-| Details editor save behavior | ✅ Writes through backend APIs | ⚠️ Save is enabled, but changes are session-local only (not persisted to backend) |
-| `colorPalette` catalog refresh | ✅ API manifest fallback and local backend paths available | ✅ Uses S3/static paths only (no local backend fallback) |
-| `resizeHandle` persistence | ✅ Persists to server-backed app state (`/api/state`) | ✅ Persists in static-mode local state behavior (no backend calls) |
+| Feature                              | Local dev (server available)                               | Static hosting (GitHub Pages)                                                     |
+| ------------------------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Resume upload + parse (`DOCX`/`PDF`) | ✅ Available (`/api/resumes/upload*`)                      | ❌ Unavailable                                                                    |
+| Resume reparse                       | ✅ Available (`/api/resumes/:id/reparse*`)                 | ❌ Unavailable                                                                    |
+| Skill definition `?` modal content   | ✅ Available (`/api/skills/:slug/info`)                    | ❌ Unavailable (`?` button hidden)                                                |
+| Details editor save behavior         | ✅ Writes through backend APIs                             | ⚠️ Save is enabled, but changes are session-local only (not persisted to backend) |
+| `colorPalette` catalog refresh       | ✅ API manifest fallback and local backend paths available | ✅ Uses S3/static paths only (no local backend fallback)                          |
+| `resizeHandle` persistence           | ✅ Persists to server-backed app state (`/api/state`)      | ✅ Persists in static-mode local state behavior (no backend calls)                |
 
 ### Parsed resume storage contract
 
@@ -93,7 +91,7 @@ After cloning, build the vendor package once: `cd color-palette-utils-ts && npm 
 The modern reactive state management and component composition system:
 
 - **[📖 Vue 3 Composition API](https://vuejs.org/guide/extras/composition-api-faq.html)** - Official Vue 3 documentation
-- **[🚀 Composables Guide](https://vuejs.org/guide/reusability/composables.html)** - Reusable composition functions  
+- **[🚀 Composables Guide](https://vuejs.org/guide/reusability/composables.html)** - Reusable composition functions
 - **[💡 Reactivity in Depth](https://vuejs.org/guide/extras/reactivity-in-depth.html)** - Understanding reactive systems
 - **[🏗️ Script Setup](https://vuejs.org/api/sfc-script-setup.html)** - Modern component authoring
 - **[🎯 Template Refs](https://vuejs.org/guide/essentials/template-refs.html)** - DOM element access patterns
@@ -272,16 +270,14 @@ The application implements a **multi-layered "Fail Fast" approach** with differe
 
 ### **📊 Strategy Summary by Use Case**
 
-
 | **Use Case**              | **Strategy**                        | **When to Use**                     | **Fail-Fast Level** |
 | ------------------------- | ----------------------------------- | ----------------------------------- | ------------------- |
 | **Critical Vue Services** | Immediate Throw + Reactive Tracking | Vue Provide/Inject dependencies     | 🚨 **IMMEDIATE**    |
-| **Async Resources**       | Promise-based + Idempotent          | File loading, network requests      | ⏰ **COORDINATED**   |
-| **DOM Elements**          | Template Ref Watchers               | When elements must exist before use | 👁️ **REACTIVE**    |
+| **Async Resources**       | Promise-based + Idempotent          | File loading, network requests      | ⏰ **COORDINATED**  |
+| **DOM Elements**          | Template Ref Watchers               | When elements must exist before use | 👁️ **REACTIVE**     |
 | **Timing Edge Cases**     | Retry with Timeout                  | DOM not ready, race conditions      | 🔄 **RECOVERY**     |
 | **Legacy Integration**    | Global Singletons + Validation      | Cross-system communication          | 🎪 **BRIDGED**      |
-| **Runtime Safety**        | Safe Access Patterns                | Production robustness               | 🛡️ **GRACEFUL**    |
-
+| **Runtime Safety**        | Safe Access Patterns                | Production robustness               | 🛡️ **GRACEFUL**     |
 
 ### **🎯 Development vs Production Balance**
 
@@ -303,7 +299,7 @@ smaller `skill cards`. Business cards include a list of skills learned or used d
 
 Mouse motion over the scene plane causes your point of view to move around, using `motion parallax` and a fuzzy `depth of field` to provide a sense of depth. Besides focal-point–driven motion parallax, a sense of 3D depth is enhanced by blur and darkness that increase with distance from the view plane.
 
-Moving the mouse vertically also causes your view to slide over the `career timeline` shown at the scene edge. 
+Moving the mouse vertically also causes your view to slide over the `career timeline` shown at the scene edge.
 
 Click on a `business card` or `skill card` to make it pop into focus at the top of the scene view, and to see its details in the details area. Use the color palette selector to enhance the viewing experience.
 
@@ -402,7 +398,7 @@ Components use **watchers** so that when shared state (e.g. badge visibility, se
 **Benefits:**
 
 - **Automatic reactivity**: State changes trigger appropriate actions
-- **Performance optimized**: Only runs when watched values change  
+- **Performance optimized**: Only runs when watched values change
 - **Declarative**: Clear cause-and-effect relationships
 
 ### 3. **Template Refs and DOM Access**
@@ -924,47 +920,47 @@ This **Infinite Scrolling Container** represents a significant advancement in vi
 
 ## Development history
 
-### version 1.2    March 2025
+### version 1.2 March 2025
 
 - **High-level features**: resume-parser (DOCX/PDF at runtime, optional LLM skill merging), resume-selector, resume-details-editor (Meta / Other / Skills / Jobs tabs), job-details-editor (Jobs tab), job-skills-selector (JobSkillEditor), resume-print (printable HTML). README now introduces these in a “High-level functionality” section.
 - 3D Settings: parallax scale (near/far), blur, brightness, saturation at max Z; modal from 3D button (resize handle and next to color palette). Base z-scale (0.9→0) multiplied by user scale.
 - Run instructions: Cursor IDE with Vite (`npm run dev`); removed VSCode + LiveServer. Resume data from DOCX/PDF parsed at runtime; removed Excel/jobs.xlsx workflow.
 - README: removed Vue 3 migration narrative, reduced Color Palette and State System sections, removed Future Work and “illustrious career” Excel customization, updated resume-parser description.
 
-### version 1.1    July 8, 2024
+### version 1.1 July 8, 2024
 
 - Updated installation and customization instructions in README.md
 - Deployed latest to github
 
 [https://sbecker11.github.io/resume-flyer](https://sbecker11.github.io/resume-flyer/)
 
-### version 1.0    March 8, 2024
+### version 1.0 March 8, 2024
 
 [http://spexture.com](http://spexture.com/)
 
 - CURRENT_DATE in job [end] replaced with first day of next month but displayed as 'working'
 - Always scroll newly selected bizCardDiv (and optionally its bizCardLineItem) into view in selectTheBizCard
 - not started  
-in highlightTheDivCardBackArrow  
-unhighlightTheHighlightedDivCardBackArrow  
-update theHighlightedDivCardBackArrow  
-find the CardDivLineItemTagSpan of theHighlightedDivCardBackArrow  
-call highlightTheCardDivLineItemTagSpan  
- in highlightTheCardDivLineItemTagSpan  
-unhighlightTheHighlightedCardDivLineItemTagSpan  
-update theHighlightedCardDivLineItemTagSpan  
-find the cardDivCardBackArrow of theHighlightedCardDivLineItemTagSpan  
-call highlightTheCardDivCardBackArrow
+  in highlightTheDivCardBackArrow  
+  unhighlightTheHighlightedDivCardBackArrow  
+  update theHighlightedDivCardBackArrow  
+  find the CardDivLineItemTagSpan of theHighlightedDivCardBackArrow  
+  call highlightTheCardDivLineItemTagSpan  
+   in highlightTheCardDivLineItemTagSpan  
+  unhighlightTheHighlightedCardDivLineItemTagSpan  
+  update theHighlightedCardDivLineItemTagSpan  
+  find the cardDivCardBackArrow of theHighlightedCardDivLineItemTagSpan  
+  call highlightTheCardDivCardBackArrow
 
-### version 0.9:   January 4, 2024
+### version 0.9: January 4, 2024
 
-### version 0.8:   January 1, 2024
+### version 0.8: January 1, 2024
 
-### version 0.7:   November 18, 2023
+### version 0.7: November 18, 2023
 
 - Default timeline year avg of min-max years
 - Auto-computing timeline min-max years
-- Interpolating CURRENT_DATE  in xlsx file
+- Interpolating CURRENT_DATE in xlsx file
 - GoLive link with port 5500 or 5501
 - applying parallax on the target for restoreSavedStyle
 - replaced addAimationEndListener with endAnimation on a timeout
@@ -976,14 +972,14 @@ call highlightTheCardDivCardBackArrow
 - added select all skills button
 - added selectNext, selectAll, and clearAll buttons
 
-### version 0.6:   July 3, 2023
+### version 0.6: July 3, 2023
 
-- Upgraded static website to use ES6 modules, thus requiring a local webserver that supports ES6.  
-- The focal point now eases towards the mouse when it enters the scene-plane area.  
-- The focal point now eases toward the bullsEye when it leaves the scene-plane areas.  
+- Upgraded static website to use ES6 modules, thus requiring a local webserver that supports ES6.
+- The focal point now eases towards the mouse when it enters the scene-plane area.
+- The focal point now eases toward the bullsEye when it leaves the scene-plane areas.
 - 8 MB animated gif
 
-### version 0.5:   June 26, 2023
+### version 0.5: June 26, 2023
 
 - A collection of small skill cards and larger business cards float over the scene-plane column (layout can put the scene on the left or right).
 - A timeline is displayed at ground level, to visualize the date range of employment for each business card.
@@ -1004,26 +1000,26 @@ call highlightTheCardDivCardBackArrow
 - Skill cards inherit the color of their parent business card.
 - Click the underlined text in a business card's resume line item to select and bring that skill card into view on the view plane.
 
-### version 0.4:   June 18, 2023
+### version 0.4: June 18, 2023
 
 - scripted process to convert WordPress media dump xml file into a javascript file of img paths of resized local img files (not included in github) for html inclusion.
 - scripted process to convert job data into a javascript file of job objects for html inclusion (resumes now parsed from DOCX/PDF at runtime).
 - right side now has fixed header and footer and an auto-scolling content.
 - click on any skill card or underlying business card to add a new deletable line item to the right column.
 
-### version 0.3:   June 7, 2023
+### version 0.3: June 7, 2023
 
-- downloads bizCards from local jobs.csv file  
+- downloads bizCards from local jobs.csv file
   - BUT only works when running local instance of http-server from the version3 folder
 - click on a red-div to open a new pink line-item in the resume-container
 
-### version 0.2:   June 6, 2023
+### version 0.2: June 6, 2023
 
 - faded timeline on right side
 - linear gradiens at top and bottom
 - bizCards are purple and far away from viewer
 - cards are red and closer to viewer
-- cards turn yellow on rollover  
+- cards turn yellow on rollover
 - horizontal and vertical mouse motion induce motion parallax
 - parallax decreases as distance to viewer increases
 - manual vertical scrolling is supported though scrollbar is invisible
