@@ -117,7 +117,7 @@ function validateRequiredState(state: AppState): void {
  * Load state from static app_state.default.json (e.g. on GitHub Pages when no server).
  * Returns null if fetch or parse fails. Throws if file is loaded but missing required settings (fast-fail).
  */
-async function loadStateFromDefaultFile(): Promise<AppState | null> {
+export async function loadStateFromDefaultFile(): Promise<AppState | null> {
     try {
         const url = basePathJoin(DEFAULT_STATE_PATH)
         const response = await fetch(url)

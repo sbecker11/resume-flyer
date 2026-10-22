@@ -79,13 +79,14 @@ import { useParallaxEnhanced } from '../composables/useParallaxVue3Enhanced.mjs'
 import { useColorPalette } from '../composables/useColorPalette.mjs'
 import { useLayoutToggle } from '../composables/useLayoutToggle.mjs'
 import { useResizeHandle } from '../composables/useResizeHandle.mjs'
-import { useAppState } from '../composables/useAppState.ts'
+import { useAppState, loadStateFromDefaultFile } from '../composables/useAppState.ts'
 import { get_filterStr_from_z } from '../core/filters.mjs'
 import { selectionManager } from '../core/selectionManager.mjs'
 import { updateContrastForBrightness } from '../composables/useColorPalette.mjs'
 import { reportError } from '../utils/errorReporting.mjs'
 import { listVisibleSceneCardRoots } from '../utils/sceneCardVisibility.mjs'
-import { getPersistedSelectedCard, validatePersistedSelectedCard, persistSelectedCard } from '../utils/selectionPersistence.mjs'
+import { getPersistedSelectedCard, validatePersistedSelectedCard, persistSelectedCard, runtimeCardFromBizRef, runtimeCardFromSkillRef } from '../utils/selectionPersistence.mjs'
+import { userSettingsOverridesFromDefaultState } from '../utils/applyStoredAppDefaults.mjs'
 import { waitForParallaxSettle } from '../utils/sceneCardClone.mjs'
 import { installBizSelectionFocus } from '../utils/bizSelectionFocus.mjs'
 import { listResumes } from '../api/resumeManagerApi.mjs'
@@ -479,6 +480,65 @@ async function restoreOrSelectFirstCardWhenReady() {
   return false
 }
 
+/**
+ * Normal startup may select the first listing item after the default file was read.
+ * When app_state.default.json exists, write its selection and focal point back over that.
+ */
+async function overwriteAppVariablesFromDefaultFile() {
+  let defaults = null
+  try {
+    defaults = await loadStateFromDefaultFile()
+  } catch (e) {
+    reportError(
+      e,
+      '[AppContent] Failed to load app_state.default.json after initialization',
+      'Keeping the selection from normal initialization'
+    )
+    return
+  }
+  if (!defaults) {
+    console.log('[AppContent] app_state.default.json not found; keeping initialized app variables')
+    return
+  }
+
+  try {
+    const patch = userSettingsOverridesFromDefaultState(defaults)
+    const { updateAppState } = useAppState()
+    await updateAppState(patch, true)
+
+    const settings = patch['user-settings']
+    const mode = settings.focalPoint?.mode ?? settings.focalPointMode
+    if (mode) storeActions.setFocalPointMode(mode, { persist: false })
+    const focalPoint = settings.focalPoint
+    if (focalPoint && typeof focalPoint.x === 'number' && typeof focalPoint.y === 'number') {
+      store.focalPoint.x = focalPoint.x
+      store.focalPoint.y = focalPoint.y
+    }
+
+    const card = runtimeCardFromBizRef(settings.selectedBizCard)
+      || runtimeCardFromSkillRef(settings.selectedSkillCard)
+    const jobs = getGlobalJobsDependency().getJobsData()
+    const valid = validatePersistedSelectedCard(card, jobs)
+    if (!valid) {
+      const err = new Error('Stored default selection is not on the loaded resume')
+      reportError(
+        err,
+        '[AppContent] Cannot apply app_state.default.json selection',
+        'Keeping the selection from normal initialization'
+      )
+      return
+    }
+    selectionManager?.selectCard(valid, 'AppContent.overwriteFromAppStateDefault')
+    console.log('[AppContent] Applied app_state.default.json over initialized app variables', valid)
+  } catch (e) {
+    reportError(
+      e,
+      '[AppContent] Failed to apply app_state.default.json after initialization',
+      'Keeping the selection from normal initialization'
+    )
+  }
+}
+
 async function scrollSceneToLatestCard() {
   await nextTick()
   const sceneContentEl = document.getElementById('scene-content')
@@ -757,8 +817,11 @@ onMounted(async () => {
           if (!restoredSelection) {
             await scrollSceneToLatestCard()
           }
-          // Apply palette to all elements after DOM is built (fixes palette not applied on initial load)
+          // Sort setup can select the first listing item on the next flush. Let that finish,
+          // then replace it with app_state.default.json when that file is present.
           await nextTick()
+          await overwriteAppVariablesFromDefaultFile()
+          // Apply palette to all elements after DOM is built (fixes palette not applied on initial load)
           requestAnimationFrame(async () => {
             try {
               await applyCurrentPaletteToAllElements()
