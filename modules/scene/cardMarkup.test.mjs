@@ -82,6 +82,9 @@ describe('cardMarkup', () => {
         expect(html).toContain('data-skill-slug="pyspark"')
         expect(html).toContain('skill-card-info-url')
         expect(html).not.toContain('skill-info-modal-btn')
+        // Pencil is resume chrome next to ×, not inside the name/URL row.
+        expect(html).toMatch(/skill-url-edit-btn[\s\S]*skill-resume-div-close/)
+        expect(html).not.toMatch(/skill-card-name-row[\s\S]*skill-url-edit-btn[\s\S]*skill-card-info-url/)
     })
 
     it('renderBizCardSceneBodyHtml and renderBizResumeHeaderHtml share field classes', () => {

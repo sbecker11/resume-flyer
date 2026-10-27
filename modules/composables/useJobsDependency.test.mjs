@@ -76,6 +76,32 @@ describe('useJobsDependency', () => {
     expect(Array.isArray(dep.getJobsData())).toBe(true);
   });
 
+  it('patchSkillData merges fields into one skill without a full reload', async () => {
+    const resumeId = 'resume-skills-patch';
+    mockRuntimeFetch({
+      resumeId,
+      apiPayload: {
+        jobs: [{ index: 0, Description: '' }],
+        skills: { cnn: { name: 'CNN', url: '' } },
+      },
+    });
+    const { loadJobs, getSkillsData, patchSkillData } = useJobsDependency();
+    await loadJobs({ force: true, forceResumeId: resumeId });
+    expect(getSkillsData().cnn.url).toBe('');
+    patchSkillData('cnn', { url: 'https://en.wikipedia.org/wiki/Convolutional_neural_network' });
+    expect(getSkillsData().cnn).toMatchObject({
+      name: 'CNN',
+      url: 'https://en.wikipedia.org/wiki/Convolutional_neural_network',
+    });
+    patchSkillData('missing-skill', { url: 'https://example.com/x' });
+    expect(getSkillsData()['missing-skill']).toMatchObject({
+      name: 'missing-skill',
+      url: 'https://example.com/x',
+    });
+    patchSkillData('', { url: 'https://nope' });
+    expect(getSkillsData()['']).toBeUndefined();
+  });
+
   it('registerController initializes immediately when jobs already loaded', async () => {
     mockRuntimeFetch({ resumeId: 'resume-default', apiPayload: { jobs: [{ index: 0, Description: '' }], skills: {} } });
     const { loadJobs, registerController } = useJobsDependency();

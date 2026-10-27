@@ -50,4 +50,24 @@ describe('skillBracketResolution', () => {
 
         expect(failures, JSON.stringify(failures, null, 2)).toEqual([])
     })
+
+    it('every non-empty curated skill url is an absolute http(s) link', async () => {
+        const { isAbsoluteHttpUrl } = await import('./skillInfoModal.mjs')
+        const ids = listCuratedResumeIds()
+        expect(ids.length).toBeGreaterThan(0)
+
+        const bad = []
+        for (const id of ids) {
+            const skills = readJson(path.join(PARSED, id, 'skills.json'))
+            for (const [slug, skill] of Object.entries(skills || {})) {
+                if (!skill || typeof skill !== 'object') continue
+                const url = String(skill.url ?? '').trim()
+                if (!url) continue
+                if (!isAbsoluteHttpUrl(url)) {
+                    bad.push({ id, slug, url })
+                }
+            }
+        }
+        expect(bad, JSON.stringify(bad, null, 2)).toEqual([])
+    })
 })

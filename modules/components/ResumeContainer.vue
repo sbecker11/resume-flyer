@@ -30,9 +30,13 @@ import {
   scrollFocusedBizCardSkillIntoViewIfCropVisible,
   rememberSkillCardSourceBiz,
   getRememberedSkillCardSourceBiz,
-  isAbsoluteHttpUrl,
   resolveSkillInfoSourceUrl,
 } from '@/modules/utils/skillInfoModal.mjs';
+import {
+  canEditSkillUrl as canEditSkillUrlForResume,
+  normalizeSkillUrlEditInput,
+  skillUrlPersistReminder,
+} from '@/modules/utils/skillUrlEdit.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
 import { computeColorGridLayout } from '@/modules/utils/colorGridLayout.mjs';
@@ -756,7 +760,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   const skillSlug = data.skillName;
   const skillObj = getGlobalJobsDependency().getSkillsData()[skillSlug];
   // Pencil only in local run mode (Express backend). Static/GitHub Pages is read-only.
-  const canEditSkillUrl = hasServer() && props.currentResumeId && props.currentResumeId !== 'default';
+  const canEditSkillUrl = canEditSkillUrlForResume(hasServer(), props.currentResumeId);
   const infoUrl = resolveSkillInfoSourceUrl(
     skillSlug,
     skillObj?.name || skillSlug,
@@ -1018,10 +1022,14 @@ function syncResumeSkillInfoUrlDisplay(skillSlug) {
  * @param {string} skillSlug
  */
 async function openSkillUrlEditPrompt(skillSlug) {
-  if (!canUpload || !skillSlug) return;
+  if (!skillSlug) return;
   const resumeId = props.currentResumeId;
-  if (!resumeId || resumeId === 'default') {
-    alert('Select a saved resume to edit skill URLs.');
+  if (!canEditSkillUrlForResume(hasServer(), resumeId)) {
+    if (!hasServer()) {
+      alert('Skill URL editing requires local run mode (Express backend). On GitHub Pages, commit skills.json instead.');
+    } else {
+      alert('Select a saved resume to edit skill URLs.');
+    }
     return;
   }
   const jobsDep = getGlobalJobsDependency();
@@ -1031,13 +1039,13 @@ async function openSkillUrlEditPrompt(skillSlug) {
     'Skill info URL (http/https). Leave blank to use the Wikipedia fallback.',
     current
   );
-  if (next == null) return; // cancelled
-  const trimmed = String(next).trim();
-  if (trimmed && !isAbsoluteHttpUrl(trimmed)) {
-    alert('URL must be an absolute http(s) link, or blank to clear.');
+  const parsed = normalizeSkillUrlEditInput(next, current);
+  if (parsed.status === 'cancelled' || parsed.status === 'unchanged') return;
+  if (parsed.status === 'invalid') {
+    alert(parsed.message || 'Invalid skill URL.');
     return;
   }
-  if (trimmed === current) return;
+  const trimmed = parsed.url;
   try {
     await updateSkillUrl(resumeId, skillSlug, trimmed);
     if (typeof jobsDep.patchSkillData === 'function') {
@@ -1046,6 +1054,10 @@ async function openSkillUrlEditPrompt(skillSlug) {
       skillsData[skillSlug].url = trimmed;
     }
     syncResumeSkillInfoUrlDisplay(skillSlug);
+    const reminder = skillUrlPersistReminder({ resumeId, skillSlug, url: trimmed });
+    console.info(`[ResumeContainer] ${reminder}`);
+    // Local edits only ship to GitHub Pages after skills.json is committed.
+    alert(reminder);
   } catch (err) {
     reportError(err, '[ResumeContainer] Failed to update skill URL');
     alert('Failed to update skill URL: ' + (err?.message || err));
