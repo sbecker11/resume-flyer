@@ -77,7 +77,7 @@
           </p>
         </div>
 
-        <!-- Confirm-delete dialog -->
+          <!-- Confirm-delete dialog -->
         <div v-if="confirmDeleteId" class="confirm-overlay" @click.self="confirmDeleteId = null">
           <div class="confirm-dialog">
             <p class="confirm-message">Delete <strong>{{ confirmDeleteName }}</strong>?</p>
@@ -85,6 +85,23 @@
             <div class="confirm-actions">
               <button class="btn-cancel" @click="confirmDeleteId = null">Cancel</button>
               <button class="btn-confirm-delete" @click="confirmAndDelete">Delete</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confirm-reparse when local edits would be lost -->
+        <div v-if="confirmReparseId" class="confirm-overlay" @click.self="confirmReparseId = null">
+          <div class="confirm-dialog confirm-dialog-wide">
+            <p class="confirm-message">Reparse <strong>{{ confirmReparseName }}</strong>?</p>
+            <p class="confirm-hint">
+              This resume has local changes. Reparsing the original file and loading it into the app
+              will discard those edits (jobs, skills, URLs, and other derived data).
+            </p>
+            <div class="confirm-actions">
+              <button class="btn-cancel" :disabled="reparsing" @click="confirmReparseId = null">Cancel</button>
+              <button class="btn-confirm-reparse" :disabled="reparsing" @click="confirmAndReparse">
+                {{ reparsing ? 'Reparsing…' : 'Reparse anyway' }}
+              </button>
             </div>
           </div>
         </div>
@@ -134,8 +151,9 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { listResumes, deleteResume, reparseResume } from '../api/resumeManagerApi.mjs'
+import { listResumes, deleteResume, reparseResume, getResumeHasLocalChanges } from '../api/resumeManagerApi.mjs'
 import { hasServer } from '@/modules/core/hasServer.mjs'
+import { reportError } from '@/modules/utils/errorReporting.mjs'
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
@@ -152,12 +170,19 @@ const selectedId = ref(null)
 const saving = ref(false)
 const reparsing = ref(false)
 const confirmDeleteId = ref(null)
+const confirmReparseId = ref(null)
 const canDelete = hasServer()
 
 const confirmDeleteName = computed(() => {
   if (!confirmDeleteId.value) return ''
   const r = resumes.value.find(r => r.id === confirmDeleteId.value)
   return r?.displayName || r?.id || confirmDeleteId.value
+})
+
+const confirmReparseName = computed(() => {
+  if (!confirmReparseId.value) return ''
+  const r = resumes.value.find(r => r.id === confirmReparseId.value)
+  return r?.displayName || r?.id || confirmReparseId.value
 })
 
 const hasChanges = computed(() => {
@@ -178,6 +203,7 @@ watch(() => props.isOpen, async (open) => {
   if (!open) return
   pendingDeletes.value = new Set()
   selectedId.value = props.currentResumeId
+  confirmReparseId.value = null
   loading.value = true
   loadError.value = null
   try {
@@ -278,22 +304,51 @@ function openUpload() {
   emit('open-upload')
 }
 
-async function reparseSelected() {
-  if (!canReparse.value) return
-  const id = selectedId.value
-  if (!id) return
-
+async function runReparse(id) {
   reparsing.value = true
   loadError.value = null
   try {
     await reparseResume(id)
     resumes.value = await listResumes()
+    confirmReparseId.value = null
     emit('reparsed', id)
   } catch (err) {
+    reportError(err, '[ResumeManager] Reparse failed')
     loadError.value = `Reparse failed: ${err.message}`
   } finally {
     reparsing.value = false
   }
+}
+
+async function reparseSelected() {
+  if (!canReparse.value) return
+  const id = selectedId.value
+  if (!id) return
+
+  loadError.value = null
+  try {
+    const status = await getResumeHasLocalChanges(id)
+    if (status?.hasLocalChanges) {
+      confirmReparseId.value = id
+      return
+    }
+  } catch (err) {
+    reportError(
+      err,
+      '[ResumeManager] Failed to check for local changes before reparse',
+      'Proceeding to confirmation dialog as a safe fallback'
+    )
+    confirmReparseId.value = id
+    return
+  }
+
+  await runReparse(id)
+}
+
+async function confirmAndReparse() {
+  const id = confirmReparseId.value
+  if (!id || reparsing.value) return
+  await runReparse(id)
 }
 </script>
 
@@ -602,6 +657,11 @@ async function reparseSelected() {
   text-align: center;
 }
 
+.confirm-dialog-wide {
+  min-width: 320px;
+  max-width: 420px;
+}
+
 .confirm-message {
   font-size: 15px;
   color: #eee;
@@ -632,4 +692,18 @@ async function reparseSelected() {
   transition: background 0.15s;
 }
 .btn-confirm-delete:hover { background: #a93226; }
+
+.btn-confirm-reparse {
+  padding: 8px 20px;
+  background: #27ae60;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-confirm-reparse:hover:not(:disabled) { background: #1e8449; }
+.btn-confirm-reparse:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

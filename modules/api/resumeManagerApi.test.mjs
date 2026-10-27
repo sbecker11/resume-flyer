@@ -8,12 +8,14 @@ import {
     uploadResumeWithParserStream,
     getResumeData,
     deleteResume,
+    getResumeHasLocalChanges,
     reparseResume,
     reparseResumeWithParserStream,
     updateJobSkills,
     updateEducationJobSkills,
     renameSkill,
     mergeSkill,
+    updateSkillUrl,
     getResumeOtherSections,
     getResumeEducation
 } from './resumeManagerApi.mjs';
@@ -521,6 +523,25 @@ describe('resumeManagerApi', () => {
         });
     });
 
+    describe('getResumeHasLocalChanges', () => {
+        it('GETs /api/resumes/:id/has-local-changes', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ hasLocalChanges: true, reason: 'derived-differs-from-parse-baseline' })
+            });
+            const out = await getResumeHasLocalChanges('r1');
+            expect(out.hasLocalChanges).toBe(true);
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/has-local-changes',
+                expect.anything()
+            );
+        });
+
+        it('throws when resume id missing', async () => {
+            await expect(getResumeHasLocalChanges('')).rejects.toThrow('No resume id provided');
+        });
+    });
+
     describe('reparseResume', () => {
         it('calls POST /api/resumes/:id/reparse and returns JSON on success', async () => {
             fetchMock.mockResolvedValue({
@@ -746,6 +767,46 @@ describe('resumeManagerApi', () => {
         });
     });
 
+    describe('updateSkillUrl', () => {
+        it('PATCHes skills/url and returns JSON', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ ok: true, key: 'cnn', url: 'https://example.com/cnn' })
+            });
+            const r = await updateSkillUrl('rid', 'cnn', 'https://example.com/cnn');
+            expect(r).toEqual({ ok: true, key: 'cnn', url: 'https://example.com/cnn' });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/rid/skills/url',
+                expect.objectContaining({
+                    method: 'PATCH',
+                    body: JSON.stringify({ key: 'cnn', url: 'https://example.com/cnn' })
+                })
+            );
+        });
+
+        it('throws with err.error when not ok', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 400,
+                json: async () => ({ error: 'url must be an absolute http(s) URL.' })
+            });
+            await expect(updateSkillUrl('r', 'cnn', 'nope')).rejects.toThrow(
+                'url must be an absolute http(s) URL.'
+            );
+        });
+
+        it('throws HTTP status when json fails', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: async () => {
+                    throw new Error('fail');
+                }
+            });
+            await expect(updateSkillUrl('r', 'cnn', 'https://x.com')).rejects.toThrow('HTTP 500');
+        });
+    });
+
     describe('getResumeOtherSections', () => {
         it('GETs other-sections and returns JSON', async () => {
             const payload = { contact: {}, title: 'T' };
@@ -917,6 +978,7 @@ describe('resumeManagerApi', () => {
         let updateEducationJobSkillsStatic;
         let renameSkillStatic;
         let mergeSkillStatic;
+        let updateSkillUrlStatic;
         let getResumeOtherSectionsStatic;
         let getResumeEducationStatic;
 
@@ -940,6 +1002,7 @@ describe('resumeManagerApi', () => {
             updateEducationJobSkillsStatic = api.updateEducationJobSkills;
             renameSkillStatic = api.renameSkill;
             mergeSkillStatic = api.mergeSkill;
+            updateSkillUrlStatic = api.updateSkillUrl;
             getResumeOtherSectionsStatic = api.getResumeOtherSections;
             getResumeEducationStatic = api.getResumeEducation;
         });
@@ -1026,6 +1089,12 @@ describe('resumeManagerApi', () => {
 
         it('mergeSkill throws', async () => {
             await expect(mergeSkillStatic('r1', 'A', 'B')).rejects.toThrow('not available on static hosting');
+        });
+
+        it('updateSkillUrl throws', async () => {
+            await expect(updateSkillUrlStatic('r1', 'cnn', 'https://example.com')).rejects.toThrow(
+                'not available on static hosting'
+            );
         });
     });
 });

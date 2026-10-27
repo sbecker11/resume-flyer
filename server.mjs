@@ -2,6 +2,7 @@ import express from 'express';
 import fs from 'fs/promises'; // Use promises for async/await
 import fsSync from 'fs';
 import path from 'path';
+import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -197,6 +198,52 @@ async function readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath =
 }
 
 const REPARSE_BACKUP_DIRNAME = '.reparse-backup';
+
+/** Derived JSON files whose edits would be lost on reparse (hashed for local-change detection). */
+const DERIVED_SNAPSHOT_FILES = [
+    'jobs.json',
+    'skills.json',
+    'education.json',
+    'other-sections.json',
+    'categories.json',
+];
+
+/**
+ * Stable content hash of derived resume JSON. Used as a parse baseline in meta.json
+ * so reparse can warn when the user has made local edits since the last parse.
+ * @param {string} dir
+ * @returns {Promise<string>}
+ */
+async function computeDerivedSnapshotHash(dir) {
+    const hash = createHash('sha256');
+    for (const name of DERIVED_SNAPSHOT_FILES) {
+        hash.update(name);
+        hash.update('\0');
+        try {
+            hash.update(await fs.readFile(path.join(dir, name)));
+        } catch (e) {
+            if (e.code !== 'ENOENT') throw e;
+            hash.update('');
+        }
+        hash.update('\0');
+    }
+    return hash.digest('hex');
+}
+
+/**
+ * Write meta.json including derivedSnapshotHash from the current derived files.
+ * Call after parser output is in place so the hash matches a clean parse.
+ * @param {string} metaPath
+ * @param {Record<string, unknown>} metadata
+ * @param {string} dir
+ * @returns {Promise<Record<string, unknown>>}
+ */
+async function writeMetaWithParseBaseline(metaPath, metadata, dir) {
+    const derivedSnapshotHash = await computeDerivedSnapshotHash(dir);
+    const out = { ...metadata, derivedSnapshotHash };
+    await fs.writeFile(metaPath, JSON.stringify(out, null, 2));
+    return out;
+}
 
 /**
  * Move all resume-folder entries except the original document into `.reparse-backup`.
@@ -782,6 +829,56 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
     }
 });
 
+// PATCH /api/resumes/:id/skills/url: Set or clear a skill's custom info URL (used by the ? modal source link).
+app.patch('/api/resumes/:id/skills/url', async (req, res) => {
+    const { id } = req.params;
+    const { key, url } = req.body ?? {};
+    if (!id || id === 'default' || !key) {
+        return res.status(400).json({ error: 'Missing id or key.' });
+    }
+    const urlTrimmed = url == null ? '' : String(url).trim();
+    if (urlTrimmed) {
+        try {
+            const parsed = new URL(urlTrimmed);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                return res.status(400).json({ error: 'url must be an absolute http(s) URL.' });
+            }
+        } catch {
+            return res.status(400).json({ error: 'url must be an absolute http(s) URL.' });
+        }
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    const skillsPath = path.join(dir, 'skills.json');
+    try {
+        const skillsContent = await fs.readFile(skillsPath, 'utf-8');
+        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        const resolvedKey = resolveSkillKey(skills, key);
+        if (resolvedKey == null) {
+            return res.status(404).json({ error: `Skill "${key}" not found.` });
+        }
+        if (!skills[resolvedKey] || typeof skills[resolvedKey] !== 'object') {
+            skills[resolvedKey] = { name: resolvedKey };
+        }
+        skills[resolvedKey].url = urlTrimmed;
+        await atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2));
+        try {
+            const jobsContent = await fs.readFile(jobsPath, 'utf-8');
+            const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
+            bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
+        } catch {
+            /* bake failure is non-fatal */
+        }
+        res.json({ ok: true, key: resolvedKey, url: urlTrimmed });
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            return res.status(404).json({ error: 'skills.json not found.' });
+        }
+        console.error('[PATCH skills/url]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description)
 app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     const { id, jobIndex } = req.params;
@@ -918,6 +1015,51 @@ app.delete('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     } catch (err) {
         console.error('[DELETE jobs]', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/resumes/:id/has-local-changes: True when derived JSON differs from last parse baseline
+// (or, for legacy folders without derivedSnapshotHash, when a derived file is newer than meta.json).
+app.get('/api/resumes/:id/has-local-changes', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') {
+        return res.status(400).json({ error: 'Invalid resume id.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const metaPath = path.join(dir, 'meta.json');
+    try {
+        const metaRaw = await fs.readFile(metaPath, 'utf-8');
+        const meta = JSON.parse(metaRaw) || {};
+        const currentHash = await computeDerivedSnapshotHash(dir);
+        if (typeof meta.derivedSnapshotHash === 'string' && meta.derivedSnapshotHash.length > 0) {
+            return res.json({
+                hasLocalChanges: currentHash !== meta.derivedSnapshotHash,
+                reason: currentHash !== meta.derivedSnapshotHash ? 'derived-differs-from-parse-baseline' : 'matches-parse-baseline',
+            });
+        }
+        // Legacy folders: treat derived files meaningfully newer than meta as local edits.
+        const metaStat = await fs.stat(metaPath);
+        for (const name of DERIVED_SNAPSHOT_FILES) {
+            try {
+                const st = await fs.stat(path.join(dir, name));
+                if (st.mtimeMs > metaStat.mtimeMs + 2000) {
+                    return res.json({
+                        hasLocalChanges: true,
+                        reason: 'legacy-derived-newer-than-meta',
+                        changedFile: name,
+                    });
+                }
+            } catch (e) {
+                if (e.code !== 'ENOENT') throw e;
+            }
+        }
+        return res.json({ hasLocalChanges: false, reason: 'legacy-no-baseline' });
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            return res.status(404).json({ error: 'Resume not found.' });
+        }
+        reportError(err, '[has-local-changes] Failed to inspect resume folder');
+        return res.status(500).json({ error: err.message });
     }
 });
 
@@ -1219,8 +1361,15 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
             }
             if (parserRunError) throw parserRunError;
 
+            // Read and normalize parsed outputs so we can return counts, then stamp meta last
+            // (derivedSnapshotHash must match post-parse derived files).
+            const jobsPath = path.join(dir, 'jobs.json');
+            const skillsPath = path.join(dir, 'skills.json');
+            const categoriesPath = path.join(dir, 'categories.json');
+            const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
             // Recreate meta.json (it was stashed as part of the reparse).
-            const metadata = {
+            const metadata = await writeMetaWithParseBaseline(metaPath, {
                 id,
                 displayName: existingMeta?.displayName || existingMeta?.name || id,
                 originalFilename: keepEntry.name,
@@ -1231,14 +1380,7 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
                 createdAt: new Date().toISOString(),
                 uploadedBy: existingMeta?.uploadedBy || 'user',
                 fileSize: (await fs.stat(keepDocPath)).size
-            };
-            await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
-
-            // Read and normalize parsed outputs so we can return counts.
-            const jobsPath = path.join(dir, 'jobs.json');
-            const skillsPath = path.join(dir, 'skills.json');
-            const categoriesPath = path.join(dir, 'categories.json');
-            const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+            }, dir);
 
             await discardReparseBackup(backupDir);
             await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
@@ -1464,8 +1606,8 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             );
         }
 
-        // Recreate meta.json (it was stashed as part of the reparse).
-        const metadata = {
+        // Recreate meta.json with parse baseline (derivedSnapshotHash) after parser output is ready.
+        const metadata = await writeMetaWithParseBaseline(metaPath, {
             id,
             displayName: existingMeta?.displayName || existingMeta?.name || id,
             originalFilename: keepEntry.name,
@@ -1476,8 +1618,7 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             createdAt: new Date().toISOString(),
             uploadedBy: existingMeta?.uploadedBy || 'user',
             fileSize: (await fs.stat(keepDocPath)).size
-        };
-        await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
+        }, dir);
 
         await discardReparseBackup(backupDir);
         await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
@@ -1765,21 +1906,6 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
             throw parserRunError;
         }
 
-        // Generate meta.json
-        const metadata = {
-            id: resumeId,
-            displayName: displayName,
-            originalFilename: uploadedFile.originalname,
-            sourceUrl: req.body.resumeUrl || null, // Original URL if fetched from web
-            sourceType: req.body.resumeUrl ? 'url' : 'upload', // 'url' or 'upload'
-            createdAt: new Date().toISOString(),
-            uploadedBy: req.body.uploadedBy || 'user',
-            fileSize: uploadedFile.size
-        };
-
-        const metaPath = path.join(outputDir, 'meta.json');
-        await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2));
-
         console.log(`✅ Resume parsed successfully: ${resumeId}`);
 
         // Read the parsed data to return in response (parser outputs jobs.json, skills.json, categories.json)
@@ -1788,6 +1914,19 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
         const categoriesPath = path.join(outputDir, 'categories.json');
 
         const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+
+        // Stamp meta last so derivedSnapshotHash matches clean parser output.
+        const metaPath = path.join(outputDir, 'meta.json');
+        const metadata = await writeMetaWithParseBaseline(metaPath, {
+            id: resumeId,
+            displayName: displayName,
+            originalFilename: uploadedFile.originalname,
+            sourceUrl: req.body.resumeUrl || null, // Original URL if fetched from web
+            sourceType: req.body.resumeUrl ? 'url' : 'upload', // 'url' or 'upload'
+            createdAt: new Date().toISOString(),
+            uploadedBy: req.body.uploadedBy || 'user',
+            fileSize: uploadedFile.size
+        }, outputDir);
 
         await regenerateNonLocalResumesIndex(`resume created (${resumeId})`);
 

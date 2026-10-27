@@ -106,6 +106,23 @@ export async function deleteResume(resumeId) {
 }
 
 /**
+ * Whether derived resume JSON has changed since the last successful parse/reparse.
+ * Used to warn before Reparse overwrites local edits.
+ * @param {string} resumeId
+ * @returns {Promise<{ hasLocalChanges: boolean, reason?: string }>}
+ */
+export async function getResumeHasLocalChanges(resumeId) {
+    if (hasServer()) {
+        if (!resumeId) throw new Error('No resume id provided');
+        return fetchJsonOrThrow(
+            basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/has-local-changes`)
+        );
+    }
+    // Static host: cannot reparse; treat as no local-change gate.
+    return { hasLocalChanges: false, reason: 'static-host' };
+}
+
+/**
  * Totally re-parse an existing resume folder.
  * Server will delete all derived files in the folder except the original .docx/.pdf document,
  * then re-run resume-parser into the same folder.
@@ -512,6 +529,28 @@ export async function renameSkill(resumeId, oldKey, newName) {
         const response = await fetch(
             basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/rename`),
             { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldKey, newName }) }
+        );
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    } else {
+        throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
+    }
+}
+
+/**
+ * Set or clear a skill's custom info URL (used by the skill-info modal source link).
+ * @param {string} resumeId
+ * @param {string} key - Skill id/name (key in skills map)
+ * @param {string} url - Absolute http(s) URL, or empty string to clear
+ */
+export async function updateSkillUrl(resumeId, key, url) {
+    if (hasServer()) {
+        const response = await fetch(
+            basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/url`),
+            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, url }) }
         );
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
