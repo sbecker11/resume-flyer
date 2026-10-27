@@ -1068,12 +1068,13 @@ watch(orientation, (newOrientation) => {
   align-items: center;
   justify-content: center;
   color: #fff;
-  cursor: pointer;
+  cursor: default;
   z-index: var(--z-focal-point, 100);
   transform: translate(-50%, -50%);
   user-select: none;
   transition: color 0.2s ease, opacity 0.2s ease;
-  pointer-events: none; /* let clicks pass through to scene cards; mode cycle is on ResizeHandle */
+  /* Never capture clicks — scene card ? / edit / links must remain reachable underneath */
+  pointer-events: none !important;
 }
 
 #focal-point .focal-point-reticle {

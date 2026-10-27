@@ -63,7 +63,8 @@
     cursor: grabbing !important;
     color: blue;
     border-color: blue;
-    pointer-events: all;
+    /* Keep none — drag tracking uses document listeners, not the reticle hit-target */
+    pointer-events: none !important;
   }
 
   /* Ensure these classes are mutually exclusive in appearance */

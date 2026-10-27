@@ -105,7 +105,8 @@ export function useFocalPoint() {
     element.style.top = `${store.focalPoint.y}px`
     element.style.transform = 'translate(-50%, -50%)'
     element.style.zIndex = '100'
-    element.style.pointerEvents = 'none'
+    // Important: reticle must never steal clicks from scene ? / edit controls underneath.
+    element.style.setProperty('pointer-events', 'none', 'important')
     element.style.visibility = (store.focalPoint.x > 0 && store.focalPoint.y > 0) ? 'visible' : 'hidden'
   }
   
@@ -119,14 +120,17 @@ export function useFocalPoint() {
   // Set target position with easing
   function setTarget(x, y, source = 'api') {
     targetPosition.value = { x, y }
-    
+
+    // Scene leave/enter glide owns the rAF loop — only retarget, don't restart.
+    if (boundaryGlideActive) return
+
     if (isDragging.value) {
       // Direct update in drag mode
       setPosition(x, y, source)
       updateElementPosition()
     } else {
       // Smooth animation for other modes
-      startEasing()
+      startEasing({ source })
     }
   }
 
@@ -137,29 +141,102 @@ export function useFocalPoint() {
     }
   }
 
-  /** Immediate snap (no easing) — used when locking focal to bulls-eye. */
-  function snapFocalToBullsEye(source = 'bulls-eye-snap') {
-    cancelFocalEasing()
+  /** Dedicated leave/enter glide — not cancelled by FOLLOW's startEasing(). */
+  let boundaryGlideRaf = null
+  let boundaryGlideActive = false
+  /** When true, mode watch must not attach the FOLLOW mouse listener yet. */
+  let suppressFollowListener = false
+
+  function cancelBoundaryGlide() {
+    if (boundaryGlideRaf != null) {
+      cancelAnimationFrame(boundaryGlideRaf)
+      boundaryGlideRaf = null
+    }
+    boundaryGlideActive = false
+  }
+
+  function finishBoundaryGlide(source) {
+    boundaryGlideRaf = null
+    boundaryGlideActive = false
+    if (suppressFollowListener) {
+      suppressFollowListener = false
+      if (isFollowing.value && !isMouseListenerActive.value) {
+        addMouseListener()
+      }
+    }
+    console.log(`[FocalPoint] Boundary glide complete (${source})`)
+  }
+
+  function getBullsEyePosition() {
     const el = typeof document !== 'undefined' ? document.getElementById('bulls-eye') : null
-    let pos = null
     if (el) {
       const rect = el.getBoundingClientRect()
-      pos = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-    } else if (bullsEye && typeof bullsEye.getPosition === 'function') {
-      pos = bullsEye.getPosition()
-    } else if (bullsEye?.x != null && bullsEye?.y != null) {
-      pos = { x: bullsEye.x, y: bullsEye.y }
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
     }
+    if (bullsEye && typeof bullsEye.getPosition === 'function') {
+      return bullsEye.getPosition()
+    }
+    if (bullsEye?.x != null && bullsEye?.y != null) {
+      return { x: bullsEye.x, y: bullsEye.y }
+    }
+    return null
+  }
+
+  /**
+   * Ease focal point to an absolute (viewport) point with the snappier
+   * scene-boundary glide. Uses its own rAF so FOLLOW mousemove cannot
+   * cancel/replace it (that was causing a snap-to-mouse on re-enter).
+   */
+  function easeFocalToPoint(x, y, source = 'focal-ease') {
+    cancelFocalEasing()
+    cancelBoundaryGlide()
+    targetPosition.value = { x, y }
+    boundaryGlideActive = true
+
+    const BOUNDARY_EASING = 0.12
+
+    function animate() {
+      const currentX = store.focalPoint.x
+      const currentY = store.focalPoint.y
+      const targetX = targetPosition.value.x
+      const targetY = targetPosition.value.y
+
+      const dx = targetX - currentX
+      const dy = targetY - currentY
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (distance < 1) {
+        setPosition(targetX, targetY, `${source}-complete`)
+        updateElementPosition()
+        finishBoundaryGlide(source)
+        return
+      }
+
+      setPosition(currentX + dx * BOUNDARY_EASING, currentY + dy * BOUNDARY_EASING, `${source}-step`)
+      updateElementPosition()
+      boundaryGlideRaf = requestAnimationFrame(animate)
+    }
+
+    animate()
+  }
+
+  /**
+   * Ease focal point from its current position to the bulls-eye.
+   * Used when locking after the pointer leaves the scene view so the
+   * focal icon glides home instead of jumping.
+   */
+  function easeFocalToBullsEye(source = 'bulls-eye-ease') {
+    const pos = getBullsEyePosition()
     if (!pos) return
-    targetPosition.value = { x: pos.x, y: pos.y }
-    setPosition(pos.x, pos.y, source)
-    updateElementPosition()
+    easeFocalToPoint(pos.x, pos.y, source)
   }
   
-  // Easing animation
-  function startEasing() {
+  // Easing animation for normal FOLLOW chase (not scene-boundary glides)
+  function startEasing({ forceSmooth = false, source = 'animation' } = {}) {
+    if (boundaryGlideActive) return
     if (animationFrame.value) {
       cancelAnimationFrame(animationFrame.value)
+      animationFrame.value = null
     }
     
     function animate() {
@@ -173,18 +250,23 @@ export function useFocalPoint() {
       const distance = Math.sqrt(dx * dx + dy * dy)
       
       if (distance < 1) {
-        setPosition(targetX, targetY, 'animation-complete')
+        setPosition(targetX, targetY, `${source}-complete`)
         updateElementPosition()
         animationFrame.value = null
         return
       }
       
-      // FOLLOWING: smaller easing = more lag (slower catch-up to mouse)
-      const easing = isDragging.value ? 1 : 0.04
+      // FOLLOWING: 0.04 = laggy mouse chase. forceSmooth retained for any non-boundary callers.
+      let easing = 0.04
+      if (!forceSmooth && isDragging.value) {
+        easing = 1
+      } else if (isLocked.value || forceSmooth) {
+        easing = 0.12
+      }
       const newX = currentX + (dx * easing)
       const newY = currentY + (dy * easing)
       
-      setPosition(newX, newY, 'animation-step')
+      setPosition(newX, newY, `${source}-step`)
       updateElementPosition()
       
       animationFrame.value = requestAnimationFrame(animate)
@@ -270,7 +352,7 @@ export function useFocalPoint() {
         followRafScheduled = false
         if (!focalPointElement.value || !isFollowing.value) return
         const { x, y } = clampToLeftColumn(lastFollowMouse.x, lastFollowMouse.y)
-        // Use setTarget so easing runs: focal point lags behind mouse (unlike DRAGGING which sets position directly)
+        // During scene-enter glide: only retarget (setTarget no-ops the restart).
         setTarget(x, y, 'follow-mouse')
       })
     }
@@ -368,11 +450,11 @@ export function useFocalPoint() {
   }
 
   function applyOutsideSceneFocalLock() {
-    cancelFocalEasing()
     if (mode.value !== FOCALPOINT_MODES.LOCKED) {
       setModeTransient(FOCALPOINT_MODES.LOCKED)
     }
-    snapFocalToBullsEye('scene-outside-locked')
+    // Glide from last in-scene position to bulls-eye (no snap jump).
+    easeFocalToBullsEye('scene-outside-locked')
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('scene-view-pointer-left', { detail: {} }))
     }
@@ -385,9 +467,27 @@ export function useFocalPoint() {
     applyOutsideSceneFocalLock()
   }
 
-  function popModeOnSceneEnter() {
+  function popModeOnSceneEnter(clientX, clientY) {
     if (modeStackForSceneLeave.length === 0) return
     const restored = modeStackForSceneLeave.pop()
+    // Stop any in-flight glide-to-bulls-eye so restored FOLLOW/DRAG can take over.
+    cancelFocalEasing()
+    cancelBoundaryGlide()
+    // FOLLOWING leave↔enter symmetry: leave eases to bulls-eye; re-enter eases
+    // to the pointer. Suppress FOLLOW listener until the glide finishes so
+    // mousemove cannot cancel the boundary rAF and snap to the cursor.
+    if (
+      restored === FOCALPOINT_MODES.FOLLOWING &&
+      Number.isFinite(clientX) &&
+      Number.isFinite(clientY)
+    ) {
+      suppressFollowListener = true
+      setModeTransient(restored)
+      const { x, y } = clampToLeftColumn(clientX, clientY)
+      easeFocalToPoint(x, y, 'scene-enter-follow')
+      return
+    }
+    suppressFollowListener = false
     setModeTransient(restored)
   }
 
@@ -423,7 +523,7 @@ export function useFocalPoint() {
     if (pointerInsideSceneView !== inside) {
       pointerInsideSceneView = inside
       if (inside) {
-        popModeOnSceneEnter()
+        popModeOnSceneEnter(clientX, clientY)
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('scene-view-pointer-entered', { detail: { clientX, clientY } }))
         }
@@ -515,13 +615,17 @@ export function useFocalPoint() {
       } else if (newMode === FOCALPOINT_MODES.FOLLOWING) {
         if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
         removeCrosshairCursor()
-        addMouseListener()
+        // Scene-enter glide attaches the listener when it finishes.
+        if (!suppressFollowListener) addMouseListener()
       } else {
         if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
         removeCrosshairCursor()
+        // Scene-leave already started the bulls-eye glide via applyOutsideSceneFocalLock.
+        // Re-running here on nextTick races with a quick re-enter ease — skip when outside.
+        if (pointerInsideSceneView === false) return
         const ready = bullsEye && (typeof bullsEye.isReady === 'function' ? bullsEye.isReady() : (bullsEye.isReady?.value ?? false))
         if (ready) {
-          snapFocalToBullsEye('mode-locked')
+          easeFocalToBullsEye('mode-locked')
         } else if (newMode === FOCALPOINT_MODES.LOCKED && !ready) {
           console.warn('[FocalPoint] Bulls-eye service not available via provide/inject')
         }
@@ -581,10 +685,9 @@ export function useFocalPoint() {
     window.removeEventListener('bulls-eye-moved', handleBullsEyeMoved)
     console.log('[FocalPoint] Removed bulls-eye-moved event listener')
     
-    if (animationFrame.value) {
-      cancelAnimationFrame(animationFrame.value)
-      animationFrame.value = null
-    }
+    cancelFocalEasing()
+    cancelBoundaryGlide()
+    suppressFollowListener = false
   }
   
   // Auto-initialize on first use
