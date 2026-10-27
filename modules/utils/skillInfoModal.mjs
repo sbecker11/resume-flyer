@@ -96,7 +96,15 @@ function installGlobalDelegate() {
             return;
         }
 
-        const btn = e.target.closest('.skill-info-modal-btn');
+        // Selected biz clones sit at high z-index and can cover a skill-card ?.
+        // Prefer the event target; otherwise pick the topmost non-clone ? under the point.
+        let btn = e.target.closest?.('.skill-info-modal-btn') || null;
+        if (!btn && typeof document.elementsFromPoint === 'function') {
+            const stack = document.elementsFromPoint(e.clientX, e.clientY) || [];
+            btn = stack.find((el) => el?.classList?.contains('skill-info-modal-btn') && !el.closest('.clone'))
+                || stack.find((el) => el?.classList?.contains('skill-info-modal-btn'))
+                || null;
+        }
         if (!btn) return;
         e.stopPropagation();
         e.preventDefault();

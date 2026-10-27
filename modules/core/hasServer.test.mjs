@@ -1,97 +1,116 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+function installLocalStorageMock(initial = {}) {
+  const store = { ...initial }
+  const mock = {
+    getItem: (key) => (Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null),
+    setItem: (key, value) => { store[key] = String(value) },
+    removeItem: (key) => { delete store[key] },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]) },
+  }
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: mock,
+    configurable: true,
+    writable: true,
+  })
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', {
+      value: mock,
+      configurable: true,
+      writable: true,
+    })
+  }
+  return mock
+}
 
 describe('core/hasServer', () => {
   beforeEach(() => {
-    vi.resetModules();
+    vi.resetModules()
+    installLocalStorageMock()
     if (typeof window !== 'undefined') {
-      delete window.hasServer;
-      delete window.enableStaticMode;
-      delete window.disableStaticMode;
-      try {
-        if (typeof localStorage?.removeItem === 'function') {
-          localStorage.removeItem('forceStaticMode');
-        }
-      } catch { /* Node/happy-dom localStorage quirks */ }
-      document.documentElement.classList.remove('has-server');
+      delete window.hasServer
+      delete window.enableStaticMode
+      delete window.disableStaticMode
+      document.documentElement.classList.remove('has-server')
     }
-  });
+  })
 
   it('returns true when origin is not github.io', async () => {
     Object.defineProperty(window, 'location', {
       value: { origin: 'http://127.0.0.1:5173', host: '127.0.0.1:5173' },
       configurable: true,
       writable: true,
-    });
-    const { hasServer } = await import('./hasServer.mjs');
-    expect(hasServer()).toBe(true);
-    expect(typeof window.hasServer).toBe('function');
-    expect(document.documentElement.classList.contains('has-server')).toBe(true);
-  });
+    })
+    const { hasServer } = await import('./hasServer.mjs')
+    expect(hasServer()).toBe(true)
+    expect(typeof window.hasServer).toBe('function')
+    expect(document.documentElement.classList.contains('has-server')).toBe(true)
+  })
 
   it('returns false when origin is github.io', async () => {
     Object.defineProperty(window, 'location', {
       value: { origin: 'https://user.github.io', host: 'user.github.io' },
       configurable: true,
       writable: true,
-    });
-    const { hasServer } = await import('./hasServer.mjs');
-    expect(hasServer()).toBe(false);
-    expect(document.documentElement.classList.contains('has-server')).toBe(false);
-  });
+    })
+    const { hasServer } = await import('./hasServer.mjs')
+    expect(hasServer()).toBe(false)
+    expect(document.documentElement.classList.contains('has-server')).toBe(false)
+  })
 
   it('returns false when host is github.io but origin is missing', async () => {
     Object.defineProperty(window, 'location', {
       value: { host: 'user.github.io' },
       configurable: true,
       writable: true,
-    });
-    const { hasServer } = await import('./hasServer.mjs');
-    expect(hasServer()).toBe(false);
-  });
+    })
+    const { hasServer } = await import('./hasServer.mjs')
+    expect(hasServer()).toBe(false)
+  })
 
   it('caches the first computed value', async () => {
     Object.defineProperty(window, 'location', {
       value: { origin: 'http://localhost:3000' },
       configurable: true,
       writable: true,
-    });
-    const { hasServer } = await import('./hasServer.mjs');
-    expect(hasServer()).toBe(true);
+    })
+    const { hasServer } = await import('./hasServer.mjs')
+    expect(hasServer()).toBe(true)
     Object.defineProperty(window, 'location', {
       value: { origin: 'https://user.github.io' },
       configurable: true,
       writable: true,
-    });
-    expect(hasServer()).toBe(true);
-  });
+    })
+    expect(hasServer()).toBe(true)
+  })
 
   it('returns false when forceStaticMode is enabled in localStorage', async () => {
-    localStorage.setItem('forceStaticMode', 'true');
+    localStorage.setItem('forceStaticMode', 'true')
     Object.defineProperty(window, 'location', {
       value: { origin: 'http://127.0.0.1:5173', host: '127.0.0.1:5173' },
       configurable: true,
       writable: true,
-    });
-    const { hasServer } = await import('./hasServer.mjs');
-    expect(hasServer()).toBe(false);
-  });
+    })
+    const { hasServer } = await import('./hasServer.mjs')
+    expect(hasServer()).toBe(false)
+  })
 
   it('exposes runtime toggles on window', async () => {
     Object.defineProperty(window, 'location', {
       value: { origin: 'http://127.0.0.1:5173', host: '127.0.0.1:5173' },
       configurable: true,
       writable: true,
-    });
-    const { hasServer } = await import('./hasServer.mjs');
-    expect(hasServer()).toBe(true);
-    expect(typeof window.enableStaticMode).toBe('function');
-    expect(typeof window.disableStaticMode).toBe('function');
+    })
+    const { hasServer } = await import('./hasServer.mjs')
+    expect(hasServer()).toBe(true)
+    expect(typeof window.enableStaticMode).toBe('function')
+    expect(typeof window.disableStaticMode).toBe('function')
 
-    window.enableStaticMode();
-    expect(localStorage.getItem('forceStaticMode')).toBe('true');
-    expect(hasServer()).toBe(false);
+    window.enableStaticMode()
+    expect(localStorage.getItem('forceStaticMode')).toBe('true')
+    expect(hasServer()).toBe(false)
 
-    window.disableStaticMode();
-    expect(localStorage.getItem('forceStaticMode')).toBeNull();
-  });
-});
+    window.disableStaticMode()
+    expect(localStorage.getItem('forceStaticMode')).toBeNull()
+  })
+})
