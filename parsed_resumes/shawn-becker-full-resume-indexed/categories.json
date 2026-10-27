@@ -1,15 +1,12 @@
 {
-  "data-science": {
-    "name": "Data Science",
+  "ai": {
+    "name": "AI",
     "skillIDs": [
-      "ai-ml",
+      "ai",
+      "ml",
       "mlops",
-      "k-means-clustering",
-      "ciede2000",
       "langchain",
       "lcel",
-      "rag",
-      "chromadb",
       "dall-e-3",
       "pgvector",
       "huggingface",
@@ -18,18 +15,40 @@
       "bedrock",
       "langgraph",
       "snowflake-cortex-search",
+      "llm",
+      "nlp",
+      "ai-ml",
+      "genai",
+      "ai-agents",
+      "computer-vision",
+      "cnns",
+      "llm-apis-openai",
+      "llm-apis-anthropic",
+      "vector-dbs-chromadb",
+      "vector-dbs-pinecone"
+    ]
+  },
+  "data-science": {
+    "name": "Data Science",
+    "skillIDs": [
+      "ai",
+      "ml",
+      "mlops",
+      "k-means",
+      "ciede2000",
+      "langchain",
+      "huggingface",
+      "minilm",
+      "snowflake-cortex-search",
       "mlflow",
       "optuna",
       "llm",
       "dbt",
       "aws-glue",
-      "glue-crawler",
-      "airflow",
       "segment-cdp",
       "bigquery",
       "tableau",
       "pytorch",
-      "cnn",
       "sagemaker",
       "looker",
       "snowflake",
@@ -38,32 +57,7 @@
       "parquet",
       "redshift",
       "nlp",
-      "genai",
-      "ai-agents",
-      "computer-vision",
-      "cnns",
-      "llm-apis-openai",
-      "llm-apis-anthropic",
-      "data-pipelines",
-      "vector-dbs-chromadb",
-      "vector-dbs-pinecone"
-    ]
-  },
-  "methodology": {
-    "name": "Methodology",
-    "skillIDs": [
       "ai-ml",
-      "devops",
-      "k-means-clustering",
-      "rag",
-      "rbac",
-      "llm",
-      "rest-api",
-      "agile",
-      "ci-cd",
-      "cnn",
-      "scrum",
-      "nlp",
       "genai",
       "ai-agents",
       "computer-vision",
@@ -78,6 +72,8 @@
       "mlops",
       "ecs-fargate",
       "launchd",
+      "jira",
+      "aws-glue",
       "codecommit",
       "codebuild",
       "codepipeline",
@@ -88,8 +84,21 @@
       "xray",
       "ci-cd",
       "flyway",
+      "data-pipelines",
       "docker",
       "kubernetes"
+    ]
+  },
+  "methodology": {
+    "name": "Methodology",
+    "skillIDs": [
+      "devops",
+      "rbac",
+      "rest-api",
+      "agile",
+      "ci-cd",
+      "scrum",
+      "data-pipelines"
     ]
   },
   "tool": {
@@ -106,12 +115,11 @@
       "gmail",
       "jira",
       "dbt",
+      "glue-crawler",
       "codecommit",
       "codebuild",
-      "codepipeline",
-      "codedeploy",
+      "cloudwatch",
       "cyberark-pam",
-      "tls",
       "kafka",
       "airflow",
       "xray",
@@ -144,12 +152,14 @@
       "bcrypt",
       "rbac",
       "spring-boot",
+      "spring-ai",
       "rest-api",
-      "tls",
+      "dbt",
       "kafka",
+      "salesforce",
+      "shopify",
       "fastapi",
       "node-js",
-      "kinesis",
       "rabbitmq",
       "jsp",
       "spring",
@@ -180,23 +190,22 @@
       "spring-ai",
       "fastapi",
       "node-js",
-      "spring",
-      "nservicebus"
+      "spring"
     ]
   },
-  "programming-language": {
-    "name": "Programming Language",
+  "ml": {
+    "name": "ML",
     "skillIDs": [
-      "typescript",
-      "java-21",
-      "python",
-      "java",
-      "c"
+      "k-means",
+      "optuna",
+      "pytorch",
+      "cnns"
     ]
   },
   "library": {
     "name": "Library",
     "skillIDs": [
+      "ciede2000",
       "langchain",
       "lcel",
       "opencv",
@@ -209,8 +218,19 @@
       "vuetify",
       "vuelidate",
       "pyspark",
+      "nservicebus",
       "llm-apis-openai",
       "llm-apis-anthropic"
+    ]
+  },
+  "programming-language": {
+    "name": "Programming Language",
+    "skillIDs": [
+      "typescript",
+      "java-21",
+      "python",
+      "java",
+      "c"
     ]
   },
   "database": {
@@ -223,6 +243,7 @@
       "bigquery",
       "snowflake",
       "redshift",
+      "flyway",
       "dynamodb",
       "filemaker",
       "sql-anywhere",
@@ -230,6 +251,12 @@
       "oracle",
       "vector-dbs-chromadb",
       "vector-dbs-pinecone"
+    ]
+  },
+  "vector-dbs": {
+    "name": "Vector DBs",
+    "skillIDs": [
+      "chromadb"
     ]
   },
   "computer-vision": {
@@ -247,6 +274,10 @@
       "snowflake-cortex-search",
       "aws-glue",
       "glue-crawler",
+      "codecommit",
+      "codebuild",
+      "codepipeline",
+      "codedeploy",
       "cloudwatch",
       "gcp",
       "bigquery",
@@ -256,7 +287,8 @@
       "kinesis",
       "s3",
       "redshift",
-      "dynamodb"
+      "dynamodb",
+      "kubernetes"
     ]
   },
   "mlops": {
@@ -264,6 +296,22 @@
     "skillIDs": [
       "mlflow",
       "sagemaker"
+    ]
+  },
+  "ci-cd": {
+    "name": "CI/CD",
+    "skillIDs": [
+      "codepipeline",
+      "codedeploy"
+    ]
+  },
+  "data-pipelines": {
+    "name": "Data Pipelines",
+    "skillIDs": [
+      "kafka",
+      "airflow",
+      "pyspark",
+      "kinesis"
     ]
   }
 }

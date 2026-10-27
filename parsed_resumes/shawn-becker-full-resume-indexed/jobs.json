@@ -10,54 +10,14 @@
     "css RGB": "#116611",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Governance.",
+    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Governance.",
     "outlineIndex": "1",
     "skillIDs": [
-      "ai-ml",
+      "ai",
+      "ml",
       "devops",
       "mlops",
-      "agile",
-      "ai-agents",
-      "aurora-postgresql-serverless-v2",
-      "aws-glue",
-      "bedrock",
-      "chromadb",
-      "ci-cd",
-      "ciede2000",
-      "cloudwatch",
-      "cnns",
-      "docker",
-      "docx",
-      "genai",
-      "glue-crawler",
-      "gmail",
-      "java",
-      "java-21",
-      "huggingface",
-      "jira",
-      "json",
-      "k-means-clustering",
-      "langchain",
-      "langgraph",
-      "launchd",
-      "llm",
-      "llm-apis-anthropic",
-      "llm-apis-openai",
-      "nlp",
-      "node-js",
-      "pdf",
-      "pgvector",
-      "postgresql",
-      "python",
-      "rag",
-      "react",
-      "react-18",
-      "spring",
-      "spring-ai",
-      "spring-boot",
-      "typescript",
-      "vector-dbs-chromadb",
-      "youtube"
+      "CNN"
     ]
   },
   "1": {
@@ -92,10 +52,7 @@
     "skillIDs": [
       "docx",
       "pdf",
-      "json",
-      "agile",
-      "python",
-      "node-js"
+      "json"
     ]
   },
   "3": {
@@ -109,11 +66,11 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [React] app generating color palettes via [K-means clustering] with [CIEDE2000] perceptual color distance.",
+    "Description": "• [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
     "outlineIndex": "1.1.2",
     "skillIDs": [
       "react",
-      "k-means-clustering",
+      "k-means",
       "ciede2000"
     ]
   },
@@ -148,14 +105,13 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [FastMCP] + [LangChain] [LCEL] [RAG] server with [ChromaDB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "• [FastMCP] + [LangChain] [LCEL] RAG server with [ChromaDB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "outlineIndex": "1.1.4",
     "skillIDs": [
       "react",
       "fastmcp",
       "langchain",
       "lcel",
-      "rag",
       "chromadb",
       "postgresql"
     ]
@@ -218,8 +174,7 @@
       "pgvector",
       "huggingface",
       "minilm",
-      "ecs-fargate",
-      "python"
+      "ecs-fargate"
     ]
   },
   "9": {
@@ -233,22 +188,14 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "• [Java 21] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [Aurora PostgreSQL Serverless v2] + [Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "• [Java 21] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [Aurora PostgreSQL Serverless v2] + [Bedrock]; 149 tests, 94.5% instruction coverage.",
     "outlineIndex": "1.1.8",
     "skillIDs": [
-      "rag",
       "spring-boot",
       "java-21",
       "spring-ai",
       "aurora-postgresql-serverless-v2",
-      "bedrock",
-      "agile",
-      "chromadb",
-      "pgvector",
-      "typescript",
-      "spring",
-      "python",
-      "node-js"
+      "bedrock"
     ]
   },
   "10": {
@@ -262,10 +209,9 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [LangGraph] corrective-[RAG] on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
+    "Description": "• [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
     "outlineIndex": "1.1.9",
     "skillIDs": [
-      "rag",
       "langgraph",
       "snowflake-cortex-search",
       "mlflow",
@@ -288,14 +234,7 @@
     "skillIDs": [
       "launchd",
       "gmail",
-      "llm",
-      "agile",
-      "ci-cd",
-      "node-js",
-      "python",
-      "rag",
-      "pdf",
-      "postgresql"
+      "llm"
     ]
   },
   "12": {
@@ -362,7 +301,7 @@
   },
   "15": {
     "index": 15,
-    "role": "Consultant — Data / Platform Engineer",
+    "role": "Consultant — Data / Security Engineer",
     "employer": "Cigna",
     "start": "05/2023",
     "end": "12/2023",
@@ -371,13 +310,12 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Automated [CyberArk PAM] mutual-[TLS] credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.3",
     "skillIDs": [
       "jira",
       "agile",
       "cyberark-pam",
-      "tls",
       "kafka",
       "airflow",
       "xray",
@@ -412,7 +350,7 @@
   },
   "17": {
     "index": 17,
-    "role": "Consultant — ML / Data Engineer",
+    "role": "Consultant — ML / BI Engineer",
     "employer": "Angel Studios",
     "start": "11/2021",
     "end": "09/2022",
@@ -421,16 +359,23 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Delivered [PyTorch] CNN models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.5",
     "skillIDs": [
       "jira",
       "agile",
       "pytorch",
-      "cnn",
       "sagemaker",
       "looker",
-      "snowflake"
+      "snowflake",
+      "PyTorch",
+      "SageMaker",
+      "Looker",
+      "Snowflake",
+      "Jira",
+      "Agile",
+      "CNN",
+      "Computer Vision"
     ]
   },
   "18": {
@@ -483,7 +428,7 @@
     "css RGB": "#ff4500",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI expenses; [Flyway] schema evolution/migrations.• First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
+    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI expenses; [Flyway] schema evolution/migrations. First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
     "outlineIndex": "2",
     "skillIDs": [
       "json",
@@ -498,8 +443,7 @@
       "s3",
       "redshift",
       "flyway",
-      "scrum",
-      "python"
+      "scrum"
     ]
   },
   "21": {
@@ -533,7 +477,7 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines.• Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
+    "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines. Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
     "outlineIndex": "4",
     "skillIDs": [
       "java",
@@ -568,7 +512,7 @@
     "css RGB": "#116611",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Lead Engineer, System Architect: [Java], [JSP], and [PostgreSQL] systems.",
+    "Description": "• [Java], [JSP], and [PostgreSQL] systems.",
     "outlineIndex": "5.6",
     "skillIDs": [
       "postgresql",
@@ -660,7 +604,7 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5–7 independent consultants.",
+    "Description": "• Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5–7 independent consultants.",
     "outlineIndex": "6",
     "skillIDs": [
       "java",
