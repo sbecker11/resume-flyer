@@ -7,7 +7,12 @@ describe('core/hasServer', () => {
       delete window.hasServer;
       delete window.enableStaticMode;
       delete window.disableStaticMode;
-      localStorage.removeItem('forceStaticMode');
+      try {
+        if (typeof localStorage?.removeItem === 'function') {
+          localStorage.removeItem('forceStaticMode');
+        }
+      } catch { /* Node/happy-dom localStorage quirks */ }
+      document.documentElement.classList.remove('has-server');
     }
   });
 
@@ -20,6 +25,7 @@ describe('core/hasServer', () => {
     const { hasServer } = await import('./hasServer.mjs');
     expect(hasServer()).toBe(true);
     expect(typeof window.hasServer).toBe('function');
+    expect(document.documentElement.classList.contains('has-server')).toBe(true);
   });
 
   it('returns false when origin is github.io', async () => {
@@ -30,6 +36,7 @@ describe('core/hasServer', () => {
     });
     const { hasServer } = await import('./hasServer.mjs');
     expect(hasServer()).toBe(false);
+    expect(document.documentElement.classList.contains('has-server')).toBe(false);
   });
 
   it('returns false when host is github.io but origin is missing', async () => {

@@ -12,7 +12,8 @@ import {
   resolveSceneSkillCardElement,
   resumeSkillYearsMatchingScene,
 } from '@/modules/utils/skillCardIdentity.mjs';
-import { listResumes, getResumeOtherSections, getResumeEducation, getResumeData } from '@/modules/api/resumeManagerApi.mjs';
+import { listResumes, getResumeOtherSections, getResumeEducation, getResumeData, updateSkillUrl } from '@/modules/api/resumeManagerApi.mjs';
+import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
@@ -21,7 +22,17 @@ import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
 import { renderSkillCardResumeInnerHtml } from '@/modules/scene/cardMarkup.mjs';
-import { openSkillInfoModal, markFocusedSkillLinkForJob, markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, scrollFocusedBizCardSkillIntoViewIfCropVisible, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '@/modules/utils/skillInfoModal.mjs';
+import {
+  openSkillInfoModal,
+  markFocusedSkillLinkForJob,
+  markSourceBizBackLinkForSkill,
+  clearSourceBizBackLinkClass,
+  scrollFocusedBizCardSkillIntoViewIfCropVisible,
+  rememberSkillCardSourceBiz,
+  getRememberedSkillCardSourceBiz,
+  isAbsoluteHttpUrl,
+  resolveSkillInfoSourceUrl,
+} from '@/modules/utils/skillInfoModal.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
 import { computeColorGridLayout } from '@/modules/utils/colorGridLayout.mjs';
@@ -163,9 +174,17 @@ async function printResume() {
   }
 }
 
-// When no jobs are loaded: open Manage modal if resumes exist, otherwise Upload modal
+// When no jobs are loaded AND no resume is selected: open Manage (if any exist) or Upload.
+// If user-settings.currentResumeId (or startup selection) already names a resume, do not force
+// the Manage Resumes dialog — the default selected resume is enough.
 watch(() => props.noJobsLoaded, async (val) => {
   if (!val) {
+    isManageModalOpen.value = false;
+    isUploadModalOpen.value = false;
+    return;
+  }
+  const selectedId = props.currentResumeId;
+  if (selectedId && selectedId !== 'default') {
     isManageModalOpen.value = false;
     isUploadModalOpen.value = false;
     return;
@@ -523,7 +542,8 @@ const detailsEditorInitialEducationKey = ref('');
 const isAboutModalOpen = ref(false);
 const README_PREVIEW_PATH = 'readme-preview.html';
 const aboutHtml = `
-<strong>resume-flyer</strong> is an interactive resume explorer. Business and skill cards glide into place as you browse your career in 3D or in a linear list. Upload a DOCX or PDF resume and it is parsed into your employment experience and technical skills. You explore them as <strong>business cards</strong> (one per job) and <strong>skill cards</strong> (one per skill). Add details, dates, and skills for each job, then print your revised resume as a new HTML file.
+<p><strong>resume-flyer</strong> is an interactive resume explorer. Business and skill cards glide into place as you browse your career in 3D or in a linear list. Upload a DOCX or PDF resume and it is parsed into your employment experience and technical skills. You explore them as <strong>business cards</strong> (one per job) and <strong>skill cards</strong> (one per skill). Add details, dates, and skills for each job, then print your revised resume as a new HTML file.</p>
+<p>Open github project: <a href="https://github.com/sbecker11/resume-flyer" target="_blank" rel="noopener noreferrer">github.com/sbecker11/resume-flyer</a></p>
 `.trim();
 
 function openAboutModal() {
@@ -735,6 +755,13 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   if (data.skillName) copy.setAttribute('data-skill-name', data.skillName);
   const skillSlug = data.skillName;
   const skillObj = getGlobalJobsDependency().getSkillsData()[skillSlug];
+  // Pencil only in local run mode (Express backend). Static/GitHub Pages is read-only.
+  const canEditSkillUrl = hasServer() && props.currentResumeId && props.currentResumeId !== 'default';
+  const infoUrl = resolveSkillInfoSourceUrl(
+    skillSlug,
+    skillObj?.name || skillSlug,
+    skillObj ? { [skillSlug]: skillObj } : null
+  );
   copy.innerHTML = renderSkillCardResumeInnerHtml({
     skillSlug,
     skillObj,
@@ -742,9 +769,25 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
     referencingJobNumbers: data.referencingJobNumbers || [],
     backIconUrl,
     bizCardIdForJob: (jobNum) => createBizCardDivId(jobNum),
+    infoUrl,
+    showUrlEdit: canEditSkillUrl,
   });
 
-  // ? button handled by global delegate in skillInfoModal.mjs
+  const urlLink = copy.querySelector('.skill-card-info-url');
+  if (urlLink) {
+    urlLink.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+
+  const urlEditBtn = copy.querySelector('.skill-url-edit-btn');
+  if (urlEditBtn) {
+    urlEditBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openSkillUrlEditPrompt(skillSlug);
+    });
+  }
 
   const closeBtn = copy.querySelector('.skill-resume-div-close');
   if (closeBtn) {
@@ -817,7 +860,7 @@ function appendSkillCardCopyToResumeListing(skillCardId, retryCount = 0) {
   });
   // Click: same as biz-resume-div — unselected → select; selected → unselect
   copy.addEventListener('click', (e) => {
-    if (e.target.closest('.skill-resume-div-close') || e.target.closest('.skill-resume-div-back-link') || e.target.closest('.skill-info-modal-btn')) return;
+    if (e.target.closest('.skill-resume-div-close') || e.target.closest('.skill-resume-div-back-link') || e.target.closest('.skill-info-modal-btn') || e.target.closest('.skill-url-edit-btn') || e.target.closest('.skill-card-info-url')) return;
     if (!skillCardId) return;
     const sel = selectionManager?.selectedCard;
     if (sel?.type === 'skill' && sel?.skillCardId === skillCardId) {
@@ -943,8 +986,70 @@ function scrollSceneSkillCardIntoView() {
   if (sceneSkillCard) sceneSkillCard.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 }
 function onResumeSkillCardClick(event) {
-  if (event.target.closest('.skill-resume-div-close') || event.target.closest('.skill-resume-div-back-link') || event.target.closest('.skill-info-modal-btn')) return;
+  if (event.target.closest('.skill-resume-div-close') || event.target.closest('.skill-resume-div-back-link') || event.target.closest('.skill-info-modal-btn') || event.target.closest('.skill-url-edit-btn') || event.target.closest('.skill-card-info-url')) return;
   scrollSceneSkillCardIntoView();
+}
+
+/**
+ * Refresh displayed info URLs on all resume copies of a skill after edit/clear.
+ * @param {string} skillSlug
+ */
+function syncResumeSkillInfoUrlDisplay(skillSlug) {
+  if (!skillSlug || typeof document === 'undefined') return;
+  const skillsData = getGlobalJobsDependency().getSkillsData();
+  const skillObj = skillsData[skillSlug];
+  const displayUrl = resolveSkillInfoSourceUrl(
+    skillSlug,
+    skillObj?.name || skillSlug,
+    skillObj ? { [skillSlug]: skillObj } : null
+  );
+  const esc = (typeof CSS !== 'undefined' && CSS.escape) ? CSS.escape(skillSlug) : String(skillSlug).replace(/"/g, '\\"');
+  document.querySelectorAll(
+    `.skill-resume-div[data-skill-name="${esc}"] .skill-card-info-url, .appended-skill-resume-div[data-skill-name="${esc}"] .skill-card-info-url`
+  ).forEach((link) => {
+    link.setAttribute('href', displayUrl);
+    link.setAttribute('title', displayUrl);
+    link.textContent = displayUrl;
+  });
+}
+
+/**
+ * Prompt to set/clear a skill's custom info URL; persists via API and patches in-memory skills.
+ * @param {string} skillSlug
+ */
+async function openSkillUrlEditPrompt(skillSlug) {
+  if (!canUpload || !skillSlug) return;
+  const resumeId = props.currentResumeId;
+  if (!resumeId || resumeId === 'default') {
+    alert('Select a saved resume to edit skill URLs.');
+    return;
+  }
+  const jobsDep = getGlobalJobsDependency();
+  const skillsData = jobsDep.getSkillsData();
+  const current = String(skillsData[skillSlug]?.url ?? '').trim();
+  const next = window.prompt(
+    'Skill info URL (http/https). Leave blank to use the Wikipedia fallback.',
+    current
+  );
+  if (next == null) return; // cancelled
+  const trimmed = String(next).trim();
+  if (trimmed && !isAbsoluteHttpUrl(trimmed)) {
+    alert('URL must be an absolute http(s) link, or blank to clear.');
+    return;
+  }
+  if (trimmed === current) return;
+  try {
+    await updateSkillUrl(resumeId, skillSlug, trimmed);
+    if (typeof jobsDep.patchSkillData === 'function') {
+      jobsDep.patchSkillData(skillSlug, { url: trimmed });
+    } else if (skillsData[skillSlug]) {
+      skillsData[skillSlug].url = trimmed;
+    }
+    syncResumeSkillInfoUrlDisplay(skillSlug);
+  } catch (err) {
+    reportError(err, '[ResumeContainer] Failed to update skill URL');
+    alert('Failed to update skill URL: ' + (err?.message || err));
+  }
 }
 
 </script>
@@ -1453,6 +1558,17 @@ function onResumeSkillCardClick(event) {
     font-family: Arial, sans-serif;
     font-size: 14px;
     line-height: 1.6;
+}
+.about-modal-body p {
+    margin: 12px 0 0;
+}
+.about-modal-body a {
+    color: #9fd2ff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.about-modal-body a:hover {
+    color: #c5e4ff;
 }
 
 .about-readme-link {

@@ -991,16 +991,20 @@ body.focal-point-locked .biz-card-div .scroll-caret,
 
 /* Removed z-index from hovered state - DOM order determines rendering */
 
-/* Hide focal point while hovering interactive skill/back-arrow links */
+/* Hide focal point while hovering interactive scene controls so it cannot
+ * visually cover or intercept ? / edit / skill-link / back-arrow clicks. */
 body:has(.biz-card-skill-title:hover) #focal-point,
 body:has(.skill-card-back-icon:hover) #focal-point,
-body:has(.skill-resume-div-back-link:hover) #focal-point {
+body:has(.skill-resume-div-back-link:hover) #focal-point,
+body:has(.skill-info-modal-btn:hover) #focal-point,
+body:has(.biz-details-edit-btn:hover) #focal-point,
+body:has(.scroll-caret:hover) #focal-point {
     opacity: 0;
-    pointer-events: none;
+    pointer-events: none !important;
     transition: opacity 0.15s ease-out;
 }
 
-/* ── Skill info modal ─────────────────────────────────────────────────────── */
+/* ── Skill info modal (? — scene skill cards only) ────────────────────────── */
 .skill-info-modal-btn {
     position: absolute;
     top: 4px;
@@ -1020,18 +1024,78 @@ body:has(.skill-resume-div-back-link:hover) #focal-point {
     padding: 0;
     flex-shrink: 0;
     transition: all 0.2s ease;
-    z-index: 2;
+    z-index: 20;
+    pointer-events: auto;
 }
-/* Show on all scene skill cards (original + selected clone) and resume-list skill cards. */
-.skill-card-div .skill-info-modal-btn,
-.skill-resume-div .skill-info-modal-btn,
-.appended-skill-resume-div .skill-info-modal-btn {
+.skill-card-div .skill-info-modal-btn {
     display: flex;
 }
-/* On skill-resume-div the × close button occupies top-right; shift ? to its left */
-.skill-resume-div .skill-info-modal-btn,
-.appended-skill-resume-div .skill-info-modal-btn {
+
+/* Resume-list: name + clickable info URL on one row (pencil/× are absolute top-right) */
+.skill-card-name-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: 10px;
+    max-width: 100%;
+    min-width: 0;
+    /* Clear absolute pencil (right:30, 22px) + close (right:4, 22px) */
+    padding-right: 56px;
+    box-sizing: border-box;
+}
+.skill-card-name-row .skill-card-label {
+    flex: 0 0 auto;
+    max-width: none;
+    white-space: nowrap;
+}
+.skill-card-info-url {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.75em;
+    font-weight: 500;
+    line-height: 1.2;
+    color: inherit;
+    opacity: 0.85;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.skill-card-info-url:hover {
+    opacity: 1;
+}
+
+/* Resume-list: edit custom skill info URL — top-right, immediately left of × close */
+.skill-url-edit-btn {
+    position: absolute;
+    top: 4px;
     right: 30px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid white;
+    background-color: var(--button-bg-color, #555);
+    color: var(--button-text-color, white);
+    cursor: pointer;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 0;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    line-height: 1;
+    z-index: 3;
+}
+/* Local run only — <html class="has-server"> is set by hasServer.mjs */
+html.has-server .skill-resume-div .skill-url-edit-btn,
+html.has-server .appended-skill-resume-div .skill-url-edit-btn {
+    display: flex;
+}
+.skill-url-edit-btn:hover {
+    filter: brightness(1.15);
 }
 
 #skill-info-modal {

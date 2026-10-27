@@ -14,6 +14,12 @@
  * To clear the runtime override: localStorage.removeItem('forceStaticMode') then reload.
  */
 
+/** Keep <html class="has-server"> in sync so CSS can hide local-only controls (e.g. URL pencil). */
+function syncHasServerDocumentClass(hasBackend) {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.toggle('has-server', !!hasBackend);
+}
+
 function hasServerImpl() {
     if (typeof window === 'undefined') return false;
     if (hasServerImpl._cached === undefined) {
@@ -22,6 +28,7 @@ function hasServerImpl() {
             if (localStorage.getItem('forceStaticMode') === 'true') {
                 console.log('[hasServer] 🗂️  Static mode forced via localStorage (forceStaticMode=true)');
                 hasServerImpl._cached = false;
+                syncHasServerDocumentClass(false);
                 return false;
             }
         } catch { /* localStorage unavailable in some contexts */ }
@@ -32,6 +39,7 @@ function hasServerImpl() {
             if (import.meta.env?.VITE_STATIC_MODE === 'true') {
                 console.log('[hasServer] 🗂️  Static mode forced via VITE_STATIC_MODE=true (.env)');
                 hasServerImpl._cached = false;
+                syncHasServerDocumentClass(false);
                 return false;
             }
         } catch { /* not a Vite environment */ }
@@ -42,6 +50,7 @@ function hasServerImpl() {
         const origin = loc.origin || '';
         const isGitHubPages = Boolean(host) ? host.includes('github.io') : origin.includes('github.io');
         hasServerImpl._cached = !isGitHubPages;
+        syncHasServerDocumentClass(hasServerImpl._cached);
     }
     return hasServerImpl._cached;
 }
@@ -55,6 +64,7 @@ if (typeof window !== 'undefined') {
     window.enableStaticMode = () => {
         localStorage.setItem('forceStaticMode', 'true');
         hasServerImpl._cached = undefined; // clear cache so next call re-evaluates
+        syncHasServerDocumentClass(false);
         console.log('[hasServer] Static mode enabled — reload the page to apply.');
     };
     window.disableStaticMode = () => {
@@ -62,6 +72,8 @@ if (typeof window !== 'undefined') {
         hasServerImpl._cached = undefined;
         console.log('[hasServer] Static mode disabled — reload the page to apply.');
     };
+    // Evaluate once on load so <html class="has-server"> is correct before first paint of controls.
+    hasServerImpl();
 }
 
 export function hasServer() {
