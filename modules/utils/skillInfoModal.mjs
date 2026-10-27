@@ -42,6 +42,33 @@ function buildSkillInfoSourceUrl(slug, displayName) {
     return `${normalizedBase}${encodeURIComponent(term)}`;
 }
 
+/** True when value is a non-empty absolute http(s) URL. */
+export function isAbsoluteHttpUrl(value) {
+    const s = String(value ?? '').trim();
+    if (!s) return false;
+    try {
+        const u = new URL(s);
+        return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Prefer a skill's stored custom `url` when it is an absolute http(s) link;
+ * otherwise fall back to Wikipedia-from-name (or configured base).
+ * @param {string} slug
+ * @param {string} [displayName]
+ * @param {Record<string, { url?: string }>|null} [skillsData]
+ * @returns {string}
+ */
+export function resolveSkillInfoSourceUrl(slug, displayName, skillsData = null) {
+    const data = skillsData ?? getGlobalJobsDependency().getSkillsData?.() ?? {};
+    const custom = data?.[slug]?.url;
+    if (isAbsoluteHttpUrl(custom)) return String(custom).trim();
+    return buildSkillInfoSourceUrl(slug, displayName);
+}
+
 // Single global delegated listener — survives any innerHTML replacement on cards.
 let _delegateInstalled = false;
 function installGlobalDelegate() {
@@ -657,8 +684,8 @@ export async function openSkillInfoModal(slug, displayName, cardEl = null) {
     const skillCardEl = resolveSkillCardElement(cardEl, slug);
     const bizLinksHtml = associatedBizCardsHtml(skillCardEl);
 
-    const sourceUrl = buildSkillInfoSourceUrl(slug, displayName);
-    const sourceLinkHtml = `<p class="skill-info-summary"><span>(<a class="skill-info-source-link" href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`;
+    const sourceUrl = resolveSkillInfoSourceUrl(slug, displayName);
+    const sourceLinkHtml = `<p class="skill-info-summary"><span>(<a class="skill-info-source-link" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(sourceUrl)}</a>)</span></p>`;
 
     if (!hasServer()) {
         // Static host: no OpenAI API — Wikipedia/source link + associated jobs only.

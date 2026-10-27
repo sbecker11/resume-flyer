@@ -363,6 +363,18 @@ export function useJobsDependency() {
   /** Sync getter for the skills map (slug → { name, ... }). Returns {} before load. */
   const getSkillsData = () => skillsState.value ?? {}
 
+  /**
+   * Patch fields on one in-memory skill (e.g. after updateSkillUrl) without a full reload.
+   * @param {string} key
+   * @param {Record<string, unknown>} patch
+   */
+  const patchSkillData = (key, patch) => {
+    if (!key || !patch || typeof patch !== 'object') return
+    const current = skillsState.value ?? {}
+    const existing = current[key] && typeof current[key] === 'object' ? current[key] : { name: key }
+    skillsState.value = { ...current, [key]: { ...existing, ...patch } }
+  }
+
   return {
     // Reactive state (readonly)
     jobsData: readonly(computed(() => jobsState.value.data)),
@@ -376,6 +388,7 @@ export function useJobsDependency() {
     loadJobs,
     getJobsData,
     getSkillsData,
+    patchSkillData,
     registerController,
     waitForJobs
   }

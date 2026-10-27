@@ -48,8 +48,25 @@ export function renderSkillCardBackIconsHtml(backLinks, backIconUrl, linkClass =
     return `<div class="skill-card-back-icons">${icons}</div>`
 }
 
+/** Resume-list only: pencil control to edit the skill's custom info URL. */
+export function renderSkillUrlEditBtnHtml(skillSlug) {
+    return `<button type="button" class="skill-url-edit-btn" data-skill-slug="${escapeHtml(skillSlug)}" aria-label="Edit skill info URL" title="Edit skill info URL">&#9998;</button>`
+}
+
+/**
+ * Clickable skill info URL (custom or Wikipedia fallback) for resume cards.
+ * @param {string} infoUrl
+ */
+export function renderSkillInfoUrlLinkHtml(infoUrl) {
+    const href = String(infoUrl || '').trim()
+    if (!href) return ''
+    return `<a class="skill-card-info-url" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(href)}">${escapeHtml(href)}</a>`
+}
+
 /**
  * Shared skill card content stack (label, back icons, years).
+ * When infoUrl is set (resume list), shows the URL to the right of the name.
+ * Pencil edit (if any) is rendered by the resume shell next to the close button.
  */
 export function renderSkillCardContentHtml({
     skillSlug,
@@ -58,12 +75,18 @@ export function renderSkillCardContentHtml({
     backLinks = [],
     backIconUrl,
     linkClass = '',
+    infoUrl = null,
 }) {
     const iconsHtml = backLinks.length
         ? renderSkillCardBackIconsHtml(backLinks, backIconUrl, linkClass)
         : ''
+    const labelHtml = `<span class="skill-card-label">${skillLabelHtml(skillSlug, skillObj)}</span>`
+    const urlLinkHtml = infoUrl ? renderSkillInfoUrlLinkHtml(infoUrl) : ''
+    const nameBlock = infoUrl
+        ? `<div class="skill-card-name-row">${labelHtml}${urlLinkHtml}</div>`
+        : labelHtml
     return `<div class="skill-card-content">
-                <span class="skill-card-label">${skillLabelHtml(skillSlug, skillObj)}</span>
+                ${nameBlock}
                 ${iconsHtml}
                 ${skillYearsExperienceHtml(totalYears)}
             </div>`
@@ -75,6 +98,7 @@ export function renderSkillInfoModalBtnHtml(skillSlug, displayName) {
 
 /**
  * Inner HTML for scene .skill-card-div (excludes shell attributes/listeners).
+ * Scene retains the ? skill-info button; no inline URL row.
  */
 export function renderSkillCardSceneInnerHtml({
     skillSlug,
@@ -91,6 +115,8 @@ export function renderSkillCardSceneInnerHtml({
 
 /**
  * Inner HTML for resume .skill-resume-div appended copy (includes listing-only close btn).
+ * Shows clickable info URL; optional pencil sits immediately left of close (top-right).
+ * No ? button (scene-only).
  */
 export function renderSkillCardResumeInnerHtml({
     skillSlug,
@@ -99,22 +125,24 @@ export function renderSkillCardResumeInnerHtml({
     referencingJobNumbers = [],
     backIconUrl,
     bizCardIdForJob,
+    infoUrl = '',
+    showUrlEdit = false,
 }) {
-    const displayName = skillObj?.name || skillSlug
     const backLinks = referencingJobNumbers.map((jobNumber) => ({
         bizCardId: bizCardIdForJob(jobNumber),
         jobNumber,
     }))
-    return `${renderSkillInfoModalBtnHtml(skillSlug, displayName)}
-    ${renderSkillCardContentHtml({
+    const urlEditHtml = showUrlEdit ? renderSkillUrlEditBtnHtml(skillSlug) : ''
+    return `${renderSkillCardContentHtml({
         skillSlug,
         skillObj,
         totalYears,
         backLinks,
         backIconUrl,
         linkClass: 'skill-resume-div-back-link',
+        infoUrl,
     })}
-    <button type="button" class="skill-resume-div-close" aria-label="Remove skill card from resume listing">×</button>`
+    ${urlEditHtml}<button type="button" class="skill-resume-div-close" aria-label="Remove skill card from resume listing">×</button>`
 }
 
 /**
