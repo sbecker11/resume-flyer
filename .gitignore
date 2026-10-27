@@ -30,3 +30,7 @@ parsed_resumes/**/parser-output.log
 
 # Schema validator test venv
 .venv-schema/.venv-schema/
+
+# Local demo capture sources / ffmpeg intermediates (LinkedIn + README use resume-flyer.gif)
+static_content/*.mov
+static_content/output.gif
