@@ -14,6 +14,7 @@ import { ResumeListScrollContainer } from './resumeListScrollContainer.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { setJobColorIndex } from '../utils/paletteHelpers.mjs';
+import { reportError } from '../utils/errorReporting.mjs';
 
 /**
  * Single process to build and attach the resume list from card divs.
@@ -51,8 +52,19 @@ export async function buildResumeListFromCards(bizCardDivs) {
     }
 
     console.debug('[ResumeSystemInitializer] building resume list from', bizCardDivs.length, 'cards');
+    // Build fully before touching the DOM so a mid-create failure cannot leave an empty listing.
+    let resumeDivs;
+    try {
+        resumeDivs = await ric.createAllBizResumeDivs(bizCardDivs);
+    } catch (error) {
+        reportError(
+            error,
+            '[ResumeSystemInitializer] Failed creating resume listing divs',
+            'Leaving the previous resume listing in place'
+        );
+        throw error;
+    }
     while (listEl.firstChild) listEl.firstChild.remove();
-    const resumeDivs = await ric.createAllBizResumeDivs(bizCardDivs);
     resumeDivs.forEach((div, index) => {
         if (div instanceof Node) {
             listEl.appendChild(div);
@@ -73,6 +85,7 @@ export async function buildResumeListFromCards(bizCardDivs) {
     if (Array.isArray(currentJobs) && currentJobs.length > 0) {
         rlc.initialize(currentJobs);
     }
+    // Identity placeholder only until reinitialize/setupResumeListScroll applies outline or date sort.
     rlc.sortedIndices = Array.from({ length: (currentJobs?.length ?? resumeDivs.filter(Boolean).length) }, (_, i) => i);
     rlc.reinitialize(resumeDivs);
     console.debug('[ResumeSystemInitializer] resume list built:', resumeDivs.length, 'items');

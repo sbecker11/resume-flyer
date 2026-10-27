@@ -435,7 +435,11 @@ class ResumeItemsController {
             descContent.className = 'description-content';
             // descriptionSlugs: slugs found in [brackets] in the description —
             // merged into the skills section so the union of all sources is shown.
-            descriptionSlugs = this.parseDescriptionToBullets(jobData.Description, descContent);
+            // Education rows: match enrichedJobs (no description→skill inheritance) —
+            // unresolved brackets render as plain text instead of aborting the whole listing.
+            descriptionSlugs = this.parseDescriptionToBullets(jobData.Description, descContent, {
+                requireResolvedSkills: !isEducationDerivedJob(jobData),
+            });
             descDiv.appendChild(descContent);
 
             detailsDiv.appendChild(descDiv);
@@ -498,10 +502,12 @@ class ResumeItemsController {
      *
      * @param {string} description
      * @param {HTMLElement} container
+     * @param {{ requireResolvedSkills?: boolean }} [options]
      * @returns {Set<string>} slugs found in description brackets
      */
-    parseDescriptionToBullets(description, container) {
+    parseDescriptionToBullets(description, container, options = {}) {
         if (!description) return new Set();
+        const requireResolvedSkills = options.requireResolvedSkills !== false;
 
         const escapeHtml = (str) => String(str)
             .replace(/&/g, '&amp;')
@@ -516,7 +522,7 @@ class ResumeItemsController {
         const resolveSkill = (term) => {
             const slug = labelToSlug(term, skillsData);
             if (!slug) {
-                if (Object.keys(skillsData).length > 0) {
+                if (requireResolvedSkills && Object.keys(skillsData).length > 0) {
                     throw new Error(`[ResumeItemsController] Unresolved bracketed term "[${term}]" — add a skill with name="${term}" to skills.json or fix the description`);
                 }
                 return null;
@@ -586,7 +592,9 @@ class ResumeItemsController {
             const descContent = detailsDiv.querySelector('.description-content');
             if (!descContent) return;
             descContent.innerHTML = '';
-            const descriptionSlugs = this.parseDescriptionToBullets(jobData.Description, descContent);
+            const descriptionSlugs = this.parseDescriptionToBullets(jobData.Description, descContent, {
+                requireResolvedSkills: !isEducationDerivedJob(jobData),
+            });
             // Rebuild skills section with the now-complete union of sources
             const skillEntries = orderedSkillEntriesForRDiv(jobData, descriptionSlugs);
             const skillsDiv = detailsDiv.querySelector('.resume-skills');
