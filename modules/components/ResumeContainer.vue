@@ -20,7 +20,7 @@ import ResumeManagerDelete from './ResumeManagerDelete.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
-import { skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
+import { skillDisplayName, skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
 import { renderSkillCardResumeInnerHtml } from '@/modules/scene/cardMarkup.mjs';
 import {
   openSkillInfoModal,
@@ -37,6 +37,7 @@ import {
   normalizeSkillUrlEditInput,
   skillUrlPersistReminder,
 } from '@/modules/utils/skillUrlEdit.mjs';
+import { effectiveStoredSkillUrl } from '@/modules/utils/skillUrlSync.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
 import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
 import { computeColorGridLayout } from '@/modules/utils/colorGridLayout.mjs';
@@ -963,6 +964,7 @@ onMounted(() => {
   window.addEventListener('app-state-loaded', onAppStateLoadedForSort);
   window.addEventListener('edit-job-skills', handleEditJobSkills);
   window.addEventListener('open-resume-details', handleOpenResumeDetails);
+  window.addEventListener('skill-urls-changed', onSharedSkillUrlsChanged);
   document.addEventListener('keydown', handleGlobalKeyDown);
   nextTick(() => { setTimeout(() => { syncSortRuleKeyFromController(); syncResumeListingControls(); }, 100); });
   window.__resumeAppendSkillCardCopy = appendSkillCardCopyToResumeListing;
@@ -980,6 +982,7 @@ onUnmounted(() => {
   window.removeEventListener('app-state-loaded', onAppStateLoadedForSort);
   window.removeEventListener('edit-job-skills', handleEditJobSkills);
   window.removeEventListener('open-resume-details', handleOpenResumeDetails);
+  window.removeEventListener('skill-urls-changed', onSharedSkillUrlsChanged);
   delete window.__resumeAppendSkillCardCopy;
 });
 
@@ -1017,26 +1020,34 @@ function syncResumeSkillInfoUrlDisplay(skillSlug) {
   });
 }
 
+function onSharedSkillUrlsChanged() {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll(
+    '.skill-resume-div[data-skill-name], .appended-skill-resume-div[data-skill-name]'
+  ).forEach((el) => {
+    const slug = el.getAttribute('data-skill-name');
+    if (slug) syncResumeSkillInfoUrlDisplay(slug);
+  });
+}
+
 /**
- * Prompt to set/clear a skill's custom info URL; persists via API and patches in-memory skills.
+ * Prompt to set/clear a skill's custom info URL.
+ * Static mode saves into the shared catalog; a reachable sync API publishes it to other apps.
  * @param {string} skillSlug
  */
 async function openSkillUrlEditPrompt(skillSlug) {
   if (!skillSlug) return;
   const resumeId = props.currentResumeId;
   if (!canEditSkillUrlForResume(hasServer(), resumeId)) {
-    if (!hasServer()) {
-      alert('Skill URL editing requires local run mode (Express backend). On GitHub Pages, commit skills.json instead.');
-    } else {
-      alert('Select a saved resume to edit skill URLs.');
-    }
+    alert('Select a saved resume to edit skill URLs.');
     return;
   }
   const jobsDep = getGlobalJobsDependency();
   const skillsData = jobsDep.getSkillsData();
-  const current = String(skillsData[skillSlug]?.url ?? '').trim();
+  const skillName = skillDisplayName(skillSlug, skillsData[skillSlug]);
+  const current = effectiveStoredSkillUrl(skillSlug, skillsData);
   const next = window.prompt(
-    'Skill info URL (http/https). Leave blank to use the Wikipedia fallback.',
+    `This URL is used for ${skillName}.\nSkill info URL (http/https). Leave blank to use the Wikipedia fallback.`,
     current
   );
   const parsed = normalizeSkillUrlEditInput(next, current);
@@ -1047,16 +1058,19 @@ async function openSkillUrlEditPrompt(skillSlug) {
   }
   const trimmed = parsed.url;
   try {
-    await updateSkillUrl(resumeId, skillSlug, trimmed);
+    const result = await updateSkillUrl(resumeId, skillSlug, trimmed);
     if (typeof jobsDep.patchSkillData === 'function') {
       jobsDep.patchSkillData(skillSlug, { url: trimmed });
     } else if (skillsData[skillSlug]) {
       skillsData[skillSlug].url = trimmed;
     }
     syncResumeSkillInfoUrlDisplay(skillSlug);
-    const reminder = skillUrlPersistReminder({ resumeId, skillSlug, url: trimmed });
+    const reminder = skillUrlPersistReminder({
+      skillSlug,
+      url: trimmed,
+      synced: result?.synced !== false,
+    });
     console.info(`[ResumeContainer] ${reminder}`);
-    // Local edits only ship to GitHub Pages after skills.json is committed.
     alert(reminder);
   } catch (err) {
     reportError(err, '[ResumeContainer] Failed to update skill URL');

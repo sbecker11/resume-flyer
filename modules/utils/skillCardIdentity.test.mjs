@@ -47,12 +47,42 @@ describe('skill finder options', () => {
             java: { name: 'Java' },
         })
         expect(options).toEqual([
-            { kind: 'skill', id: 'skill-card-div-4', label: 'Agile', sublabel: 'agile' },
-            { kind: 'skill', id: 'skill-card-div-9', label: 'Java', sublabel: 'java' },
+            { kind: 'skill', id: 'skill-card-div-4', label: 'Agile', sublabel: '', slug: 'agile' },
+            { kind: 'skill', id: 'skill-card-div-9', label: 'Java', sublabel: '', slug: 'java' },
         ])
         const agile = filterSearchOptionsByQuery(options, 'Agile')
         expect(agile).toHaveLength(1)
         expect(agile[0].id).toBe('skill-card-div-4')
+    })
+
+    it('appends the skill url after the slug and does not replace it with a catalog url', () => {
+        const cards = [
+            skillCard('skill-card-div-1', 'aurora-postgresql-serverless-v2'),
+            skillCard('skill-card-div-2', 'airflow'),
+            skillCard('skill-card-div-3', 'agile'),
+        ]
+        const options = buildSkillSearchOptions(cards, {
+            'aurora-postgresql-serverless-v2': {
+                name: 'Aurora PostgreSQL Serverless v2',
+                url: 'https://aws.amazon.com/rds/aurora/serverless/',
+            },
+            airflow: { name: 'Airflow', url: 'https://airflow.apache.org/' },
+            agile: { name: 'Agile', url: '' },
+        }, {
+            entries: {
+                'Aurora PostgreSQL Serverless v2': {
+                    url: 'https://www.google.com/search?q=amazon+Aurora',
+                    updatedAt: '2026-01-01T00:00:00.000Z',
+                },
+            },
+        })
+        expect(options.find((row) => row.id === 'skill-card-div-1').sublabel)
+            .toBe('https://aws.amazon.com/rds/aurora/serverless/')
+        expect(options.find((row) => row.id === 'skill-card-div-2').sublabel)
+            .toBe('https://airflow.apache.org/')
+        expect(options.find((row) => row.id === 'skill-card-div-3').sublabel).toBe('')
+        const bySlug = filterSearchOptionsByQuery(options, 'aurora-postgresql-serverless-v2')
+        expect(bySlug.map((row) => row.id)).toEqual(['skill-card-div-1'])
     })
 
     it('keeps the canonical id when the clone appears first in the DOM', () => {

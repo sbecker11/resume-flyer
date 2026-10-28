@@ -1,17 +1,20 @@
 /**
- * Helpers for resume-list skill URL editing (local Express only).
- * Custom urls live in parsed_resumes/<id>/skills.json and must be committed for GitHub Pages.
+ * Helpers for resume-list skill URL editing.
+ * Static mode can edit. URLs are shared across resume-flyer apps via the skill URL catalog
+ * (see skillUrlSync.mjs), not stored only in one resume's skills.json.
  */
 import { isAbsoluteHttpUrl } from './skillInfoModal.mjs'
 
 /**
- * Pencil / persist only when a backend is available and a non-default resume is selected.
+ * Pencil is available in static mode. With a backend, a saved resume must be selected
+ * because the per-resume skills.json write still rejects the default resume.
  * @param {boolean} hasBackend
  * @param {string|null|undefined} resumeId
  * @returns {boolean}
  */
 export function canEditSkillUrl(hasBackend, resumeId) {
-    return Boolean(hasBackend) && Boolean(resumeId) && resumeId !== 'default'
+    if (!hasBackend) return true
+    return Boolean(resumeId) && resumeId !== 'default'
 }
 
 /**
@@ -36,17 +39,24 @@ export function normalizeSkillUrlEditInput(next, current = '') {
 }
 
 /**
- * Reminder after a successful local skills.json URL write — Pages only sees committed files.
- * @param {{ resumeId: string, skillSlug: string, url: string }} opts
+ * Reminder after a skill URL edit. Synced edits live in the shared catalog;
+ * static hosts serve the mirrored parsed_resumes/skill-urls.json after it is committed.
+ * @param {{ skillSlug: string, url: string, synced?: boolean }} opts
  * @returns {string}
  */
-export function skillUrlPersistReminder({ resumeId, skillSlug, url }) {
-    const id = String(resumeId || '').trim() || '(resume)'
+export function skillUrlPersistReminder({ skillSlug, url, synced = false }) {
     const slug = String(skillSlug || '').trim() || '(skill)'
     const cleared = !String(url || '').trim()
     const action = cleared ? 'cleared' : 'updated'
+    if (synced) {
+        return (
+            `Skill URL ${action} for "${slug}". ` +
+            `Shared with other resume-flyer apps. ` +
+            `Commit parsed_resumes/skill-urls.json so GitHub Pages serves the change.`
+        )
+    }
     return (
-        `Skill URL ${action} for "${slug}" in resume "${id}". ` +
-        `Saved to parsed_resumes/${id}/skills.json — commit and push that file so GitHub Pages serves the change.`
+        `Skill URL ${action} for "${slug}" in this browser. ` +
+        `The shared catalog was unreachable, so other resume-flyer apps will not see it until the sync server is running.`
     )
 }

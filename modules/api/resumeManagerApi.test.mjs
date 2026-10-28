@@ -11,6 +11,8 @@ import {
     getResumeHasLocalChanges,
     reparseResume,
     reparseResumeWithParserStream,
+    listReparseHistory,
+    restoreReparseHistory,
     updateJobSkills,
     updateEducationJobSkills,
     renameSkill,
@@ -22,11 +24,26 @@ import {
 import { mergeJobsWithEducation, toJobsArray } from '@/modules/data/mergeEducationIntoJobs.mjs';
 import { enrichJobsWithSkills } from '@/modules/data/enrichedJobs.mjs';
 
+function installLocalStorageMock() {
+    const store = {};
+    const mock = {
+        getItem: (key) => (Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null),
+        setItem: (key, value) => { store[key] = String(value); },
+        removeItem: (key) => { delete store[key]; },
+        clear: () => { Object.keys(store).forEach((key) => delete store[key]); },
+    };
+    Object.defineProperty(globalThis, 'localStorage', { value: mock, configurable: true, writable: true });
+    if (typeof window !== 'undefined') {
+        Object.defineProperty(window, 'localStorage', { value: mock, configurable: true, writable: true });
+    }
+}
+
 describe('resumeManagerApi', () => {
     let fetchMock;
     let consoleErrorSpy;
 
     beforeEach(() => {
+        installLocalStorageMock();
         // Mock console.error to avoid test output noise
         consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -631,6 +648,52 @@ describe('resumeManagerApi', () => {
         });
     });
 
+    describe('listReparseHistory', () => {
+        it('GETs the dated backup list', async () => {
+            const history = [{ id: '2026-10-27T17-00-00-000Z', createdAt: '2026-10-27T17:00:00.000Z', reason: 'reparse' }];
+            fetchMock.mockResolvedValue({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                json: async () => ({ history })
+            });
+            const out = await listReparseHistory('r1');
+            expect(out).toEqual(history);
+            expect(fetchMock).toHaveBeenCalledWith('/api/resumes/r1/reparse-history', expect.anything());
+        });
+
+        it('throws when the history list is missing', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                json: async () => ({})
+            });
+            await expect(listReparseHistory('r1')).rejects.toThrow('missing a history list');
+        });
+    });
+
+    describe('restoreReparseHistory', () => {
+        it('POSTs the chosen backup id', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                json: async () => ({ ok: true, id: '2026-10-27T17-00-00-000Z' })
+            });
+            const out = await restoreReparseHistory('r1', '2026-10-27T17-00-00-000Z');
+            expect(out).toEqual({ ok: true, id: '2026-10-27T17-00-00-000Z' });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/r1/reparse-history/2026-10-27T17-00-00-000Z/restore',
+                expect.objectContaining({ method: 'POST' })
+            );
+        });
+
+        it('throws when backup id is missing', async () => {
+            await expect(restoreReparseHistory('r1', '')).rejects.toThrow('No backup id provided');
+        });
+    });
+
     describe('updateJobSkills', () => {
         it('PATCHes skills without newSkills when array empty', async () => {
             fetchMock.mockResolvedValue({
@@ -774,7 +837,7 @@ describe('resumeManagerApi', () => {
                 json: async () => ({ ok: true, key: 'cnn', url: 'https://example.com/cnn' })
             });
             const r = await updateSkillUrl('rid', 'cnn', 'https://example.com/cnn');
-            expect(r).toEqual({ ok: true, key: 'cnn', url: 'https://example.com/cnn' });
+            expect(r).toMatchObject({ ok: true, key: 'cnn', url: 'https://example.com/cnn', synced: true });
             expect(fetchMock).toHaveBeenCalledWith(
                 '/api/resumes/rid/skills/url',
                 expect.objectContaining({
@@ -795,7 +858,7 @@ describe('resumeManagerApi', () => {
             );
         });
 
-        it('throws HTTP status when json fails', async () => {
+        it('keeps the shared catalog save when skills.json PATCH fails', async () => {
             fetchMock.mockResolvedValue({
                 ok: false,
                 status: 500,
@@ -803,7 +866,9 @@ describe('resumeManagerApi', () => {
                     throw new Error('fail');
                 }
             });
-            await expect(updateSkillUrl('r', 'cnn', 'https://x.com')).rejects.toThrow('HTTP 500');
+            const r = await updateSkillUrl('r', 'cnn', 'https://x.com');
+            expect(r).toMatchObject({ ok: true, key: 'cnn', url: 'https://x.com', synced: false });
+            expect(consoleErrorSpy).toHaveBeenCalled();
         });
     });
 
@@ -981,6 +1046,8 @@ describe('resumeManagerApi', () => {
         let updateSkillUrlStatic;
         let getResumeOtherSectionsStatic;
         let getResumeEducationStatic;
+        let listReparseHistoryStatic;
+        let restoreReparseHistoryStatic;
 
         beforeEach(async () => {
             vi.resetModules();
@@ -1005,6 +1072,8 @@ describe('resumeManagerApi', () => {
             updateSkillUrlStatic = api.updateSkillUrl;
             getResumeOtherSectionsStatic = api.getResumeOtherSections;
             getResumeEducationStatic = api.getResumeEducation;
+            listReparseHistoryStatic = api.listReparseHistory;
+            restoreReparseHistoryStatic = api.restoreReparseHistory;
         });
 
         it('listResumes fetches static index and returns resumes', async () => {
@@ -1091,10 +1160,24 @@ describe('resumeManagerApi', () => {
             await expect(mergeSkillStatic('r1', 'A', 'B')).rejects.toThrow('not available on static hosting');
         });
 
-        it('updateSkillUrl throws', async () => {
-            await expect(updateSkillUrlStatic('r1', 'cnn', 'https://example.com')).rejects.toThrow(
-                'not available on static hosting'
-            );
+        it('listReparseHistory throws', async () => {
+            await expect(listReparseHistoryStatic('r1')).rejects.toThrow('not available on static hosting');
+        });
+
+        it('restoreReparseHistory throws', async () => {
+            await expect(restoreReparseHistoryStatic('r1', '2026-10-27T17-00-00-000Z')).rejects.toThrow('not available on static hosting');
+        });
+
+        it('updateSkillUrl saves in the browser when the sync API is unavailable', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 404,
+                json: async () => ({}),
+            });
+            const r = await updateSkillUrlStatic('r1', 'cnn', 'https://example.com');
+            expect(r).toMatchObject({ ok: true, key: 'cnn', url: 'https://example.com', synced: false });
+            const stored = JSON.parse(localStorage.getItem('resume-flyer/skill-urls'));
+            expect(stored.entries.cnn.url).toBe('https://example.com');
         });
     });
 });

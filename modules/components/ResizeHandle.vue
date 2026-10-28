@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, type Ref, type ComputedRef } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, type Ref, type ComputedRef } from 'vue';
 // useAimPoint removed during Vue 3 migration cleanup
 import { FOCALPOINT_MODES } from '@/modules/composables/useFocalPointVue3.mjs';
 import { useAppStore } from '@/modules/stores/appStore.mjs';
@@ -17,6 +17,7 @@ import {
   filterSearchOptionsByQuery,
 } from '@/modules/utils/skillCardIdentity.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
+import { getSkillUrlCatalog } from '@/modules/utils/skillUrlSync.mjs';
 import Scene3DSettings from './Scene3DSettings.vue';
 
 // Local type definitions
@@ -372,12 +373,20 @@ type SkillSearchOption = { kind: 'skill'; id: string; label: string; sublabel: s
 type JobSearchOption = { kind: 'job'; id: number; label: string; sublabel: string };
 type SearchOption = SkillSearchOption | JobSearchOption;
 
+const skillUrlRevision = ref(0);
+function onSkillUrlsChanged(): void {
+  skillUrlRevision.value += 1;
+}
+onMounted(() => window.addEventListener('skill-urls-changed', onSkillUrlsChanged));
+onUnmounted(() => window.removeEventListener('skill-urls-changed', onSkillUrlsChanged));
+
 const filteredSearchOptions = computed<SearchOption[]>(() => {
+  skillUrlRevision.value;
   const q = skillSearchQuery.value.trim().toLowerCase();
   if (searchMode.value === 'skill') {
     const skillsData = getGlobalJobsDependency().getSkillsData() || {};
     const cards = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]:not(.clone)'));
-    return filterSearchOptionsByQuery(buildSkillSearchOptions(cards, skillsData), q);
+    return filterSearchOptionsByQuery(buildSkillSearchOptions(cards, skillsData, getSkillUrlCatalog()), q);
   }
 
   const cards = Array.from(document.querySelectorAll('.biz-card-div[id^="biz-card-div-"]:not(.clone)'));
@@ -579,7 +588,7 @@ watch(skillSearchOpen, (open) => {
                 @click="selectSearchResult(item)"
               >
                 <span class="skill-search-result-title">{{ item.label }}</span>
-                <span class="skill-search-result-sub">{{ item.sublabel }}</span>
+                <span v-if="item.sublabel" class="skill-search-result-sub">{{ item.sublabel }}</span>
               </button>
               <div v-if="!filteredSearchOptions.length" class="skill-search-empty">
                 No matching {{ searchMode === 'job' ? 'jobs' : 'skills' }}.
@@ -897,6 +906,7 @@ watch(skillSearchOpen, (open) => {
 .skill-search-result-sub {
     font-size: 12px;
     opacity: 0.78;
+    overflow-wrap: anywhere;
 }
 
 .skill-search-empty {

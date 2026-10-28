@@ -6,6 +6,8 @@ import { enrichJobsWithSkills } from '../data/enrichedJobs.mjs'
 import { mergeJobsWithEducation, toJobsArray as rawJobsToArray } from '../data/mergeEducationIntoJobs.mjs'
 import { reportError } from '@/modules/utils/errorReporting.mjs'
 import { hasServer } from '@/modules/core/hasServer.mjs'
+import { applyCatalogToSkills } from '@/modules/utils/skillUrlCatalog.mjs'
+import { getSkillUrlCatalog, isSkillUrlSyncActive } from '@/modules/utils/skillUrlSync.mjs'
 
 /**
  * Validate that no two slugs in the skills map resolve to the same display name.
@@ -63,6 +65,21 @@ const jobsState = ref({
 
 // Skills map: slug → { name, ... } — stored alongside jobs so display names are always available
 const skillsState = ref({})
+
+function overlaySharedSkillUrls(skills) {
+  if (!isSkillUrlSyncActive()) return skills || {}
+  return applyCatalogToSkills(skills, getSkillUrlCatalog()).skills
+}
+
+function onSharedSkillUrlsChanged() {
+  if (!isSkillUrlSyncActive()) return
+  const { skills, changed } = applyCatalogToSkills(skillsState.value, getSkillUrlCatalog())
+  if (changed) skillsState.value = skills
+}
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('skill-urls-changed', onSharedSkillUrlsChanged)
+}
 
 // Controllers that depend on jobs data
 const dependentControllers = ref(new Set())
@@ -151,7 +168,7 @@ export function useJobsDependency() {
 
     /** Commit a resolved jobs+skills payload to reactive state and notify controllers. */
     const commitJobs = async (jobs, skills, source) => {
-      skillsState.value = skills || {}
+      skillsState.value = overlaySharedSkillUrls(skills || {})
       validateSkillLabelUniqueness(skillsState.value)
       jobsState.value.data = jobs
       jobsState.value.isInitialized = true

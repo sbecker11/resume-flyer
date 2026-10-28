@@ -14,7 +14,7 @@
  * To clear the runtime override: localStorage.removeItem('forceStaticMode') then reload.
  */
 
-/** Keep <html class="has-server"> in sync so CSS can hide local-only controls (e.g. URL pencil). */
+/** Keep <html class="has-server"> in sync so CSS can tell server mode from static mode. */
 function syncHasServerDocumentClass(hasBackend) {
     if (typeof document === 'undefined') return;
     document.documentElement.classList.toggle('has-server', !!hasBackend);

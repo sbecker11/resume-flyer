@@ -15,6 +15,12 @@ import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories }
 import { mergeJobsWithEducation, toJobsArray } from './modules/data/mergeEducationIntoJobs.mjs';
 import { enrichJobsWithSkills } from './modules/data/enrichedJobs.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
+import { assertSkillInfoUrl } from './modules/utils/skillUrlCatalog.mjs';
+import {
+    readSharedSkillUrlCatalog,
+    skillUrlsMirrorPath,
+    upsertSharedSkillUrl,
+} from './modules/utils/skillUrlCatalogStore.mjs';
 import { reportError } from './modules/utils/errorReporting.mjs';
 import {
     archiveReparseBackup,
@@ -847,6 +853,45 @@ app.patch('/api/resumes/:id/skills/url', async (req, res) => {
             return res.status(404).json({ error: 'skills.json not found.' });
         }
         console.error('[PATCH skills/url]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/skill-urls: Shared skill-info URL catalog (all resumes, all resume-flyer apps on this machine).
+app.get('/api/skill-urls', async (req, res) => {
+    try {
+        const catalog = await readSharedSkillUrlCatalog();
+        res.set('Cache-Control', 'no-store');
+        res.json(catalog);
+    } catch (err) {
+        reportError(err, '[GET /api/skill-urls] Failed to read shared skill URL catalog');
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PUT /api/skill-urls: Merge one slug. Last updatedAt wins. Mirrors parsed_resumes/skill-urls.json.
+app.put('/api/skill-urls', async (req, res) => {
+    const { key, url, updatedAt } = req.body ?? {};
+    if (!key || typeof key !== 'string' || !key.trim()) {
+        return res.status(400).json({ error: 'Missing key.' });
+    }
+    let urlTrimmed;
+    try {
+        urlTrimmed = assertSkillInfoUrl(url);
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
+    }
+    try {
+        const catalog = await upsertSharedSkillUrl({
+            key: key.trim(),
+            url: urlTrimmed,
+            updatedAt: typeof updatedAt === 'string' && updatedAt ? updatedAt : new Date().toISOString(),
+            mirrorPath: skillUrlsMirrorPath(PARSED_RESUMES_DIR),
+        });
+        res.set('Cache-Control', 'no-store');
+        res.json(catalog);
+    } catch (err) {
+        reportError(err, '[PUT /api/skill-urls] Failed to save shared skill URL');
         res.status(500).json({ error: err.message });
     }
 });

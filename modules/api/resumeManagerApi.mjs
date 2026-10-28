@@ -588,19 +588,30 @@ export async function renameSkill(resumeId, oldKey, newName) {
  * @param {string} url - Absolute http(s) URL, or empty string to clear
  */
 export async function updateSkillUrl(resumeId, key, url) {
-    if (hasServer()) {
-        const response = await fetch(
-            basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/url`),
-            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, url }) }
-        );
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error || `HTTP ${response.status}`);
+    const { publishSkillUrl } = await import('@/modules/utils/skillUrlSync.mjs');
+    const published = await publishSkillUrl(key, url);
+    if (hasServer() && resumeId && resumeId !== 'default') {
+        try {
+            const response = await fetch(
+                basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/url`),
+                { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, url }) }
+            );
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || `HTTP ${response.status}`);
+            }
+            const body = await response.json();
+            return { ...body, synced: published.synced };
+        } catch (error) {
+            reportError(
+                error,
+                `[ResumeManagerAPI] Failed to write skill URL into skills.json for ${resumeId}`,
+                'Shared skill URL catalog already saved this change'
+            );
+            return published;
         }
-        return response.json();
-    } else {
-        throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
     }
+    return published;
 }
 
 /**

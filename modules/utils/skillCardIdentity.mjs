@@ -11,6 +11,7 @@
  */
 
 import { reportError } from './errorReporting.mjs'
+import { userDefinedSkillUrl } from './skillUrlCatalog.mjs'
 
 const CLONE_ID_SUFFIX = '-clone'
 
@@ -64,16 +65,22 @@ export function skillCardIdBySlugFromElements(elements) {
 /**
  * @param {Iterable<Element>} cardElements
  * @param {Record<string, { name?: string }>} [skillsData]
+ * @param {unknown} [catalog] shared skill-URL catalog, used only when the skill has no url
  * @returns {{ kind: 'skill', id: string, label: string, sublabel: string }[]}
  */
-export function buildSkillSearchOptions(cardElements, skillsData = {}) {
+export function buildSkillSearchOptions(cardElements, skillsData = {}, catalog = null) {
     const bySlug = skillCardIdBySlugFromElements(cardElements)
-    const options = Object.entries(bySlug).map(([slug, id]) => ({
-        kind: 'skill',
-        id,
-        label: skillsData[slug]?.name || slug,
-        sublabel: slug,
-    }))
+    const options = Object.entries(bySlug).map(([slug, id]) => {
+        const skill = skillsData[slug]
+        const url = userDefinedSkillUrl(catalog, slug, skill?.name, skill?.url)
+        return {
+            kind: 'skill',
+            id,
+            label: skill?.name || slug,
+            sublabel: url || '',
+            slug,
+        }
+    })
     options.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
     return options
 }
@@ -110,9 +117,10 @@ export function buildJobSearchOptions(cardElements) {
 export function filterSearchOptionsByQuery(options, query) {
     const q = String(query ?? '').trim().toLowerCase()
     if (!q || !Array.isArray(options)) return options || []
-    return options.filter((opt) =>
-        opt.label.toLowerCase().includes(q) || opt.sublabel.toLowerCase().includes(q)
-    )
+    return options.filter((opt) => {
+        const haystack = [opt.label, opt.sublabel, opt.slug].filter(Boolean).join('\n').toLowerCase()
+        return haystack.includes(q)
+    })
 }
 
 /**

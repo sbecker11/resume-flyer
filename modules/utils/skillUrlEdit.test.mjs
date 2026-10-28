@@ -7,9 +7,11 @@ import {
 
 describe('skillUrlEdit', () => {
     describe('canEditSkillUrl', () => {
-        it('requires backend and a non-default resume id', () => {
+        it('allows static mode and still requires a saved resume when a backend is present', () => {
+            expect(canEditSkillUrl(false, 'shawn-becker-full-resume-indexed')).toBe(true)
+            expect(canEditSkillUrl(false, 'default')).toBe(true)
+            expect(canEditSkillUrl(false, null)).toBe(true)
             expect(canEditSkillUrl(true, 'shawn-becker-full-resume-indexed')).toBe(true)
-            expect(canEditSkillUrl(false, 'shawn-becker-full-resume-indexed')).toBe(false)
             expect(canEditSkillUrl(true, 'default')).toBe(false)
             expect(canEditSkillUrl(true, '')).toBe(false)
             expect(canEditSkillUrl(true, null)).toBe(false)
@@ -56,31 +58,40 @@ describe('skillUrlEdit', () => {
     })
 
     describe('skillUrlPersistReminder', () => {
-        it('mentions skills.json path and commit for Pages', () => {
+        it('mentions the shared catalog and commit for Pages when synced', () => {
             const msg = skillUrlPersistReminder({
-                resumeId: 'shawn-becker-full-resume-indexed',
                 skillSlug: 'cnn',
                 url: 'https://en.wikipedia.org/wiki/Convolutional_neural_network',
+                synced: true,
             })
             expect(msg).toContain('cnn')
-            expect(msg).toContain('shawn-becker-full-resume-indexed')
-            expect(msg).toContain('skills.json')
+            expect(msg).toContain('skill-urls.json')
             expect(msg).toMatch(/commit/i)
             expect(msg).toMatch(/GitHub Pages/i)
+            expect(msg).toMatch(/other resume-flyer apps/i)
+        })
+
+        it('says the browser copy is local when the sync API was unreachable', () => {
+            const msg = skillUrlPersistReminder({
+                skillSlug: 'cnn',
+                url: 'https://example.com/cnn',
+                synced: false,
+            })
+            expect(msg).toMatch(/this browser/i)
+            expect(msg).toMatch(/unreachable/i)
         })
 
         it('says cleared when url is blank', () => {
             const msg = skillUrlPersistReminder({
-                resumeId: 'r1',
                 skillSlug: 'cnn',
                 url: '',
+                synced: true,
             })
             expect(msg).toMatch(/cleared/i)
         })
 
-        it('falls back when ids are missing', () => {
-            const msg = skillUrlPersistReminder({ resumeId: '', skillSlug: '', url: 'https://x.com' })
-            expect(msg).toContain('(resume)')
+        it('falls back when the slug is missing', () => {
+            const msg = skillUrlPersistReminder({ skillSlug: '', url: 'https://x.com', synced: true })
             expect(msg).toContain('(skill)')
             expect(msg).toMatch(/updated/i)
         })

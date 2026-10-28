@@ -90,6 +90,7 @@ import { userSettingsOverridesFromDefaultState } from '../utils/applyStoredAppDe
 import { waitForParallaxSettle } from '../utils/sceneCardClone.mjs'
 import { installBizSelectionFocus } from '../utils/bizSelectionFocus.mjs'
 import { listResumes } from '../api/resumeManagerApi.mjs'
+import { startSkillUrlSync, stopSkillUrlSync } from '../utils/skillUrlSync.mjs'
 
 /** Dev / ?debugSkillContrast=1 — teardown in onUnmounted */
 let skillCardContrastGuardTeardown = null
@@ -745,6 +746,7 @@ function handleRenderingChanged() {
 
 onMounted(async () => {
   console.log('🚀 [AppContent] Vue 3 App Initialization Started')
+  startSkillUrlSync()
   
   try {
     // PHASE 0: Register app container in global element registry
@@ -934,6 +936,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   console.log('[AppContent] 🧹 Cleaning up...')
+  stopSkillUrlSync()
   window.removeEventListener('rendering-changed', handleRenderingChanged)
   if (typeof skillCardContrastGuardTeardown === 'function') {
     skillCardContrastGuardTeardown()

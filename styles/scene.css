@@ -1089,9 +1089,9 @@ body:has(.scroll-caret:hover) #focal-point {
     line-height: 1;
     z-index: 3;
 }
-/* Local run only — <html class="has-server"> is set by hasServer.mjs */
-html.has-server .skill-resume-div .skill-url-edit-btn,
-html.has-server .appended-skill-resume-div .skill-url-edit-btn {
+/* Shown whenever the resume shell rendered the pencil, including static mode. */
+.skill-resume-div .skill-url-edit-btn,
+.appended-skill-resume-div .skill-url-edit-btn {
     display: flex;
 }
 .skill-url-edit-btn:hover {

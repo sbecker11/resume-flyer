@@ -92,6 +92,42 @@ export async function atomicWriteJSON(filePath, jsonData, pretty = true, maxRetr
  * // Clean up stale locks on startup
  * await cleanStaleLock('./app_state.json', 30000);
  */
+/**
+ * Run a read-modify-write under an exclusive lock file.
+ * The lock is released if `fn` throws.
+ *
+ * @param {string} filePath - Path whose `.lock` sibling is claimed
+ * @param {() => Promise<*>} fn
+ * @param {number} [maxRetries=10]
+ * @param {number} [retryDelay=50]
+ * @returns {Promise<*>}
+ */
+export async function withFileLock(filePath, fn, maxRetries = 10, retryDelay = 50) {
+    const lockPath = `${filePath}.lock`;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            await fs.writeFile(lockPath, process.pid.toString(), { flag: 'wx' });
+            try {
+                return await fn();
+            } finally {
+                await fs.unlink(lockPath).catch(() => {});
+            }
+        } catch (error) {
+            if (error.code === 'EEXIST') {
+                if (attempt < maxRetries - 1) {
+                    await new Promise((resolve) => setTimeout(resolve, retryDelay));
+                    continue;
+                }
+                throw new Error(`Failed to acquire lock for ${filePath} after ${maxRetries} retries`);
+            }
+            throw error;
+        }
+    }
+
+    throw new Error(`Failed to acquire lock for ${filePath} after retries`);
+}
+
 export async function cleanStaleLock(filePath, maxAgeMs = 30000) {
     const lockPath = `${filePath}.lock`;
 

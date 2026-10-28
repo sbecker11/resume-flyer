@@ -1,0 +1,44 @@
+{
+  "entries": {
+    "Redshift": {
+      "url": "https://aws.amazon.com/redshift/",
+      "updatedAt": "2026-10-27T22:22:12.170Z"
+    },
+    "Tableau": {
+      "url": "https://en.wikipedia.org/wiki/Tableau_Software",
+      "updatedAt": "2026-10-27T22:23:57.269Z"
+    },
+    "ML": {
+      "url": "https://en.wikipedia.org/wiki/Machine_learning",
+      "updatedAt": "2026-10-27T22:24:35.475Z"
+    },
+    "MS Mobile 5": {
+      "url": "https://en.wikipedia.org/wiki/Windows_Mobile_5.0",
+      "updatedAt": "2026-10-27T22:26:41.619Z"
+    },
+    "Kafka": {
+      "url": "https://www.google.com/search?q=apache+kafka+tutorial&sca_esv=aafa6ca6a126c165&rlz=1C5MACD_enUS1022US1022&biw=1080&bih=513&sxsrf=APpeQnvCULbRxmKeeBduMtPNlchKR6d7uQ%3A1793140059435&ei=WyXhaoWTGtWZgLQP1o3RKQ&oq=apache+kafka&gs_lp=Egxnd3Mtd2l6LXNlcnAiDGFwYWNoZSBrYWZrYSoKCAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzINEAAYgAQYigUYQxiwAzINEAAYgAQYigUYQxiwAzINEAAYgAQYigUYQxiwAzINEAAYgAQYigUYQxiwA0iFYlAAWABwAXgBkAEAmAEAoAEAqgEAuAEByAEAmAIBoAIamAMAiAYBkAYMkgcBMaAHALIHALgHAMIHAzMtMcgHC4AIAQ&sclient=gws-wiz-serp",
+      "updatedAt": "2026-10-27T22:28:11.588Z"
+    },
+    "Aurora PostgreSQL Serverless v2": {
+      "url": "https://www.google.com/search?q=amazon+Aurora+PostgreSQL+Serverless+v2&rlz=1C5MACD_enUS1022US1022&oq=amazon+Aurora+PostgreSQL+Serverless+v2&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIICAEQABgWGB4yBwgCEAAY7wUyCggDEAAYgAQYogQyBwgEEAAY7wXSAQg2NTU3ajBqNKgCALACAQ&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+      "updatedAt": "2026-10-27T22:29:20.802Z"
+    },
+    "Spring": {
+      "url": "https://spring.io/projects/spring-framework",
+      "updatedAt": "2026-10-27T22:43:02.006Z"
+    },
+    "LangGraph": {
+      "url": "https://docs.langchain.com/oss/python/langgraph/overview",
+      "updatedAt": "2026-10-27T22:44:52.391Z"
+    },
+    "CodeCommit": {
+      "url": "https://aws.amazon.com/codecommit/",
+      "updatedAt": "2026-10-27T22:46:11.991Z"
+    },
+    "pytorch": {
+      "url": "https://pytorch.org/foundation/",
+      "updatedAt": "2026-10-27T23:06:52.523Z"
+    }
+  }
+}
