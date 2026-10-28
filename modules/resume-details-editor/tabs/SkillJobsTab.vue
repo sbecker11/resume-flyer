@@ -17,7 +17,7 @@
       <div v-else class="rde-skill-jobs-split">
         <!-- Single scrolling container; one grid inside so header and body share column widths -->
         <div class="rde-sj-scroll" aria-label="Job and skill cross grid">
-          <div class="rde-sj-matrix-grid" :style="matrixGridStyle">
+          <div ref="matrixGridEl" class="rde-sj-matrix-grid" :style="matrixGridStyle">
             <!-- Row 0: corner + job headers; subgrid inherits outer column sizes exactly -->
             <div class="rde-sj-header-jobs">
               <div class="rde-sj-corner" role="group" aria-label="Skill–jobs actions">
@@ -25,9 +25,9 @@
                   type="button"
                   class="rde-btn rde-sj-clear"
                   aria-label="Clear all job–skill links"
-                  title="Clear all job–skill links"
+                  title="Clear all job–skill links. You will be asked to confirm first."
                   :disabled="!canClearGrid"
-                  @click="onClearGrid"
+                  @click="requestClearGrid"
                 >
                   Clear
                 </button>
@@ -36,6 +36,7 @@
                 v-for="(job, ji) in jobsList"
                 :key="'job-h-' + ji"
                 class="rde-sj-head-job"
+                :class="{ 'rde-sj-unused': jobColumnIsUnused(job) }"
               >
                 <span class="rde-skill-jobs-label rotated-job-name">{{ rotatedJobHeaderText(job, ji) }}</span>
               </div>
@@ -43,7 +44,11 @@
 
             <!-- Rows 1…N: skill label + matrix cells -->
             <template v-for="(skillRow, si) in skillRowsForMatrix" :key="'skill-row-' + skillRow.id">
-              <div class="rde-sj-head-skill" :title="skillRow.displayLabel">
+              <div
+                class="rde-sj-head-skill"
+                :class="{ 'rde-sj-unused': skillRow.jobCount === 0 }"
+                :title="skillRow.displayLabel"
+              >
                 {{ skillRow.displayLabel }}
               </div>
               <button
@@ -51,7 +56,14 @@
                 :key="'cell-' + skillRow.id + '-' + ji"
                 type="button"
                 class="rde-sj-cell"
-                :class="{ 'rde-sj-cell--selected': isMatrixCellSelected(job, skillRow.id) }"
+                :class="{
+                  'rde-sj-cell--selected': isMatrixCellSelected(job, skillRow.id),
+                  'rde-sj-cell--unused-skill': skillRow.jobCount === 0,
+                  'rde-sj-cell--unused-job': jobColumnIsUnused(job),
+                  'rde-sj-cell--row-end': ji === jobsList.length - 1,
+                  'rde-sj-cell--col-start': si === 0,
+                  'rde-sj-cell--col-end': si === skillRowsForMatrix.length - 1,
+                }"
                 :disabled="!matrixCellInteractive(job)"
                 :aria-label="cellAriaLabel(job, ji, skillRow)"
                 :aria-pressed="isMatrixCellSelected(job, skillRow.id)"
@@ -62,6 +74,29 @@
         </div>
       </div>
     </template>
+    <Teleport to="body">
+      <div
+        v-if="showClearWarning"
+        class="rde-sj-confirm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rde-sj-clear-warning-title"
+      >
+        <div class="rde-sj-confirm-card">
+          <h2 id="rde-sj-clear-warning-title" class="rde-sj-confirm-title">Clear all job–skill links?</h2>
+          <p class="rde-sj-confirm-copy">
+            This removes every link between jobs and skills on this resume. Checked cells in this grid are cleared, and skill names in square brackets are removed from job descriptions.
+          </p>
+          <p class="rde-sj-confirm-copy">
+            The skills themselves stay. This is saved immediately and cannot be undone from here.
+          </p>
+          <div class="rde-sj-confirm-actions">
+            <button type="button" class="rde-btn rde-sj-confirm-cancel" @click="showClearWarning = false">Cancel</button>
+            <button type="button" class="rde-btn rde-sj-clear" :disabled="saving" @click="confirmClearGrid">Clear all links</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -78,6 +113,7 @@ import {
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { updateJobSkills, updateEducationJobSkills } from '@/modules/api/resumeManagerApi.mjs';
 import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
+import { jobColumnHeaderText, rotatedJobHeaderRowMinPx, skillRowDisplayLabel } from '../skillJobsMatrixLabels.mjs';
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -90,6 +126,7 @@ const canPersistToServer = hasServer();
 const canEdit = true;
 /** True only while "Clear all" runs; cell toggles no longer block the grid (optimistic UI + background save). */
 const saving = ref(false);
+const showClearWarning = ref(false);
 /** In-flight per-cell save count; Clear is disabled until these finish to avoid inconsistent bulk clear. */
 const pendingToggleSaves = ref(0);
 /** Skill keys that existed when this panel loaded / last refetched (for updateJobSkills newSkills). */
@@ -114,8 +151,25 @@ function chainJobSave(jobIndex, task) {
 
 /** Same rem for job column width and body row height → square matrix cells; wider = more space between rotated job headers. */
 const JOB_MATRIX_CELL_REM = 1.4;
-/** Header row min height (rem) for −45° job labels above square columns (taller = less clipping on long names). */
+/** Floor for the job-header row. Measured labels can only make this taller. */
 const JOB_HEADER_ROW_MIN_REM = 4.35;
+
+const matrixGridEl = ref(null);
+/** Pixel height that fits every rotated job label inside the scroll area. 0 until measured. */
+const headerRowMinPx = ref(0);
+
+function measureHeaderRowMinPx() {
+  const root = matrixGridEl.value;
+  if (!root) return;
+  const labels = root.querySelectorAll('.rde-sj-head-job .rde-skill-jobs-label');
+  const sizes = [];
+  for (const el of labels) {
+    if (el.offsetWidth <= 0 || el.offsetHeight <= 0) continue;
+    sizes.push({ width: el.offsetWidth, height: el.offsetHeight });
+  }
+  if (sizes.length === 0) return;
+  headerRowMinPx.value = rotatedJobHeaderRowMinPx(sizes);
+}
 
 const jobs = shallowRef([]);
 const skillsMap = shallowRef({});
@@ -130,6 +184,28 @@ function jobsArray(data) {
 }
 
 const jobsList = computed(() => jobs.value);
+
+/** Jobs whose matrix cell for this skill is selected. */
+function linkedJobCountForSkill(skillId, jobsArr, map) {
+  let count = 0;
+  for (const job of jobsArr) {
+    if (getSelectedSkillIdsForJob(job, map).has(skillId)) count += 1;
+  }
+  return count;
+}
+
+/** Selected skills that are rows in this grid. */
+function linkedSkillCountForJob(job, map) {
+  let count = 0;
+  for (const id of getSelectedSkillIdsForJob(job, map)) {
+    if (map?.[id] != null) count += 1;
+  }
+  return count;
+}
+
+function jobColumnIsUnused(job) {
+  return linkedSkillCountForJob(job, skillsMap.value) === 0;
+}
 
 /** Sum of job durationMonths for jobs where this skill is linked (same cells as matrix selection). */
 function linkedJobsDurationMonthsTotal(skillId, jobsArr, map) {
@@ -148,9 +224,10 @@ const skillRowsForMatrix = computed(() => {
   const entries = Object.entries(map);
   const rows = entries.map(([id, s]) => {
     const fullName = (s && s.name) || id;
+    const jobCount = linkedJobCountForSkill(id, jlist, map);
     const monthsTotal = linkedJobsDurationMonthsTotal(id, jlist, map);
-    const displayLabel = monthsTotal > 0 ? `${fullName} (${monthsTotal})` : fullName;
-    return { id, fullName, displayLabel, monthsTotal };
+    const displayLabel = skillRowDisplayLabel(fullName, jobCount, monthsTotal);
+    return { id, fullName, displayLabel, monthsTotal, jobCount };
   });
   rows.sort((a, b) => a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' }));
   return rows;
@@ -203,7 +280,9 @@ const matrixGridStyle = computed(() => {
   return {
     ...crossGridColumnsStyle.value,
     gridTemplateRows: `auto repeat(${Math.max(ns, 1)}, minmax(${JOB_MATRIX_CELL_REM}rem, auto))`,
-    '--rde-sj-header-row-min': `${JOB_HEADER_ROW_MIN_REM}rem`,
+    '--rde-sj-header-row-min': headerRowMinPx.value > 0
+      ? `${headerRowMinPx.value}px`
+      : `${JOB_HEADER_ROW_MIN_REM}rem`,
     '--rde-sj-cell-size': `${JOB_MATRIX_CELL_REM}rem`,
   };
 });
@@ -236,15 +315,18 @@ function fullJobLabel(job, i) {
   return `Job ${i + 1}`;
 }
 
-/** Rotated column header: "(N) employer/label" where N is enriched durationMonths. */
+/** Rotated column header. Unused jobs are "(0) name". Used jobs keep "(months) name". */
 function rotatedJobHeaderText(job, i) {
   const base = fullJobLabel(job, i);
-  const n = job?.durationMonths;
-  if (typeof n === 'number' && Number.isFinite(n) && n > 0) {
-    return `(${n}) ${base}`;
-  }
-  return base;
+  return jobColumnHeaderText(base, linkedSkillCountForJob(job, skillsMap.value), job?.durationMonths);
 }
+
+watch(
+  () => jobsList.value.map((job, i) => rotatedJobHeaderText(job, i)).join('\n'),
+  () => {
+    nextTick(() => measureHeaderRowMinPx());
+  },
+);
 
 function cellAriaLabel(job, ji, skillRow) {
   const base = `${rotatedJobHeaderText(job, ji)} — ${skillRow.displayLabel}`;
@@ -364,11 +446,18 @@ function onMatrixCellClick(jobIndex, skillRow) {
   });
 }
 
+function requestClearGrid() {
+  if (!canClearGrid.value || saving.value) return;
+  showClearWarning.value = true;
+}
+
+async function confirmClearGrid() {
+  showClearWarning.value = false;
+  await onClearGrid();
+}
+
 async function onClearGrid() {
   if (!canClearGrid.value) return;
-  if (!window.confirm('Clear all job–skill links for this resume? This cannot be undone from here.')) {
-    return;
-  }
   const map = skillsMap.value;
   saving.value = true;
   try {
@@ -411,6 +500,7 @@ async function onClearGrid() {
 watch(
   () => [props.resumeId, props.reloadNonce],
   ([id]) => {
+    showClearWarning.value = false;
     jobsLoaded.value = false;
     loadError.value = '';
     jobs.value = [];
@@ -508,10 +598,10 @@ watch(
   display: grid;
   grid-template-columns: subgrid;
   grid-column: 1 / -1;
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 2;
   box-sizing: border-box;
+  overflow: visible;
   background: rgb(20, 24, 32);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -521,7 +611,7 @@ watch(
   position: relative;
   box-sizing: border-box;
   background: transparent;
-  min-height: var(--rde-sj-header-row-min, 4.35rem);
+  min-height: max(4.35rem, var(--rde-sj-header-row-min, 4.35rem));
 }
 
 .rde-sj-corner .rde-sj-clear {
@@ -534,18 +624,54 @@ watch(
 .rde-sj-head-job {
   position: relative;
   box-sizing: border-box;
-  min-height: var(--rde-sj-header-row-min, 4.35rem);
+  min-height: max(4.35rem, var(--rde-sj-header-row-min, 4.35rem));
   padding: 0 1px;
   background: transparent;
   min-width: 0;
+  overflow: visible;
 }
 
-/* First character at bottom center of cell; rotate about left bottom of the label. */
+/* Start at the bottom of the header, just above the skill rows, and travel up-right at −45°. */
 .rde-sj-head-job .rde-skill-jobs-label {
   position: absolute;
   left: 50%;
   bottom: 0;
+  transform: rotate(-45deg);
   transform-origin: left bottom;
+}
+
+.rde-sj-head-skill.rde-sj-unused,
+.rde-sj-head-job.rde-sj-unused .rde-skill-jobs-label {
+  font-weight: 700;
+}
+
+/* Horizontal unused-skill lines cover the job cells only, and stop before the skill-name column. */
+.rde-sj-cell--unused-skill {
+  box-shadow: inset 0 2px 0 #ff4d4d, inset 0 -2px 0 #ff4d4d;
+}
+
+.rde-sj-cell--unused-skill.rde-sj-cell--row-end {
+  box-shadow: inset 0 2px 0 #ff4d4d, inset 0 -2px 0 #ff4d4d, inset -2px 0 0 #ff4d4d;
+}
+
+.rde-sj-cell--unused-job {
+  box-shadow: inset 2px 0 0 #ff4d4d, inset -2px 0 0 #ff4d4d;
+}
+
+.rde-sj-cell--unused-job.rde-sj-cell--col-start {
+  box-shadow: inset 2px 0 0 #ff4d4d, inset -2px 0 0 #ff4d4d, inset 0 2px 0 #ff4d4d;
+}
+
+.rde-sj-cell--unused-job.rde-sj-cell--col-end {
+  box-shadow: inset 2px 0 0 #ff4d4d, inset -2px 0 0 #ff4d4d, inset 0 -2px 0 #ff4d4d;
+}
+
+.rde-sj-cell--unused-job.rde-sj-cell--col-start.rde-sj-cell--col-end {
+  box-shadow: inset 0 0 0 2px #ff4d4d;
+}
+
+.rde-sj-cell--unused-skill.rde-sj-cell--unused-job {
+  box-shadow: inset 0 0 0 2px #ff4d4d;
 }
 
 .rde-sj-head-skill {
@@ -625,5 +751,50 @@ watch(
 .rde-btn.rde-sj-clear:disabled {
   opacity: 0.45;
   cursor: default;
+}
+.rde-sj-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 21000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+}
+.rde-sj-confirm-card {
+  width: min(440px, 100%);
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+  color: #e0e0e0;
+  font-family: Arial, sans-serif;
+}
+.rde-sj-confirm-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.rde-sj-confirm-copy {
+  margin: 0 0 10px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.82);
+}
+.rde-sj-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rde-sj-confirm-cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 18px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 </style>
