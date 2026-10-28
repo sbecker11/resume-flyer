@@ -30,7 +30,7 @@
             :aria-selected="activeTab === t.id"
             :data-rde-tab-id="t.id"
             :class="{ active: activeTab === t.id }"
-            :disabled="saving || reparsing || otherSectionsAutosaving || fieldAutosaving"
+            :disabled="saving || reparsing || restoring || otherSectionsAutosaving || fieldAutosaving"
             @click="selectTab(t.id)"
           >
             {{ t.label }}
@@ -103,8 +103,17 @@
           <button type="button" class="rde-btn cancel" @click="cancel">Cancel</button>
           <button
             type="button"
+            class="rde-btn restore"
+            @click="openRestoreHistory"
+            :disabled="restoreButtonDisabled"
+            :title="restoreButtonTitle"
+          >
+            {{ restoring ? 'Restoring…' : 'Restore previous' }}
+          </button>
+          <button
+            type="button"
             class="rde-btn reparse"
-            @click="reparse"
+            @click="requestReparse"
             :disabled="reparseButtonDisabled"
             :title="reparseButtonTitle"
           >
@@ -121,6 +130,67 @@
               {{ saving ? 'Saving…' : 'Save' }}
             </button>
             <div v-if="!canPersistToServer && !saving" class="rde-save-session-hint">session only</div>
+          </div>
+        </div>
+
+        <div
+          v-if="showReparseWarning"
+          class="rde-confirm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rde-reparse-warning-title"
+        >
+          <div class="rde-confirm-card">
+            <h2 id="rde-reparse-warning-title" class="rde-confirm-title">Reparse this resume?</h2>
+            <p class="rde-confirm-copy">
+              This deletes the jobs, skills, and other data gathered for this resume in the app and reloads them from the original file. Edits made here will be overwritten.
+            </p>
+            <p class="rde-confirm-copy">
+              A dated backup of the current data is saved first. Use Restore previous to put a backup back.
+            </p>
+            <div class="rde-confirm-actions">
+              <button type="button" class="rde-btn cancel" @click="showReparseWarning = false">Cancel</button>
+              <button type="button" class="rde-btn reparse" @click="confirmReparse">Reparse anyway</button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          v-if="showRestoreHistory"
+          class="rde-confirm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rde-restore-title"
+        >
+          <div class="rde-confirm-card">
+            <h2 id="rde-restore-title" class="rde-confirm-title">Restore a previous backup</h2>
+            <p class="rde-confirm-copy">
+              Each successful reparse saves the previous resume data. Restoring a backup puts those files back and saves the current data as a new backup first.
+            </p>
+            <p v-if="historyLoading" class="rde-confirm-copy">Loading backups…</p>
+            <p v-if="historyError" class="rde-confirm-copy rde-confirm-error">{{ historyError }}</p>
+            <p v-if="!historyLoading && !historyError && historyEntries.length === 0" class="rde-confirm-copy">
+              No backups yet. A backup is created each time reparse succeeds.
+            </p>
+            <ul v-if="!historyLoading && historyEntries.length" class="rde-history-list">
+              <li v-for="entry in historyEntries" :key="entry.id" class="rde-history-row">
+                <div class="rde-history-meta">
+                  <div>{{ formatBackupWhen(entry.createdAt) }}</div>
+                  <div class="rde-history-reason">{{ backupReasonLabel(entry.reason) }}</div>
+                </div>
+                <button
+                  type="button"
+                  class="rde-btn restore"
+                  :disabled="restoring"
+                  @click="restoreBackup(entry.id)"
+                >
+                  Restore
+                </button>
+              </li>
+            </ul>
+            <div class="rde-confirm-actions">
+              <button type="button" class="rde-btn cancel" :disabled="restoring" @click="showRestoreHistory = false">Close</button>
+            </div>
           </div>
         </div>
 
@@ -144,7 +214,11 @@ import JobsTab from './tabs/JobsTab.vue';
 import SkillsTab from './tabs/SkillsTab.vue';
 import SkillJobsTab from './tabs/SkillJobsTab.vue';
 import * as api from './api.mjs';
-import { reparseResumeWithParserStream } from '@/modules/api/resumeManagerApi.mjs';
+import {
+  listReparseHistory,
+  reparseResumeWithParserStream,
+  restoreReparseHistory
+} from '@/modules/api/resumeManagerApi.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 
 const MIN_WIDTH = 320;
@@ -180,6 +254,12 @@ const otherSections = shallowRef({});
 const education = shallowRef({});
 const saving = ref(false);
 const reparsing = ref(false);
+const restoring = ref(false);
+const showReparseWarning = ref(false);
+const showRestoreHistory = ref(false);
+const historyEntries = ref([]);
+const historyLoading = ref(false);
+const historyError = ref('');
 const canPersistToServer = hasServer();
 const canEdit = true;
 const reloadNonce = ref(0);
@@ -742,14 +822,26 @@ const saveButtonTitle = computed(() => {
 });
 
 const reparseButtonDisabled = computed(
-  () => saving.value || reparsing.value || !canPersistToServer || !canReparse.value
+  () => saving.value || reparsing.value || restoring.value || !canPersistToServer || !canReparse.value
 );
 const reparseButtonTitle = computed(() => {
   if (!canPersistToServer) return 'Reparse requires a server with the resume API.';
   if (saving.value) return 'Wait until save finishes.';
   if (reparsing.value) return 'Reparsing in progress…';
+  if (restoring.value) return 'Wait until restore finishes.';
   if (!canReparse.value) return 'Select a saved resume (not the default placeholder) to reparse.';
-  return 'Delete derived files in this resume folder and re-run the parser (keeps only the original .docx/.pdf)';
+  return 'Ask before deleting derived files and reloading this resume from the original .docx/.pdf. A dated backup is kept.';
+});
+const restoreButtonDisabled = computed(
+  () => saving.value || reparsing.value || restoring.value || !canPersistToServer || !canReparse.value
+);
+const restoreButtonTitle = computed(() => {
+  if (!canPersistToServer) return 'Restore requires a server with the resume API.';
+  if (saving.value) return 'Wait until save finishes.';
+  if (reparsing.value) return 'Wait until reparse finishes.';
+  if (restoring.value) return 'Restoring in progress…';
+  if (!canReparse.value) return 'Select a saved resume (not the default placeholder) to restore.';
+  return 'List dated backups and put one back over the current resume data.';
 });
 
 /** Clear stale async flags when the modal opens or closes so footer actions are not stuck disabled. */
@@ -758,9 +850,14 @@ watch(
   (open) => {
     saving.value = false;
     reparsing.value = false;
+    restoring.value = false;
     fieldAutosaving.value = false;
     otherSectionsAutosaving.value = false;
-    if (!open) return;
+    if (!open) {
+      showReparseWarning.value = false;
+      showRestoreHistory.value = false;
+      return;
+    }
     if (!canPersistToServer) {
       console.warn(
         '[ResumeDetailsEditor] Static mode: editing is enabled, but persistence is session-local only and reparse is disabled.'
@@ -943,6 +1040,76 @@ function cancel() {
   emit('close');
 }
 
+function formatBackupWhen(createdAt) {
+  const d = new Date(createdAt);
+  if (Number.isNaN(d.getTime())) return String(createdAt || '');
+  return d.toLocaleString();
+}
+
+function backupReasonLabel(reason) {
+  if (reason === 'before-restore') return 'Saved before a restore';
+  return 'Saved before a reparse';
+}
+
+async function reloadDetailsFromServer() {
+  const id = props.resumeId;
+  const [metaRes, otherRes, educationRes] = await Promise.all([
+    api.getResumeMeta(id).catch(() => ({})),
+    api.getResumeOtherSections(id).catch(() => ({})),
+    api.getResumeEducation(id).catch(() => ({}))
+  ]);
+  meta.value = typeof metaRes === 'object' && metaRes !== null ? { ...metaRes } : metaRes;
+  otherSections.value = typeof otherRes === 'object' && otherRes !== null ? { ...otherRes } : otherRes;
+  education.value = typeof educationRes === 'object' && educationRes !== null ? { ...educationRes } : {};
+  pendingMeta.value = null;
+  pendingOtherSections.value = null;
+  pendingEducation.value = null;
+  reloadNonce.value++;
+}
+
+function requestReparse() {
+  if (reparseButtonDisabled.value) return;
+  showReparseWarning.value = true;
+}
+
+async function confirmReparse() {
+  showReparseWarning.value = false;
+  await reparse();
+}
+
+async function openRestoreHistory() {
+  if (restoreButtonDisabled.value) return;
+  showRestoreHistory.value = true;
+  historyEntries.value = [];
+  historyError.value = '';
+  historyLoading.value = true;
+  try {
+    historyEntries.value = await listReparseHistory(props.resumeId);
+  } catch (err) {
+    reportError(err, '[ResumeDetailsEditor] Failed to list resume backups');
+    historyError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    historyLoading.value = false;
+  }
+}
+
+async function restoreBackup(backupId) {
+  if (!backupId || restoring.value) return;
+  restoring.value = true;
+  historyError.value = '';
+  try {
+    await restoreReparseHistory(props.resumeId, backupId);
+    await reloadDetailsFromServer();
+    emit('saved', { restored: true });
+    showRestoreHistory.value = false;
+  } catch (err) {
+    reportError(err, '[ResumeDetailsEditor] Failed to restore resume backup', 'Reopen Restore previous; a snapshot taken just before this restore may be in the list');
+    historyError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    restoring.value = false;
+  }
+}
+
 async function reparse() {
   if (!canPersistToServer) {
     console.warn('[ResumeDetailsEditor] reparse: ignored (no API server).');
@@ -978,20 +1145,7 @@ async function reparse() {
     });
 
     reparseOutput.value += 'Resume parsed successfully!\n';
-    // Reload data in this modal so user sees the new parsed outputs.
-    const id = props.resumeId;
-    const [metaRes, otherRes, educationRes] = await Promise.all([
-      api.getResumeMeta(id).catch(() => ({})),
-      api.getResumeOtherSections(id).catch(() => ({})),
-      api.getResumeEducation(id).catch(() => ({}))
-    ]);
-    meta.value = typeof metaRes === 'object' && metaRes !== null ? { ...metaRes } : metaRes;
-    otherSections.value = typeof otherRes === 'object' && otherRes !== null ? { ...otherRes } : otherRes;
-    education.value = typeof educationRes === 'object' && educationRes !== null ? { ...educationRes } : {};
-    pendingMeta.value = null;
-    pendingOtherSections.value = null;
-    pendingEducation.value = null;
-    reloadNonce.value++;
+    await reloadDetailsFromServer();
     emit('saved', { reparsed: true });
     reparseSucceeded = true;
   } catch (err) {
@@ -999,8 +1153,8 @@ async function reparse() {
       reparseOutput.value = '';
       return;
     }
-    console.error('[ResumeDetailsEditor] reparse failed:', err);
-    alert('Failed to reparse: ' + err.message);
+    reportError(err, '[ResumeDetailsEditor] reparse failed');
+    alert('Failed to reparse: ' + (err instanceof Error ? err.message : String(err)));
   } finally {
     reparsing.value = false;
     reparseAbortController = null;
@@ -1190,6 +1344,7 @@ async function save() {
 }
 .rde-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   align-items: flex-start;
   gap: 8px;
@@ -1230,6 +1385,78 @@ async function save() {
   color: #2ecc71;
 }
 .rde-btn.reparse:disabled { opacity: 0.5; cursor: default; }
+.rde-btn.restore {
+  background: transparent;
+  border-color: rgba(241, 196, 15, 0.5);
+  color: rgba(241, 196, 15, 0.95);
+}
+.rde-btn.restore:hover:not(:disabled) {
+  border-color: rgba(241, 196, 15, 0.85);
+  color: #f1c40f;
+}
+.rde-btn.restore:disabled { opacity: 0.5; cursor: default; }
+.rde-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+}
+.rde-confirm-card {
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.rde-confirm-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.rde-confirm-copy {
+  margin: 0 0 10px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.82);
+}
+.rde-confirm-error { color: #ff8a80; }
+.rde-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.rde-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+}
+.rde-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+}
+.rde-history-reason {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
 .rde-btn.save { background: #4a9eff; color: #fff; }
 .rde-btn.save:hover:not(:disabled) { background: #6ab0ff; }
 .rde-btn.save:disabled { opacity: 0.5; cursor: default; }

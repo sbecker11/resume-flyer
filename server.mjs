@@ -17,6 +17,13 @@ import { enrichJobsWithSkills } from './modules/data/enrichedJobs.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
 import { reportError } from './modules/utils/errorReporting.mjs';
 import {
+    archiveReparseBackup,
+    listReparseHistory,
+    restoreReparseBackup,
+    restoreReparseHistoryEntry,
+    stashDerivedFilesForReparse,
+} from './modules/resume/reparseHistory.mjs';
+import {
     refreshPaletteCatalogCache,
     getCachedPaletteCatalogBundle,
     getLastPaletteCatalogSourceUrl,
@@ -197,7 +204,6 @@ async function readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath =
     return { jobs, skills, categories };
 }
 
-const REPARSE_BACKUP_DIRNAME = '.reparse-backup';
 
 /** Derived JSON files whose edits would be lost on reparse (hashed for local-change detection). */
 const DERIVED_SNAPSHOT_FILES = [
@@ -245,51 +251,17 @@ async function writeMetaWithParseBaseline(metaPath, metadata, dir) {
     return out;
 }
 
-/**
- * Move all resume-folder entries except the original document into `.reparse-backup`.
- * On parser failure, restore with restoreReparseBackup so the folder is not left empty.
- * @param {string} dir
- * @param {string} keepDocName - basename of the .docx/.pdf to keep in place
- * @returns {Promise<string>} absolute path to the backup directory
- */
-async function stashDerivedFilesForReparse(dir, keepDocName) {
-    const backupDir = path.join(dir, REPARSE_BACKUP_DIRNAME);
-    await fs.rm(backupDir, { recursive: true, force: true });
-    await fs.mkdir(backupDir, { recursive: true });
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    for (const ent of entries) {
-        if (ent.name === keepDocName || ent.name === REPARSE_BACKUP_DIRNAME) continue;
-        await fs.rename(path.join(dir, ent.name), path.join(backupDir, ent.name));
-    }
-    return backupDir;
-}
-
-/** Restore stashed derived files after a failed reparse. */
-async function restoreReparseBackup(dir, backupDir) {
-    if (!backupDir) return;
+/** Keep a successful reparse's stash as a dated history entry. A history-write failure leaves the stash in place. */
+async function keepReparseBackup(dir, backupDir) {
     try {
-        await fs.access(backupDir);
-    } catch {
-        return;
+        await archiveReparseBackup(dir, backupDir, { reason: 'reparse' });
+    } catch (archiveErr) {
+        reportError(
+            archiveErr,
+            '[ResumeReparse] Failed to archive pre-reparse backup',
+            'Leaving the stash in .reparse-backup; parsed files were kept'
+        );
     }
-    const current = await fs.readdir(dir, { withFileTypes: true });
-    for (const ent of current) {
-        if (ent.name === REPARSE_BACKUP_DIRNAME) continue;
-        const lower = ent.name.toLowerCase();
-        if (lower.endsWith('.pdf') || lower.endsWith('.docx')) continue;
-        await fs.rm(path.join(dir, ent.name), { recursive: true, force: true });
-    }
-    const backed = await fs.readdir(backupDir, { withFileTypes: true });
-    for (const ent of backed) {
-        await fs.rename(path.join(backupDir, ent.name), path.join(dir, ent.name));
-    }
-    await fs.rm(backupDir, { recursive: true, force: true });
-}
-
-/** Discard backup after a successful reparse. */
-async function discardReparseBackup(backupDir) {
-    if (!backupDir) return;
-    await fs.rm(backupDir, { recursive: true, force: true });
 }
 
 /**
@@ -1382,7 +1354,7 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
                 fileSize: (await fs.stat(keepDocPath)).size
             }, dir);
 
-            await discardReparseBackup(backupDir);
+            await keepReparseBackup(dir, backupDir);
             await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
 
             res.json({
@@ -1620,7 +1592,7 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             fileSize: (await fs.stat(keepDocPath)).size
         }, dir);
 
-        await discardReparseBackup(backupDir);
+        await keepReparseBackup(dir, backupDir);
         await regenerateNonLocalResumesIndex(`resume re-parsed (${id})`);
 
         sendEvent('done', JSON.stringify({
@@ -1638,6 +1610,66 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
         reportError(e, '[ResumeReparseStream] Failed to reparse with stream', 'Remedy: previous derived files restored when backup existed');
         sendEvent('error', JSON.stringify({ message: e instanceof Error ? e.message : String(e) }));
         res.end();
+    }
+});
+
+// GET /api/resumes/:id/reparse-history: dated snapshots taken before each successful reparse or restore.
+app.get('/api/resumes/:id/reparse-history', async (req, res) => {
+    const { id } = req.params;
+    if (!id || id === 'default') {
+        return res.status(400).json({ error: 'Invalid resume id.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    try {
+        await fs.access(dir);
+        const history = await listReparseHistory(dir);
+        res.setHeader('Cache-Control', 'no-store');
+        res.json({ history });
+    } catch (error) {
+        if (error?.code === 'ENOENT') {
+            return res.status(404).json({ error: 'Resume not found.' });
+        }
+        reportError(error, '[GET reparse-history] Failed to list resume backups');
+        res.status(500).json({ error: error?.message || 'Failed to list resume backups' });
+    }
+});
+
+// POST /api/resumes/:id/reparse-history/:backupId/restore: copy one snapshot back over derived files.
+app.post('/api/resumes/:id/reparse-history/:backupId/restore', async (req, res) => {
+    const { id, backupId } = req.params;
+    if (!id || id === 'default') {
+        return res.status(400).json({ error: 'Invalid resume id.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    try {
+        await fs.access(dir);
+        const restored = await restoreReparseHistoryEntry(dir, backupId);
+        try {
+            const { jobs, skills } = await readAndNormalizeResumeData(
+                path.join(dir, 'jobs.json'),
+                path.join(dir, 'skills.json'),
+                path.join(dir, 'categories.json')
+            );
+            await bakeEnrichedJobs(dir, jobs, skills);
+        } catch (bakeErr) {
+            reportError(
+                bakeErr,
+                '[POST reparse-history restore] Failed to rebake enriched-jobs.json',
+                'Restored derived files were kept'
+            );
+        }
+        await regenerateNonLocalResumesIndex(`resume backup restored (${id} ${restored.id})`);
+        res.json({ ok: true, id: restored.id });
+    } catch (error) {
+        const status = error?.statusCode || (error?.code === 'ENOENT' ? 404 : 500);
+        reportError(
+            error,
+            '[POST reparse-history restore] Failed to restore resume backup',
+            status >= 500
+                ? 'If a before-restore snapshot was written, restore that entry to return to the previous files'
+                : 'Rejected the request; current resume files were left unchanged'
+        );
+        res.status(status).json({ error: error?.message || 'Failed to restore resume backup' });
     }
 });
 

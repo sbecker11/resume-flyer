@@ -27,6 +27,8 @@ parsed_resumes/_local-*/
 parsed_resumes/_local-*/**
 parsed_resumes/.DS_Store
 parsed_resumes/**/parser-output.log
+parsed_resumes/**/.reparse-backup/
+parsed_resumes/**/.reparse-history/
 
 # Schema validator test venv
 .venv-schema/.venv-schema/

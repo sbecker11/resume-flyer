@@ -248,6 +248,47 @@ export async function reparseResumeWithParserStream(resumeId, opts = {}) {
 }
 
 /**
+ * Dated snapshots saved before each successful reparse (newest first).
+ * @param {string} resumeId
+ * @returns {Promise<Array<{ id: string, createdAt: string, reason: string }>>}
+ */
+export async function listReparseHistory(resumeId) {
+    if (!hasServer()) {
+        throw new Error('Restore is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
+    }
+    if (!resumeId) throw new Error('No resume id provided');
+    const body = await fetchJsonOrThrow(
+        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/reparse-history`)
+    );
+    if (!body || !Array.isArray(body.history)) {
+        throw new Error('Backup history response was missing a history list.');
+    }
+    return body.history;
+}
+
+/**
+ * Copy one dated backup over the current derived files.
+ * The server archives the current files first.
+ * @param {string} resumeId
+ * @param {string} backupId
+ */
+export async function restoreReparseHistory(resumeId, backupId) {
+    if (!hasServer()) {
+        throw new Error('Restore is not available on static hosting (e.g. GitHub Pages). Run the app with a backend.');
+    }
+    if (!resumeId) throw new Error('No resume id provided');
+    if (!backupId) throw new Error('No backup id provided');
+    return fetchJsonOrThrow(
+        basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/reparse-history/${encodeURIComponent(backupId)}/restore`),
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        }
+    );
+}
+
+/**
  * Upload a resume file or fetch from URL for parsing
  * @param {File|string} fileOrUrl - The resume file to upload OR a URL string
  * @param {string} displayName - Optional display name for the resume

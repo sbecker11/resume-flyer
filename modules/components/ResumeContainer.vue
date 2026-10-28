@@ -617,7 +617,7 @@ async function handleDetailsSaved(payload) {
       console.warn('[ResumeContainer] handleDetailsSaved fetchResumeList failed:', err);
     }
   }
-  if (payload?.reparsed === true) {
+  if (payload?.reparsed === true || payload?.restored === true) {
     // Force AppContent to reload the currently-selected resume data in-place.
     emit('resume-selected', props.currentResumeId);
     return;
