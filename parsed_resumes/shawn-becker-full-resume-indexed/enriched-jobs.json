@@ -6,19 +6,22 @@
     "start": "07/2025",
     "end": "CURRENT_DATE",
     "durationMonths": 16,
-    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Governance.",
+    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Governance.",
     "educationKey": null,
     "skillIDs": [
-      "ai",
-      "ml",
+      "ai-ml",
       "devops",
-      "mlops",
-      "CNN"
+      "mlops"
     ],
-    "references": [],
+    "references": [
+      "<a href=\"https://en.wikipedia.org/wiki/Machine_learning\">[ai-ml]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/DevOps\">[devops]</a>",
+      "<a href=\"https://ml-ops.org/\">[mlops]</a>"
+    ],
     "job-skills": {
-      "ML": "ML",
-      "CNN": "CNN"
+      "ai-ml": "ai-ml",
+      "devops": "devops",
+      "mlops": "mlops"
     },
     "outlineIndex": "1",
     "outlineKind": "job",
@@ -67,14 +70,14 @@
       "json"
     ],
     "references": [
-      "<a href=\"https://www.ecma-international.org/publications-and-standards/standards/ecma-376/\">[DOCX]</a>",
-      "<a href=\"https://www.iso.org/standard/75839.html\">[PDF]</a>",
-      "<a href=\"https://www.json.org/\">[JSON]</a>"
+      "<a href=\"https://www.ecma-international.org/publications-and-standards/standards/ecma-376/\">[docx]</a>",
+      "<a href=\"https://www.iso.org/standard/75839.html\">[pdf]</a>",
+      "<a href=\"https://www.json.org/\">[json]</a>"
     ],
     "job-skills": {
-      "DOCX": "DOCX",
-      "PDF": "PDF",
-      "JSON": "JSON"
+      "docx": "docx",
+      "pdf": "pdf",
+      "json": "json"
     },
     "outlineIndex": "1.1.1",
     "outlineKind": "job",
@@ -101,14 +104,14 @@
       "ciede2000"
     ],
     "references": [
-      "<a href=\"https://en.wikipedia.org/wiki/React_(software)\">[React]</a>",
-      "<a href=\"https://scikit-learn.org/stable/modules/clustering.html#k-means\">[K-means]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Color_difference#CIEDE2000\">[CIEDE2000]</a>"
+      "<a href=\"https://react.dev/\">[react]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/K-means_clustering\">[k-means]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Color_difference#CIEDE2000\">[ciede2000]</a>"
     ],
     "job-skills": {
-      "React": "React",
-      "K-means": "K-means",
-      "CIEDE2000": "CIEDE2000"
+      "react": "react",
+      "k-means": "k-means",
+      "ciede2000": "ciede2000"
     },
     "outlineIndex": "1.1.2",
     "outlineKind": "job",
@@ -136,16 +139,16 @@
       "express-js"
     ],
     "references": [
-      "<a href=\"https://vuejs.org/\">[Vue 3]</a>",
-      "<a href=\"https://www.typescriptlang.org/\">[TypeScript]</a>",
-      "<a href=\"https://vitejs.dev/\">[Vite]</a>",
-      "<a href=\"https://expressjs.com/\">[Express.js]</a>"
+      "<a href=\"https://vuejs.org/\">[vue-3]</a>",
+      "<a href=\"https://www.typescriptlang.org/\">[typescript]</a>",
+      "<a href=\"https://vitejs.dev/\">[vite]</a>",
+      "<a href=\"https://expressjs.com/\">[express-js]</a>"
     ],
     "job-skills": {
-      "Vue 3": "Vue 3",
-      "TypeScript": "TypeScript",
-      "Vite": "Vite",
-      "Express.js": "Express.js"
+      "vue-3": "vue-3",
+      "typescript": "typescript",
+      "vite": "vite",
+      "express-js": "express-js"
     },
     "outlineIndex": "1.1.3",
     "outlineKind": "job",
@@ -175,20 +178,20 @@
       "postgresql"
     ],
     "references": [
-      "<a href=\"https://www.google.com/search?q=what+is+fast+mcp&rlz=1C5MACD_enUS1022US1022&oq=what+is+fast+mcp&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQABiABDINCAIQABiGAxiABBiKBTINCAMQABiGAxiABBiKBTINCAQQABiGAxiABBiKBTINCAUQABiGAxiABBiKBTIHCAYQABjvBTIKCAcQABiiBBiJBTIKCAgQABiABBiiBDIKCAkQABiiBBiJBdIBCDY2NTVqMGo0qAIAsAIB&sourceid=chrome&source=chrome.ob&ie=UTF-8\">[FastMCP]</a>",
-      "<a href=\"https://www.langchain.com/\">[LangChain]</a>",
-      "<a href=\"https://python.langchain.com/docs/concepts/lcel/\">[LCEL]</a>",
-      "<a href=\"https://www.trychroma.com/\">[ChromaDB]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/React_(software)\">[React]</a>"
+      "<a href=\"https://github.com/jlowin/fastmcp\">[fastmcp]</a>",
+      "<a href=\"https://www.langchain.com/\">[langchain]</a>",
+      "<a href=\"https://python.langchain.com/docs/concepts/lcel/\">[lcel]</a>",
+      "<a href=\"https://www.trychroma.com/\">[chromadb]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>",
+      "<a href=\"https://react.dev/\">[react]</a>"
     ],
     "job-skills": {
-      "FastMCP": "FastMCP",
-      "LangChain": "LangChain",
-      "LCEL": "LCEL",
-      "ChromaDB": "ChromaDB",
-      "PostgreSQL": "PostgreSQL",
-      "React": "React"
+      "fastmcp": "fastmcp",
+      "langchain": "langchain",
+      "lcel": "lcel",
+      "chromadb": "chromadb",
+      "postgresql": "postgresql",
+      "react": "react"
     },
     "outlineIndex": "1.1.4",
     "outlineKind": "job",
@@ -214,12 +217,12 @@
       "opencv"
     ],
     "references": [
-      "<a href=\"https://openai.com/index/dall-e-3/\">[DALL·E 3]</a>",
-      "<a href=\"https://opencv.org/\">[OpenCV]</a>"
+      "<a href=\"https://openai.com/index/dall-e-3/\">[dall-e-3]</a>",
+      "<a href=\"https://opencv.org/\">[opencv]</a>"
     ],
     "job-skills": {
-      "DALL·E 3": "DALL·E 3",
-      "OpenCV": "OpenCV"
+      "dall-e-3": "dall-e-3",
+      "opencv": "opencv"
     },
     "outlineIndex": "1.1.5",
     "outlineKind": "job",
@@ -249,21 +252,21 @@
       "rbac"
     ],
     "references": [
-      "<a href=\"https://react.dev/\">[React 18]</a>",
-      "<a href=\"https://expressjs.com/\">[Express.js]</a>",
-      "<a href=\"https://jwt.io/\">[JWT]</a>",
+      "<a href=\"https://react.dev/\">[react-18]</a>",
+      "<a href=\"https://expressjs.com/\">[express-js]</a>",
+      "<a href=\"https://jwt.io/\">[jwt]</a>",
       "<a href=\"https://github.com/kelektiv/node.bcrypt.js\">[bcrypt]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Role-based_access_control\">[RBAC]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://en.wikipedia.org/wiki/Role-based_access_control\">[rbac]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "React 18": "React 18",
-      "Express.js": "Express.js",
-      "JWT": "JWT",
+      "react-18": "react-18",
+      "express-js": "express-js",
+      "jwt": "jwt",
       "bcrypt": "bcrypt",
-      "RBAC": "RBAC",
-      "PostgreSQL": "PostgreSQL",
-      "React": "React"
+      "rbac": "rbac",
+      "postgresql": "postgresql",
+      "react": "react"
     },
     "outlineIndex": "1.1.6",
     "outlineKind": "job",
@@ -292,19 +295,19 @@
       "ecs-fargate"
     ],
     "references": [
-      "<a href=\"https://spring.io/projects/spring-boot\">[Spring Boot]</a>",
+      "<a href=\"https://spring.io/projects/spring-boot\">[spring-boot]</a>",
       "<a href=\"https://github.com/pgvector/pgvector\">[pgvector]</a>",
-      "<a href=\"https://huggingface.co/\">[HuggingFace]</a>",
-      "<a href=\"https://huggingface.co/microsoft/MiniLM-L12-H384-uncased\">[MiniLM]</a>",
-      "<a href=\"https://www.google.com/search?q=aws+ecs+fargate&rlz=1C5MACD_enUS1022US1022&oq=&gs_lcrp=EgZjaHJvbWUqGwgAEAAYQhiRAhi0AhjqAhiABBiMBBiKBRjnBjIbCAAQABhCGJECGLQCGOoCGIAEGIwEGIoFGOcGMhsIARAAGEIYkQIYtAIY6gIYgAQYjAQYigUY5wYyGwgCEAAYQhiRAhi0AhjqAhiABBiMBBiKBRjnBjIbCAMQABhCGJECGLQCGOoCGIAEGIwEGIoFGOcGMhsIBBAAGEIYkQIYtAIY6gIYgAQYjAQYigUY5wYyGwgFEAAYQhiRAhi0AhjqAhiABBiMBBiKBRjnBjIGCAYQRRhA0gEJMjQ3MTNqMGo5qAIGsAIB8QWaS10-4bejag&sourceid=chrome&source=chrome.ob&ie=UTF-8\">[ECS Fargate]</a>"
+      "<a href=\"https://huggingface.co/\">[huggingface]</a>",
+      "<a href=\"https://huggingface.co/microsoft/MiniLM-L12-H384-uncased\">[minilm]</a>",
+      "<a href=\"https://aws.amazon.com/fargate/\">[ecs-fargate]</a>"
     ],
     "job-skills": {
-      "Spring Boot": "Spring Boot",
+      "spring-boot": "spring-boot",
       "pgvector": "pgvector",
-      "HuggingFace": "HuggingFace",
-      "MiniLM": "MiniLM",
-      "ECS Fargate": "ECS Fargate",
-      "Spring": "Spring"
+      "huggingface": "huggingface",
+      "minilm": "minilm",
+      "ecs-fargate": "ecs-fargate",
+      "spring": "spring"
     },
     "outlineIndex": "1.1.7",
     "outlineKind": "job",
@@ -333,22 +336,21 @@
       "bedrock"
     ],
     "references": [
-      "<a href=\"https://en.wikipedia.org/wiki/Java_(programming_language)\">[Java 21]</a>",
-      "<a href=\"https://spring.io/projects/spring-boot\">[Spring Boot]</a>",
-      "<a href=\"https://spring.io/projects/spring-ai\">[Spring AI]</a>",
-      "<a href=\"https://aws.amazon.com/rds/aurora/serverless/\">[Aurora PostgreSQL Serverless v2]</a>",
-      "<a href=\"https://www.google.com/search?q=amazon+bedrock&rlz=1C5MACD_enUS1022US1022&oq=amazon+bedrock&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQABiABDIHCAIQABiABDIHCAMQABiABDIHCAQQABiABDIHCAUQABiABDIHCAYQABiABDIHCAcQABiABDIKCAgQABiABBi0BzIHCAkQABiABNIBCDMyMjJqMGo0qAIAsAIA&sourceid=chrome&source=chrome.ob&ie=UTF-8\">[Bedrock]</a>"
+      "<a href=\"https://www.oracle.com/java/technologies/downloads/\">[java-21]</a>",
+      "<a href=\"https://spring.io/projects/spring-boot\">[spring-boot]</a>",
+      "<a href=\"https://spring.io/projects/spring-ai\">[spring-ai]</a>",
+      "<a href=\"https://aws.amazon.com/rds/aurora/serverless/\">[aurora-postgresql-serverless-v2]</a>",
+      "<a href=\"https://aws.amazon.com/bedrock/\">[bedrock]</a>"
     ],
     "job-skills": {
-      "Java 21": "Java 21",
-      "Spring Boot": "Spring Boot",
-      "Spring AI": "Spring AI",
-      "Aurora PostgreSQL Serverless v2": "Aurora PostgreSQL Serverless v2",
-      "Bedrock": "Bedrock",
-      "PostgreSQL": "PostgreSQL",
-      "Spring": "Spring",
-      "Java": "Java",
-      "AI": "AI"
+      "java-21": "java-21",
+      "spring-boot": "spring-boot",
+      "spring-ai": "spring-ai",
+      "aurora-postgresql-serverless-v2": "aurora-postgresql-serverless-v2",
+      "bedrock": "bedrock",
+      "postgresql": "postgresql",
+      "spring": "spring",
+      "java": "java"
     },
     "outlineIndex": "1.1.8",
     "outlineKind": "job",
@@ -376,17 +378,17 @@
       "optuna"
     ],
     "references": [
-      "<a href=\"https://langchain-ai.github.io/langgraph/\">[LangGraph]</a>",
-      "<a href=\"https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview\">[Snowflake Cortex Search]</a>",
-      "<a href=\"https://mlflow.org/\">[MLflow]</a>",
-      "<a href=\"https://optuna.org/\">[Optuna]</a>"
+      "<a href=\"https://langchain-ai.github.io/langgraph/\">[langgraph]</a>",
+      "<a href=\"https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview\">[snowflake-cortex-search]</a>",
+      "<a href=\"https://mlflow.org/\">[mlflow]</a>",
+      "<a href=\"https://optuna.org/\">[optuna]</a>"
     ],
     "job-skills": {
-      "LangGraph": "LangGraph",
-      "Snowflake Cortex Search": "Snowflake Cortex Search",
-      "MLflow": "MLflow",
-      "Optuna": "Optuna",
-      "Snowflake": "Snowflake"
+      "langgraph": "langgraph",
+      "snowflake-cortex-search": "snowflake-cortex-search",
+      "mlflow": "mlflow",
+      "optuna": "optuna",
+      "snowflake": "snowflake"
     },
     "outlineIndex": "1.1.9",
     "outlineKind": "job",
@@ -414,13 +416,13 @@
     ],
     "references": [
       "<a href=\"https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html\">[launchd]</a>",
-      "<a href=\"https://mail.google.com/\">[Gmail]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Large_language_model\">[LLM]</a>"
+      "<a href=\"https://mail.google.com/\">[gmail]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Large_language_model\">[llm]</a>"
     ],
     "job-skills": {
       "launchd": "launchd",
-      "Gmail": "Gmail",
-      "LLM": "LLM"
+      "gmail": "gmail",
+      "llm": "llm"
     },
     "outlineIndex": "1.1.10",
     "outlineKind": "job",
@@ -457,7 +459,7 @@
   {
     "employer": "Adobe",
     "title": "",
-    "role": "Consultant — Python Backend / SEO Platform",
+    "role": "Consultant",
     "start": "03/2025",
     "end": "07/2025",
     "durationMonths": 5,
@@ -470,16 +472,16 @@
       "agile"
     ],
     "references": [
-      "<a href=\"https://www.python.org/\">[Python]</a>",
-      "<a href=\"https://restfulapi.net/\">[REST API]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Jira_(software)\">[Jira]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Agile_software_development\">[Agile]</a>"
+      "<a href=\"https://www.python.org/\">[python]</a>",
+      "<a href=\"https://restfulapi.net/\">[rest-api]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://agilemanifesto.org/\">[agile]</a>"
     ],
     "job-skills": {
-      "Python": "Python",
-      "REST API": "REST API",
-      "Jira": "Jira",
-      "Agile": "Agile"
+      "python": "python",
+      "rest-api": "rest-api",
+      "jira": "jira",
+      "agile": "agile"
     },
     "outlineIndex": "1.2.1",
     "outlineKind": "job",
@@ -494,7 +496,7 @@
   {
     "employer": "Fannie Mae",
     "title": "",
-    "role": "Consultant — Data Engineer",
+    "role": "Consultant",
     "start": "02/2024",
     "end": "07/2024",
     "durationMonths": 6,
@@ -514,27 +516,27 @@
     ],
     "references": [
       "<a href=\"https://www.getdbt.com/\">[dbt]</a>",
-      "<a href=\"https://aws.amazon.com/glue/\">[AWS Glue]</a>",
-      "<a href=\"https://www.google.com/search?q=define+glue+and+glue+crawler&rlz=1C5MACD_enUS1022US1022&oq=define+glue+and+glue+crawler&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigATIHCAIQIRigATIHCAMQIRigATIHCAQQIRigATIHCAUQIRifBTIHCAYQIRifBTIHCAcQIRifBTIHCAgQIRifBTIHCAkQIRifBdIBCDkwOTlqMGo0qAIAsAIB&sourceid=chrome&source=chrome.ob&ie=UTF-8\">[Glue Crawler]</a>",
-      "<a href=\"https://aws.amazon.com/codecommit/\">[CodeCommit]</a>",
-      "<a href=\"https://aws.amazon.com/codebuild/\">[CodeBuild]</a>",
-      "<a href=\"https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html\">[CodePipeline]</a>",
-      "<a href=\"https://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html\">[CodeDeploy]</a>",
-      "<a href=\"https://aws.amazon.com/cloudwatch/\">[CloudWatch]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Jira_(software)\">[Jira]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Agile_software_development\">[Agile]</a>"
+      "<a href=\"https://aws.amazon.com/glue/\">[aws-glue]</a>",
+      "<a href=\"https://docs.aws.amazon.com/glue/latest/dg/add-crawler.html\">[glue-crawler]</a>",
+      "<a href=\"https://aws.amazon.com/codecommit/\">[codecommit]</a>",
+      "<a href=\"https://aws.amazon.com/codebuild/\">[codebuild]</a>",
+      "<a href=\"https://aws.amazon.com/codepipeline/\">[codepipeline]</a>",
+      "<a href=\"https://aws.amazon.com/codedeploy/\">[codedeploy]</a>",
+      "<a href=\"https://aws.amazon.com/cloudwatch/\">[cloudwatch]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://agilemanifesto.org/\">[agile]</a>"
     ],
     "job-skills": {
       "dbt": "dbt",
-      "AWS Glue": "AWS Glue",
-      "Glue Crawler": "Glue Crawler",
-      "CodeCommit": "CodeCommit",
-      "CodeBuild": "CodeBuild",
-      "CodePipeline": "CodePipeline",
-      "CodeDeploy": "CodeDeploy",
-      "CloudWatch": "CloudWatch",
-      "Jira": "Jira",
-      "Agile": "Agile"
+      "aws-glue": "aws-glue",
+      "glue-crawler": "glue-crawler",
+      "codecommit": "codecommit",
+      "codebuild": "codebuild",
+      "codepipeline": "codepipeline",
+      "codedeploy": "codedeploy",
+      "cloudwatch": "cloudwatch",
+      "jira": "jira",
+      "agile": "agile"
     },
     "outlineIndex": "1.2.2",
     "outlineKind": "job",
@@ -549,7 +551,7 @@
   {
     "employer": "Cigna",
     "title": "",
-    "role": "Consultant — Data / Security Engineer",
+    "role": "Consultant",
     "start": "05/2023",
     "end": "12/2023",
     "durationMonths": 8,
@@ -565,22 +567,22 @@
       "ci-cd"
     ],
     "references": [
-      "<a href=\"https://docs.cyberark.com/pam-self-hosted/latest/en/content/resources/_topnav/cc_home.htm\">[CyberArk PAM]</a>",
-      "<a href=\"https://kafka.apache.org/\">[Kafka]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Apache_Airflow\">[Airflow]</a>",
-      "<a href=\"https://www.google.com/search?q=xray+test+managemetn&rlz=1C5MACD_enUS1022US1022&oq=xray+test+managemetn&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgwIBRAAGA0YgAQYtAcyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCAgJEAAYDRge0gEJMTA0NDhqMGo0qAIAsAIB&sourceid=chrome&source=chrome.ob&ie=UTF-8\">[Xray]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Jira_(software)\">[Jira]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/CI/CD\">[CI/CD]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Agile_software_development\">[Agile]</a>"
+      "<a href=\"https://www.cyberark.com/products/privileged-access-manager/\">[cyberark-pam]</a>",
+      "<a href=\"https://kafka.apache.org/\">[kafka]</a>",
+      "<a href=\"https://airflow.apache.org/\">[airflow]</a>",
+      "<a href=\"https://aws.amazon.com/xray/\">[xray]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/CI/CD\">[ci-cd]</a>",
+      "<a href=\"https://agilemanifesto.org/\">[agile]</a>"
     ],
     "job-skills": {
-      "CyberArk PAM": "CyberArk PAM",
-      "Kafka": "Kafka",
-      "Airflow": "Airflow",
-      "Xray": "Xray",
-      "Jira": "Jira",
-      "CI/CD": "CI/CD",
-      "Agile": "Agile"
+      "cyberark-pam": "cyberark-pam",
+      "kafka": "kafka",
+      "airflow": "airflow",
+      "xray": "xray",
+      "jira": "jira",
+      "ci-cd": "ci-cd",
+      "agile": "agile"
     },
     "outlineIndex": "1.2.3",
     "outlineKind": "job",
@@ -595,7 +597,7 @@
   {
     "employer": "Warner Bros. Games",
     "title": "",
-    "role": "Consultant — Data Engineer",
+    "role": "Consultant",
     "start": "09/2022",
     "end": "03/2023",
     "durationMonths": 7,
@@ -614,28 +616,28 @@
       "tableau"
     ],
     "references": [
-      "<a href=\"https://segment.com/\">[Segment CDP]</a>",
-      "<a href=\"https://www.salesforce.com/\">[Salesforce]</a>",
-      "<a href=\"https://www.shopify.com/\">[Shopify]</a>",
-      "<a href=\"https://ads.google.com/\">[Google Ads]</a>",
-      "<a href=\"https://www.youtube.com/\">[YouTube]</a>",
-      "<a href=\"https://www.google.com/search?q=google+gcp+definition&sca_esv=a336b5ca07a741fd&rlz=1C5MACD_enUS1022US1022&sxsrf=APpeQnuhO0XR3oGxslvsviQ_l8P7KMS0rQ%3A1793069942067&ei=dhPgavPVA6L3yckPqeuW8Qc&uact=5&oq=google+gcp+definition&gs_lp=Egxnd3Mtd2l6LXNlcnAiFWdvb2dsZSBnY3AgZGVmaW5pdGlvbjIIEAAYFhgeGAoyBhAAGBYYHjIGEAAYFhgeMgsQABiABBiKBRiGAzILEAAYgAQYigUYhgMyCxAAGIAEGIoFGIYDMgUQABjvBUilGFCNB1ivFHABeACQAQCYAWqgAdkGqgEEMTEuMbgBA8gBAPgBAZgCDKAC1gjCAgoQABhHGNYEGLADwgINEAAYgAQYigUYQxiwA8ICBRAAGIAEwgILEAAYgAQYigUYkQKYAwCIBgGQBgySBwQxMC4yoAfmUrIHAzkuMrgHtAjCBwQzLTEyyAeIAYAIAQ&sclient=gws-wiz-serp\">[GCP]</a>",
-      "<a href=\"https://cloud.google.com/bigquery\">[BigQuery]</a>",
-      "<a href=\"https://fastapi.tiangolo.com/\">[FastAPI]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Apache_Airflow\">[Airflow]</a>",
-      "<a href=\"https://www.tableau.com/\">[Tableau]</a>"
+      "<a href=\"https://segment.com/\">[segment-cdp]</a>",
+      "<a href=\"https://www.salesforce.com/\">[salesforce]</a>",
+      "<a href=\"https://www.shopify.com/\">[shopify]</a>",
+      "<a href=\"https://ads.google.com/\">[google-ads]</a>",
+      "<a href=\"https://www.youtube.com/\">[youtube]</a>",
+      "<a href=\"https://cloud.google.com/\">[gcp]</a>",
+      "<a href=\"https://cloud.google.com/bigquery\">[bigquery]</a>",
+      "<a href=\"https://fastapi.tiangolo.com/\">[fastapi]</a>",
+      "<a href=\"https://airflow.apache.org/\">[airflow]</a>",
+      "<a href=\"https://www.tableau.com/\">[tableau]</a>"
     ],
     "job-skills": {
-      "Segment CDP": "Segment CDP",
-      "Salesforce": "Salesforce",
-      "Shopify": "Shopify",
-      "Google Ads": "Google Ads",
-      "YouTube": "YouTube",
-      "GCP": "GCP",
-      "BigQuery": "BigQuery",
-      "FastAPI": "FastAPI",
-      "Airflow": "Airflow",
-      "Tableau": "Tableau"
+      "segment-cdp": "segment-cdp",
+      "salesforce": "salesforce",
+      "shopify": "shopify",
+      "google-ads": "google-ads",
+      "youtube": "youtube",
+      "gcp": "gcp",
+      "bigquery": "bigquery",
+      "fastapi": "fastapi",
+      "airflow": "airflow",
+      "tableau": "tableau"
     },
     "outlineIndex": "1.2.4",
     "outlineKind": "job",
@@ -650,45 +652,38 @@
   {
     "employer": "Angel Studios",
     "title": "",
-    "role": "Consultant — ML / BI Engineer",
+    "role": "Consultant",
     "start": "11/2021",
     "end": "09/2022",
     "durationMonths": 11,
-    "Description": "• Delivered [PyTorch] CNN models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
     "educationKey": null,
     "skillIDs": [
       "jira",
       "agile",
       "pytorch",
+      "cnn",
       "sagemaker",
       "looker",
-      "snowflake",
-      "PyTorch",
-      "SageMaker",
-      "Looker",
-      "Snowflake",
-      "Jira",
-      "Agile",
-      "CNN",
-      "Computer Vision"
+      "snowflake"
     ],
     "references": [
-      "<a href=\"https://pytorch.org/\">[PyTorch]</a>",
-      "<a href=\"https://aws.amazon.com/sagemaker/\">[SageMaker]</a>",
-      "<a href=\"https://docs.cloud.google.com/looker/docs\">[Looker]</a>",
-      "<a href=\"https://www.google.com/search?q=snowflake+data+warehouse&rlz=1C5MACD_enUS1022US1022&oq=snowflake+data+warehouse&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQABiABDIHCAIQABiABDIHCAMQABiABDIHCAQQABiABDIHCAUQABiABDIHCAYQABiABDIHCAcQABiABDIHCAgQABiABDIHCAkQABiABNIBCTEyMTk1ajBqNKgCALACAQ&sourceid=chrome&source=chrome.ob&ie=UTF-8\">[Snowflake]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Jira_(software)\">[Jira]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Agile_software_development\">[Agile]</a>"
+      "<a href=\"https://pytorch.org/foundation/\">[pytorch]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Convolutional_neural_network\">[cnn]</a>",
+      "<a href=\"https://aws.amazon.com/sagemaker/\">[sagemaker]</a>",
+      "<a href=\"https://cloud.google.com/looker\">[looker]</a>",
+      "<a href=\"https://www.snowflake.com/\">[snowflake]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://agilemanifesto.org/\">[agile]</a>"
     ],
     "job-skills": {
-      "PyTorch": "PyTorch",
-      "SageMaker": "SageMaker",
-      "Looker": "Looker",
-      "Snowflake": "Snowflake",
-      "Jira": "Jira",
-      "Agile": "Agile",
-      "CNN": "CNN",
-      "Computer Vision": "Computer Vision"
+      "pytorch": "pytorch",
+      "cnn": "cnn",
+      "sagemaker": "sagemaker",
+      "looker": "looker",
+      "snowflake": "snowflake",
+      "jira": "jira",
+      "agile": "agile"
     },
     "outlineIndex": "1.2.5",
     "outlineKind": "job",
@@ -703,7 +698,7 @@
   {
     "employer": "Greenseed LLC",
     "title": "",
-    "role": "Consultant — Data Architect",
+    "role": "Consultant",
     "start": "01/2020",
     "end": "11/2021",
     "durationMonths": 23,
@@ -713,10 +708,10 @@
       "postgresql"
     ],
     "references": [
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "PostgreSQL": "PostgreSQL"
+      "postgresql": "postgresql"
     },
     "outlineIndex": "1.2.6",
     "outlineKind": "job",
@@ -731,7 +726,7 @@
   {
     "employer": "NuSkin",
     "title": "",
-    "role": "Consultant — Full-Stack Engineer",
+    "role": "Consultant",
     "start": "11/2019",
     "end": "11/2020",
     "durationMonths": 13,
@@ -746,20 +741,20 @@
       "vuelidate"
     ],
     "references": [
-      "<a href=\"https://vuejs.org/\">[Vue 3]</a>",
-      "<a href=\"https://nodejs.org/\">[Node.js]</a>",
-      "<a href=\"https://vuetifyjs.com/en/\">[Vuetify]</a>",
-      "<a href=\"https://vuelidate-next.netlify.app/\">[Vuelidate]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Jira_(software)\">[Jira]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Agile_software_development\">[Agile]</a>"
+      "<a href=\"https://vuejs.org/\">[vue-3]</a>",
+      "<a href=\"https://nodejs.org/\">[node-js]</a>",
+      "<a href=\"https://vuetifyjs.com/\">[vuetify]</a>",
+      "<a href=\"https://vuelidate-next.netlify.app/\">[vuelidate]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://agilemanifesto.org/\">[agile]</a>"
     ],
     "job-skills": {
-      "Vue 3": "Vue 3",
-      "Node.js": "Node.js",
-      "Vuetify": "Vuetify",
-      "Vuelidate": "Vuelidate",
-      "Jira": "Jira",
-      "Agile": "Agile"
+      "vue-3": "vue-3",
+      "node-js": "node-js",
+      "vuetify": "vuetify",
+      "vuelidate": "vuelidate",
+      "jira": "jira",
+      "agile": "agile"
     },
     "outlineIndex": "1.2.7",
     "outlineKind": "job",
@@ -778,7 +773,7 @@
     "start": "02/2017",
     "end": "11/2019",
     "durationMonths": 34,
-    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI expenses; [Flyway] schema evolution/migrations. First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
+    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI expenses.• [Flyway] schema evolution/migrations.• First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
     "educationKey": null,
     "skillIDs": [
       "json",
@@ -796,34 +791,34 @@
       "scrum"
     ],
     "references": [
-      "<a href=\"https://spark.apache.org/docs/latest/api/python/\">[PySpark]</a>",
-      "<a href=\"https://aws.amazon.com/emr/\">[AWS EMR]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Amazon_Kinesis\">[Kinesis]</a>",
-      "<a href=\"https://www.rabbitmq.com/\">[RabbitMQ]</a>",
-      "<a href=\"https://www.json.org/\">[JSON]</a>",
-      "<a href=\"https://parquet.apache.org/docs/\">[Parquet]</a>",
-      "<a href=\"https://aws.amazon.com/s3/\">[S3]</a>",
-      "<a href=\"https://aws.amazon.com/redshift/\">[Redshift]</a>",
-      "<a href=\"https://www.tableau.com/\">[Tableau]</a>",
-      "<a href=\"https://flywaydb.org/\">[Flyway]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Agile_software_development\">[Agile]</a>",
-      "<a href=\"https://www.scrum.org/\">[Scrum]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Jira_(software)\">[Jira]</a>"
+      "<a href=\"https://spark.apache.org/docs/latest/api/python/\">[pyspark]</a>",
+      "<a href=\"https://aws.amazon.com/emr/\">[aws-emr]</a>",
+      "<a href=\"https://aws.amazon.com/kinesis/\">[kinesis]</a>",
+      "<a href=\"https://www.rabbitmq.com/\">[rabbitmq]</a>",
+      "<a href=\"https://www.json.org/\">[json]</a>",
+      "<a href=\"https://parquet.apache.org/\">[parquet]</a>",
+      "<a href=\"https://aws.amazon.com/s3/\">[s3]</a>",
+      "<a href=\"https://aws.amazon.com/redshift/\">[redshift]</a>",
+      "<a href=\"https://www.tableau.com/\">[tableau]</a>",
+      "<a href=\"https://flywaydb.org/\">[flyway]</a>",
+      "<a href=\"https://agilemanifesto.org/\">[agile]</a>",
+      "<a href=\"https://www.scrum.org/\">[scrum]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>"
     ],
     "job-skills": {
-      "PySpark": "PySpark",
-      "AWS EMR": "AWS EMR",
-      "Kinesis": "Kinesis",
-      "RabbitMQ": "RabbitMQ",
-      "JSON": "JSON",
-      "Parquet": "Parquet",
-      "S3": "S3",
-      "Redshift": "Redshift",
-      "Tableau": "Tableau",
-      "Flyway": "Flyway",
-      "Agile": "Agile",
-      "Scrum": "Scrum",
-      "Jira": "Jira"
+      "pyspark": "pyspark",
+      "aws-emr": "aws-emr",
+      "kinesis": "kinesis",
+      "rabbitmq": "rabbitmq",
+      "json": "json",
+      "parquet": "parquet",
+      "s3": "s3",
+      "redshift": "redshift",
+      "tableau": "tableau",
+      "flyway": "flyway",
+      "agile": "agile",
+      "scrum": "scrum",
+      "jira": "jira"
     },
     "outlineIndex": "2",
     "outlineKind": "job",
@@ -851,16 +846,16 @@
       "spring"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://spring.io/projects/spring-framework\">[Spring]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://spring.io/\">[spring]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "Spring": "Spring",
-      "PostgreSQL": "PostgreSQL"
+      "java": "java",
+      "jsp": "jsp",
+      "spring": "spring",
+      "postgresql": "postgresql"
     },
     "outlineIndex": "3",
     "outlineKind": "job",
@@ -879,7 +874,7 @@
     "start": "01/2011",
     "end": "09/2016",
     "durationMonths": 69,
-    "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines. Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
+    "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines.• Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
     "educationKey": null,
     "skillIDs": [
       "java",
@@ -888,17 +883,17 @@
       "nlp"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://spring.io/projects/spring-framework\">[Spring]</a>",
-      "<a href=\"https://aws.amazon.com/dynamodb/\">[DynamoDB]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Natural_language_processing\">[NLP]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://spring.io/\">[spring]</a>",
+      "<a href=\"https://aws.amazon.com/dynamodb/\">[dynamodb]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Natural_language_processing\">[nlp]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "Spring": "Spring",
-      "DynamoDB": "DynamoDB",
-      "NLP": "NLP",
-      "Data Pipelines": "Data Pipelines"
+      "java": "java",
+      "spring": "spring",
+      "dynamodb": "dynamodb",
+      "nlp": "nlp",
+      "data-pipelines": "data-pipelines"
     },
     "outlineIndex": "4",
     "outlineKind": "job",
@@ -913,7 +908,7 @@
   {
     "employer": "Sierra Vista Group",
     "title": "",
-    "role": "Co-founder — Technical Lead",
+    "role": "Co-founder and Technical Lead",
     "start": "12/2002",
     "end": "12/2011",
     "durationMonths": 109,
@@ -947,14 +942,14 @@
       "jsp"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "PostgreSQL": "PostgreSQL"
+      "java": "java",
+      "jsp": "jsp",
+      "postgresql": "postgresql"
     },
     "outlineIndex": "5.6",
     "outlineKind": "job",
@@ -979,10 +974,10 @@
       "c"
     ],
     "references": [
-      "<a href=\"https://isocpp.org/\">[C++]</a>"
+      "<a href=\"https://isocpp.org/\">[c]</a>"
     ],
     "job-skills": {
-      "C++": "C++"
+      "c": "c"
     },
     "outlineIndex": "5.4",
     "outlineKind": "job",
@@ -1009,14 +1004,14 @@
       "filemaker"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://www.claris.com/filemaker/\">[FileMaker]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://www.claris.com/filemaker/\">[filemaker]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "FileMaker": "FileMaker"
+      "java": "java",
+      "jsp": "jsp",
+      "filemaker": "filemaker"
     },
     "outlineIndex": "5.3",
     "outlineKind": "job",
@@ -1043,14 +1038,14 @@
       "ms-mobile-5"
     ],
     "references": [
-      "<a href=\"https://en.wikipedia.org/wiki/SQL_Anywhere\">[SQL Anywhere]</a>",
-      "<a href=\"https://www.google.com/search?q=NServiceBus+is+a+commercial+messaging+and+distributed+systems+framework+for+.NET+created+by+Particular+Software&rlz=1C5MACD_enUS1022US1022&oq=NServiceBus+is+a+commercial+messaging+and+distributed+systems+framework+for+.NET+created+by+Particular+Software&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBBzkzMGowajmoAgawAgHxBbq392HIXoj0&sourceid=chrome&source=chrome.ob&ie=UTF-8\">[NServiceBus]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Windows_Mobile_5\">[MS Mobile 5]</a>"
+      "<a href=\"https://www.sap.com/products/technology-platform/sql-anywhere.html\">[sql-anywhere]</a>",
+      "<a href=\"https://particular.net/nservicebus\">[nservicebus]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Windows_Mobile_5\">[ms-mobile-5]</a>"
     ],
     "job-skills": {
-      "SQL Anywhere": "SQL Anywhere",
-      "NServiceBus": "NServiceBus",
-      "MS Mobile 5": "MS Mobile 5"
+      "sql-anywhere": "sql-anywhere",
+      "nservicebus": "nservicebus",
+      "ms-mobile-5": "ms-mobile-5"
     },
     "outlineIndex": "5.2",
     "outlineKind": "job",
@@ -1076,12 +1071,12 @@
       "db-design-tools"
     ],
     "references": [
-      "<a href=\"https://en.wikipedia.org/wiki/Windows_NT\">[Windows NT]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Database_design\">[DB Design Tools]</a>"
+      "<a href=\"https://en.wikipedia.org/wiki/Windows_NT\">[windows-nt]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Database_design\">[db-design-tools]</a>"
     ],
     "job-skills": {
-      "Windows NT": "Windows NT",
-      "DB Design Tools": "DB Design Tools"
+      "windows-nt": "windows-nt",
+      "db-design-tools": "db-design-tools"
     },
     "outlineIndex": "5.1",
     "outlineKind": "job",
@@ -1100,7 +1095,7 @@
     "start": "02/1997",
     "end": "12/2002",
     "durationMonths": 71,
-    "Description": "• Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5–7 independent consultants.",
+    "Description": "• Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5–7 independent consultants.",
     "educationKey": null,
     "skillIDs": [
       "java",
@@ -1108,14 +1103,14 @@
       "oracle"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Oracle_Database\">[Oracle]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://www.oracle.com/database/\">[oracle]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "Oracle": "Oracle"
+      "java": "java",
+      "jsp": "jsp",
+      "oracle": "oracle"
     },
     "outlineIndex": "6",
     "outlineKind": "job",
@@ -1128,14 +1123,14 @@
     "jobID": "29"
   },
   {
-    "employer": "Massachusetts Institute of Technology (MIT)",
-    "title": "PhD Student",
-    "role": "PhD Student",
-    "label": "Massachusetts Institute of Technology (MIT)",
-    "start": "1990",
-    "end": "1997",
-    "durationMonths": 85,
-    "Description": "• PhD, Media Arts & Sciences, focused on [Computer Vision] and [Digital Signal Processing].",
+    "employer": "Massachusetts Institute of Technology (MIT)  —  1990 - 1997",
+    "title": "PhD, Media Arts & Sciences, Computer Vision, Digital Signal Processing",
+    "role": "PhD, Media Arts & Sciences, Computer Vision, Digital Signal Processing",
+    "label": "Massachusetts Institute of Technology (MIT)  —  1990 - 1997",
+    "start": "1990-01-01",
+    "end": "1997-12-31",
+    "durationMonths": 96,
+    "Description": "",
     "educationKey": "0",
     "references": [],
     "job-skills": {},
@@ -1143,14 +1138,14 @@
     "outlineKind": "job"
   },
   {
-    "employer": "Brigham Young University",
-    "title": "MS Student",
-    "role": "MS Student",
-    "label": "Brigham Young University",
-    "start": "1987",
-    "end": "1990",
-    "durationMonths": 37,
-    "Description": "• MS, Computer Science, focused on [Computer Graphics] and Medical Imaging.",
+    "employer": "Brigham Young University  —  1987 - 1990",
+    "title": "MS, Computer Science, Computer Graphics, Medical Imaging",
+    "role": "MS, Computer Science, Computer Graphics, Medical Imaging",
+    "label": "Brigham Young University  —  1987 - 1990",
+    "start": "1987-01-01",
+    "end": "1990-12-31",
+    "durationMonths": 48,
+    "Description": "",
     "educationKey": "1",
     "references": [],
     "job-skills": {},
@@ -1158,14 +1153,14 @@
     "outlineKind": "job"
   },
   {
-    "employer": "Brigham Young University",
-    "title": "BS Student",
-    "role": "BS Student",
-    "label": "Brigham Young University",
-    "start": "1983",
-    "end": "1987",
-    "durationMonths": 49,
-    "Description": "• BS, Design Engineering Technology, focused on [CAD]/[CAM]/[CAE].",
+    "employer": "Brigham Young University  —  1983 - 1987",
+    "title": "BS, Design Engineering Technology, CAD/CAM/CAE",
+    "role": "BS, Design Engineering Technology, CAD/CAM/CAE",
+    "label": "Brigham Young University  —  1983 - 1987",
+    "start": "1983-01-01",
+    "end": "1987-12-31",
+    "durationMonths": 60,
+    "Description": "",
     "educationKey": "2",
     "references": [],
     "job-skills": {},

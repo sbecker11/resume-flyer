@@ -1,23 +1,11 @@
 {
-  "ai": {
-    "name": "AI",
-    "url": "https://ai.google/",
-    "img": "",
-    "categoryIDs": [
-      "ai",
-      "data-science"
-    ],
-    "jobIDs": [
-      0
-    ]
-  },
-  "ml": {
-    "name": "ML",
+  "ai-ml": {
+    "name": "AI/ML",
     "url": "https://en.wikipedia.org/wiki/Machine_learning",
     "img": "",
     "categoryIDs": [
       "data-science",
-      "ai"
+      "methodology"
     ],
     "jobIDs": [
       0
@@ -25,7 +13,7 @@
   },
   "devops": {
     "name": "DevOps",
-    "url": "https://aws.amazon.com/devops/what-is-devops/",
+    "url": "https://en.wikipedia.org/wiki/DevOps",
     "img": "",
     "categoryIDs": [
       "devops",
@@ -41,8 +29,7 @@
     "img": "",
     "categoryIDs": [
       "devops",
-      "data-science",
-      "ai"
+      "data-science"
     ],
     "jobIDs": [
       0
@@ -85,7 +72,7 @@
   },
   "react": {
     "name": "React",
-    "url": "https://en.wikipedia.org/wiki/React_(software)",
+    "url": "https://react.dev/",
     "img": "",
     "categoryIDs": [
       "frontend",
@@ -98,11 +85,11 @@
   },
   "k-means": {
     "name": "K-means",
-    "url": "https://scikit-learn.org/stable/modules/clustering.html#k-means",
+    "url": "https://en.wikipedia.org/wiki/K-means_clustering",
     "img": "",
     "categoryIDs": [
       "data-science",
-      "ml"
+      "methodology"
     ],
     "jobIDs": [
       3
@@ -114,7 +101,7 @@
     "img": "",
     "categoryIDs": [
       "data-science",
-      "library"
+      "methodology"
     ],
     "jobIDs": [
       3
@@ -171,7 +158,7 @@
   },
   "fastmcp": {
     "name": "FastMCP",
-    "url": "https://www.google.com/search?q=what+is+fast+mcp&rlz=1C5MACD_enUS1022US1022&oq=what+is+fast+mcp&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQABiABDINCAIQABiGAxiABBiKBTINCAMQABiGAxiABBiKBTINCAQQABiGAxiABBiKBTINCAUQABiGAxiABBiKBTIHCAYQABjvBTIKCAcQABiiBBiJBTIKCAgQABiABBiiBDIKCAkQABiiBBiJBdIBCDY2NTVqMGo0qAIAsAIB&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+    "url": "https://github.com/jlowin/fastmcp",
     "img": "",
     "categoryIDs": [
       "backend",
@@ -187,7 +174,6 @@
     "img": "",
     "categoryIDs": [
       "library",
-      "ai",
       "data-science"
     ],
     "jobIDs": [
@@ -200,7 +186,7 @@
     "img": "",
     "categoryIDs": [
       "library",
-      "ai"
+      "data-science"
     ],
     "jobIDs": [
       5
@@ -212,7 +198,7 @@
     "img": "",
     "categoryIDs": [
       "database",
-      "vector-dbs"
+      "data-science"
     ],
     "jobIDs": [
       5
@@ -238,7 +224,7 @@
     "url": "https://openai.com/index/dall-e-3/",
     "img": "",
     "categoryIDs": [
-      "ai",
+      "data-science",
       "tool"
     ],
     "jobIDs": [
@@ -274,8 +260,8 @@
     "url": "https://jwt.io/",
     "img": "",
     "categoryIDs": [
-      "backend",
-      "tool"
+      "tool",
+      "backend"
     ],
     "jobIDs": [
       7
@@ -324,7 +310,7 @@
     "img": "",
     "categoryIDs": [
       "database",
-      "ai"
+      "data-science"
     ],
     "jobIDs": [
       8
@@ -335,9 +321,8 @@
     "url": "https://huggingface.co/",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "data-science",
-      "library"
+      "library",
+      "data-science"
     ],
     "jobIDs": [
       8
@@ -348,7 +333,6 @@
     "url": "https://huggingface.co/microsoft/MiniLM-L12-H384-uncased",
     "img": "",
     "categoryIDs": [
-      "ai",
       "data-science",
       "library"
     ],
@@ -358,7 +342,7 @@
   },
   "ecs-fargate": {
     "name": "ECS Fargate",
-    "url": "https://www.google.com/search?q=aws+ecs+fargate&rlz=1C5MACD_enUS1022US1022&oq=&gs_lcrp=EgZjaHJvbWUqGwgAEAAYQhiRAhi0AhjqAhiABBiMBBiKBRjnBjIbCAAQABhCGJECGLQCGOoCGIAEGIwEGIoFGOcGMhsIARAAGEIYkQIYtAIY6gIYgAQYjAQYigUY5wYyGwgCEAAYQhiRAhi0AhjqAhiABBiMBBiKBRjnBjIbCAMQABhCGJECGLQCGOoCGIAEGIwEGIoFGOcGMhsIBBAAGEIYkQIYtAIY6gIYgAQYjAQYigUY5wYyGwgFEAAYQhiRAhi0AhjqAhiABBiMBBiKBRjnBjIGCAYQRRhA0gEJMjQ3MTNqMGo5qAIGsAIB8QWaS10-4bejag&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+    "url": "https://aws.amazon.com/fargate/",
     "img": "",
     "categoryIDs": [
       "cloud",
@@ -370,7 +354,7 @@
   },
   "java-21": {
     "name": "Java 21",
-    "url": "https://en.wikipedia.org/wiki/Java_(programming_language)",
+    "url": "https://www.oracle.com/java/technologies/downloads/",
     "img": "",
     "categoryIDs": [
       "programming-language"
@@ -385,8 +369,7 @@
     "img": "",
     "categoryIDs": [
       "framework",
-      "ai",
-      "backend"
+      "data-science"
     ],
     "jobIDs": [
       9
@@ -406,11 +389,11 @@
   },
   "bedrock": {
     "name": "Bedrock",
-    "url": "https://www.google.com/search?q=amazon+bedrock&rlz=1C5MACD_enUS1022US1022&oq=amazon+bedrock&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQABiABDIHCAIQABiABDIHCAMQABiABDIHCAQQABiABDIHCAUQABiABDIHCAYQABiABDIHCAcQABiABDIKCAgQABiABBi0BzIHCAkQABiABNIBCDMyMjJqMGo0qAIAsAIA&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+    "url": "https://aws.amazon.com/bedrock/",
     "img": "",
     "categoryIDs": [
       "cloud",
-      "ai"
+      "data-science"
     ],
     "jobIDs": [
       9
@@ -422,7 +405,7 @@
     "img": "",
     "categoryIDs": [
       "library",
-      "ai"
+      "data-science"
     ],
     "jobIDs": [
       10
@@ -433,9 +416,8 @@
     "url": "https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview",
     "img": "",
     "categoryIDs": [
-      "cloud",
-      "ai",
-      "data-science"
+      "data-science",
+      "cloud"
     ],
     "jobIDs": [
       10
@@ -446,8 +428,7 @@
     "url": "https://mlflow.org/",
     "img": "",
     "categoryIDs": [
-      "tool",
-      "mlops",
+      "devops",
       "data-science"
     ],
     "jobIDs": [
@@ -460,8 +441,7 @@
     "img": "",
     "categoryIDs": [
       "library",
-      "data-science",
-      "ml"
+      "data-science"
     ],
     "jobIDs": [
       10
@@ -495,8 +475,8 @@
     "url": "https://en.wikipedia.org/wiki/Large_language_model",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "data-science"
+      "data-science",
+      "methodology"
     ],
     "jobIDs": [
       11
@@ -527,7 +507,7 @@
   },
   "jira": {
     "name": "Jira",
-    "url": "https://en.wikipedia.org/wiki/Jira_(software)",
+    "url": "https://www.atlassian.com/software/jira",
     "img": "",
     "categoryIDs": [
       "tool",
@@ -544,7 +524,7 @@
   },
   "agile": {
     "name": "Agile",
-    "url": "https://en.wikipedia.org/wiki/Agile_software_development",
+    "url": "https://agilemanifesto.org/",
     "img": "",
     "categoryIDs": [
       "methodology"
@@ -564,8 +544,7 @@
     "img": "",
     "categoryIDs": [
       "tool",
-      "data-science",
-      "backend"
+      "data-science"
     ],
     "jobIDs": [
       14
@@ -577,8 +556,7 @@
     "img": "",
     "categoryIDs": [
       "cloud",
-      "data-science",
-      "devops"
+      "data-science"
     ],
     "jobIDs": [
       14
@@ -586,11 +564,11 @@
   },
   "glue-crawler": {
     "name": "Glue Crawler",
-    "url": "https://www.google.com/search?q=define+glue+and+glue+crawler&rlz=1C5MACD_enUS1022US1022&oq=define+glue+and+glue+crawler&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigATIHCAIQIRigATIHCAMQIRigATIHCAQQIRigATIHCAUQIRifBTIHCAYQIRifBTIHCAcQIRifBTIHCAgQIRifBTIHCAkQIRifBdIBCDkwOTlqMGo0qAIAsAIB&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+    "url": "https://docs.aws.amazon.com/glue/latest/dg/add-crawler.html",
     "img": "",
     "categoryIDs": [
       "cloud",
-      "tool"
+      "data-science"
     ],
     "jobIDs": [
       14
@@ -602,7 +580,6 @@
     "img": "",
     "categoryIDs": [
       "devops",
-      "tool",
       "cloud"
     ],
     "jobIDs": [
@@ -615,7 +592,6 @@
     "img": "",
     "categoryIDs": [
       "devops",
-      "tool",
       "cloud"
     ],
     "jobIDs": [
@@ -624,12 +600,11 @@
   },
   "codepipeline": {
     "name": "CodePipeline",
-    "url": "https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome.html",
+    "url": "https://aws.amazon.com/codepipeline/",
     "img": "",
     "categoryIDs": [
       "devops",
-      "cloud",
-      "ci-cd"
+      "cloud"
     ],
     "jobIDs": [
       14
@@ -637,12 +612,11 @@
   },
   "codedeploy": {
     "name": "CodeDeploy",
-    "url": "https://docs.aws.amazon.com/codedeploy/latest/userguide/welcome.html",
+    "url": "https://aws.amazon.com/codedeploy/",
     "img": "",
     "categoryIDs": [
       "devops",
-      "cloud",
-      "ci-cd"
+      "cloud"
     ],
     "jobIDs": [
       14
@@ -653,9 +627,8 @@
     "url": "https://aws.amazon.com/cloudwatch/",
     "img": "",
     "categoryIDs": [
-      "cloud",
       "devops",
-      "tool"
+      "cloud"
     ],
     "jobIDs": [
       14
@@ -663,7 +636,7 @@
   },
   "cyberark-pam": {
     "name": "CyberArk PAM",
-    "url": "https://docs.cyberark.com/pam-self-hosted/latest/en/content/resources/_topnav/cc_home.htm",
+    "url": "https://www.cyberark.com/products/privileged-access-manager/",
     "img": "",
     "categoryIDs": [
       "tool",
@@ -679,8 +652,7 @@
     "img": "",
     "categoryIDs": [
       "backend",
-      "tool",
-      "data-pipelines"
+      "tool"
     ],
     "jobIDs": [
       15
@@ -688,12 +660,11 @@
   },
   "airflow": {
     "name": "Airflow",
-    "url": "https://en.wikipedia.org/wiki/Apache_Airflow",
+    "url": "https://airflow.apache.org/",
     "img": "",
     "categoryIDs": [
       "tool",
-      "devops",
-      "data-pipelines"
+      "data-science"
     ],
     "jobIDs": [
       15,
@@ -702,11 +673,11 @@
   },
   "xray": {
     "name": "Xray",
-    "url": "https://www.google.com/search?q=xray+test+managemetn&rlz=1C5MACD_enUS1022US1022&oq=xray+test+managemetn&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIJCAEQABgNGIAEMgkIAhAAGA0YgAQyCQgDEAAYDRiABDIJCAQQABgNGIAEMgwIBRAAGA0YgAQYtAcyCQgGEAAYDRiABDIJCAcQABgNGIAEMgkICBAAGA0YgAQyCAgJEAAYDRge0gEJMTA0NDhqMGo0qAIAsAIB&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+    "url": "https://aws.amazon.com/xray/",
     "img": "",
     "categoryIDs": [
-      "tool",
-      "devops"
+      "devops",
+      "tool"
     ],
     "jobIDs": [
       15
@@ -741,8 +712,7 @@
     "url": "https://www.salesforce.com/",
     "img": "",
     "categoryIDs": [
-      "tool",
-      "backend"
+      "tool"
     ],
     "jobIDs": [
       16
@@ -753,8 +723,7 @@
     "url": "https://www.shopify.com/",
     "img": "",
     "categoryIDs": [
-      "tool",
-      "backend"
+      "tool"
     ],
     "jobIDs": [
       16
@@ -784,7 +753,7 @@
   },
   "gcp": {
     "name": "GCP",
-    "url": "https://www.google.com/search?q=google+gcp+definition&sca_esv=a336b5ca07a741fd&rlz=1C5MACD_enUS1022US1022&sxsrf=APpeQnuhO0XR3oGxslvsviQ_l8P7KMS0rQ%3A1793069942067&ei=dhPgavPVA6L3yckPqeuW8Qc&uact=5&oq=google+gcp+definition&gs_lp=Egxnd3Mtd2l6LXNlcnAiFWdvb2dsZSBnY3AgZGVmaW5pdGlvbjIIEAAYFhgeGAoyBhAAGBYYHjIGEAAYFhgeMgsQABiABBiKBRiGAzILEAAYgAQYigUYhgMyCxAAGIAEGIoFGIYDMgUQABjvBUilGFCNB1ivFHABeACQAQCYAWqgAdkGqgEEMTEuMbgBA8gBAPgBAZgCDKAC1gjCAgoQABhHGNYEGLADwgINEAAYgAQYigUYQxiwA8ICBRAAGIAEwgILEAAYgAQYigUYkQKYAwCIBgGQBgySBwQxMC4yoAfmUrIHAzkuMrgHtAjCBwQzLTEyyAeIAYAIAQ&sclient=gws-wiz-serp",
+    "url": "https://cloud.google.com/",
     "img": "",
     "categoryIDs": [
       "cloud"
@@ -799,8 +768,7 @@
     "img": "",
     "categoryIDs": [
       "database",
-      "cloud",
-      "data-science"
+      "cloud"
     ],
     "jobIDs": [
       16
@@ -833,12 +801,23 @@
   },
   "pytorch": {
     "name": "PyTorch",
-    "url": "https://pytorch.org/",
+    "url": "https://pytorch.org/foundation/",
     "img": "",
     "categoryIDs": [
       "library",
+      "data-science"
+    ],
+    "jobIDs": [
+      17
+    ]
+  },
+  "cnn": {
+    "name": "CNN",
+    "url": "https://en.wikipedia.org/wiki/Convolutional_neural_network",
+    "img": "",
+    "categoryIDs": [
       "data-science",
-      "ml"
+      "methodology"
     ],
     "jobIDs": [
       17
@@ -850,7 +829,6 @@
     "img": "",
     "categoryIDs": [
       "cloud",
-      "mlops",
       "data-science"
     ],
     "jobIDs": [
@@ -859,7 +837,7 @@
   },
   "looker": {
     "name": "Looker",
-    "url": "https://docs.cloud.google.com/looker/docs",
+    "url": "https://cloud.google.com/looker",
     "img": "",
     "categoryIDs": [
       "tool",
@@ -871,12 +849,11 @@
   },
   "snowflake": {
     "name": "Snowflake",
-    "url": "https://www.google.com/search?q=snowflake+data+warehouse&rlz=1C5MACD_enUS1022US1022&oq=snowflake+data+warehouse&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQABiABDIHCAIQABiABDIHCAMQABiABDIHCAQQABiABDIHCAUQABiABDIHCAYQABiABDIHCAcQABiABDIHCAgQABiABDIHCAkQABiABNIBCTEyMTk1ajBqNKgCALACAQ&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+    "url": "https://www.snowflake.com/",
     "img": "",
     "categoryIDs": [
       "database",
-      "cloud",
-      "data-science"
+      "cloud"
     ],
     "jobIDs": [
       17
@@ -896,7 +873,7 @@
   },
   "vuetify": {
     "name": "Vuetify",
-    "url": "https://vuetifyjs.com/en/",
+    "url": "https://vuetifyjs.com/",
     "img": "",
     "categoryIDs": [
       "frontend",
@@ -923,9 +900,8 @@
     "url": "https://spark.apache.org/docs/latest/api/python/",
     "img": "",
     "categoryIDs": [
-      "data-science",
       "library",
-      "data-pipelines"
+      "data-science"
     ],
     "jobIDs": [
       20
@@ -945,11 +921,11 @@
   },
   "kinesis": {
     "name": "Kinesis",
-    "url": "https://en.wikipedia.org/wiki/Amazon_Kinesis",
+    "url": "https://aws.amazon.com/kinesis/",
     "img": "",
     "categoryIDs": [
       "cloud",
-      "data-pipelines"
+      "backend"
     ],
     "jobIDs": [
       20
@@ -969,7 +945,7 @@
   },
   "parquet": {
     "name": "Parquet",
-    "url": "https://parquet.apache.org/docs/",
+    "url": "https://parquet.apache.org/",
     "img": "",
     "categoryIDs": [
       "tool",
@@ -997,8 +973,7 @@
     "img": "",
     "categoryIDs": [
       "database",
-      "cloud",
-      "data-science"
+      "cloud"
     ],
     "jobIDs": [
       20
@@ -1010,8 +985,7 @@
     "img": "",
     "categoryIDs": [
       "tool",
-      "devops",
-      "database"
+      "devops"
     ],
     "jobIDs": [
       20
@@ -1060,7 +1034,7 @@
   },
   "spring": {
     "name": "Spring",
-    "url": "https://spring.io/projects/spring-framework",
+    "url": "https://spring.io/",
     "img": "",
     "categoryIDs": [
       "backend",
@@ -1088,8 +1062,8 @@
     "url": "https://en.wikipedia.org/wiki/Natural_language_processing",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "data-science"
+      "data-science",
+      "methodology"
     ],
     "jobIDs": [
       22
@@ -1120,7 +1094,7 @@
   },
   "sql-anywhere": {
     "name": "SQL Anywhere",
-    "url": "https://en.wikipedia.org/wiki/SQL_Anywhere",
+    "url": "https://www.sap.com/products/technology-platform/sql-anywhere.html",
     "img": "",
     "categoryIDs": [
       "database"
@@ -1131,7 +1105,7 @@
   },
   "nservicebus": {
     "name": "NServiceBus",
-    "url": "https://www.google.com/search?q=NServiceBus+is+a+commercial+messaging+and+distributed+systems+framework+for+.NET+created+by+Particular+Software&rlz=1C5MACD_enUS1022US1022&oq=NServiceBus+is+a+commercial+messaging+and+distributed+systems+framework+for+.NET+created+by+Particular+Software&gs_lcrp=EgZjaHJvbWUyBggAEEUYOdIBBzkzMGowajmoAgawAgHxBbq392HIXoj0&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+    "url": "https://particular.net/nservicebus",
     "img": "",
     "categoryIDs": [
       "backend",
@@ -1177,7 +1151,7 @@
   },
   "oracle": {
     "name": "Oracle",
-    "url": "https://en.wikipedia.org/wiki/Oracle_Database",
+    "url": "https://www.oracle.com/database/",
     "img": "",
     "categoryIDs": [
       "database"
@@ -1186,23 +1160,13 @@
       29
     ]
   },
-  "ai-ml": {
-    "name": "AI/ML",
-    "url": "https://en.wikipedia.org/wiki/Machine_learning",
-    "img": "",
-    "categoryIDs": [
-      "ai",
-      "data-science"
-    ],
-    "jobIDs": []
-  },
   "genai": {
     "name": "GenAI",
     "url": "https://en.wikipedia.org/wiki/Generative_artificial_intelligence",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "data-science"
+      "data-science",
+      "methodology"
     ],
     "jobIDs": []
   },
@@ -1211,30 +1175,28 @@
     "url": "https://en.wikipedia.org/wiki/Intelligent_agent",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "data-science"
+      "data-science",
+      "methodology"
     ],
     "jobIDs": []
   },
   "computer-vision": {
     "name": "Computer Vision",
-    "url": "https://en.wikipedia.org/wiki/Natural_language_processing",
+    "url": "https://en.wikipedia.org/wiki/Computer_vision",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "data-science"
+      "data-science",
+      "methodology"
     ],
-    "jobIDs": [
-      30
-    ]
+    "jobIDs": []
   },
   "llm-apis-openai": {
     "name": "LLM APIs OpenAI",
     "url": "https://platform.openai.com/",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "library"
+      "library",
+      "data-science"
     ],
     "jobIDs": []
   },
@@ -1243,8 +1205,8 @@
     "url": "https://www.anthropic.com/",
     "img": "",
     "categoryIDs": [
-      "ai",
-      "library"
+      "library",
+      "data-science"
     ],
     "jobIDs": []
   },
@@ -1254,7 +1216,6 @@
     "img": "",
     "categoryIDs": [
       "data-science",
-      "devops",
       "methodology"
     ],
     "jobIDs": []
@@ -1265,7 +1226,7 @@
     "img": "",
     "categoryIDs": [
       "database",
-      "ai"
+      "data-science"
     ],
     "jobIDs": []
   },
@@ -1275,7 +1236,7 @@
     "img": "",
     "categoryIDs": [
       "database",
-      "ai"
+      "data-science"
     ],
     "jobIDs": []
   },
@@ -1295,74 +1256,8 @@
     "img": "",
     "categoryIDs": [
       "devops",
-      "tool",
-      "cloud"
+      "tool"
     ],
     "jobIDs": []
-  },
-  "CNN": {
-    "name": "CNN",
-    "jobIDs": [
-      0,
-      17
-    ],
-    "url": "https://en.wikipedia.org/wiki/Convolutional_neural_network"
-  },
-  "digital-signal-processing": {
-    "name": "Digital Signal Processing",
-    "url": "https://en.wikipedia.org/wiki/Digital_signal_processing",
-    "img": "",
-    "categoryIDs": [
-      "ai",
-      "data-science"
-    ],
-    "jobIDs": [
-      30
-    ]
-  },
-  "computer-graphics": {
-    "name": "Computer Graphics",
-    "url": "https://en.wikipedia.org/wiki/Computer_graphics",
-    "img": "",
-    "categoryIDs": [
-      "ai",
-      "computer-vision"
-    ],
-    "jobIDs": [
-      31
-    ]
-  },
-  "cad": {
-    "name": "CAD",
-    "url": "https://en.wikipedia.org/wiki/Computer-aided_design",
-    "img": "",
-    "categoryIDs": [
-      "tool"
-    ],
-    "jobIDs": [
-      32
-    ]
-  },
-  "cam": {
-    "name": "CAM",
-    "url": "https://en.wikipedia.org/wiki/Computer-aided_manufacturing",
-    "img": "",
-    "categoryIDs": [
-      "tool"
-    ],
-    "jobIDs": [
-      32
-    ]
-  },
-  "cae": {
-    "name": "CAE",
-    "url": "https://en.wikipedia.org/wiki/Computer-aided_engineering",
-    "img": "",
-    "categoryIDs": [
-      "tool"
-    ],
-    "jobIDs": [
-      32
-    ]
   }
 }

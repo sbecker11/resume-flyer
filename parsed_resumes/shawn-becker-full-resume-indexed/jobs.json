@@ -10,14 +10,12 @@
     "css RGB": "#116611",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting / systems, agentic components, and full-stack applications with and platform functionality Governance.",
+    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Governance.",
     "outlineIndex": "1",
     "skillIDs": [
-      "ai",
-      "ml",
+      "ai-ml",
       "devops",
-      "mlops",
-      "CNN"
+      "mlops"
     ]
   },
   "1": {
@@ -255,7 +253,7 @@
   },
   "13": {
     "index": 13,
-    "role": "Consultant — Python Backend / SEO Platform",
+    "role": "Consultant",
     "employer": "Adobe",
     "start": "03/2025",
     "end": "07/2025",
@@ -275,7 +273,7 @@
   },
   "14": {
     "index": 14,
-    "role": "Consultant — Data Engineer",
+    "role": "Consultant",
     "employer": "Fannie Mae",
     "start": "02/2024",
     "end": "07/2024",
@@ -301,7 +299,7 @@
   },
   "15": {
     "index": 15,
-    "role": "Consultant — Data / Security Engineer",
+    "role": "Consultant",
     "employer": "Cigna",
     "start": "05/2023",
     "end": "12/2023",
@@ -324,7 +322,7 @@
   },
   "16": {
     "index": 16,
-    "role": "Consultant — Data Engineer",
+    "role": "Consultant",
     "employer": "Warner Bros. Games",
     "start": "09/2022",
     "end": "03/2023",
@@ -350,7 +348,7 @@
   },
   "17": {
     "index": 17,
-    "role": "Consultant — ML / BI Engineer",
+    "role": "Consultant",
     "employer": "Angel Studios",
     "start": "11/2021",
     "end": "09/2022",
@@ -359,28 +357,21 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Delivered [PyTorch] CNN models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.5",
     "skillIDs": [
       "jira",
       "agile",
       "pytorch",
+      "cnn",
       "sagemaker",
       "looker",
-      "snowflake",
-      "PyTorch",
-      "SageMaker",
-      "Looker",
-      "Snowflake",
-      "Jira",
-      "Agile",
-      "CNN",
-      "Computer Vision"
+      "snowflake"
     ]
   },
   "18": {
     "index": 18,
-    "role": "Consultant — Data Architect",
+    "role": "Consultant",
     "employer": "Greenseed LLC",
     "start": "01/2020",
     "end": "11/2021",
@@ -397,7 +388,7 @@
   },
   "19": {
     "index": 19,
-    "role": "Consultant — Full-Stack Engineer",
+    "role": "Consultant",
     "employer": "NuSkin",
     "start": "11/2019",
     "end": "11/2020",
@@ -428,7 +419,7 @@
     "css RGB": "#ff4500",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI expenses; [Flyway] schema evolution/migrations. First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
+    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI expenses.• [Flyway] schema evolution/migrations.• First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
     "outlineIndex": "2",
     "skillIDs": [
       "json",
@@ -477,7 +468,7 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines. Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
+    "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines.• Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
     "outlineIndex": "4",
     "skillIDs": [
       "java",
@@ -488,7 +479,7 @@
   },
   "23": {
     "index": 23,
-    "role": "Co-founder — Technical Lead",
+    "role": "Co-founder and Technical Lead",
     "employer": "Sierra Vista Group",
     "start": "12/2002",
     "end": "12/2011",
@@ -604,7 +595,7 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001. Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5–7 independent consultants.",
+    "Description": "• Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5–7 independent consultants.",
     "outlineIndex": "6",
     "skillIDs": [
       "java",
