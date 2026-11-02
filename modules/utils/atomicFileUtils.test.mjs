@@ -411,5 +411,39 @@ describe('atomicFileUtils', () => {
             expect(parsed).toHaveProperty('data');
             expect(parsed).toHaveProperty('timestamp');
         });
+
+        it('should keep integrity when each write outlasts the default retry delay', async () => {
+            const jsonFile = path.join(testDir, 'slow-integrity.json');
+            const numOperations = 10;
+            const originalWriteFile = fs.writeFile.bind(fs);
+            // Longer than the default 50ms retry. A fixed-delay stampede exhausts 10 attempts.
+            fs.writeFile = async (filePath, data, options) => {
+                if (typeof filePath === 'string' && filePath.endsWith('.tmp')) {
+                    await new Promise((resolve) => setTimeout(resolve, 80));
+                }
+                return originalWriteFile(filePath, data, options);
+            };
+
+            try {
+                const operations = Array.from({ length: numOperations }, (_, i) => ({
+                    id: i,
+                    data: `test-${i}`,
+                    timestamp: Date.now() + i
+                }));
+
+                await Promise.all(
+                    operations.map(op => atomicWriteJSON(jsonFile, op))
+                );
+
+                const content = await fs.readFile(jsonFile, 'utf-8');
+                const parsed = JSON.parse(content);
+
+                expect(parsed).toHaveProperty('id');
+                expect(parsed).toHaveProperty('data');
+                expect(operations.map(op => op.id)).toContain(parsed.id);
+            } finally {
+                fs.writeFile = originalWriteFile;
+            }
+        });
     });
 });
