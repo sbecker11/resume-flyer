@@ -74,6 +74,9 @@ async function main() {
             ...process.env,
             EXPRESS_PORT: String(backendPort),
             PORT: String(backendPort),
+            // Lets POST /api/local-dev/quit run scripts/restart-local.sh --stop-only.
+            // Unset on any other launch, including a public deploy of server.mjs.
+            RESUME_FLYER_LOCAL_DEV: '1',
         },
         stdio: 'inherit',
     });

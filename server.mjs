@@ -22,6 +22,7 @@ import {
     upsertSharedSkillUrl,
 } from './modules/utils/skillUrlCatalogStore.mjs';
 import { reportError } from './modules/utils/errorReporting.mjs';
+import { createLocalDevQuitHandler } from './modules/server/localDevQuit.mjs';
 import {
     archiveReparseBackup,
     listReparseHistory,
@@ -4003,6 +4004,10 @@ function startServer(port) {
         }
     });
 }
+
+// Local dev only. start-dev.mjs sets RESUME_FLYER_LOCAL_DEV=1. Without that flag
+// this route refuses and does not run the checkout stop script.
+app.post('/api/local-dev/quit', createLocalDevQuitHandler());
 
 export { app };
 

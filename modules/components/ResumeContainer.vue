@@ -19,6 +19,11 @@ import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import {
+  LOCAL_DEV_QUIT_CONFIRM_MESSAGE,
+  quitNeedsServerConfirm,
+  requestLocalDevQuit,
+} from '@/modules/api/localDevQuit.mjs';
 import { isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
 import { skillDisplayName, skillLabelHtml, skillLabelText } from '@/modules/utils/skillLabel.mjs';
 import { renderSkillCardResumeInnerHtml } from '@/modules/scene/cardMarkup.mjs';
@@ -545,6 +550,10 @@ const detailsEditorInitialEducationKey = ref('');
 
 // --- About modal (hero phrase) ---
 const isAboutModalOpen = ref(false);
+const isQuitting = ref(false);
+const quitConfirmOpen = ref(false);
+const quitNotice = ref('');
+const quitFailed = ref(false);
 const README_PREVIEW_PATH = 'readme-preview.html';
 const aboutHtml = `
 <p><strong>resume-flyer</strong> is an interactive resume explorer. Business and skill cards glide into place as you browse your career in 3D or in a linear list. Upload a DOCX or PDF resume and it is parsed into your employment experience and technical skills. You explore them as <strong>business cards</strong> (one per job) and <strong>skill cards</strong> (one per skill). Add details, dates, and skills for each job, then print your revised resume as a new HTML file.</p>
@@ -554,11 +563,55 @@ const aboutHtml = `
 function openAboutModal() {
   // Avoid stacking modals; keep UX simple.
   isDetailsEditorOpen.value = false;
+  if (!isQuitting.value) {
+    quitConfirmOpen.value = false;
+    quitNotice.value = '';
+    quitFailed.value = false;
+  }
   isAboutModalOpen.value = true;
 }
 
 function closeAboutModal() {
+  if (!isQuitting.value) quitConfirmOpen.value = false;
   isAboutModalOpen.value = false;
+}
+
+function cancelQuitConfirm() {
+  quitConfirmOpen.value = false;
+}
+
+async function performLocalQuit() {
+  if (isQuitting.value) return;
+  isQuitting.value = true;
+  quitFailed.value = false;
+  quitNotice.value = '';
+  try {
+    const result = await requestLocalDevQuit();
+    const accepted = result?.message || 'Stopping the local resume-flyer dev servers for this checkout.';
+    quitNotice.value = `${accepted} This page will go offline once those servers exit.`;
+  } catch (error) {
+    reportError(error, '[ResumeContainer] Failed to quit local resume-flyer');
+    quitFailed.value = true;
+    quitNotice.value = error instanceof Error ? error.message : String(error);
+    isQuitting.value = false;
+  }
+}
+
+async function quitLocalApp() {
+  if (isQuitting.value || quitConfirmOpen.value) return;
+  if (!quitNeedsServerConfirm(hasServer)) {
+    await performLocalQuit();
+    return;
+  }
+  quitFailed.value = false;
+  quitNotice.value = '';
+  quitConfirmOpen.value = true;
+}
+
+async function confirmQuitLocalApp() {
+  if (isQuitting.value) return;
+  quitConfirmOpen.value = false;
+  await performLocalQuit();
 }
 
 function openReadmePreview() {
@@ -567,7 +620,12 @@ function openReadmePreview() {
 
 function handleGlobalKeyDown(e) {
   if (!isAboutModalOpen.value) return;
-  if (e?.key === 'Escape') closeAboutModal();
+  if (e?.key !== 'Escape') return;
+  if (quitConfirmOpen.value) {
+    cancelQuitConfirm();
+    return;
+  }
+  closeAboutModal();
 }
 
 function openDetailsModal(tab = 'meta', jobIndex = null, educationKey = null) {
@@ -1313,14 +1371,60 @@ async function openSkillUrlEditPrompt(skillSlug) {
                 ×
               </button>
               <div class="about-modal-body" v-html="aboutHtml"></div>
-              <a
-                class="about-readme-link"
-                :href="basePathJoin(README_PREVIEW_PATH)"
-                aria-label="Open README in preview mode"
-                @click.prevent="openReadmePreview"
+              <div class="about-modal-actions">
+                <a
+                  class="about-readme-link"
+                  :href="basePathJoin(README_PREVIEW_PATH)"
+                  aria-label="Open README in preview mode"
+                  @click.prevent="openReadmePreview"
+                >
+                  Open README preview
+                </a>
+                <button
+                  type="button"
+                  class="about-quit-btn"
+                  :disabled="isQuitting || quitConfirmOpen"
+                  aria-label="Quit resume-flyer and stop the local dev servers"
+                  @click="quitLocalApp"
+                >
+                  {{ isQuitting ? 'Stopping…' : 'Quit' }}
+                </button>
+              </div>
+              <div
+                v-if="quitConfirmOpen"
+                class="about-quit-confirm"
+                role="alertdialog"
+                aria-labelledby="about-quit-confirm-title"
+                aria-describedby="about-quit-confirm-copy"
               >
-                Open README preview
-              </a>
+                <p id="about-quit-confirm-title" class="about-quit-confirm-title">Quit resume-flyer?</p>
+                <p id="about-quit-confirm-copy" class="about-quit-confirm-copy">{{ LOCAL_DEV_QUIT_CONFIRM_MESSAGE }}</p>
+                <div class="about-quit-confirm-actions">
+                  <button
+                    type="button"
+                    class="about-quit-btn about-quit-cancel"
+                    @click="cancelQuitConfirm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    class="about-quit-btn"
+                    :disabled="isQuitting"
+                    @click="confirmQuitLocalApp"
+                  >
+                    Stop both servers
+                  </button>
+                </div>
+              </div>
+              <p
+                v-if="quitNotice"
+                class="about-quit-notice"
+                :class="{ 'is-error': quitFailed }"
+                role="status"
+              >
+                {{ quitNotice }}
+              </p>
             </div>
           </div>
         </teleport>
@@ -1608,6 +1712,86 @@ async function openSkillUrlEditPrompt(skillSlug) {
 }
 .about-readme-link:hover {
     color: #c5e4ff;
+}
+
+.about-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+}
+.about-modal-actions .about-readme-link {
+    margin-top: 0;
+}
+.about-quit-btn {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    background-color: var(--grey-dark-6);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.8rem;
+    line-height: 1.15;
+    font-family: Arial, sans-serif;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+}
+.about-quit-btn:hover:not(:disabled) {
+    background-color: var(--grey-dark-7);
+}
+.about-quit-btn:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 2px;
+}
+.about-quit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.about-quit-confirm {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+}
+.about-quit-confirm-title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: Arial, sans-serif;
+}
+.about-quit-confirm-copy {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    font-family: Arial, sans-serif;
+    color: rgba(255, 255, 255, 0.88);
+}
+.about-quit-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+}
+.about-quit-cancel {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    text-shadow: none;
+}
+.about-quit-cancel:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+}
+.about-quit-notice {
+    margin: 10px 0 0;
+    font-size: 13px;
+    line-height: 1.4;
+    font-family: Arial, sans-serif;
+    color: rgba(255, 255, 255, 0.85);
+}
+.about-quit-notice.is-error {
+    color: #ffb4b4;
 }
 
 #resume-content-listing {
