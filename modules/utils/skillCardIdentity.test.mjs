@@ -115,6 +115,45 @@ describe('job finder options', () => {
             { kind: 'job', id: 3, label: 'Adobe', sublabel: 'Consultant' },
         ])
     })
+
+    it('prefixes each job with the Skill jobs tenure in parentheses', () => {
+        const adobe = document.createElement('div')
+        adobe.className = 'biz-card-div'
+        adobe.setAttribute('data-job-number', '0')
+        adobe.setAttribute('data-employer', 'Adobe')
+        adobe.setAttribute('data-role', 'Consultant')
+        const unused = document.createElement('div')
+        unused.className = 'biz-card-div'
+        unused.setAttribute('data-job-number', '1')
+        unused.setAttribute('data-employer', 'NuSkin')
+        unused.setAttribute('data-role', 'Consultant')
+        const jobs = [
+            { employer: 'Adobe', skillIDs: ['python'], durationMonths: 5, Description: '' },
+            { employer: 'NuSkin', skillIDs: [], durationMonths: 12, Description: '' },
+        ]
+        const skills = { python: { name: 'Python' } }
+        const options = buildJobSearchOptions([adobe, unused], jobs, skills)
+        expect(options.map((row) => row.label)).toEqual(['(5) Adobe', '(0) NuSkin'])
+    })
+
+describe('skill finder experience', () => {
+    it('appends the Skill jobs month total after each skill name', () => {
+        const cards = [
+            skillCard('skill-card-div-1', 'python'),
+            skillCard('skill-card-div-2', 'vite'),
+        ]
+        const skills = {
+            python: { name: 'Python' },
+            vite: { name: 'Vite' },
+        }
+        const jobs = [
+            { skillIDs: ['python'], durationMonths: 8, Description: '' },
+            { skillIDs: ['python'], durationMonths: 10, Description: 'Uses [Vite].' },
+        ]
+        const options = buildSkillSearchOptions(cards, skills, null, jobs)
+        expect(options.find((row) => row.slug === 'python').label).toBe('Python (18)')
+        expect(options.find((row) => row.slug === 'vite').label).toBe('Vite (10)')
+    })
 })
 
 describe('resume skill copy identity', () => {

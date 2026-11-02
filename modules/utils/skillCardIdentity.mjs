@@ -12,6 +12,8 @@
 
 import { reportError } from './errorReporting.mjs'
 import { userDefinedSkillUrl } from './skillUrlCatalog.mjs'
+import { getSelectedSkillIdsForJob } from '../resume-details-editor/jobSkillsSelection.mjs'
+import { jobColumnHeaderText, skillRowDisplayLabel } from '../resume-details-editor/skillJobsMatrixLabels.mjs'
 
 const CLONE_ID_SUFFIX = '-clone'
 
@@ -63,20 +65,60 @@ export function skillCardIdBySlugFromElements(elements) {
 }
 
 /**
+ * Same month total the Skill jobs tab shows in parentheses after a skill name.
+ * @param {string} skillId
+ * @param {Array<object>|null|undefined} jobs
+ * @param {Record<string, unknown>} skillsData
+ * @returns {{ jobCount: number, monthsTotal: number }}
+ */
+function skillJobsExperience(skillId, jobs, skillsData) {
+    let jobCount = 0
+    let monthsTotal = 0
+    for (const job of jobs || []) {
+        if (!getSelectedSkillIdsForJob(job, skillsData).has(skillId)) continue
+        jobCount += 1
+        const n = job?.durationMonths
+        if (typeof n === 'number' && Number.isFinite(n) && n > 0) monthsTotal += n
+    }
+    return { jobCount, monthsTotal }
+}
+
+/**
+ * Same skill count and tenure the Skill jobs tab shows before a job name.
+ * @param {object|undefined} job
+ * @param {Record<string, unknown>} skillsData
+ * @returns {{ skillCount: number, durationMonths: number|null|undefined }}
+ */
+function jobRowExperience(job, skillsData) {
+    let skillCount = 0
+    for (const id of getSelectedSkillIdsForJob(job, skillsData)) {
+        if (skillsData?.[id] != null) skillCount += 1
+    }
+    return { skillCount, durationMonths: job?.durationMonths }
+}
+
+/**
  * @param {Iterable<Element>} cardElements
  * @param {Record<string, { name?: string }>} [skillsData]
  * @param {unknown} [catalog] shared skill-URL catalog, used only when the skill has no url
+ * @param {Array<object>|null} [jobs] when set, labels use the Skill jobs month total: "Name (number)"
  * @returns {{ kind: 'skill', id: string, label: string, sublabel: string }[]}
  */
-export function buildSkillSearchOptions(cardElements, skillsData = {}, catalog = null) {
+export function buildSkillSearchOptions(cardElements, skillsData = {}, catalog = null, jobs = null) {
     const bySlug = skillCardIdBySlugFromElements(cardElements)
     const options = Object.entries(bySlug).map(([slug, id]) => {
         const skill = skillsData[slug]
         const url = userDefinedSkillUrl(catalog, slug, skill?.name, skill?.url)
+        const name = skill?.name || slug
+        let label = name
+        if (Array.isArray(jobs)) {
+            const { jobCount, monthsTotal } = skillJobsExperience(slug, jobs, skillsData)
+            label = skillRowDisplayLabel(name, jobCount, monthsTotal)
+        }
         return {
             kind: 'skill',
             id,
-            label: skill?.name || slug,
+            label,
             sublabel: url || '',
             slug,
         }
@@ -87,11 +129,14 @@ export function buildSkillSearchOptions(cardElements, skillsData = {}, catalog =
 
 /**
  * @param {Iterable<Element>} cardElements
+ * @param {Array<object>|null} [jobs] when set, labels use the Skill jobs tenure: "(number) Name"
+ * @param {Record<string, unknown>|null} [skillsData]
  * @returns {{ kind: 'job', id: number, label: string, sublabel: string }[]}
  */
-export function buildJobSearchOptions(cardElements) {
+export function buildJobSearchOptions(cardElements, jobs = null, skillsData = null) {
     const options = []
     if (!cardElements) return options
+    const skills = skillsData && typeof skillsData === 'object' ? skillsData : {}
     for (const el of cardElements) {
         if (!el || el.classList?.contains('clone')) continue
         const rawJob = String(el.getAttribute?.('data-job-number') || '').trim()
@@ -99,10 +144,16 @@ export function buildJobSearchOptions(cardElements) {
         if (!Number.isFinite(jobNumber)) continue
         const employer = String(el.getAttribute?.('data-employer') || '').trim()
         const role = String(el.getAttribute?.('data-role') || '').trim()
+        const name = employer || `Job ${jobNumber}`
+        let label = name
+        if (Array.isArray(jobs)) {
+            const { skillCount, durationMonths } = jobRowExperience(jobs[jobNumber], skills)
+            label = jobColumnHeaderText(name, skillCount, durationMonths)
+        }
         options.push({
             kind: 'job',
             id: jobNumber,
-            label: employer || `Job ${jobNumber}`,
+            label,
             sublabel: role || 'Job',
         })
     }

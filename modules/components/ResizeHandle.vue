@@ -18,6 +18,7 @@ import {
 } from '@/modules/utils/skillCardIdentity.mjs';
 import { selectionManager } from '@/modules/core/selectionManager.mjs';
 import { getSkillUrlCatalog } from '@/modules/utils/skillUrlSync.mjs';
+import { getResumeData as getEditorResumeData } from '@/modules/resume-details-editor/api.mjs';
 import Scene3DSettings from './Scene3DSettings.vue';
 
 // Local type definitions
@@ -380,17 +381,70 @@ function onSkillUrlsChanged(): void {
 onMounted(() => window.addEventListener('skill-urls-changed', onSkillUrlsChanged));
 onUnmounted(() => window.removeEventListener('skill-urls-changed', onSkillUrlsChanged));
 
+/** Same jobs and skills the Skill jobs tab loads, so the parenthetical month totals match that grid. */
+const searchExperienceJobs = ref<unknown[]>([]);
+const searchExperienceSkills = ref<Record<string, { name?: string; url?: string }>>({});
+const searchExperienceReady = ref(false);
+let searchExperienceToken = 0;
+
+const searchResumeId = computed(() => appState.value?.['user-settings']?.currentResumeId || 'default');
+
+async function refreshSearchExperience(): Promise<void> {
+  const token = ++searchExperienceToken;
+  const id = searchResumeId.value;
+  const jobsDep = getGlobalJobsDependency();
+  if (!id || id === 'default') {
+    if (token !== searchExperienceToken) return;
+    searchExperienceJobs.value = jobsDep.getJobsData() || [];
+    searchExperienceSkills.value = jobsDep.getSkillsData() || {};
+    searchExperienceReady.value = true;
+    return;
+  }
+  try {
+    const data = await getEditorResumeData(id);
+    if (token !== searchExperienceToken) return;
+    const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
+    const rawSkills = data?.skills && typeof data.skills === 'object' ? data.skills : {};
+    const sceneSkills = jobsDep.getSkillsData() || {};
+    const skills: Record<string, { name?: string; url?: string }> = {};
+    for (const [key, skill] of Object.entries(rawSkills)) {
+      const row = skill && typeof skill === 'object' ? skill as { name?: string; url?: string } : {};
+      const sceneUrl = sceneSkills[key]?.url;
+      skills[key] = {
+        ...row,
+        url: row.url || sceneUrl || '',
+      };
+    }
+    searchExperienceJobs.value = jobs;
+    searchExperienceSkills.value = skills;
+    searchExperienceReady.value = true;
+  } catch (err) {
+    if (token !== searchExperienceToken) return;
+    reportError(err, '[ResizeHandle] Skill search experience load failed', 'Using scene job data');
+    searchExperienceJobs.value = jobsDep.getJobsData() || [];
+    searchExperienceSkills.value = jobsDep.getSkillsData() || {};
+    searchExperienceReady.value = true;
+  }
+}
+
+watch([skillSearchOpen, searchResumeId], ([open]) => {
+  if (open) void refreshSearchExperience();
+});
+
 const filteredSearchOptions = computed<SearchOption[]>(() => {
   skillUrlRevision.value;
   const q = skillSearchQuery.value.trim().toLowerCase();
+  const jobs = searchExperienceReady.value ? searchExperienceJobs.value : null;
+  const skillsData = searchExperienceReady.value
+    ? searchExperienceSkills.value
+    : (getGlobalJobsDependency().getSkillsData() || {});
   if (searchMode.value === 'skill') {
-    const skillsData = getGlobalJobsDependency().getSkillsData() || {};
     const cards = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]:not(.clone)'));
-    return filterSearchOptionsByQuery(buildSkillSearchOptions(cards, skillsData, getSkillUrlCatalog()), q);
+    return filterSearchOptionsByQuery(buildSkillSearchOptions(cards, skillsData, getSkillUrlCatalog(), jobs), q);
   }
 
   const cards = Array.from(document.querySelectorAll('.biz-card-div[id^="biz-card-div-"]:not(.clone)'));
-  return filterSearchOptionsByQuery(buildJobSearchOptions(cards), q);
+  return filterSearchOptionsByQuery(buildJobSearchOptions(cards, jobs, skillsData), q);
 });
 
 function openSkillSearch(event: MouseEvent): void {
