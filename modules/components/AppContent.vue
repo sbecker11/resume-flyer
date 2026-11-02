@@ -967,9 +967,13 @@ watch(orientation, (newOrientation) => {
 
 #app-container {
   display: flex !important;
-  height: 100vh;
-  width: 100vw;
-  overflow: visible;
+  height: 100%;
+  width: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
   position: relative;
 }
 
@@ -1012,6 +1016,9 @@ watch(orientation, (newOrientation) => {
 #resume-container {
   display: flex;
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
   background: var(--background-dark, #1a1a1a);
   position: relative;
 }

@@ -294,6 +294,10 @@ defineExpose({
   position: relative;
   overflow: visible;
   flex-shrink: 0;
+  /* Flex item default min-height:auto would grow to the timeline (~9000px). */
+  min-height: 0;
+  min-width: 0;
+  max-height: 100%;
 }
 
 #scene-container.container-first {
@@ -350,7 +354,7 @@ defineExpose({
 #scene-plane {
   position: relative;
   width: 100%; /* Match scene-content width instead of fixed 500px */
-  min-width: 500px; /* Ensure minimum width for card positioning */
+  min-width: min(500px, 100%); /* Card positioning floor, but never wider than the scene */
   height: var(--timeline-height, 2000px);
   overflow: visible;
   /* Height now calculated to exactly match bottom-most content position */

@@ -23,10 +23,20 @@ reference for the #main-container to occupy the full height of the viewPort.
 }
 
 html, body {
-  height: auto; /* to fit size of its content */
+  /* Fill the viewport. height:auto let the document grow with the timeline
+     (thousands of px) and with 100vh, so the macOS green zoom button sized
+     the window to that content and it spilled past the menu bar and Dock. */
+  height: 100%;
+  width: 100%;
   margin: 0; /* Remove default margins */
   padding: 0; /* Remove default paddings */
   background-color: var(--background-dark);
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+  width: 100%;
   overflow: hidden;
 }
 
@@ -38,18 +48,20 @@ html, body {
 }
 
 /*
-Make #main-container take the full height of the viewPort using 100vh 
-(viewPort height). 100vh is equal to 100% of the height of the viewPort, 
-regardless of the window size.
+#main-container fills the viewport via the html/body height:100% chain.
+Do not switch this back to 100vh: that size includes area outside the
+available screen, and the green zoom button then makes the window too tall.
 */
 #main-container {
   display: flex; /* Arrange children (scene and resume) side-by-side */
   width: 100%; /* Full width */
-  height: 100vh; /* Full viewPort height */
+  height: 100%; /* Full viewPort height, bounded by html/body */
+  max-height: 100%;
+  min-height: 0;
   position: relative; /* For absolute positioning of resize handle */
   margin: 0;
   padding: 0;
-  overflow: visible;
+  overflow: hidden;
   font-family: Arial, sans-serif;
   background-color: red;
 }
