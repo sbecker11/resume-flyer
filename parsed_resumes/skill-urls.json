@@ -17,8 +17,8 @@
       "updatedAt": "2026-10-27T22:26:41.619Z"
     },
     "Kafka": {
-      "url": "https://www.google.com/search?q=apache+kafka+tutorial&sca_esv=aafa6ca6a126c165&rlz=1C5MACD_enUS1022US1022&biw=1080&bih=513&sxsrf=APpeQnvCULbRxmKeeBduMtPNlchKR6d7uQ%3A1793140059435&ei=WyXhaoWTGtWZgLQP1o3RKQ&oq=apache+kafka&gs_lp=Egxnd3Mtd2l6LXNlcnAiDGFwYWNoZSBrYWZrYSoKCAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzIKEAAYRxjWBBiwAzINEAAYgAQYigUYQxiwAzINEAAYgAQYigUYQxiwAzINEAAYgAQYigUYQxiwAzINEAAYgAQYigUYQxiwA0iFYlAAWABwAXgBkAEAmAEAoAEAqgEAuAEByAEAmAIBoAIamAMAiAYBkAYMkgcBMaAHALIHALgHAMIHAzMtMcgHC4AIAQ&sclient=gws-wiz-serp",
-      "updatedAt": "2026-10-27T22:28:11.588Z"
+      "url": "https://kafka.apache.org/",
+      "updatedAt": "2026-11-01T22:30:34.840Z"
     },
     "Aurora PostgreSQL Serverless v2": {
       "url": "https://www.google.com/search?q=amazon+Aurora+PostgreSQL+Serverless+v2&rlz=1C5MACD_enUS1022US1022&oq=amazon+Aurora+PostgreSQL+Serverless+v2&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIICAEQABgWGB4yBwgCEAAY7wUyCggDEAAYgAQYogQyBwgEEAAY7wXSAQg2NTU3ajBqNKgCALACAQ&sourceid=chrome&source=chrome.ob&ie=UTF-8",
@@ -39,6 +39,54 @@
     "pytorch": {
       "url": "https://pytorch.org/foundation/",
       "updatedAt": "2026-10-27T23:06:52.523Z"
+    },
+    "JWT": {
+      "url": "https://www.jwt.io/",
+      "updatedAt": "2026-11-01T22:31:31.986Z"
+    },
+    "FastMCP": {
+      "url": "https://gofastmcp.com/getting-started/welcome",
+      "updatedAt": "2026-11-01T22:32:34.369Z"
+    },
+    "Airflow": {
+      "url": "https://airflow.apache.org/",
+      "updatedAt": "2026-11-01T22:33:33.479Z"
+    },
+    "Agile": {
+      "url": "https://www.atlassian.com/agile",
+      "updatedAt": "2026-11-01T22:34:49.417Z"
+    },
+    "Amazon Bedrock": {
+      "url": "https://aws.amazon.com/bedrock/",
+      "updatedAt": "2026-11-01T22:35:33.515Z"
+    },
+    "Amazon ECS": {
+      "url": "https://aws.amazon.com/ecs/",
+      "updatedAt": "2026-11-01T22:36:26.940Z"
+    },
+    "Amazon RDS": {
+      "url": "https://aws.amazon.com/rds/",
+      "updatedAt": "2026-11-01T22:36:58.290Z"
+    },
+    "Anthropic API": {
+      "url": "https://platform.claude.com/docs/en/api/overview",
+      "updatedAt": "2026-11-01T22:38:23.427Z"
+    },
+    "Zsh": {
+      "url": "https://www.zsh.org/",
+      "updatedAt": "2026-11-01T22:40:23.598Z"
+    },
+    "Vite": {
+      "url": "https://vite.dev/",
+      "updatedAt": "2026-11-01T22:41:12.615Z"
+    },
+    "Bash": {
+      "url": "https://en.wikipedia.org/wiki/Bash_(Unix_shell)",
+      "updatedAt": "2026-11-01T23:55:56.751Z"
+    },
+    "LCEL": {
+      "url": "https://www.langchain.com/blog/langchain-expression-language",
+      "updatedAt": "2026-11-02T00:14:33.933Z"
     }
   }
 }

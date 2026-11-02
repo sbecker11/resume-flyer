@@ -1,40 +1,5 @@
-{
-  "0": {
-    "index": 0,
-    "role": "Independent Consultant — Senior Software Engineer / Data Engineer",
-    "employer": "Spexture (Independent Consulting)",
-    "start": "07/2025",
-    "end": "CURRENT_DATE",
-    "z-index": 1,
-    "css name": "darkforest",
-    "css RGB": "#116611",
-    "css color": null,
-    "text color": "#FFFFFF",
-    "Description": "• Hands-on technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Model Monitoring, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Versioning, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality ML Pipelines, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Scalability, technical consulting for Fortune 500 and regulated clients, architecting [AI/ML] systems, agentic components, and full-stack applications with [DevOps] and [MLOps] platform functionality Governance.",
-    "outlineIndex": "1",
-    "skillIDs": [
-      "ai-ml",
-      "devops",
-      "mlops"
-    ]
-  },
-  "1": {
-    "index": 1,
-    "role": "",
-    "employer": "Spexture Portfolio Projects",
-    "start": "",
-    "end": "",
-    "z-index": 2,
-    "css name": "darkcyan",
-    "css RGB": "#0069AC",
-    "css color": null,
-    "text color": "#FFFFFF",
-    "Description": "",
-    "outlineIndex": "1.1",
-    "outlineKind": "section",
-    "skillIDs": []
-  },
-  "2": {
+[
+  {
     "index": 2,
     "role": "Portfolio Project: resume-parser",
     "employer": "resume-parser",
@@ -48,12 +13,21 @@
     "Description": "• Agentic [DOCX]/[PDF] → [JSON] résumé parser with manual approval gates.",
     "outlineIndex": "1.1.1",
     "skillIDs": [
-      "docx",
-      "pdf",
-      "json"
-    ]
+      "DOCX",
+      "PDF",
+      "JSON",
+      "Anthropic API",
+      "Python",
+      "AI Agents",
+      "AI/ML",
+      "React 18",
+      "GenAI",
+      "LLM APIs Anthropic",
+      "Bash"
+    ],
+    "jobID": "2"
   },
-  "3": {
+  {
     "index": 3,
     "role": "Portfolio Project: color-palette-maker",
     "employer": "color-palette-maker",
@@ -67,12 +41,21 @@
     "Description": "• [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
     "outlineIndex": "1.1.2",
     "skillIDs": [
-      "react",
-      "k-means",
-      "ciede2000"
-    ]
+      "React",
+      "K-means",
+      "CIEDE2000",
+      "AWS S3",
+      "Express",
+      "JavaScript",
+      "Node.js",
+      "OpenCV",
+      "Python",
+      "Vite",
+      "AI/ML"
+    ],
+    "jobID": "3"
   },
-  "4": {
+  {
     "index": 4,
     "role": "Portfolio Project: resume-flyer",
     "employer": "resume-flyer",
@@ -86,13 +69,24 @@
     "Description": "• [Vue 3] + [TypeScript] + [Vite] SPA with an [Express.js] backend that parses an uploaded résumé via the resume-parser package into an interactive jobs × skills 3D card explorer.",
     "outlineIndex": "1.1.3",
     "skillIDs": [
-      "vue-3",
-      "typescript",
-      "vite",
-      "express-js"
-    ]
+      "Vue 3",
+      "TypeScript",
+      "Vite",
+      "Express.js",
+      "Vue",
+      "Node.js",
+      "JavaScript",
+      "Express",
+      "Anthropic API",
+      "DOCX",
+      "AI/ML",
+      "GenAI",
+      "LLM APIs Anthropic",
+      "Bash"
+    ],
+    "jobID": "4"
   },
-  "5": {
+  {
     "index": 5,
     "role": "Portfolio Project: sushi-rag-mcp-server",
     "employer": "sushi-rag-mcp-server",
@@ -103,18 +97,33 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [FastMCP] + [LangChain] [LCEL] RAG server with [ChromaDB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "• [FastMCP] + [LangChain] [LCEL] RAG server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "outlineIndex": "1.1.4",
     "skillIDs": [
-      "react",
-      "fastmcp",
-      "langchain",
-      "lcel",
-      "chromadb",
-      "postgresql"
-    ]
+      "FastMCP",
+      "LangChain",
+      "LCEL",
+      "PostgreSQL",
+      "React",
+      "Amazon ECS",
+      "Amazon RDS",
+      "Chroma DB",
+      "Docker Compose",
+      "Express",
+      "JavaScript",
+      "Node.js",
+      "OpenAI API",
+      "Python",
+      "SQLite",
+      "Vite",
+      "AI/ML",
+      "GenAI",
+      "LLM APIs OpenAI",
+      "Bash"
+    ],
+    "jobID": "5"
   },
-  "6": {
+  {
     "index": 6,
     "role": "Portfolio Project: campaign asset automation",
     "employer": "campaign asset automation",
@@ -128,11 +137,14 @@
     "Description": "• [DALL·E 3] + [OpenCV] campaign asset automation with brand-compliance validation.",
     "outlineIndex": "1.1.5",
     "skillIDs": [
-      "dall-e-3",
-      "opencv"
-    ]
+      "DALL·E 3",
+      "OpenCV",
+      "AI/ML",
+      "GenAI"
+    ],
+    "jobID": "6"
   },
-  "7": {
+  {
     "index": 7,
     "role": "Portfolio Project: spexture-com",
     "employer": "spexture-com",
@@ -152,9 +164,10 @@
       "jwt",
       "bcrypt",
       "rbac"
-    ]
+    ],
+    "jobID": "7"
   },
-  "8": {
+  {
     "index": 8,
     "role": "Portfolio Project: ecommerce-semantic-search",
     "employer": "ecommerce-semantic-search",
@@ -168,14 +181,30 @@
     "Description": "• [Spring Boot] + [pgvector] + [HuggingFace] [MiniLM] semantic search deployed on [ECS Fargate].",
     "outlineIndex": "1.1.7",
     "skillIDs": [
-      "spring-boot",
       "pgvector",
-      "huggingface",
-      "minilm",
-      "ecs-fargate"
-    ]
+      "Docker Compose",
+      "Spring Boot",
+      "HuggingFace",
+      "MiniLM",
+      "ECS Fargate",
+      "Amazon ECS",
+      "Amazon RDS",
+      "AWS CloudFormation",
+      "Docker",
+      "Flask",
+      "Java",
+      "Pandas",
+      "PostgreSQL",
+      "Python",
+      "PyTorch",
+      "sentence-transformers",
+      "AI/ML",
+      "DevOps",
+      "Bash"
+    ],
+    "jobID": "8"
   },
-  "9": {
+  {
     "index": 9,
     "role": "Portfolio Project: linkage-engine",
     "employer": "linkage-engine",
@@ -186,17 +215,29 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "• [Java 21] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [Aurora PostgreSQL Serverless v2] + [Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "• [Java] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
     "outlineIndex": "1.1.8",
     "skillIDs": [
-      "spring-boot",
-      "java-21",
-      "spring-ai",
-      "aurora-postgresql-serverless-v2",
-      "bedrock"
-    ]
+      "Spring Boot",
+      "Spring AI",
+      "Amazon Bedrock",
+      "Amazon ECS",
+      "AWS CloudWatch",
+      "AWS CostExplorer",
+      "Docker",
+      "Flyway",
+      "Java",
+      "pgvector",
+      "PostgreSQL",
+      "Terraform",
+      "AI/ML",
+      "DevOps",
+      "GenAI",
+      "Bash"
+    ],
+    "jobID": "9"
   },
-  "10": {
+  {
     "index": 10,
     "role": "Portfolio Project: healthcare-agentic-snowflake-rag",
     "employer": "healthcare-agentic-snowflake-rag",
@@ -210,13 +251,28 @@
     "Description": "• [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
     "outlineIndex": "1.1.9",
     "skillIDs": [
-      "langgraph",
-      "snowflake-cortex-search",
-      "mlflow",
-      "optuna"
-    ]
+      "LangGraph",
+      "Snowflake Cortex Search",
+      "MLflow",
+      "Optuna",
+      "Anthropic API",
+      "LangChain",
+      "MLFlow",
+      "Python",
+      "scikit-learn",
+      "Snowflake",
+      "SQLite",
+      "Snowflake Cortext Search",
+      "AI/ML",
+      "Agile",
+      "GenAI",
+      "LLM APIs Anthropic",
+      "PSI drift monitoring",
+      "MLOps"
+    ],
+    "jobID": "10"
   },
-  "11": {
+  {
     "index": 11,
     "role": "Portfolio Project: recruiting-automation",
     "employer": "recruiting-automation",
@@ -227,31 +283,26 @@
     "css RGB": "#008b8b",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [launchd]-scheduled pipeline orchestrating comms-migration inbox classification and job-tracker [Gmail] triage, [LLM] JD evaluation, and tailored résumé/cover-letter package generation.",
+    "Description": "• [launchd]-scheduled pipeline orchestrating comms-migration inbox classification and job-tracker triage, [LLM] JD evaluation, and tailored résumé/cover-letter package generation.",
     "outlineIndex": "1.1.10",
     "skillIDs": [
       "launchd",
-      "gmail",
-      "llm"
-    ]
+      "Anthropic API",
+      "GMail API",
+      "LLM",
+      "Bash",
+      "Python",
+      "React",
+      "TypeScript",
+      "Z3",
+      "Zsh",
+      "AI/ML",
+      "GenAI",
+      "LLM APIs Anthropic"
+    ],
+    "jobID": "11"
   },
-  "12": {
-    "index": 12,
-    "role": "",
-    "employer": "Spexture Client Engagements",
-    "start": "",
-    "end": "",
-    "z-index": 1,
-    "css name": "darkforest",
-    "css RGB": "#116611",
-    "css color": null,
-    "text color": "#FFFFFF",
-    "Description": "",
-    "outlineIndex": "1.2",
-    "outlineKind": "section",
-    "skillIDs": []
-  },
-  "13": {
+  {
     "index": 13,
     "role": "Consultant",
     "employer": "Adobe",
@@ -269,9 +320,10 @@
       "rest-api",
       "jira",
       "agile"
-    ]
+    ],
+    "jobID": "13"
   },
-  "14": {
+  {
     "index": 14,
     "role": "Consultant",
     "employer": "Fannie Mae",
@@ -282,22 +334,24 @@
     "css RGB": "#006688",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Built [dbt] models and [AWS Glue]/[Glue Crawler] pipelines with explicit metadata lineage and schema-evolution tracking for regulated mortgage-finance data, deployed through [CodeCommit]/[CodeBuild]/[CodePipeline]/[CodeDeploy] with [CloudWatch] monitoring, in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Built [dbt] models and [AWS Glue]/[Glue Crawler] pipelines with explicit metadata lineage and schema-evolution tracking for regulated mortgage-finance data, deployed through [CodeCommit]/[CodeBuild]/[CodePipeline]/[CodeDeploy] with [AWS CloudWatch] monitoring, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.2",
     "skillIDs": [
-      "jira",
-      "agile",
       "dbt",
-      "aws-glue",
-      "glue-crawler",
-      "codecommit",
-      "codebuild",
-      "codepipeline",
-      "codedeploy",
-      "cloudwatch"
-    ]
+      "AWS CloudWatch",
+      "AWS Glue",
+      "Glue Crawler",
+      "CodeCommit",
+      "CodeBuild",
+      "CodePipeline",
+      "CodeDeploy",
+      "Jira",
+      "Agile",
+      "DevOps"
+    ],
+    "jobID": "14"
   },
-  "15": {
+  {
     "index": 15,
     "role": "Consultant",
     "employer": "Cigna",
@@ -311,16 +365,18 @@
     "Description": "• Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.3",
     "skillIDs": [
-      "jira",
-      "agile",
-      "cyberark-pam",
-      "kafka",
-      "airflow",
-      "xray",
-      "ci-cd"
-    ]
+      "CyberArk PAM",
+      "Kafka",
+      "Airflow",
+      "Xray",
+      "Jira",
+      "CI/CD",
+      "Agile",
+      "DevOps"
+    ],
+    "jobID": "15"
   },
-  "16": {
+  {
     "index": 16,
     "role": "Consultant",
     "employer": "Warner Bros. Games",
@@ -344,9 +400,10 @@
       "bigquery",
       "fastapi",
       "tableau"
-    ]
+    ],
+    "jobID": "16"
   },
-  "17": {
+  {
     "index": 17,
     "role": "Consultant",
     "employer": "Angel Studios",
@@ -360,16 +417,18 @@
     "Description": "• Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.5",
     "skillIDs": [
-      "jira",
-      "agile",
-      "pytorch",
-      "cnn",
-      "sagemaker",
-      "looker",
-      "snowflake"
-    ]
+      "PyTorch",
+      "CNN",
+      "SageMaker",
+      "Looker",
+      "Snowflake",
+      "Jira",
+      "Agile",
+      "AI/ML"
+    ],
+    "jobID": "17"
   },
-  "18": {
+  {
     "index": 18,
     "role": "Consultant",
     "employer": "Greenseed LLC",
@@ -384,9 +443,10 @@
     "outlineIndex": "1.2.6",
     "skillIDs": [
       "postgresql"
-    ]
+    ],
+    "jobID": "18"
   },
-  "19": {
+  {
     "index": 19,
     "role": "Consultant",
     "employer": "NuSkin",
@@ -406,9 +466,10 @@
       "node-js",
       "vuetify",
       "vuelidate"
-    ]
+    ],
+    "jobID": "19"
   },
-  "20": {
+  {
     "index": 20,
     "role": "Senior Data Engineer",
     "employer": "SeniorLink (now Careforth)",
@@ -419,25 +480,27 @@
     "css RGB": "#ff4500",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [S3] → [Redshift] OLAP → [Tableau] self-service BI expenses.• [Flyway] schema evolution/migrations.• First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
+    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI expenses.• [Flyway] schema evolution/migrations.• First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
     "outlineIndex": "2",
     "skillIDs": [
-      "json",
-      "jira",
-      "agile",
-      "tableau",
-      "pyspark",
-      "aws-emr",
-      "kinesis",
-      "rabbitmq",
-      "parquet",
-      "s3",
-      "redshift",
-      "flyway",
-      "scrum"
-    ]
+      "PySpark",
+      "AWS EMR",
+      "Kinesis",
+      "RabbitMQ",
+      "JSON",
+      "Parquet",
+      "AWS S3",
+      "Redshift",
+      "Tableau",
+      "Flyway",
+      "Agile",
+      "Scrum",
+      "Jira",
+      "Data Pipelines"
+    ],
+    "jobID": "20"
   },
-  "21": {
+  {
     "index": 21,
     "role": "Senior Software Engineer",
     "employer": "BigR.io",
@@ -455,9 +518,10 @@
       "java",
       "jsp",
       "spring"
-    ]
+    ],
+    "jobID": "21"
   },
-  "22": {
+  {
     "index": 22,
     "role": "Co-founder — AI/NLP Senior Full-Stack Engineer",
     "employer": "ClipFile",
@@ -471,28 +535,15 @@
     "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines.• Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
     "outlineIndex": "4",
     "skillIDs": [
-      "java",
-      "spring",
-      "dynamodb",
-      "nlp"
-    ]
+      "Java",
+      "Spring",
+      "DynamoDB",
+      "NLP",
+      "AI/ML"
+    ],
+    "jobID": "22"
   },
-  "23": {
-    "index": 23,
-    "role": "Co-founder and Technical Lead",
-    "employer": "Sierra Vista Group",
-    "start": "12/2002",
-    "end": "12/2011",
-    "z-index": 3,
-    "css name": "darkcyan",
-    "css RGB": "#008b8b",
-    "css color": null,
-    "text color": "#FFFFFF",
-    "Description": "• Founded from start-up mode in Boston; technical lead for 5–7 independent consultants across a sequence of enterprise client engagements.",
-    "outlineIndex": "5",
-    "skillIDs": []
-  },
-  "24": {
+  {
     "index": 24,
     "role": "Lead Engineer, System Architect",
     "employer": "Rowe International",
@@ -506,12 +557,14 @@
     "Description": "• [Java], [JSP], and [PostgreSQL] systems.",
     "outlineIndex": "5.6",
     "skillIDs": [
-      "postgresql",
-      "java",
-      "jsp"
-    ]
+      "Java",
+      "JSP",
+      "PostgreSQL",
+      "DynamoDB"
+    ],
+    "jobID": "24"
   },
-  "25": {
+  {
     "index": 25,
     "role": "System Architect",
     "employer": "Intrusic",
@@ -526,9 +579,10 @@
     "outlineIndex": "5.4",
     "skillIDs": [
       "c"
-    ]
+    ],
+    "jobID": "25"
   },
-  "26": {
+  {
     "index": 26,
     "role": "Data Architect, Project Manager",
     "employer": "AMI",
@@ -545,9 +599,10 @@
       "java",
       "jsp",
       "filemaker"
-    ]
+    ],
+    "jobID": "26"
   },
-  "27": {
+  {
     "index": 27,
     "role": "CTO, Project Manager",
     "employer": "Coca-Cola Corp",
@@ -564,9 +619,10 @@
       "sql-anywhere",
       "nservicebus",
       "ms-mobile-5"
-    ]
+    ],
+    "jobID": "27"
   },
-  "28": {
+  {
     "index": 28,
     "role": "Senior Software Engineer",
     "employer": "MSC / One Call",
@@ -582,9 +638,10 @@
     "skillIDs": [
       "windows-nt",
       "db-design-tools"
-    ]
+    ],
+    "jobID": "28"
   },
-  "29": {
+  {
     "index": 29,
     "role": "Co-founder & CTO",
     "employer": "HomePortfolio",
@@ -601,6 +658,7 @@
       "java",
       "jsp",
       "oracle"
-    ]
+    ],
+    "jobID": "29"
   }
-}
+]

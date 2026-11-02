@@ -36,12 +36,10 @@
       "nlp",
       "genai",
       "ai-agents",
-      "computer-vision",
       "llm-apis-openai",
       "llm-apis-anthropic",
       "data-pipelines",
-      "vector-dbs-chromadb",
-      "vector-dbs-pinecone"
+      "vector-dbs-chromadb"
     ]
   },
   "methodology": {
@@ -61,7 +59,6 @@
       "nlp",
       "genai",
       "ai-agents",
-      "computer-vision",
       "data-pipelines"
     ]
   },
@@ -83,8 +80,7 @@
       "xray",
       "ci-cd",
       "flyway",
-      "docker",
-      "kubernetes"
+      "docker"
     ]
   },
   "tool": {
@@ -119,8 +115,7 @@
       "ms-mobile-5",
       "windows-nt",
       "db-design-tools",
-      "docker",
-      "kubernetes"
+      "docker"
     ]
   },
   "backend": {
@@ -216,8 +211,7 @@
       "sql-anywhere",
       "db-design-tools",
       "oracle",
-      "vector-dbs-chromadb",
-      "vector-dbs-pinecone"
+      "vector-dbs-chromadb"
     ]
   },
   "computer-vision": {
