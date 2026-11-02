@@ -14,6 +14,8 @@ import { reportError } from './errorReporting.mjs'
 import { userDefinedSkillUrl } from './skillUrlCatalog.mjs'
 import { getSelectedSkillIdsForJob } from '../resume-details-editor/jobSkillsSelection.mjs'
 import { jobColumnHeaderText, skillRowDisplayLabel } from '../resume-details-editor/skillJobsMatrixLabels.mjs'
+import { isEducationDerivedJob } from '../data/ResumeJob.mjs'
+import { educationJobDisplayNameFromParts } from './educationJobDisplayName.mjs'
 
 const CLONE_ID_SUFFIX = '-clone'
 
@@ -144,7 +146,15 @@ export function buildJobSearchOptions(cardElements, jobs = null, skillsData = nu
         if (!Number.isFinite(jobNumber)) continue
         const employer = String(el.getAttribute?.('data-employer') || '').trim()
         const role = String(el.getAttribute?.('data-role') || '').trim()
-        const name = employer || `Job ${jobNumber}`
+        const job = Array.isArray(jobs) ? jobs[jobNumber] : null
+        let name = employer || `Job ${jobNumber}`
+        if (isEducationDerivedJob(job)) {
+            const shortName = educationJobDisplayNameFromParts(
+                job.employer || job.Employer || employer,
+                job.title || job.role || job.Role || role,
+            )
+            if (shortName) name = shortName
+        }
         let label = name
         if (Array.isArray(jobs)) {
             const { skillCount, durationMonths } = jobRowExperience(jobs[jobNumber], skills)

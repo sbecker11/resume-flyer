@@ -42,9 +42,15 @@ export function educationJobDisplayNameFromParts(employer, title) {
     major = major.slice(0, detailSep).trim();
   }
 
-  return shortenLongUniversityName(
+  const label = shortenLongUniversityName(
     truncateBeforeDateRange([shortInst, degree, major].filter(Boolean).join(', ')),
   );
+  // A year range in the institution line drops the degree. Put it back so the
+  // skill-jobs columns read MIT PhD, BYU-MS, and BYU-BS.
+  const token = degree ? String(degree).split(/[\s,]/)[0] : '';
+  if (token && label === 'MIT') return `MIT ${token}`;
+  if (token && label === 'BYU') return `BYU-${token}`;
+  return label;
 }
 
 /**

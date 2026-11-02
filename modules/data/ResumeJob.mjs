@@ -168,7 +168,7 @@ export function educationKeyOf(job) {
 }
 
 /**
- * Resume-jobs tab: dropdown should list only persisted work jobs (not education-derived rows).
+ * Resume-jobs navigation that must stay on persisted work jobs (add, delete, first selection).
  * `mergedIdx` is the index in the full merged array (same as Skills tab / scene job number).
  * @param {unknown[]} jobs
  * @returns {{ job: unknown, mergedIdx: number }[]}
@@ -179,6 +179,22 @@ export function workJobDropdownEntries(jobs) {
   for (let mergedIdx = 0; mergedIdx < jobs.length; mergedIdx++) {
     const job = jobs[mergedIdx];
     if (!isEducationDerivedJob(job)) out.push({ job, mergedIdx });
+  }
+  return out;
+}
+
+/**
+ * Resume-jobs dropdown: work jobs plus education rows (MIT PhD, BYU-MS, BYU-BS).
+ * @param {unknown[]} jobs
+ * @returns {{ job: unknown, mergedIdx: number }[]}
+ */
+export function resumeJobDropdownEntries(jobs) {
+  if (!Array.isArray(jobs)) return [];
+  const out = [];
+  for (let mergedIdx = 0; mergedIdx < jobs.length; mergedIdx++) {
+    const job = jobs[mergedIdx];
+    if (job == null || isOutlineSectionJob(job)) continue;
+    out.push({ job, mergedIdx });
   }
   return out;
 }

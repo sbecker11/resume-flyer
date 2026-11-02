@@ -136,6 +136,53 @@ describe('job finder options', () => {
         expect(options.map((row) => row.label)).toEqual(['(5) Adobe', '(0) NuSkin'])
     })
 
+    it('uses the short education names in job search', () => {
+        const mit = document.createElement('div')
+        mit.className = 'biz-card-div'
+        mit.setAttribute('data-job-number', '0')
+        mit.setAttribute('data-employer', 'Massachusetts Institute of Technology (MIT)  —  1990 - 1997')
+        mit.setAttribute('data-role', 'PhD, Media Arts & Sciences')
+        const byuMs = document.createElement('div')
+        byuMs.className = 'biz-card-div'
+        byuMs.setAttribute('data-job-number', '1')
+        byuMs.setAttribute('data-employer', 'Brigham Young University  —  1987 - 1990')
+        byuMs.setAttribute('data-role', 'MS, Computer Science')
+        const byuBs = document.createElement('div')
+        byuBs.className = 'biz-card-div'
+        byuBs.setAttribute('data-job-number', '2')
+        byuBs.setAttribute('data-employer', 'Brigham Young University  —  1983 - 1987')
+        byuBs.setAttribute('data-role', 'BS, Design Engineering Technology')
+        const jobs = [
+            {
+                educationKey: '0',
+                employer: 'Massachusetts Institute of Technology (MIT)  —  1990 - 1997',
+                title: 'PhD, Media Arts & Sciences, Computer Vision, Digital Signal Processing',
+                skillIDs: ['python'],
+                durationMonths: 96,
+                Description: '',
+            },
+            {
+                educationKey: '1',
+                employer: 'Brigham Young University  —  1987 - 1990',
+                title: 'MS, Computer Science, Computer Graphics, Medical Imaging',
+                skillIDs: ['python'],
+                durationMonths: 48,
+                Description: '',
+            },
+            {
+                educationKey: '2',
+                employer: 'Brigham Young University  —  1983 - 1987',
+                title: 'BS, Design Engineering Technology, CAD/CAM/CAE',
+                skillIDs: ['python'],
+                durationMonths: 60,
+                Description: '',
+            },
+        ]
+        const options = buildJobSearchOptions([mit, byuMs, byuBs], jobs, { python: { name: 'Python' } })
+        expect(options.map((row) => row.label)).toEqual(['(96) MIT PhD', '(48) BYU-MS', '(60) BYU-BS'])
+    })
+})
+
 describe('skill finder experience', () => {
     it('appends the Skill jobs month total after each skill name', () => {
         const cards = [

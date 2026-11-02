@@ -10,12 +10,12 @@
           name="rde-jobs-job"
           v-model="jobIndexLocal"
           class="rde-select"
-          :disabled="workJobsForDropdown.length === 0"
+          :disabled="jobsForDropdown.length === 0"
           @change="emit('update:selectedJobIndex', jobIndexLocal)"
         >
           <option value="" disabled>jobs</option>
           <option
-            v-for="({ job, mergedIdx }, pos) in workJobsForDropdown"
+            v-for="({ job, mergedIdx }, pos) in jobsForDropdown"
             :key="mergedIdx"
             :value="mergedIdx"
           >
@@ -179,7 +179,7 @@
           <button
             type="button"
             class="rde-btn delete-job"
-            :disabled="!canPersistToServer || saving || selectedJob == null || !props.resumeId || props.resumeId === 'default'"
+            :disabled="!canPersistToServer || saving || selectedJob == null || selectedIsEducation || !props.resumeId || props.resumeId === 'default'"
             @click="openDeleteJobConfirm"
           >
             Delete Job
@@ -247,12 +247,13 @@ import { reportError } from '@/modules/utils/errorReporting.mjs';
 import {
   isEducationDerivedJob,
   workJobDropdownEntries,
+  resumeJobDropdownEntries,
   firstWorkJobMergedIndex,
 } from '@/modules/data/ResumeJob.mjs';
 import { displayJobHeading } from '@/modules/utils/outlineIndex.mjs';
+import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDisplayName.mjs';
 
 const canPersistToServer = hasServer();
-const canEdit = true;
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -294,7 +295,8 @@ function jobsArray(data) {
   return keys.map(k => data[k]);
 }
 
-/** Work jobs only — education rows are edited on the Education tab (Job skills tab still lists all rows). */
+/** Work jobs plus education rows. Education is shown by its short name and is not editable here. */
+const jobsForDropdown = computed(() => resumeJobDropdownEntries(jobs.value));
 const workJobsForDropdown = computed(() => workJobDropdownEntries(jobs.value));
 
 const workMergedIndices = computed(() => workJobsForDropdown.value.map((e) => e.mergedIdx));
@@ -379,7 +381,6 @@ watch(() => [props.resumeId, props.reloadNonce], ([id]) => {
         props.selectedJobIndex != null
         && props.selectedJobIndex >= 0
         && props.selectedJobIndex < arr.length
-        && !isEducationDerivedJob(arr[props.selectedJobIndex])
       ) {
         idx = Number(props.selectedJobIndex);
       } else {
@@ -400,20 +401,11 @@ watch(() => [props.resumeId, props.reloadNonce], ([id]) => {
   }, 0);
 }, { immediate: true });
 
-// When parent shared index updates: mirror work jobs only; education indices belong on Job skills / Education tabs.
 watch(
   () => props.selectedJobIndex,
   (v) => {
     if (!jobsLoaded.value || jobs.value.length === 0) return;
     if (v == null || v < 0 || v >= jobs.value.length) return;
-    if (isEducationDerivedJob(jobs.value[v])) {
-      const first = firstWorkJobMergedIndex(jobs.value);
-      if (first != null && jobIndexLocal.value !== first) {
-        jobIndexLocal.value = first;
-        emit('update:selectedJobIndex', first);
-      }
-      return;
-    }
     if (jobIndexLocal.value !== v) jobIndexLocal.value = v;
   }
 );
@@ -444,6 +436,9 @@ const selectedJob = computed(() => {
   if (idx == null || idx < 0 || idx >= jobs.value.length) return null;
   return jobs.value[idx];
 });
+
+const selectedIsEducation = computed(() => isEducationDerivedJob(selectedJob.value));
+const canEdit = computed(() => !selectedIsEducation.value);
 
 function currentWorkDropdownPosition() {
   const idx = jobIndexAsNumber();
@@ -560,6 +555,9 @@ function onTwoDigitInput(field) {
 function jobOptionLabel(job, pos) {
   const title = job?.title ?? job?.role ?? job?.Role ?? '';
   const employer = displayJobHeading(job) || job?.employer || job?.Employer || job?.label || '';
+  if (isEducationDerivedJob(job)) {
+    return educationJobDisplayNameFromParts(employer, title) || `Job ${pos + 1}`;
+  }
   const parts = [employer, title].filter(Boolean);
   return parts.length ? parts.join(' -- ') : `Job ${pos + 1}`;
 }
@@ -749,6 +747,7 @@ function openDeleteJobConfirm() {
 async function confirmDeleteJob() {
   const delIdx = jobIndexAsNumber();
   if (delIdx == null || !props.resumeId || props.resumeId === 'default') return;
+  if (isEducationDerivedJob(jobs.value[delIdx])) return;
   deleteInFlight.value = true;
   try {
     await api.deleteJob(props.resumeId, delIdx);

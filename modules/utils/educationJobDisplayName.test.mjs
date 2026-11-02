@@ -45,15 +45,15 @@ describe('educationJobDisplayNameFromParts', () => {
     expect(educationJobDisplayNameFromParts(
       'Massachusetts Institute of Technology (MIT)  —  1990 - 1997',
       'PhD, Media Arts & Sciences, Computer Vision, Digital Signal Processing',
-    )).toBe('MIT');
+    )).toBe('MIT PhD');
     expect(educationJobDisplayNameFromParts(
       'Brigham Young University  —  1987 - 1990',
       'MS, Computer Science, Computer Graphics, Medical Imaging',
-    )).toBe('BYU');
+    )).toBe('BYU-MS');
     expect(educationJobDisplayNameFromParts(
       'Brigham Young University  —  1983 - 1987',
       'BS, Design Engineering Technology, CAD/CAM/CAE',
-    )).toBe('BYU');
+    )).toBe('BYU-BS');
     expect(truncateBeforeDateRange('Already short')).toBe('Already short');
     expect(shortenLongUniversityName('MIT, PhD, Media Arts & Sciences')).toBe(
       'MIT, PhD, Media Arts & Sciences',

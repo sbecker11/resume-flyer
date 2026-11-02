@@ -4,6 +4,7 @@ import {
   isEducationDerivedJob,
   educationKeyOf,
   workJobDropdownEntries,
+  resumeJobDropdownEntries,
   firstWorkJobMergedIndex,
   isOutlineSectionJob,
 } from './ResumeJob.mjs';
@@ -221,6 +222,23 @@ describe('workJobDropdownEntries', () => {
     ];
     const entries = workJobDropdownEntries(jobs);
     expect(entries[0].mergedIdx).toBe(1);
+  });
+});
+
+describe('resumeJobDropdownEntries', () => {
+  it('includes education rows after work jobs', () => {
+    const jobs = [
+      new ResumeJob({ employer: 'Adobe' }),
+      new ResumeJob({
+        educationKey: 'mit',
+        employer: 'Massachusetts Institute of Technology (MIT)  —  1990 - 1997',
+        title: 'PhD, Media Arts & Sciences',
+      }),
+      new ResumeJob({ outlineKind: 'section', employer: 'Section' }),
+    ];
+    const entries = resumeJobDropdownEntries(jobs);
+    expect(entries.map((e) => e.mergedIdx)).toEqual([0, 1]);
+    expect(entries[1].job).toBe(jobs[1]);
   });
 });
 
