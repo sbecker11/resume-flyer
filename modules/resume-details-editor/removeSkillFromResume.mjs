@@ -1,0 +1,132 @@
+/**
+ * Remove one skill from a resume's in-memory jobs, skills, education, and categories.
+ * Mutates the objects in place. Strips matching skillIDs and [Skill] brackets so a
+ * leftover bracket cannot fail description enrichment after the skill is gone.
+ */
+import { labelToSlug } from '../utils/skillLabel.mjs';
+
+/**
+ * @param {unknown} jobs
+ * @returns {object[]}
+ */
+function recordList(jobs) {
+  if (Array.isArray(jobs)) return jobs;
+  if (jobs && typeof jobs === 'object') return Object.values(jobs);
+  return [];
+}
+
+/**
+ * @param {string} description
+ * @returns {string}
+ */
+function tidyDescription(description) {
+  return description
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+}
+
+/**
+ * @param {unknown} sid
+ * @param {Record<string, { name?: string }>} skills
+ * @param {string} resolvedKey
+ * @param {string} nameLower
+ * @param {string} keyLower
+ */
+function idMatchesSkill(sid, skills, resolvedKey, nameLower, keyLower) {
+  const text = String(sid ?? '').trim();
+  if (!text) return false;
+  if (text === resolvedKey) return true;
+  const lower = text.toLowerCase();
+  if (lower === nameLower || lower === keyLower) return true;
+  return labelToSlug(text, skills) === resolvedKey;
+}
+
+/**
+ * @param {string} description
+ * @param {Record<string, { name?: string }>} skills
+ * @param {string} resolvedKey
+ * @param {string} nameLower
+ * @param {string} keyLower
+ * @returns {string}
+ */
+function stripSkillBrackets(description, skills, resolvedKey, nameLower, keyLower) {
+  const out = description.replace(/\[([^\]]+)\]/g, (match, inner) => {
+    const label = String(inner).trim();
+    if (!label) return match;
+    if (idMatchesSkill(label, skills, resolvedKey, nameLower, keyLower)) return '';
+    return match;
+  });
+  return tidyDescription(out);
+}
+
+/**
+ * @param {object} record
+ * @param {Record<string, { name?: string }>} skills
+ * @param {string} resolvedKey
+ * @param {string} nameLower
+ * @param {string} keyLower
+ * @returns {number} 1 when a description field changed
+ */
+function stripRecord(record, skills, resolvedKey, nameLower, keyLower) {
+  if (!record || typeof record !== 'object') return 0;
+  if (Array.isArray(record.skillIDs)) {
+    record.skillIDs = record.skillIDs.filter(
+      (sid) => !idMatchesSkill(sid, skills, resolvedKey, nameLower, keyLower)
+    );
+  }
+  let descriptionFixes = 0;
+  for (const field of ['Description', 'description']) {
+    if (typeof record[field] !== 'string' || !record[field]) continue;
+    const next = stripSkillBrackets(record[field], skills, resolvedKey, nameLower, keyLower);
+    if (next !== record[field]) {
+      record[field] = next;
+      descriptionFixes = 1;
+    }
+  }
+  return descriptionFixes;
+}
+
+/**
+ * @param {{
+ *   jobs: unknown,
+ *   skills: Record<string, { name?: string }>,
+ *   education?: Record<string, object> | null,
+ *   categories?: Record<string, { skillIDs?: string[] }> | null,
+ *   key: string,
+ * }} data
+ * @returns {{ ok: true, key: string, name: string, descriptionFixes: number } | { ok: false, error: string }}
+ */
+export function removeSkillFromResumeData({ jobs, skills, education, categories, key }) {
+  if (!skills || typeof skills !== 'object') {
+    return { ok: false, error: 'Skills data is missing.' };
+  }
+  const requested = key != null ? String(key).trim() : '';
+  if (!requested) return { ok: false, error: 'Missing skill key.' };
+  const resolvedKey = skills[requested] != null ? requested : labelToSlug(requested, skills);
+  if (resolvedKey == null || skills[resolvedKey] == null) {
+    return { ok: false, error: `Skill "${requested}" not found.` };
+  }
+  const name = skills[resolvedKey].name || resolvedKey;
+  const nameLower = String(name).trim().toLowerCase();
+  const keyLower = String(resolvedKey).trim().toLowerCase();
+
+  let descriptionFixes = 0;
+  for (const job of recordList(jobs)) {
+    descriptionFixes += stripRecord(job, skills, resolvedKey, nameLower, keyLower);
+  }
+  for (const entry of recordList(education)) {
+    descriptionFixes += stripRecord(entry, skills, resolvedKey, nameLower, keyLower);
+  }
+  for (const category of recordList(categories)) {
+    if (!category || typeof category !== 'object' || !Array.isArray(category.skillIDs)) continue;
+    category.skillIDs = category.skillIDs.filter(
+      (sid) => !idMatchesSkill(sid, skills, resolvedKey, nameLower, keyLower)
+    );
+  }
+
+  delete skills[resolvedKey];
+  return { ok: true, key: resolvedKey, name, descriptionFixes };
+}

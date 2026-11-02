@@ -16,6 +16,7 @@ import {
     updateJobSkills,
     updateEducationJobSkills,
     renameSkill,
+    deleteSkill,
     mergeSkill,
     updateSkillUrl,
     getResumeOtherSections,
@@ -793,6 +794,45 @@ describe('resumeManagerApi', () => {
         });
     });
 
+    describe('deleteSkill', () => {
+        it('PATCHes remove and returns JSON', async () => {
+            fetchMock.mockResolvedValue({
+                ok: true,
+                json: async () => ({ ok: true, key: 'vite' })
+            });
+            const r = await deleteSkill('rid', 'vite');
+            expect(r).toEqual({ ok: true, key: 'vite' });
+            expect(fetchMock).toHaveBeenCalledWith(
+                '/api/resumes/rid/skills/remove',
+                expect.objectContaining({
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'vite' })
+                })
+            );
+        });
+
+        it('throws with err.error when not ok', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 404,
+                json: async () => ({ error: 'Skill "vite" not found.' })
+            });
+            await expect(deleteSkill('r', 'vite')).rejects.toThrow('Skill "vite" not found.');
+        });
+
+        it('throws HTTP status when json fails', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 500,
+                json: async () => {
+                    throw new Error('fail');
+                }
+            });
+            await expect(deleteSkill('r', 'vite')).rejects.toThrow('HTTP 500');
+        });
+    });
+
     describe('mergeSkill', () => {
         it('PATCHes merge and returns JSON', async () => {
             fetchMock.mockResolvedValue({
@@ -1042,6 +1082,7 @@ describe('resumeManagerApi', () => {
         let updateJobSkillsStatic;
         let updateEducationJobSkillsStatic;
         let renameSkillStatic;
+        let deleteSkillStatic;
         let mergeSkillStatic;
         let updateSkillUrlStatic;
         let getResumeOtherSectionsStatic;
@@ -1068,6 +1109,7 @@ describe('resumeManagerApi', () => {
             updateJobSkillsStatic = api.updateJobSkills;
             updateEducationJobSkillsStatic = api.updateEducationJobSkills;
             renameSkillStatic = api.renameSkill;
+            deleteSkillStatic = api.deleteSkill;
             mergeSkillStatic = api.mergeSkill;
             updateSkillUrlStatic = api.updateSkillUrl;
             getResumeOtherSectionsStatic = api.getResumeOtherSections;
@@ -1154,6 +1196,10 @@ describe('resumeManagerApi', () => {
 
         it('renameSkill throws', async () => {
             await expect(renameSkillStatic('r1', 'old', 'New')).rejects.toThrow('not available on static hosting');
+        });
+
+        it('deleteSkill throws', async () => {
+            await expect(deleteSkillStatic('r1', 'vite')).rejects.toThrow('not available on static hosting');
         });
 
         it('mergeSkill throws', async () => {

@@ -3,6 +3,7 @@
     id="rde-skill-jobs-root"
     class="rde-tab-content rde-skill-jobs"
     tabindex="-1"
+    @click="onSkillJobsPageClick"
   >
     <p v-if="loadError" class="rde-error">{{ loadError }}</p>
     <p v-else-if="!jobsLoaded && resumeId && resumeId !== 'default'" class="rde-loading">Loading jobs…</p>
@@ -15,30 +16,48 @@
         <span v-else>No skills in this resume.</span>
       </p>
       <div v-else class="rde-skill-jobs-split">
+        <div class="rde-sj-toolbar" role="group" aria-label="Skill–jobs actions">
+          <button
+            type="button"
+            class="rde-btn rde-sj-clear"
+            aria-label="Clear all job–skill links"
+            title="Clear all job–skill links. You will be asked to confirm first."
+            :disabled="!canClearGrid"
+            @click="requestClearGrid"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            class="rde-btn rde-sj-remove"
+            aria-label="Delete selected skill"
+            :title="removeSkillButtonTitle"
+            :disabled="!canRemoveSkill"
+            @click.stop="requestRemoveSkill"
+          >
+            Delete skill
+          </button>
+        </div>
         <!-- Single scrolling container; one grid inside so header and body share column widths -->
         <div class="rde-sj-scroll" aria-label="Job and skill cross grid">
           <div ref="matrixGridEl" class="rde-sj-matrix-grid" :style="matrixGridStyle">
             <!-- Row 0: corner + job headers; subgrid inherits outer column sizes exactly -->
             <div class="rde-sj-header-jobs">
-              <div class="rde-sj-corner" role="group" aria-label="Skill–jobs actions">
-                <button
-                  type="button"
-                  class="rde-btn rde-sj-clear"
-                  aria-label="Clear all job–skill links"
-                  title="Clear all job–skill links. You will be asked to confirm first."
-                  :disabled="!canClearGrid"
-                  @click="requestClearGrid"
-                >
-                  Clear
-                </button>
-              </div>
+              <div class="rde-sj-corner" />
               <div
                 v-for="(job, ji) in jobsList"
                 :key="'job-h-' + ji"
                 class="rde-sj-head-job"
-                :class="{ 'rde-sj-unused': jobColumnIsUnused(job) }"
+                :class="{
+                  'rde-sj-unused': jobColumnIsUnused(job),
+                  'rde-sj-hi-col': highlight.jobIndex === ji,
+                }"
+                @click.stop="onJobHeaderClick(ji)"
               >
-                <span class="rde-skill-jobs-label rotated-job-name">{{ rotatedJobHeaderText(job, ji) }}</span>
+                <span
+                  class="rde-skill-jobs-label rotated-job-name"
+                  :class="{ 'rde-sj-hi-name': highlight.jobIndex === ji }"
+                >{{ rotatedJobHeaderText(job, ji) }}</span>
               </div>
             </div>
 
@@ -46,10 +65,17 @@
             <template v-for="(skillRow, si) in skillRowsForMatrix" :key="'skill-row-' + skillRow.id">
               <div
                 class="rde-sj-head-skill"
-                :class="{ 'rde-sj-unused': skillRow.jobCount === 0 }"
+                :class="{
+                  'rde-sj-unused': skillRow.jobCount === 0,
+                  'rde-sj-hi-row': highlight.skillId === skillRow.id,
+                }"
                 :title="skillRow.displayLabel"
+                @click.stop="onSkillHeaderClick(skillRow.id)"
               >
-                {{ skillRow.displayLabel }}
+                <span
+                  class="rde-sj-skill-name"
+                  :class="{ 'rde-sj-hi-name': highlight.skillId === skillRow.id }"
+                >{{ skillRow.displayLabel }}</span>
               </div>
               <button
                 v-for="(job, ji) in jobsList"
@@ -63,11 +89,13 @@
                   'rde-sj-cell--row-end': ji === jobsList.length - 1,
                   'rde-sj-cell--col-start': si === 0,
                   'rde-sj-cell--col-end': si === skillRowsForMatrix.length - 1,
+                  'rde-sj-hi-col': highlight.jobIndex === ji,
+                  'rde-sj-hi-row': highlight.skillId === skillRow.id,
                 }"
                 :disabled="!matrixCellInteractive(job)"
                 :aria-label="cellAriaLabel(job, ji, skillRow)"
                 :aria-pressed="isMatrixCellSelected(job, skillRow.id)"
-                @click="onMatrixCellClick(ji, skillRow)"
+                @click.stop="onMatrixCellClick(ji, skillRow)"
               />
             </template>
           </div>
@@ -96,12 +124,33 @@
           </div>
         </div>
       </div>
+      <div
+        v-if="showRemoveWarning"
+        class="rde-sj-confirm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rde-sj-remove-warning-title"
+      >
+        <div class="rde-sj-confirm-card">
+          <h2 id="rde-sj-remove-warning-title" class="rde-sj-confirm-title">Delete {{ skillPendingRemoval?.name || 'this skill' }}?</h2>
+          <p class="rde-sj-confirm-copy">
+            This deletes the skill from this resume. Its checked cells are cleared, and square-bracket mentions of it are removed from job descriptions.
+          </p>
+          <p class="rde-sj-confirm-copy">
+            This is saved immediately and cannot be undone from here.
+          </p>
+          <div class="rde-sj-confirm-actions">
+            <button type="button" class="rde-btn rde-sj-confirm-cancel" @click="showRemoveWarning = false">Cancel</button>
+            <button type="button" class="rde-btn rde-sj-remove" :disabled="saving" @click="confirmRemoveSkill">Delete skill</button>
+          </div>
+        </div>
+      </div>
     </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, shallowRef, computed, watch, nextTick } from 'vue';
+import { ref, shallowRef, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import * as api from '../api.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { ResumeJob, isEducationDerivedJob, educationKeyOf } from '@/modules/data/ResumeJob.mjs';
@@ -111,9 +160,15 @@ import {
   filterDescriptionBracketsToSkillSelection,
 } from '../jobSkillsSelection.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
-import { updateJobSkills, updateEducationJobSkills } from '@/modules/api/resumeManagerApi.mjs';
+import { updateJobSkills, updateEducationJobSkills, deleteSkill } from '@/modules/api/resumeManagerApi.mjs';
 import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 import { jobColumnHeaderText, rotatedJobHeaderRowMinPx, skillRowDisplayLabel } from '../skillJobsMatrixLabels.mjs';
+import {
+  emptySkillJobsHighlight,
+  skillJobsHighlightAfterClick,
+  skillJobsHighlightAfterEscape,
+  skillJobsHighlightAfterSkillRemoved,
+} from '../skillJobsMatrixSelection.mjs';
 
 const props = defineProps({
   resumeId: { type: String, default: '' },
@@ -127,10 +182,46 @@ const canEdit = true;
 /** True only while "Clear all" runs; cell toggles no longer block the grid (optimistic UI + background save). */
 const saving = ref(false);
 const showClearWarning = ref(false);
+const showRemoveWarning = ref(false);
+/** Skill captured when Remove skill was clicked, so a later highlight change cannot delete a different row. */
+const skillPendingRemoval = ref(null);
 /** In-flight per-cell save count; Clear is disabled until these finish to avoid inconsistent bulk clear. */
 const pendingToggleSaves = ref(0);
 /** Skill keys that existed when this panel loaded / last refetched (for updateJobSkills newSkills). */
 const initialSkillKeys = ref(new Set());
+/** One job column and one skill row. Name clicks set this; they do not toggle matrix links. */
+const highlight = ref(emptySkillJobsHighlight());
+
+function onJobHeaderClick(jobIndex) {
+  highlight.value = skillJobsHighlightAfterClick(highlight.value, { kind: 'job', jobIndex });
+}
+
+function onSkillHeaderClick(skillId) {
+  highlight.value = skillJobsHighlightAfterClick(highlight.value, { kind: 'skill', skillId });
+}
+
+/** Drop the skill-row highlight. A highlighted job column stays. */
+function clearSelectedSkillRow() {
+  highlight.value = skillJobsHighlightAfterSkillRemoved(highlight.value);
+}
+
+function onSkillJobsPageClick() {
+  highlight.value = skillJobsHighlightAfterClick(highlight.value, { kind: 'outside' });
+}
+
+/** Escape clears the highlight only. It does not prevent the modal from handling Escape. */
+function onSkillJobsEscape(event) {
+  if (event.key !== 'Escape') return;
+  if (highlight.value.jobIndex == null && highlight.value.skillId == null) return;
+  highlight.value = skillJobsHighlightAfterEscape(highlight.value);
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onSkillJobsEscape);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onSkillJobsEscape);
+});
 
 /** @type {Map<number, Promise<void>>} */
 const jobSaveTail = new Map();
@@ -233,6 +324,12 @@ const skillRowsForMatrix = computed(() => {
   return rows;
 });
 
+/** A deleted skill cannot stay selected, and no other row is selected in its place. */
+watch(skillRowsForMatrix, (rows) => {
+  const id = highlight.value.skillId;
+  if (id && !rows.some((row) => row.id === id)) clearSelectedSkillRow();
+});
+
 const hasAnyMatrixLink = computed(() => {
   const map = skillsMap.value;
   for (const job of jobsList.value) {
@@ -252,6 +349,29 @@ const canClearGrid = computed(
     && skillRowsForMatrix.value.length > 0
     && hasAnyMatrixLink.value
 );
+
+/** The one highlighted skill row, when that row is still in the grid. */
+const selectedSkillRow = computed(() => {
+  const id = highlight.value.skillId;
+  if (!id) return null;
+  return skillRowsForMatrix.value.find((row) => row.id === id) ?? null;
+});
+
+const canRemoveSkill = computed(
+  () =>
+    canPersistToServer
+    && props.resumeId
+    && props.resumeId !== 'default'
+    && !saving.value
+    && pendingToggleSaves.value === 0
+    && selectedSkillRow.value != null
+);
+
+const removeSkillButtonTitle = computed(() => {
+  if (canRemoveSkill.value) return 'Delete the selected skill. You will be asked to confirm first.';
+  if (!canPersistToServer) return 'Removing a skill needs the local app server.';
+  return 'Select one skill row to remove it.';
+});
 
 const crossGridColumnsStyle = computed(() => {
   const nj = jobsList.value.length;
@@ -373,6 +493,7 @@ function patchJobRowLocal(jobIndex, skillIDs, descriptionIfWork) {
 }
 
 function onMatrixCellClick(jobIndex, skillRow) {
+  highlight.value = skillJobsHighlightAfterClick(highlight.value, { kind: 'cell' });
   const job = jobs.value[jobIndex];
   if (!matrixCellInteractive(job)) return;
   const resumeId = props.resumeId;
@@ -451,6 +572,44 @@ function requestClearGrid() {
   showClearWarning.value = true;
 }
 
+function requestRemoveSkill() {
+  const row = selectedSkillRow.value;
+  if (!canRemoveSkill.value || saving.value || !row) return;
+  skillPendingRemoval.value = { id: row.id, name: row.fullName || row.id };
+  showRemoveWarning.value = true;
+}
+
+async function confirmRemoveSkill() {
+  const pending = skillPendingRemoval.value;
+  showRemoveWarning.value = false;
+  if (!pending?.id || !canPersistToServer) return;
+  const resumeId = props.resumeId;
+  saving.value = true;
+  try {
+    await deleteSkill(resumeId, pending.id);
+    clearSelectedSkillRow();
+    skillPendingRemoval.value = null;
+    const data = await api.getResumeData(resumeId);
+    jobs.value = jobsArray(data.jobs);
+    skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
+    initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
+    emit('saved', { removedSkill: true });
+  } catch (err) {
+    reportError(err, '[SkillJobsTab] Remove skill failed', 'Refetching resume data to resync');
+    try {
+      const data = await api.getResumeData(resumeId);
+      jobs.value = jobsArray(data.jobs);
+      skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
+      initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
+    } catch (e2) {
+      reportError(e2, '[SkillJobsTab] Remove skill: refetch after error failed', '');
+    }
+    alert('Failed to remove skill: ' + (err instanceof Error ? err.message : String(err)));
+  } finally {
+    saving.value = false;
+  }
+}
+
 async function confirmClearGrid() {
   showClearWarning.value = false;
   await onClearGrid();
@@ -501,6 +660,9 @@ watch(
   () => [props.resumeId, props.reloadNonce],
   ([id]) => {
     showClearWarning.value = false;
+    showRemoveWarning.value = false;
+    skillPendingRemoval.value = null;
+    highlight.value = emptySkillJobsHighlight();
     jobsLoaded.value = false;
     loadError.value = '';
     jobs.value = [];
@@ -533,6 +695,7 @@ watch(
 
 <style scoped>
 .rde-tab-content.rde-skill-jobs {
+  --rde-sj-select: #3dd68c;
   /* Fill .rde-body so .rde-sj-scroll can flex to the inner bottom (respects body padding) */
   flex: 1 1 auto;
   min-height: 0;
@@ -614,11 +777,12 @@ watch(
   min-height: max(4.35rem, var(--rde-sj-header-row-min, 4.35rem));
 }
 
-.rde-sj-corner .rde-sj-clear {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  z-index: 2;
+.rde-sj-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .rde-sj-head-job {
@@ -629,6 +793,7 @@ watch(
   background: transparent;
   min-width: 0;
   overflow: visible;
+  cursor: pointer;
 }
 
 /* Start at the bottom of the header, just above the skill rows, and travel up-right at −45°. */
@@ -674,6 +839,102 @@ watch(
   box-shadow: inset 0 0 0 2px #ff4d4d;
 }
 
+/* Green selection is a ::after ring so it does not replace the red unused box-shadow or change cell size. */
+.rde-sj-cell.rde-sj-hi-col,
+.rde-sj-cell.rde-sj-hi-row,
+.rde-sj-head-skill.rde-sj-hi-row {
+  position: relative;
+}
+
+.rde-sj-head-job.rde-sj-hi-col::after,
+.rde-sj-head-skill.rde-sj-hi-row::after,
+.rde-sj-cell.rde-sj-hi-col::after,
+.rde-sj-cell.rde-sj-hi-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.rde-sj-head-job.rde-sj-hi-col::after {
+  box-shadow: inset 2px 0 0 var(--rde-sj-select), inset -2px 0 0 var(--rde-sj-select), inset 0 2px 0 var(--rde-sj-select);
+}
+
+.rde-sj-cell.rde-sj-hi-col::after {
+  box-shadow: inset 2px 0 0 var(--rde-sj-select), inset -2px 0 0 var(--rde-sj-select);
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--col-end::after {
+  box-shadow: inset 2px 0 0 var(--rde-sj-select), inset -2px 0 0 var(--rde-sj-select), inset 0 -2px 0 var(--rde-sj-select);
+}
+
+.rde-sj-head-skill.rde-sj-hi-row::after {
+  box-shadow: inset 2px 0 0 var(--rde-sj-select), inset 0 2px 0 var(--rde-sj-select), inset 0 -2px 0 var(--rde-sj-select);
+}
+
+.rde-sj-cell.rde-sj-hi-row::after {
+  box-shadow: inset 0 2px 0 var(--rde-sj-select), inset 0 -2px 0 var(--rde-sj-select);
+}
+
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--row-end::after {
+  box-shadow: inset 0 2px 0 var(--rde-sj-select), inset 0 -2px 0 var(--rde-sj-select), inset -2px 0 0 var(--rde-sj-select);
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-hi-row::after {
+  box-shadow: inset 0 0 0 2px var(--rde-sj-select);
+}
+
+/* Sit the green ring inside a red unused edge so both stay visible. */
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-job::after,
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--unused-job::after {
+  inset: 0 2px;
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-job.rde-sj-cell--col-start::after {
+  inset: 2px 2px 0;
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-job.rde-sj-cell--col-end::after,
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--unused-job.rde-sj-cell--col-end::after {
+  inset: 0 2px 2px;
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-skill::after,
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--unused-skill::after {
+  inset: 2px 0;
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-skill.rde-sj-cell--col-end::after {
+  inset: 2px 0 2px;
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-skill.rde-sj-cell--row-end::after,
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--unused-skill.rde-sj-cell--row-end::after {
+  inset: 2px 2px 2px 0;
+}
+
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-job.rde-sj-cell--unused-skill::after,
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--unused-job.rde-sj-cell--unused-skill::after,
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-job.rde-sj-cell--unused-skill.rde-sj-cell--col-end::after,
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-job.rde-sj-cell--unused-skill.rde-sj-cell--row-end::after,
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--unused-job.rde-sj-cell--unused-skill.rde-sj-cell--col-end::after,
+.rde-sj-cell.rde-sj-hi-row.rde-sj-cell--unused-job.rde-sj-cell--unused-skill.rde-sj-cell--row-end::after,
+.rde-sj-cell.rde-sj-hi-col.rde-sj-cell--unused-job.rde-sj-cell--col-start.rde-sj-cell--col-end::after {
+  inset: 2px;
+}
+
+.rde-sj-skill-name.rde-sj-hi-name,
+.rde-sj-head-job .rde-skill-jobs-label.rde-sj-hi-name {
+  z-index: 1;
+  border-radius: 2px;
+  background: rgb(20, 24, 32);
+  box-shadow: 0 0 0 2px var(--rde-sj-select);
+}
+
+.rde-sj-skill-name.rde-sj-hi-name {
+  position: relative;
+}
+
 .rde-sj-head-skill {
   box-sizing: border-box;
   display: flex;
@@ -688,6 +949,7 @@ watch(
   white-space: nowrap;
   background: rgba(255, 255, 255, 0.04);
   min-width: min-content;
+  cursor: pointer;
 }
 
 .rde-sj-cell {
@@ -735,7 +997,8 @@ watch(
   max-width: none;
 }
 
-.rde-btn.rde-sj-clear {
+.rde-btn.rde-sj-clear,
+.rde-btn.rde-sj-remove {
   font-size: 0.8rem;
   padding: 4px 12px;
   border-radius: 4px;
@@ -743,12 +1006,15 @@ watch(
   color: #f5a5a5;
   border: 1px solid rgba(232, 100, 100, 0.45);
   cursor: pointer;
+  white-space: nowrap;
 }
-.rde-btn.rde-sj-clear:hover:not(:disabled) {
+.rde-btn.rde-sj-clear:hover:not(:disabled),
+.rde-btn.rde-sj-remove:hover:not(:disabled) {
   background: rgba(232, 80, 80, 0.35);
   color: #fff;
 }
-.rde-btn.rde-sj-clear:disabled {
+.rde-btn.rde-sj-clear:disabled,
+.rde-btn.rde-sj-remove:disabled {
   opacity: 0.45;
   cursor: default;
 }

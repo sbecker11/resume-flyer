@@ -615,6 +615,27 @@ export async function updateSkillUrl(resumeId, key, url) {
 }
 
 /**
+ * Delete one skill from a resume, including job links, education links, category links, and [bracket] mentions.
+ * @param {string} resumeId
+ * @param {string} key - Skill id or display name
+ */
+export async function deleteSkill(resumeId, key) {
+    if (hasServer()) {
+        const response = await fetch(
+            basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/skills/remove`),
+            { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) }
+        );
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        return response.json();
+    } else {
+        throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
+    }
+}
+
+/**
  * Merge one skill into another (replace fromKey with toKey everywhere, remove fromKey). Normalizes to a single skillID.
  * @param {string} resumeId
  * @param {string} fromKey - Skill to merge away (e.g. "JS")

@@ -13,6 +13,7 @@ import fetch from 'node-fetch';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
 import { mergeJobsWithEducation, toJobsArray } from './modules/data/mergeEducationIntoJobs.mjs';
+import { removeSkillFromResumeData } from './modules/resume-details-editor/removeSkillFromResume.mjs';
 import { enrichJobsWithSkills } from './modules/data/enrichedJobs.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
 import { assertSkillInfoUrl } from './modules/utils/skillUrlCatalog.mjs';
@@ -804,6 +805,64 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
         res.json({ ok: true, mergedInto: toKey, descriptionFixes: descFixes });
     } catch (err) {
         console.error('[PATCH skills/merge]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// PATCH /api/resumes/:id/skills/remove: Delete one skill and every job, education, category, and [bracket] reference to it.
+app.patch('/api/resumes/:id/skills/remove', async (req, res) => {
+    const { id } = req.params;
+    const key = req.body?.key != null ? String(req.body.key).trim() : '';
+    if (!id || id === 'default' || !key) {
+        return res.status(400).json({ error: 'Missing id or key.' });
+    }
+    const dir = path.join(PARSED_RESUMES_DIR, id);
+    const jobsPath = path.join(dir, 'jobs.json');
+    const skillsPath = path.join(dir, 'skills.json');
+    const educationPath = path.join(dir, 'education.json');
+    const categoriesPath = path.join(dir, 'categories.json');
+    try {
+        const [jobsContent, skillsContent] = await Promise.all([
+            fs.readFile(jobsPath, 'utf-8'),
+            fs.readFile(skillsPath, 'utf-8'),
+        ]);
+        const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
+        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        let education = null;
+        let categories = null;
+        try {
+            education = JSON.parse(await fs.readFile(educationPath, 'utf-8'));
+        } catch (err) {
+            if (err.code !== 'ENOENT') throw err;
+        }
+        try {
+            categories = JSON.parse(await fs.readFile(categoriesPath, 'utf-8'));
+        } catch (err) {
+            if (err.code !== 'ENOENT') throw err;
+        }
+        const removed = removeSkillFromResumeData({ jobs, skills, education, categories, key });
+        if (!removed.ok) {
+            return res.status(404).json({ error: removed.error });
+        }
+        const writes = [
+            atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
+            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+        ];
+        if (education && typeof education === 'object') {
+            writes.push(atomicWriteWithLock(educationPath, JSON.stringify(education, null, 2)));
+        }
+        if (categories && typeof categories === 'object') {
+            writes.push(atomicWriteWithLock(categoriesPath, JSON.stringify(categories, null, 2)));
+        }
+        await Promise.all(writes);
+        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
+        console.log(`[PATCH skills/remove] removed "${removed.name}" (${removed.key}); ${removed.descriptionFixes} descriptions updated`);
+        res.json({ ok: true, key: removed.key, name: removed.name, descriptionFixes: removed.descriptionFixes });
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            return res.status(404).json({ error: `Resume "${id}" not found.` });
+        }
+        console.error('[PATCH skills/remove]', err);
         res.status(500).json({ error: err.message });
     }
 });

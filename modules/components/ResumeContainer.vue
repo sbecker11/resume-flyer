@@ -681,7 +681,7 @@ async function handleDetailsSaved(payload) {
     emit('resume-selected', props.currentResumeId);
     return;
   }
-  if (payload?.clearAllJobSkillLinks === true) {
+  if (payload?.clearAllJobSkillLinks === true || payload?.removedSkill === true) {
     emit('resume-selected', props.currentResumeId);
     return;
   }
