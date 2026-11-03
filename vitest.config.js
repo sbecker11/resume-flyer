@@ -1,10 +1,13 @@
 import { defineConfig } from 'vitest/config';
+import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // Compile .vue SFCs so component tests can mount them with @vue/test-utils.
+  plugins: [vue()],
   test: {
     environment: 'happy-dom',
     include: ['modules/**/*.test.mjs', 'scripts/**/*.test.mjs'],
