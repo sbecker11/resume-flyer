@@ -249,7 +249,8 @@ export function testResumeSystem() {
         const ric = app.resumeItemsController;
         console.log('ResumeItemsController methods:');
         console.log('- createAllBizResumeDivs:', typeof ric.createAllBizResumeDivs);
-        console.log('- isInitialized:', ric.isInitialized());
+        // Instance flag (boolean) shadows the prototype method of the same name.
+        console.log('- isInitialized:', ric.isInitialized === true);
         console.log('- bizResumeDivs length:', ric.bizResumeDivs?.length);
     }
     

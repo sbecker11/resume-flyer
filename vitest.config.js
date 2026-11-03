@@ -25,7 +25,10 @@ export default defineConfig({
         '**/modules/types/**',
         '**/index.ts',
         // Vue/DOM-heavy or integration-only (not unit-tested to 80%)
-        'modules/resume/**',
+        // ~40% covered: half the file is a disabled scroll path (DISABLE_RESUME_LIST_SCROLL)
+        // plus console debug helpers. Behaviour is covered by ResumeListController.test.mjs.
+        'modules/resume/ResumeListController.mjs',
+        'modules/resume/testFixtures.mjs',
         'modules/composables/useBullsEyeVue3.mjs',
         'modules/composables/useCardsController.mjs',
         'modules/composables/useColorPalette.mjs',
