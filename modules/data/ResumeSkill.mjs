@@ -7,12 +7,12 @@ class ResumeSkill {
    * @param {Record<string, unknown>} [data]
    */
   constructor(id, data = {}) {
+    // Copy extensible fields first so the coerced core fields below are not overwritten by raw values.
+    Object.assign(this, data);
     this.id = String(id);
     this.name = data.name != null ? String(data.name) : this.id;
     this.url = data.url != null ? String(data.url) : '';
     this.img = data.img != null ? String(data.img) : '';
-    Object.assign(this, data);
-    this.id = String(id);
   }
 
   /**
