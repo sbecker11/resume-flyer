@@ -24,6 +24,7 @@ import {
 } from './modules/utils/skillUrlCatalogStore.mjs';
 import { reportError } from './modules/utils/errorReporting.mjs';
 import { createLocalDevQuitHandler } from './modules/server/localDevQuit.mjs';
+import { mergeSkillEntryInto } from './modules/server/skillMerge.mjs';
 import {
     archiveReparseBackup,
     listReparseHistory,
@@ -679,6 +680,29 @@ function resolveSkillKey(skills, keyOrName) {
     return null;
 }
 
+/**
+ * After a skill key goes away (merge or rename), re-key its shared-catalog row so the
+ * saved URL is not orphaned under a slug no resume uses any more. The surviving key's
+ * own row wins if it already has one. Optional step: the resume files are already
+ * written, so a catalog failure is reported and does not fail the request.
+ */
+async function carrySharedSkillUrlEntry(fromKey, toKey) {
+    try {
+        const catalog = await readSharedSkillUrlCatalog();
+        const fromEntry = catalog.entries[fromKey];
+        if (!fromEntry || catalog.entries[toKey]) return;
+        await upsertSharedSkillUrl({
+            key: toKey,
+            url: fromEntry.url,
+            updatedAt: fromEntry.updatedAt || new Date().toISOString(),
+            mirrorPath: skillUrlsMirrorPath(PARSED_RESUMES_DIR),
+        });
+        console.log(`[skill-urls] carried shared URL row "${fromKey}" → "${toKey}"`);
+    } catch (err) {
+        reportError(err, `[skill-urls] Failed to carry shared URL row "${fromKey}" → "${toKey}"`, 'Resume files are saved; the shared catalog row stays under the old key');
+    }
+}
+
 // PATCH /api/resumes/:id/skills/rename: Rename a skill (update key and all job references). If newName already exists, merge into it.
 app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
     const { id } = req.params;
@@ -704,15 +728,16 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
         if (resolvedOldKey == null) {
             return res.status(404).json({ error: `Skill "${oldKey}" not found.` });
         }
-        const oldSkillName = skills[resolvedOldKey].name || resolvedOldKey;
-        const jobIDsFromOld = skills[resolvedOldKey].jobIDs || [];
+        const oldSkill = skills[resolvedOldKey];
+        const oldSkillName = oldSkill.name || resolvedOldKey;
+        const jobIDsFromOld = oldSkill.jobIDs || [];
         delete skills[resolvedOldKey];
         if (skills[newNameTrimmed] != null) {
-            const existingJobIDs = new Set(skills[newNameTrimmed].jobIDs || []);
-            jobIDsFromOld.forEach(j => existingJobIDs.add(j));
-            skills[newNameTrimmed].jobIDs = [...existingJobIDs];
+            // Renaming onto an existing skill is a merge: keep the manually defined URL (shortest when both have one).
+            mergeSkillEntryInto(oldSkill, skills[newNameTrimmed]);
         } else {
             skills[newNameTrimmed] = { name: newNameTrimmed, jobIDs: [...jobIDsFromOld] };
+            if (oldSkill.url) skills[newNameTrimmed].url = oldSkill.url;
         }
         const jobEntries = Array.isArray(jobs) ? jobs.map((j, i) => [i, j]) : Object.entries(jobs);
         for (const [, job] of jobEntries) {
@@ -734,6 +759,7 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
         bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
+        await carrySharedSkillUrlEntry(resolvedOldKey, newNameTrimmed);
         res.json({ ok: true, key: newNameTrimmed, descriptionFixes: descFixes });
     } catch (err) {
         console.error('[PATCH skills/rename]', err);
@@ -774,10 +800,8 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
         }
         const fromSkillName = skills[resolvedFromKey].name || resolvedFromKey;
         const toSkillName = skills[resolvedToKey].name || resolvedToKey;
-        const fromJobIDs = new Set(skills[resolvedFromKey].jobIDs || []);
-        const toJobIDsSet = new Set(skills[resolvedToKey].jobIDs || []);
-        fromJobIDs.forEach(j => toJobIDsSet.add(j));
-        skills[resolvedToKey].jobIDs = [...toJobIDsSet];
+        // Union jobIDs and keep the manually defined URL (shortest when both skills have one).
+        mergeSkillEntryInto(skills[resolvedFromKey], skills[resolvedToKey]);
         delete skills[resolvedFromKey];
         const jobEntries = Array.isArray(jobs) ? jobs.map((j, i) => [i, j]) : Object.entries(jobs);
         for (const [, job] of jobEntries) {
@@ -802,6 +826,7 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
         ]);
         bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
+        await carrySharedSkillUrlEntry(resolvedFromKey, resolvedToKey);
         res.json({ ok: true, mergedInto: toKey, descriptionFixes: descFixes });
     } catch (err) {
         console.error('[PATCH skills/merge]', err);
