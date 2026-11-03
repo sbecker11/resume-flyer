@@ -192,4 +192,41 @@ describe('enrichedJobs', () => {
     expect(jobs[0].durationMonths).toBe(25);
     vi.useRealTimers();
   });
+
+  describe('skillIDs that name a skill by key or by display name', () => {
+    const skills = {
+      'express-js': { name: 'Express.js', url: 'https://expressjs.com/' },
+      postgresql: { name: 'PostgreSQL' },
+      Vue: { name: 'Vue' },
+    };
+
+    it('adds each skill to job-skills once under its canonical key', () => {
+      const rawJobs = [{
+        index: 0,
+        Description: '• [Vue] + [Express.js] on [PostgreSQL].',
+        // key for one, display name for another, both already found via brackets
+        skillIDs: ['express-js', 'PostgreSQL', 'Vue'],
+      }];
+      const [job] = enrichJobsWithSkills(rawJobs, skills);
+      expect(job['job-skills']).toEqual({ Vue: 'Vue', 'express-js': 'express-js', postgresql: 'postgresql' });
+      expect(job.references).toHaveLength(3);
+    });
+
+    it('resolves a display-name skillID not mentioned in the description to its key', () => {
+      const rawJobs = [{ index: 0, Description: 'No brackets here.', skillIDs: ['Express.js', 'express-js'] }];
+      const [job] = enrichJobsWithSkills(rawJobs, skills);
+      expect(Object.keys(job['job-skills'])).toEqual(['express-js']);
+    });
+
+    it('warns and skips a skillID that matches no key or name', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        const [job] = enrichJobsWithSkills([{ index: 0, employer: 'Acme', skillIDs: ['Nope'] }], skills);
+        expect(job['job-skills']).toEqual({});
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('skillID "Nope" on job "Acme"'));
+      } finally {
+        warn.mockRestore();
+      }
+    });
+  });
 });

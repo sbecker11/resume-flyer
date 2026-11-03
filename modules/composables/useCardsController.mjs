@@ -34,11 +34,13 @@ import {
     RESUME_LISTING_RESTORED_EVENT,
 } from '@/modules/utils/sceneCardVisibility.mjs'
 import { useAppState } from '@/modules/composables/useAppState.ts'
-import { skillLabelText, skillLabelHtml } from '@/modules/utils/skillLabel.mjs'
+import { skillLabelText, skillLabelHtml, canonicalSkillKey } from '@/modules/utils/skillLabel.mjs'
 import { skillCardIdBySlugFromElements, totalYearsFromDurationMonths } from '@/modules/utils/skillCardIdentity.mjs'
 import {
     renderSkillCardSceneInnerHtml,
     renderBizCardSceneBodyHtml,
+    orderedBizCardSkillEntries,
+    renderBizCardSkillTitleSpansHtml,
 } from '@/modules/scene/cardMarkup.mjs'
 import {
     markFocusedSkillLinkForJob,
@@ -312,16 +314,22 @@ export function useCardsController() {
             const allDivs = window.resumeFlyer?.allDivs
             if (allDivs) allDivs.bizCardDivs = cards.slice()
 
-            // Build unique skills and which jobs reference each (one skill card per skill, shared by multiple biz cards)
+            // Build unique skills and which jobs reference each (one skill card per skill, shared by multiple biz cards).
+            // job-skills keys are resolved to canonical skills-map keys so a stale baked
+            // enriched-jobs.json keyed by display name ("Express.js") still yields the same
+            // skill card as the key ("express-js") the biz-card skill titles link to.
+            const skillsDataForCards = getGlobalJobsDependency().getSkillsData()
             const allSkillNames = new Set()
             const skillToJobIndices = Object.create(null)
             for (let i = 0; i < jobs.length; i++) {
                 const job = jobs[i]
                 if (!job || isOutlineSectionJob(job) || !job['job-skills']) continue
-                for (const skillName of Object.keys(job['job-skills'])) {
+                for (const rawSkillName of Object.keys(job['job-skills'])) {
+                    const skillName = canonicalSkillKey(rawSkillName, skillsDataForCards)
+                    if (!skillName) continue
                     allSkillNames.add(skillName)
                     if (!skillToJobIndices[skillName]) skillToJobIndices[skillName] = []
-                    skillToJobIndices[skillName].push(i)
+                    if (!skillToJobIndices[skillName].includes(i)) skillToJobIndices[skillName].push(i)
                 }
             }
             const skillCardIdsBySkillName = Object.create(null)
@@ -980,47 +988,24 @@ export function useCardsController() {
     }
 
     /**
-     * Build the ordered list of skill entries to show in a biz card's skill titles section.
-     * Mirrors orderedSkillEntriesForRDiv in ResumeItemsController exactly:
-     *   1. job.skillIDs first (user-assigned, ordered)
-     *   2. then any extra keys from job['job-skills'] (description-derived) not already present
-     * Every skill is included regardless of whether a skill card exists in the scene.
-     * skillCardId is resolved from skillCardIdsByName when available, otherwise null.
-     * @param {object} job
-     * @param {Record<string,string>} skillCardIdsByName - map of skillKey → skillCardId
-     * @returns {{ skillKey: string, skillCardId: string|null, displayName: string }[]}
-     */
-    /**
      * Build the ordered skill entry list for a cDiv skills section.
-     * Exactly one entry per unique slug from all sources:
-     *   1. job.skillIDs       — user-assigned, ordered
-     *   2. job['job-skills']  — enrichment-derived (from description text)
-     *   3. descriptionSlugs   — any additional slugs found in [brackets] in the description
+     * Shared with the resume rDiv via orderedBizCardSkillEntries (cardMarkup.mjs):
+     * exactly one entry per canonical skill key across skillIDs, job-skills and
+     * description brackets, so a key ("express-js") and its display name ("Express.js")
+     * never produce two entries. Every skill is included regardless of whether a skill
+     * card exists in the scene; skillCardId is null when no card exists.
      *
      * @param {object} job
      * @param {Record<string,string>} skillCardIdsByName  slug → skill-card-div id
      * @param {Set<string>} [descriptionSlugs]  slugs found in description brackets
+     * @returns {{ skillKey: string, skillCardId: string|null, displayName: string }[]}
      */
     function orderedSkillEntriesForBizCard(job, skillCardIdsByName, descriptionSlugs = new Set()) {
-        const jobSkills = job['job-skills'] || {}
         const skillsData = getGlobalJobsDependency().getSkillsData()
-        const seen = new Set()
-        const result = []
-        const resolveDisplayName = (sid) =>
-            jobSkills[sid] || skillsData[sid]?.name || sid
-        const add = (sid) => {
-            if (seen.has(sid)) return
-            seen.add(sid)
-            result.push({
-                skillKey: sid,
-                skillCardId: skillCardIdsByName[sid] || null,
-                displayName: resolveDisplayName(sid),
-            })
-        }
-        if (Array.isArray(job.skillIDs)) job.skillIDs.forEach(add)
-        Object.keys(jobSkills).forEach(add)
-        descriptionSlugs.forEach(add)
-        return result.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }))
+        return orderedBizCardSkillEntries(job, skillsData, descriptionSlugs).map((entry) => ({
+            ...entry,
+            skillCardId: skillCardIdsByName?.[entry.skillKey] || null,
+        }))
     }
 
     /**
@@ -1037,12 +1022,7 @@ export function useCardsController() {
             return
         }
         const skillsData = getGlobalJobsDependency().getSkillsData()
-        container.innerHTML = entries.map(({ skillKey, skillCardId }) => {
-            const skillObj = skillsData[skillKey]
-            const cardIdAttr = skillCardId ? ` data-skill-card-id="${escapeHtml(skillCardId)}"` : ''
-            const ariaLabel = `View skill: ${skillLabelText(skillKey, skillObj)}`
-            return `<span class="biz-card-skill-title" tabindex="0" role="link" aria-label="${escapeHtml(ariaLabel)}"${cardIdAttr} data-skill-name="${escapeHtml(skillKey)}">${skillLabelHtml(skillKey, skillObj)}</span>`
-        }).join(' • ')
+        container.innerHTML = renderBizCardSkillTitleSpansHtml(entries, skillsData)
     }
 
     /**
@@ -2340,21 +2320,24 @@ export function useCardsController() {
             }
         }
 
-        // (#3, #4) Update skill-card-div data-referencing-biz-card-ids for added/removed skills
-        const removed = (oldSkillIDs || []).filter(s => !(skillIDs || []).includes(s))
-        const added = (skillIDs || []).filter(s => !(oldSkillIDs || []).includes(s))
-        for (const sid of removed) {
-            const skillName = (jobSkills && jobSkills[sid]) || sid
-            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]:not(.clone)`)
+        // (#3, #4) Update skill-card-div data-referencing-biz-card-ids for added/removed skills.
+        // Skill cards are keyed by canonical skills-map key, so resolve ids (key or display name) first.
+        const skillsDataForLinks = getGlobalJobsDependency().getSkillsData()
+        const toKey = (sid) => canonicalSkillKey(sid, skillsDataForLinks)
+        const newKeys = new Set((skillIDs || []).map(toKey))
+        const oldKeys = new Set((oldSkillIDs || []).map(toKey))
+        const removed = [...oldKeys].filter(k => k && !newKeys.has(k))
+        const added = [...newKeys].filter(k => k && !oldKeys.has(k))
+        for (const skillName of removed) {
+            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(skillName)}"]:not(.clone)`)
             if (skillCardEl) {
                 const ids = (skillCardEl.getAttribute('data-referencing-biz-card-ids') || '')
                     .split(',').filter(id => id && id !== bizCardId)
                 skillCardEl.setAttribute('data-referencing-biz-card-ids', ids.join(','))
             }
         }
-        for (const sid of added) {
-            const skillName = (jobSkills && jobSkills[sid]) || sid
-            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${skillName}"]:not(.clone)`)
+        for (const skillName of added) {
+            const skillCardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(skillName)}"]:not(.clone)`)
             if (skillCardEl) {
                 const existing = (skillCardEl.getAttribute('data-referencing-biz-card-ids') || '')
                     .split(',').filter(Boolean)

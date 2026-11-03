@@ -148,6 +148,27 @@ export function labelToSlug(label, skillsData) {
     return null
 }
 
+/**
+ * Canonical skill key for an identifier that may be either a skills-map key or a
+ * display name (job.skillIDs and baked job-skills have historically held both,
+ * e.g. "express-js" and "Express.js" for the same skill).
+ *
+ * Fast path: the value is already a key. Otherwise resolve like a bracketed
+ * description term (case-insensitive name, then case-insensitive key). When
+ * nothing matches, the trimmed input is returned unchanged so callers can still
+ * show the raw id; they must not treat it as a known skill.
+ *
+ * @param {unknown} idOrName
+ * @param {Record<string, { name?: string }> | null | undefined} skillsData
+ * @returns {string} canonical key, or the trimmed input when unresolved; '' for blank input
+ */
+export function canonicalSkillKey(idOrName, skillsData) {
+    const raw = typeof idOrName === 'string' ? idOrName.trim() : ''
+    if (!raw) return ''
+    if (skillsData && typeof skillsData === 'object' && skillsData[raw] != null) return raw
+    return labelToSlug(raw, skillsData) || raw
+}
+
 /** Common legal/corporate suffixes parsers often leave on employer-like skill tags. */
 const CORPORATE_SUFFIX_RE = /(?:\s*[,.]?\s*)?\b(?:incorporated|corporation|company|corp\.?|inc\.?|llc\.?|ltd\.?|l\.?l\.?c\.?|co\.?)\s*\.?$/i
 

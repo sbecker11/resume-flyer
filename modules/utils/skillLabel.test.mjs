@@ -6,6 +6,7 @@ import {
   skillLabelHtml,
   skillLabelForSlug,
   labelToSlug,
+  canonicalSkillKey,
   skillYearsExperienceLabel,
   skillYearsExperienceHtml,
 } from './skillLabel.mjs';
@@ -72,5 +73,32 @@ describe('skillLabel', () => {
     expect(labelToSlug('Acme LLC', skillsData)).toBe('acme');
     // Still unresolved when no base skill exists
     expect(labelToSlug('Kaplan Inc.', skillsData)).toBeNull();
+  });
+
+  describe('canonicalSkillKey', () => {
+    const skillsData = {
+      'express-js': { name: 'Express.js' },
+      Vue: { name: 'Vue' },
+      docx: { name: 'DOCX' },
+    };
+
+    it('returns a key unchanged (fast path)', () => {
+      expect(canonicalSkillKey('express-js', skillsData)).toBe('express-js');
+      expect(canonicalSkillKey('Vue', skillsData)).toBe('Vue');
+    });
+
+    it('maps a display name (any case) to its key', () => {
+      expect(canonicalSkillKey('Express.js', skillsData)).toBe('express-js');
+      expect(canonicalSkillKey('express.JS', skillsData)).toBe('express-js');
+      expect(canonicalSkillKey('DOCX', skillsData)).toBe('docx');
+      expect(canonicalSkillKey(' vue ', skillsData)).toBe('Vue');
+    });
+
+    it('returns the trimmed input when nothing matches, and empty for blank input', () => {
+      expect(canonicalSkillKey('Unknown Thing', skillsData)).toBe('Unknown Thing');
+      expect(canonicalSkillKey('  ', skillsData)).toBe('');
+      expect(canonicalSkillKey(null, skillsData)).toBe('');
+      expect(canonicalSkillKey('express-js', null)).toBe('express-js');
+    });
   });
 });

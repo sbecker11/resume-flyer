@@ -21,20 +21,20 @@
       "Bash"
     ],
     "references": [
-      "<a href=\"https://www.ecma-international.org/publications-and-standards/standards/ecma-376/\">[DOCX]</a>",
-      "<a href=\"https://www.iso.org/standard/75839.html\">[PDF]</a>",
-      "<a href=\"https://www.json.org/\">[JSON]</a>"
+      "<a href=\"https://www.ecma-international.org/publications-and-standards/standards/ecma-376/\">[docx]</a>",
+      "<a href=\"https://www.iso.org/standard/75839.html\">[pdf]</a>",
+      "<a href=\"https://www.json.org/\">[json]</a>"
     ],
     "job-skills": {
-      "DOCX": "DOCX",
-      "PDF": "PDF",
-      "JSON": "JSON",
+      "docx": "docx",
+      "pdf": "pdf",
+      "json": "json",
       "Anthropic API": "Anthropic API",
-      "Python": "Python",
-      "AI Agents": "AI Agents",
-      "AI/ML": "AI/ML",
-      "React 18": "React 18",
-      "GenAI": "GenAI",
+      "python": "python",
+      "ai-agents": "ai-agents",
+      "ai-ml": "ai-ml",
+      "react-18": "react-18",
+      "genai": "genai",
       "Bash": "Bash"
     },
     "outlineIndex": "1.1.1",
@@ -70,21 +70,22 @@
       "AI/ML"
     ],
     "references": [
-      "<a href=\"https://react.dev/\">[React]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/K-means_clustering\">[K-means]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Color_difference#CIEDE2000\">[CIEDE2000]</a>"
+      "<a href=\"https://react.dev/\">[react]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/K-means_clustering\">[k-means]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Color_difference#CIEDE2000\">[ciede2000]</a>"
     ],
     "job-skills": {
-      "React": "React",
-      "K-means": "K-means",
-      "CIEDE2000": "CIEDE2000",
+      "react": "react",
+      "k-means": "k-means",
+      "ciede2000": "ciede2000",
       "AWS S3": "AWS S3",
+      "express-js": "express-js",
       "JavaScript": "JavaScript",
-      "Node.js": "Node.js",
-      "OpenCV": "OpenCV",
-      "Python": "Python",
-      "Vite": "Vite",
-      "AI/ML": "AI/ML"
+      "node-js": "node-js",
+      "opencv": "opencv",
+      "python": "python",
+      "vite": "vite",
+      "ai-ml": "ai-ml"
     },
     "outlineIndex": "1.1.2",
     "outlineKind": "job",
@@ -120,21 +121,21 @@
     ],
     "references": [
       "<a href=\"https://vuejs.org/\">[Vue]</a>",
-      "<a href=\"https://www.typescriptlang.org/\">[TypeScript]</a>",
-      "<a href=\"https://vite.dev/\">[Vite]</a>",
-      "<a href=\"https://expressjs.com/\">[Express.js]</a>"
+      "<a href=\"https://www.typescriptlang.org/\">[typescript]</a>",
+      "<a href=\"https://vite.dev/\">[vite]</a>",
+      "<a href=\"https://expressjs.com/\">[express-js]</a>"
     ],
     "job-skills": {
       "Vue": "Vue",
-      "TypeScript": "TypeScript",
-      "Vite": "Vite",
-      "Express.js": "Express.js",
-      "Node.js": "Node.js",
+      "typescript": "typescript",
+      "vite": "vite",
+      "express-js": "express-js",
+      "node-js": "node-js",
       "JavaScript": "JavaScript",
       "Anthropic API": "Anthropic API",
-      "DOCX": "DOCX",
-      "AI/ML": "AI/ML",
-      "GenAI": "GenAI",
+      "docx": "docx",
+      "ai-ml": "ai-ml",
+      "genai": "genai",
       "Bash": "Bash"
     },
     "outlineIndex": "1.1.3",
@@ -179,32 +180,33 @@
       "Bash"
     ],
     "references": [
-      "<a href=\"https://gofastmcp.com/getting-started/welcome\">[FastMCP]</a>",
-      "<a href=\"https://www.langchain.com/\">[LangChain]</a>",
-      "<a href=\"https://www.langchain.com/blog/langchain-expression-language\">[LCEL]</a>",
+      "<a href=\"https://gofastmcp.com/getting-started/welcome\">[fastmcp]</a>",
+      "<a href=\"https://www.langchain.com/\">[langchain]</a>",
+      "<a href=\"https://www.langchain.com/blog/langchain-expression-language\">[lcel]</a>",
       "<a href=\"#\">[Chroma DB]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>",
-      "<a href=\"https://react.dev/\">[React]</a>"
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>",
+      "<a href=\"https://react.dev/\">[react]</a>"
     ],
     "job-skills": {
-      "FastMCP": "FastMCP",
-      "LangChain": "LangChain",
-      "LCEL": "LCEL",
+      "fastmcp": "fastmcp",
+      "langchain": "langchain",
+      "lcel": "lcel",
       "Chroma DB": "Chroma DB",
-      "PostgreSQL": "PostgreSQL",
-      "React": "React",
+      "postgresql": "postgresql",
+      "react": "react",
       "Amazon ECS": "Amazon ECS",
       "Amazon RDS": "Amazon RDS",
       "Docker Compose": "Docker Compose",
+      "express-js": "express-js",
       "JavaScript": "JavaScript",
-      "Node.js": "Node.js",
+      "node-js": "node-js",
       "OpenAI API": "OpenAI API",
-      "Python": "Python",
+      "python": "python",
       "SQLite": "SQLite",
-      "Vite": "Vite",
-      "AI/ML": "AI/ML",
-      "GenAI": "GenAI",
-      "LLM APIs OpenAI": "LLM APIs OpenAI",
+      "vite": "vite",
+      "ai-ml": "ai-ml",
+      "genai": "genai",
+      "llm-apis-openai": "llm-apis-openai",
       "Bash": "Bash"
     },
     "outlineIndex": "1.1.4",
@@ -233,14 +235,14 @@
       "GenAI"
     ],
     "references": [
-      "<a href=\"https://openai.com/index/dall-e-3/\">[DALL·E 3]</a>",
-      "<a href=\"https://opencv.org/\">[OpenCV]</a>"
+      "<a href=\"https://openai.com/index/dall-e-3/\">[dall-e-3]</a>",
+      "<a href=\"https://opencv.org/\">[opencv]</a>"
     ],
     "job-skills": {
-      "DALL·E 3": "DALL·E 3",
-      "OpenCV": "OpenCV",
-      "AI/ML": "AI/ML",
-      "GenAI": "GenAI"
+      "dall-e-3": "dall-e-3",
+      "opencv": "opencv",
+      "ai-ml": "ai-ml",
+      "genai": "genai"
     },
     "outlineIndex": "1.1.5",
     "outlineKind": "job",
@@ -270,21 +272,21 @@
       "rbac"
     ],
     "references": [
-      "<a href=\"https://react.dev/\">[React 18]</a>",
-      "<a href=\"https://expressjs.com/\">[Express.js]</a>",
-      "<a href=\"https://www.jwt.io/\">[JWT]</a>",
+      "<a href=\"https://react.dev/\">[react-18]</a>",
+      "<a href=\"https://expressjs.com/\">[express-js]</a>",
+      "<a href=\"https://www.jwt.io/\">[jwt]</a>",
       "<a href=\"https://github.com/kelektiv/node.bcrypt.js\">[bcrypt]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Role-based_access_control\">[RBAC]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://en.wikipedia.org/wiki/Role-based_access_control\">[rbac]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "React 18": "React 18",
-      "Express.js": "Express.js",
-      "JWT": "JWT",
+      "react-18": "react-18",
+      "express-js": "express-js",
+      "jwt": "jwt",
       "bcrypt": "bcrypt",
-      "RBAC": "RBAC",
-      "PostgreSQL": "PostgreSQL",
-      "React": "React"
+      "rbac": "rbac",
+      "postgresql": "postgresql",
+      "react": "react"
     },
     "outlineIndex": "1.1.6",
     "outlineKind": "job",
@@ -328,33 +330,33 @@
       "Bash"
     ],
     "references": [
-      "<a href=\"https://spring.io/projects/spring-boot\">[Spring Boot]</a>",
+      "<a href=\"https://spring.io/projects/spring-boot\">[spring-boot]</a>",
       "<a href=\"https://github.com/pgvector/pgvector\">[pgvector]</a>",
-      "<a href=\"https://huggingface.co/\">[HuggingFace]</a>",
-      "<a href=\"https://huggingface.co/microsoft/MiniLM-L12-H384-uncased\">[MiniLM]</a>",
-      "<a href=\"https://aws.amazon.com/fargate/\">[ECS Fargate]</a>"
+      "<a href=\"https://huggingface.co/\">[huggingface]</a>",
+      "<a href=\"https://huggingface.co/microsoft/MiniLM-L12-H384-uncased\">[minilm]</a>",
+      "<a href=\"https://aws.amazon.com/fargate/\">[ecs-fargate]</a>"
     ],
     "job-skills": {
-      "Spring Boot": "Spring Boot",
+      "spring-boot": "spring-boot",
       "pgvector": "pgvector",
-      "HuggingFace": "HuggingFace",
-      "MiniLM": "MiniLM",
-      "ECS Fargate": "ECS Fargate",
-      "Spring": "Spring",
+      "huggingface": "huggingface",
+      "minilm": "minilm",
+      "ecs-fargate": "ecs-fargate",
+      "spring": "spring",
       "Docker Compose": "Docker Compose",
       "Amazon ECS": "Amazon ECS",
       "Amazon RDS": "Amazon RDS",
       "AWS CloudFormation": "AWS CloudFormation",
-      "Docker": "Docker",
+      "docker": "docker",
       "Flask": "Flask",
-      "Java": "Java",
+      "java": "java",
       "Pandas": "Pandas",
-      "PostgreSQL": "PostgreSQL",
-      "Python": "Python",
-      "PyTorch": "PyTorch",
+      "postgresql": "postgresql",
+      "python": "python",
+      "pytorch": "pytorch",
       "sentence-transformers": "sentence-transformers",
-      "AI/ML": "AI/ML",
-      "DevOps": "DevOps",
+      "ai-ml": "ai-ml",
+      "devops": "devops",
       "Bash": "Bash"
     },
     "outlineIndex": "1.1.7",
@@ -395,29 +397,29 @@
       "Bash"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://spring.io/projects/spring-boot\">[Spring Boot]</a>",
-      "<a href=\"https://spring.io/projects/spring-ai\">[Spring AI]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>",
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://spring.io/projects/spring-boot\">[spring-boot]</a>",
+      "<a href=\"https://spring.io/projects/spring-ai\">[spring-ai]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>",
       "<a href=\"https://aws.amazon.com/bedrock/\">[Amazon Bedrock]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "Spring Boot": "Spring Boot",
-      "Spring AI": "Spring AI",
-      "PostgreSQL": "PostgreSQL",
+      "java": "java",
+      "spring-boot": "spring-boot",
+      "spring-ai": "spring-ai",
+      "postgresql": "postgresql",
       "Amazon Bedrock": "Amazon Bedrock",
-      "Spring": "Spring",
+      "spring": "spring",
       "Amazon ECS": "Amazon ECS",
       "AWS CloudWatch": "AWS CloudWatch",
       "AWS CostExplorer": "AWS CostExplorer",
-      "Docker": "Docker",
-      "Flyway": "Flyway",
+      "docker": "docker",
+      "flyway": "flyway",
       "pgvector": "pgvector",
       "Terraform": "Terraform",
-      "AI/ML": "AI/ML",
-      "DevOps": "DevOps",
-      "GenAI": "GenAI",
+      "ai-ml": "ai-ml",
+      "devops": "devops",
+      "genai": "genai",
       "Bash": "Bash"
     },
     "outlineIndex": "1.1.8",
@@ -441,8 +443,6 @@
     "educationKey": null,
     "skillIDs": [
       "LangGraph",
-      "Snowflake Cortex Search",
-      "MLflow",
       "Optuna",
       "Anthropic API",
       "LangChain",
@@ -459,27 +459,27 @@
       "MLOps"
     ],
     "references": [
-      "<a href=\"https://langchain-ai.github.io/langgraph/\">[LangGraph]</a>",
-      "<a href=\"https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview\">[Snowflake Cortex Search]</a>",
-      "<a href=\"https://mlflow.org/\">[MLflow]</a>",
-      "<a href=\"https://optuna.org/\">[Optuna]</a>"
+      "<a href=\"https://langchain-ai.github.io/langgraph/\">[langgraph]</a>",
+      "<a href=\"https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview\">[snowflake-cortex-search]</a>",
+      "<a href=\"https://mlflow.org/\">[mlflow]</a>",
+      "<a href=\"https://optuna.org/\">[optuna]</a>"
     ],
     "job-skills": {
-      "LangGraph": "LangGraph",
-      "Snowflake Cortex Search": "Snowflake Cortex Search",
-      "MLflow": "MLflow",
-      "Optuna": "Optuna",
+      "langgraph": "langgraph",
+      "snowflake-cortex-search": "snowflake-cortex-search",
+      "mlflow": "mlflow",
+      "optuna": "optuna",
       "PSI drift monitoring": "PSI drift monitoring",
-      "Snowflake": "Snowflake",
+      "snowflake": "snowflake",
       "Anthropic API": "Anthropic API",
-      "LangChain": "LangChain",
-      "Python": "Python",
+      "langchain": "langchain",
+      "python": "python",
       "scikit-learn": "scikit-learn",
       "SQLite": "SQLite",
-      "AI/ML": "AI/ML",
-      "Agile": "Agile",
-      "GenAI": "GenAI",
-      "MLOps": "MLOps"
+      "ai-ml": "ai-ml",
+      "agile": "agile",
+      "genai": "genai",
+      "mlops": "mlops"
     },
     "outlineIndex": "1.1.9",
     "outlineKind": "job",
@@ -516,21 +516,21 @@
     ],
     "references": [
       "<a href=\"https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html\">[launchd]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Large_language_model\">[LLM]</a>"
+      "<a href=\"https://en.wikipedia.org/wiki/Large_language_model\">[llm]</a>"
     ],
     "job-skills": {
       "launchd": "launchd",
-      "LLM": "LLM",
+      "llm": "llm",
       "Anthropic API": "Anthropic API",
       "GMail API": "GMail API",
       "Bash": "Bash",
-      "Python": "Python",
-      "React": "React",
-      "TypeScript": "TypeScript",
+      "python": "python",
+      "react": "react",
+      "typescript": "typescript",
       "Z3": "Z3",
       "Zsh": "Zsh",
-      "AI/ML": "AI/ML",
-      "GenAI": "GenAI"
+      "ai-ml": "ai-ml",
+      "genai": "genai"
     },
     "outlineIndex": "1.1.10",
     "outlineKind": "job",
@@ -558,16 +558,16 @@
       "agile"
     ],
     "references": [
-      "<a href=\"https://www.python.org/\">[Python]</a>",
-      "<a href=\"https://restfulapi.net/\">[REST API]</a>",
-      "<a href=\"https://www.atlassian.com/software/jira\">[Jira]</a>",
-      "<a href=\"https://www.atlassian.com/agile\">[Agile]</a>"
+      "<a href=\"https://www.python.org/\">[python]</a>",
+      "<a href=\"https://restfulapi.net/\">[rest-api]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://www.atlassian.com/agile\">[agile]</a>"
     ],
     "job-skills": {
-      "Python": "Python",
-      "REST API": "REST API",
-      "Jira": "Jira",
-      "Agile": "Agile"
+      "python": "python",
+      "rest-api": "rest-api",
+      "jira": "jira",
+      "agile": "agile"
     },
     "outlineIndex": "1.2.1",
     "outlineKind": "job",
@@ -603,28 +603,28 @@
     ],
     "references": [
       "<a href=\"https://www.getdbt.com/\">[dbt]</a>",
-      "<a href=\"https://aws.amazon.com/glue/\">[AWS Glue]</a>",
-      "<a href=\"https://docs.aws.amazon.com/glue/latest/dg/add-crawler.html\">[Glue Crawler]</a>",
-      "<a href=\"https://aws.amazon.com/codecommit/\">[CodeCommit]</a>",
-      "<a href=\"https://aws.amazon.com/codebuild/\">[CodeBuild]</a>",
-      "<a href=\"https://aws.amazon.com/codepipeline/\">[CodePipeline]</a>",
-      "<a href=\"https://aws.amazon.com/codedeploy/\">[CodeDeploy]</a>",
+      "<a href=\"https://aws.amazon.com/glue/\">[aws-glue]</a>",
+      "<a href=\"https://docs.aws.amazon.com/glue/latest/dg/add-crawler.html\">[glue-crawler]</a>",
+      "<a href=\"https://aws.amazon.com/codecommit/\">[codecommit]</a>",
+      "<a href=\"https://aws.amazon.com/codebuild/\">[codebuild]</a>",
+      "<a href=\"https://aws.amazon.com/codepipeline/\">[codepipeline]</a>",
+      "<a href=\"https://aws.amazon.com/codedeploy/\">[codedeploy]</a>",
       "<a href=\"#\">[AWS CloudWatch]</a>",
-      "<a href=\"https://www.atlassian.com/software/jira\">[Jira]</a>",
-      "<a href=\"https://www.atlassian.com/agile\">[Agile]</a>"
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://www.atlassian.com/agile\">[agile]</a>"
     ],
     "job-skills": {
       "dbt": "dbt",
-      "AWS Glue": "AWS Glue",
-      "Glue Crawler": "Glue Crawler",
-      "CodeCommit": "CodeCommit",
-      "CodeBuild": "CodeBuild",
-      "CodePipeline": "CodePipeline",
-      "CodeDeploy": "CodeDeploy",
+      "aws-glue": "aws-glue",
+      "glue-crawler": "glue-crawler",
+      "codecommit": "codecommit",
+      "codebuild": "codebuild",
+      "codepipeline": "codepipeline",
+      "codedeploy": "codedeploy",
       "AWS CloudWatch": "AWS CloudWatch",
-      "Jira": "Jira",
-      "Agile": "Agile",
-      "DevOps": "DevOps"
+      "jira": "jira",
+      "agile": "agile",
+      "devops": "devops"
     },
     "outlineIndex": "1.2.2",
     "outlineKind": "job",
@@ -656,23 +656,23 @@
       "DevOps"
     ],
     "references": [
-      "<a href=\"https://www.cyberark.com/products/privileged-access-manager/\">[CyberArk PAM]</a>",
-      "<a href=\"https://kafka.apache.org/\">[Kafka]</a>",
-      "<a href=\"https://airflow.apache.org/\">[Airflow]</a>",
-      "<a href=\"https://aws.amazon.com/xray/\">[Xray]</a>",
-      "<a href=\"https://www.atlassian.com/software/jira\">[Jira]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/CI/CD\">[CI/CD]</a>",
-      "<a href=\"https://www.atlassian.com/agile\">[Agile]</a>"
+      "<a href=\"https://www.cyberark.com/products/privileged-access-manager/\">[cyberark-pam]</a>",
+      "<a href=\"https://kafka.apache.org/\">[kafka]</a>",
+      "<a href=\"https://airflow.apache.org/\">[airflow]</a>",
+      "<a href=\"https://aws.amazon.com/xray/\">[xray]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/CI/CD\">[ci-cd]</a>",
+      "<a href=\"https://www.atlassian.com/agile\">[agile]</a>"
     ],
     "job-skills": {
-      "CyberArk PAM": "CyberArk PAM",
-      "Kafka": "Kafka",
-      "Airflow": "Airflow",
-      "Xray": "Xray",
-      "Jira": "Jira",
-      "CI/CD": "CI/CD",
-      "Agile": "Agile",
-      "DevOps": "DevOps"
+      "cyberark-pam": "cyberark-pam",
+      "kafka": "kafka",
+      "airflow": "airflow",
+      "xray": "xray",
+      "jira": "jira",
+      "ci-cd": "ci-cd",
+      "agile": "agile",
+      "devops": "devops"
     },
     "outlineIndex": "1.2.3",
     "outlineKind": "job",
@@ -706,28 +706,28 @@
       "tableau"
     ],
     "references": [
-      "<a href=\"https://segment.com/\">[Segment CDP]</a>",
-      "<a href=\"https://www.salesforce.com/\">[Salesforce]</a>",
-      "<a href=\"https://www.shopify.com/\">[Shopify]</a>",
-      "<a href=\"https://ads.google.com/\">[Google Ads]</a>",
-      "<a href=\"https://www.youtube.com/\">[YouTube]</a>",
-      "<a href=\"https://cloud.google.com/\">[GCP]</a>",
-      "<a href=\"https://cloud.google.com/bigquery\">[BigQuery]</a>",
-      "<a href=\"https://fastapi.tiangolo.com/\">[FastAPI]</a>",
-      "<a href=\"https://airflow.apache.org/\">[Airflow]</a>",
-      "<a href=\"https://www.tableau.com/\">[Tableau]</a>"
+      "<a href=\"https://segment.com/\">[segment-cdp]</a>",
+      "<a href=\"https://www.salesforce.com/\">[salesforce]</a>",
+      "<a href=\"https://www.shopify.com/\">[shopify]</a>",
+      "<a href=\"https://ads.google.com/\">[google-ads]</a>",
+      "<a href=\"https://www.youtube.com/\">[youtube]</a>",
+      "<a href=\"https://cloud.google.com/\">[gcp]</a>",
+      "<a href=\"https://cloud.google.com/bigquery\">[bigquery]</a>",
+      "<a href=\"https://fastapi.tiangolo.com/\">[fastapi]</a>",
+      "<a href=\"https://airflow.apache.org/\">[airflow]</a>",
+      "<a href=\"https://www.tableau.com/\">[tableau]</a>"
     ],
     "job-skills": {
-      "Segment CDP": "Segment CDP",
-      "Salesforce": "Salesforce",
-      "Shopify": "Shopify",
-      "Google Ads": "Google Ads",
-      "YouTube": "YouTube",
-      "GCP": "GCP",
-      "BigQuery": "BigQuery",
-      "FastAPI": "FastAPI",
-      "Airflow": "Airflow",
-      "Tableau": "Tableau"
+      "segment-cdp": "segment-cdp",
+      "salesforce": "salesforce",
+      "shopify": "shopify",
+      "google-ads": "google-ads",
+      "youtube": "youtube",
+      "gcp": "gcp",
+      "bigquery": "bigquery",
+      "fastapi": "fastapi",
+      "airflow": "airflow",
+      "tableau": "tableau"
     },
     "outlineIndex": "1.2.4",
     "outlineKind": "job",
@@ -759,23 +759,23 @@
       "AI/ML"
     ],
     "references": [
-      "<a href=\"https://pytorch.org/foundation/\">[PyTorch]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Convolutional_neural_network\">[CNN]</a>",
-      "<a href=\"https://aws.amazon.com/sagemaker/\">[SageMaker]</a>",
-      "<a href=\"https://cloud.google.com/looker\">[Looker]</a>",
-      "<a href=\"https://www.snowflake.com/\">[Snowflake]</a>",
-      "<a href=\"https://www.atlassian.com/software/jira\">[Jira]</a>",
-      "<a href=\"https://www.atlassian.com/agile\">[Agile]</a>"
+      "<a href=\"https://pytorch.org/foundation/\">[pytorch]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Convolutional_neural_network\">[cnn]</a>",
+      "<a href=\"https://aws.amazon.com/sagemaker/\">[sagemaker]</a>",
+      "<a href=\"https://cloud.google.com/looker\">[looker]</a>",
+      "<a href=\"https://www.snowflake.com/\">[snowflake]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://www.atlassian.com/agile\">[agile]</a>"
     ],
     "job-skills": {
-      "PyTorch": "PyTorch",
-      "CNN": "CNN",
-      "SageMaker": "SageMaker",
-      "Looker": "Looker",
-      "Snowflake": "Snowflake",
-      "Jira": "Jira",
-      "Agile": "Agile",
-      "AI/ML": "AI/ML"
+      "pytorch": "pytorch",
+      "cnn": "cnn",
+      "sagemaker": "sagemaker",
+      "looker": "looker",
+      "snowflake": "snowflake",
+      "jira": "jira",
+      "agile": "agile",
+      "ai-ml": "ai-ml"
     },
     "outlineIndex": "1.2.5",
     "outlineKind": "job",
@@ -800,10 +800,10 @@
       "postgresql"
     ],
     "references": [
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "PostgreSQL": "PostgreSQL"
+      "postgresql": "postgresql"
     },
     "outlineIndex": "1.2.6",
     "outlineKind": "job",
@@ -834,19 +834,19 @@
     ],
     "references": [
       "<a href=\"https://vuejs.org/\">[Vue]</a>",
-      "<a href=\"https://nodejs.org/\">[Node.js]</a>",
-      "<a href=\"https://vuetifyjs.com/\">[Vuetify]</a>",
-      "<a href=\"https://vuelidate-next.netlify.app/\">[Vuelidate]</a>",
-      "<a href=\"https://www.atlassian.com/software/jira\">[Jira]</a>",
-      "<a href=\"https://www.atlassian.com/agile\">[Agile]</a>"
+      "<a href=\"https://nodejs.org/\">[node-js]</a>",
+      "<a href=\"https://vuetifyjs.com/\">[vuetify]</a>",
+      "<a href=\"https://vuelidate-next.netlify.app/\">[vuelidate]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>",
+      "<a href=\"https://www.atlassian.com/agile\">[agile]</a>"
     ],
     "job-skills": {
       "Vue": "Vue",
-      "Node.js": "Node.js",
-      "Vuetify": "Vuetify",
-      "Vuelidate": "Vuelidate",
-      "Jira": "Jira",
-      "Agile": "Agile"
+      "node-js": "node-js",
+      "vuetify": "vuetify",
+      "vuelidate": "vuelidate",
+      "jira": "jira",
+      "agile": "agile"
     },
     "outlineIndex": "1.2.7",
     "outlineKind": "job",
@@ -884,35 +884,35 @@
       "Data Pipelines"
     ],
     "references": [
-      "<a href=\"https://spark.apache.org/docs/latest/api/python/\">[PySpark]</a>",
-      "<a href=\"https://aws.amazon.com/emr/\">[AWS EMR]</a>",
-      "<a href=\"https://aws.amazon.com/kinesis/\">[Kinesis]</a>",
-      "<a href=\"https://www.rabbitmq.com/\">[RabbitMQ]</a>",
-      "<a href=\"https://www.json.org/\">[JSON]</a>",
-      "<a href=\"https://parquet.apache.org/\">[Parquet]</a>",
+      "<a href=\"https://spark.apache.org/docs/latest/api/python/\">[pyspark]</a>",
+      "<a href=\"https://aws.amazon.com/emr/\">[aws-emr]</a>",
+      "<a href=\"https://aws.amazon.com/kinesis/\">[kinesis]</a>",
+      "<a href=\"https://www.rabbitmq.com/\">[rabbitmq]</a>",
+      "<a href=\"https://www.json.org/\">[json]</a>",
+      "<a href=\"https://parquet.apache.org/\">[parquet]</a>",
       "<a href=\"#\">[AWS S3]</a>",
-      "<a href=\"https://aws.amazon.com/redshift/\">[Redshift]</a>",
-      "<a href=\"https://www.tableau.com/\">[Tableau]</a>",
-      "<a href=\"https://flywaydb.org/\">[Flyway]</a>",
-      "<a href=\"https://www.atlassian.com/agile\">[Agile]</a>",
-      "<a href=\"https://www.scrum.org/\">[Scrum]</a>",
-      "<a href=\"https://www.atlassian.com/software/jira\">[Jira]</a>"
+      "<a href=\"https://aws.amazon.com/redshift/\">[redshift]</a>",
+      "<a href=\"https://www.tableau.com/\">[tableau]</a>",
+      "<a href=\"https://flywaydb.org/\">[flyway]</a>",
+      "<a href=\"https://www.atlassian.com/agile\">[agile]</a>",
+      "<a href=\"https://www.scrum.org/\">[scrum]</a>",
+      "<a href=\"https://www.atlassian.com/software/jira\">[jira]</a>"
     ],
     "job-skills": {
-      "PySpark": "PySpark",
-      "AWS EMR": "AWS EMR",
-      "Kinesis": "Kinesis",
-      "RabbitMQ": "RabbitMQ",
-      "JSON": "JSON",
-      "Parquet": "Parquet",
+      "pyspark": "pyspark",
+      "aws-emr": "aws-emr",
+      "kinesis": "kinesis",
+      "rabbitmq": "rabbitmq",
+      "json": "json",
+      "parquet": "parquet",
       "AWS S3": "AWS S3",
-      "Redshift": "Redshift",
-      "Tableau": "Tableau",
-      "Flyway": "Flyway",
-      "Agile": "Agile",
-      "Scrum": "Scrum",
-      "Jira": "Jira",
-      "Data Pipelines": "Data Pipelines"
+      "redshift": "redshift",
+      "tableau": "tableau",
+      "flyway": "flyway",
+      "agile": "agile",
+      "scrum": "scrum",
+      "jira": "jira",
+      "data-pipelines": "data-pipelines"
     },
     "outlineIndex": "2",
     "outlineKind": "job",
@@ -940,16 +940,16 @@
       "spring"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://spring.io/\">[Spring]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://spring.io/\">[spring]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "Spring": "Spring",
-      "PostgreSQL": "PostgreSQL"
+      "java": "java",
+      "jsp": "jsp",
+      "spring": "spring",
+      "postgresql": "postgresql"
     },
     "outlineIndex": "3",
     "outlineKind": "job",
@@ -978,18 +978,18 @@
       "AI/ML"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://spring.io/\">[Spring]</a>",
-      "<a href=\"https://aws.amazon.com/dynamodb/\">[DynamoDB]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Natural_language_processing\">[NLP]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://spring.io/\">[spring]</a>",
+      "<a href=\"https://aws.amazon.com/dynamodb/\">[dynamodb]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Natural_language_processing\">[nlp]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "Spring": "Spring",
-      "DynamoDB": "DynamoDB",
-      "NLP": "NLP",
-      "Data Pipelines": "Data Pipelines",
-      "AI/ML": "AI/ML"
+      "java": "java",
+      "spring": "spring",
+      "dynamodb": "dynamodb",
+      "nlp": "nlp",
+      "data-pipelines": "data-pipelines",
+      "ai-ml": "ai-ml"
     },
     "outlineIndex": "4",
     "outlineKind": "job",
@@ -1017,15 +1017,15 @@
       "DynamoDB"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://www.postgresql.org/\">[PostgreSQL]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "PostgreSQL": "PostgreSQL",
-      "DynamoDB": "DynamoDB"
+      "java": "java",
+      "jsp": "jsp",
+      "postgresql": "postgresql",
+      "dynamodb": "dynamodb"
     },
     "outlineIndex": "5.6",
     "outlineKind": "job",
@@ -1050,10 +1050,10 @@
       "c"
     ],
     "references": [
-      "<a href=\"https://isocpp.org/\">[C++]</a>"
+      "<a href=\"https://isocpp.org/\">[c]</a>"
     ],
     "job-skills": {
-      "C++": "C++"
+      "c": "c"
     },
     "outlineIndex": "5.4",
     "outlineKind": "job",
@@ -1080,14 +1080,14 @@
       "filemaker"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://www.claris.com/filemaker/\">[FileMaker]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://www.claris.com/filemaker/\">[filemaker]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "FileMaker": "FileMaker"
+      "java": "java",
+      "jsp": "jsp",
+      "filemaker": "filemaker"
     },
     "outlineIndex": "5.3",
     "outlineKind": "job",
@@ -1114,14 +1114,14 @@
       "ms-mobile-5"
     ],
     "references": [
-      "<a href=\"https://www.sap.com/products/technology-platform/sql-anywhere.html\">[SQL Anywhere]</a>",
-      "<a href=\"https://particular.net/nservicebus\">[NServiceBus]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Windows_Mobile_5\">[MS Mobile 5]</a>"
+      "<a href=\"https://www.sap.com/products/technology-platform/sql-anywhere.html\">[sql-anywhere]</a>",
+      "<a href=\"https://particular.net/nservicebus\">[nservicebus]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Windows_Mobile_5\">[ms-mobile-5]</a>"
     ],
     "job-skills": {
-      "SQL Anywhere": "SQL Anywhere",
-      "NServiceBus": "NServiceBus",
-      "MS Mobile 5": "MS Mobile 5"
+      "sql-anywhere": "sql-anywhere",
+      "nservicebus": "nservicebus",
+      "ms-mobile-5": "ms-mobile-5"
     },
     "outlineIndex": "5.2",
     "outlineKind": "job",
@@ -1147,12 +1147,12 @@
       "db-design-tools"
     ],
     "references": [
-      "<a href=\"https://en.wikipedia.org/wiki/Windows_NT\">[Windows NT]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Database_design\">[DB Design Tools]</a>"
+      "<a href=\"https://en.wikipedia.org/wiki/Windows_NT\">[windows-nt]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Database_design\">[db-design-tools]</a>"
     ],
     "job-skills": {
-      "Windows NT": "Windows NT",
-      "DB Design Tools": "DB Design Tools"
+      "windows-nt": "windows-nt",
+      "db-design-tools": "db-design-tools"
     },
     "outlineIndex": "5.1",
     "outlineKind": "job",
@@ -1179,14 +1179,14 @@
       "oracle"
     ],
     "references": [
-      "<a href=\"https://www.java.com/\">[Java]</a>",
-      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[JSP]</a>",
-      "<a href=\"https://www.oracle.com/database/\">[Oracle]</a>"
+      "<a href=\"https://www.java.com/\">[java]</a>",
+      "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
+      "<a href=\"https://www.oracle.com/database/\">[oracle]</a>"
     ],
     "job-skills": {
-      "Java": "Java",
-      "JSP": "JSP",
-      "Oracle": "Oracle"
+      "java": "java",
+      "jsp": "jsp",
+      "oracle": "oracle"
     },
     "outlineIndex": "6",
     "outlineKind": "job",

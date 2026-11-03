@@ -10,6 +10,7 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf, isOutlineSectionJob } from '../data/ResumeJob.mjs';
 import { displayJobHeading, outlineNestDepth } from '../utils/outlineIndex.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
+import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml } from '../scene/cardMarkup.mjs';
 import { tryParseFlexibleDateString, formatCardDatesDisplay, stripUnknownDatesFromTitle } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '../utils/skillInfoModal.mjs';
@@ -40,40 +41,18 @@ function skillTitleFocusAttrsForDisplayName(displayName) {
     return ` tabindex="0" role="link" aria-label="View skill: ${esc}"`;
 }
 /**
- * Build the ordered list of { skillKey, displayName } pairs for a job's skills section.
- * Uses job.skillIDs as the primary ordered source (user-assigned), then appends any
- * extra keys from job['job-skills'] (description-derived) not already present.
- * Resolves displayName from job['job-skills'] map; falls back to skillKey.
- * @param {object} jobData
- * @returns {{ skillKey: string, displayName: string }[]}
- */
-/**
  * Build the ordered skill entry list for an rDiv skills section.
- * Exactly one entry per unique slug from all sources:
- *   1. job.skillIDs       — user-assigned, ordered
- *   2. job['job-skills']  — enrichment-derived (from description text)
- *   3. descriptionSlugs   — any additional slugs found in [brackets] in the description
+ * Shared with the scene cDiv via orderedBizCardSkillEntries (cardMarkup.mjs): exactly one
+ * entry per canonical skill key across skillIDs, job-skills and description brackets, so a
+ * key ("express-js") and its display name ("Express.js") never produce two entries.
  *
  * @param {object} jobData
  * @param {Set<string>} [descriptionSlugs]  slugs found in description brackets
  * @returns {{ skillKey: string, displayName: string }[]}
  */
 function orderedSkillEntriesForRDiv(jobData, descriptionSlugs = new Set()) {
-    const jobSkills = jobData['job-skills'] || {}
     const skillsData = getGlobalJobsDependency().getSkillsData()
-    const resolveDisplayName = (sid) =>
-        jobSkills[sid] || skillsData[sid]?.name || sid
-    const seen = new Set()
-    const result = []
-    const add = (sid) => {
-        if (seen.has(sid)) return
-        seen.add(sid)
-        result.push({ skillKey: sid, displayName: resolveDisplayName(sid) })
-    }
-    if (Array.isArray(jobData.skillIDs)) jobData.skillIDs.forEach(add)
-    Object.keys(jobSkills).forEach(add)
-    descriptionSlugs.forEach(add)
-    return result.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }))
+    return orderedBizCardSkillEntries(jobData, skillsData, descriptionSlugs)
 }
 
 /**
@@ -83,17 +62,12 @@ function orderedSkillEntriesForRDiv(jobData, descriptionSlugs = new Set()) {
  * @returns {string} HTML string for the .skills-list content
  */
 function buildSkillListHTML(entries) {
-    const escHtml = (s) => String(s)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
     const skillsData = getGlobalJobsDependency().getSkillsData()
-    const spans = entries.map(({ skillKey, displayName }) => {
-        const skill = skillsData[skillKey]
-        const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(skillKey)}"]:not(.clone)`)
-        const idAttr = cardEl ? ` data-skill-card-id="${cardEl.id}"` : ''
-        const ariaLabel = `View skill: ${skillLabelText(skillKey, skill)}`
-        const innerHtml = skillLabelHtml(skillKey, skill)
-        return `<span class="biz-card-skill-title" tabindex="0" role="link" aria-label="${escHtml(ariaLabel)}" data-skill-name="${escHtml(skillKey)}"${idAttr}>${innerHtml}</span>`
-    }).join(' • ')
+    const withCardIds = entries.map((entry) => {
+        const cardEl = document.querySelector(`.skill-card-div[data-skill-name="${CSS.escape(entry.skillKey)}"]:not(.clone)`)
+        return { ...entry, skillCardId: cardEl ? cardEl.id : null }
+    })
+    const spans = renderBizCardSkillTitleSpansHtml(withCardIds, skillsData)
     return '<span class="bullet">•</span><span class="skills-text">' + spans + '</span>'
 }
 

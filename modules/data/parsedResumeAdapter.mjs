@@ -31,10 +31,20 @@ function isSlugKey(key) {
   return /^[a-z0-9][a-z0-9\-._]*$/.test(key);
 }
 
+/** True when the map key is the skill's own display name (name-keyed entry). */
+function isSelfNamedKey(key, skill) {
+  const name = skill && typeof skill === 'object' && skill.name != null ? String(skill.name).trim() : '';
+  return name !== '' && name === String(key).trim();
+}
+
 /**
  * @param {unknown} skills - One of three formats:
- *   1. Already slug-keyed: { [slug]: { name, url?, img?, ... } }  — our skills.json format; pass through unchanged.
+ *   1. Already canonical: { [slug]: { name, url?, img?, ... } } — our skills.json format; pass through unchanged.
+ *      A canonical map may also contain name-keyed entries ({ Vue: { name: 'Vue' } }) alongside slug
+ *      keys; those are still canonical (the key IS the identity the client, jobs.json skillIDs and
+ *      enriched-jobs.json all use), so the map is passed through as-is rather than re-keyed.
  *   2. Parser new format: { [opaqueID]: { name, url?, img?, ... } } — re-key by name for enrichment.
+ *      Detected only when some key is neither a slug nor the entry's own name.
  *   3. Legacy name-keyed: { [skillName]: { url?, img? } }          — pass through unchanged.
  * @returns {Record<string, { name?: string, url?: string, img?: string }>} Slug- or name-keyed skills for enrichment
  */
@@ -43,9 +53,11 @@ export function normalizeParserSkills(skills) {
   const entries = Object.entries(skills);
   if (entries.length === 0) return {};
 
-  // If all keys are valid slugs, the map is already in our canonical format — pass through.
-  const allSlugs = entries.every(([k]) => isSlugKey(k));
-  if (allSlugs) return /** @type {Record<string, { name?: string, url?: string, img?: string }>} */ (skills);
+  // If every key is a slug or the entry's own name, the keys are already the canonical identity — pass through.
+  // Re-keying here would split identity between the server/enriched-jobs.json (name keys) and the
+  // client's raw skills.json (slug keys), which made each affected skill render twice per card.
+  const allCanonical = entries.every(([k, v]) => isSlugKey(k) || isSelfNamedKey(k, v));
+  if (allCanonical) return /** @type {Record<string, { name?: string, url?: string, img?: string }>} */ (skills);
 
   // Parser "new format": keys are opaque IDs, values have a name field — re-key by name.
   const first = entries[0][1];

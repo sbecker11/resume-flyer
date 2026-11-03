@@ -191,6 +191,31 @@ describe('parsedResumeAdapter', () => {
             expect(normalizeParserSkills({})).toEqual({});
         });
 
+        it('should pass through a canonical map that mixes slug keys and self-named keys', () => {
+            // Our skills.json may hold both shapes; re-keying by name here used to split the
+            // identity space (server/baked: "Express.js", client: "express-js") and render each
+            // affected skill twice per card.
+            const skills = {
+                'express-js': { name: 'Express.js', url: 'https://expressjs.com/' },
+                Vue: { name: 'Vue', url: 'https://vuejs.org/' },
+                'Chroma DB': { name: 'Chroma DB' },
+            };
+
+            const result = normalizeParserSkills(skills);
+
+            expect(result).toBe(skills);
+            expect(Object.keys(result)).toEqual(['express-js', 'Vue', 'Chroma DB']);
+        });
+
+        it('should still re-key by name when any key is an opaque id', () => {
+            const skills = {
+                'express-js': { name: 'Express.js' },
+                'SkillID-9': { name: 'Chroma DB' },
+            };
+
+            expect(Object.keys(normalizeParserSkills(skills))).toEqual(['Express.js', 'Chroma DB']);
+        });
+
         it('should handle skills with no url or img', () => {
             const skills = {
                 'skill-1': { name: 'JavaScript' }

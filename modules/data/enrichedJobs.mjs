@@ -13,8 +13,7 @@ import { expandJobsOnePerContentIndex } from './expandJobsOnePerContentIndex.mjs
 import { parseOutlineIndex } from '../utils/outlineIndex.mjs';
 import { skillsObjectToResumeSkills } from './ResumeSkill.mjs';
 import { jobTenureMonthsInclusive } from '../utils/dateUtils.mjs';
-import { labelToSlug } from '../utils/skillLabel.mjs';
-import { reportError } from '../utils/errorReporting.mjs';
+import { labelToSlug, canonicalSkillKey } from '../utils/skillLabel.mjs';
 
 const BRACKET_REGEX = /\[([^\]]+)\]/g;
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -137,11 +136,21 @@ export function enrichJobsWithSkills(rawJobs, skills) {
     if (!rj.isEducationDerived) {
       ({ refs, jobSkills } = enrichJobFromDescription(rj.Description, skillsMap, matchers));
     }
+    // skillIDs may hold either the skills-map key ("express-js") or the display name
+    // ("Express.js"); resolve to the canonical key so a skill already found via its
+    // bracketed name is not added a second time under a different id.
     if (Array.isArray(rj.skillIDs)) {
       for (const sid of rj.skillIDs) {
-        if (!jobSkills[sid] && skillsMap[sid]) {
-          jobSkills[sid] = sid;
+        const key = canonicalSkillKey(sid, skillsMap);
+        if (!key || jobSkills[key]) continue;
+        if (!skillsMap[key]) {
+          console.warn(
+            `[enrichJobsWithSkills] skillID "${sid}" on job "${rj.employer || rj.institution || rj.outlineIndex || ''}" ` +
+            `matches no skills.json key or name — left out of job-skills`
+          );
+          continue;
         }
+        jobSkills[key] = key;
       }
     }
     rj.references = refs;

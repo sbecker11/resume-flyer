@@ -8,7 +8,7 @@
  * See docs/CARD-VISUAL-PARITY.md
  */
 
-import { skillLabelHtml, skillYearsExperienceHtml } from '@/modules/utils/skillLabel.mjs'
+import { skillLabelHtml, skillLabelText, skillYearsExperienceHtml, canonicalSkillKey } from '@/modules/utils/skillLabel.mjs'
 
 export function escapeHtml(text) {
     return String(text)
@@ -143,6 +143,62 @@ export function renderSkillCardResumeInnerHtml({
         infoUrl,
     })}
     ${urlEditHtml}<button type="button" class="skill-resume-div-close" aria-label="Remove skill card from resume listing">×</button>`
+}
+
+/**
+ * Ordered skill entries for a biz card's "Technologies & Skills" section (scene cDiv and resume rDiv).
+ *
+ * Sources, in priority order:
+ *   1. job.skillIDs       — user-assigned, ordered
+ *   2. job['job-skills']  — enrichment-derived (description brackets + unbracketed names)
+ *   3. descriptionSlugs   — slugs the caller already resolved from [brackets]
+ *
+ * Every id is first resolved to its canonical skills-map key via {@link canonicalSkillKey},
+ * so "express-js" (key) and "Express.js" (display name) collapse to ONE entry. Without this
+ * step a skill whose key differs from its name rendered twice on every card.
+ *
+ * Entries are sorted by display name. Ids that resolve to no known skill are kept
+ * (displayed as their raw id) so data problems stay visible rather than silently vanishing.
+ *
+ * @param {{ skillIDs?: unknown, 'job-skills'?: Record<string, string> }} job
+ * @param {Record<string, { name?: string }>} skillsData  full skills map (slug → skill)
+ * @param {Iterable<string>} [descriptionSlugs]
+ * @returns {{ skillKey: string, displayName: string }[]}
+ */
+export function orderedBizCardSkillEntries(job, skillsData, descriptionSlugs = []) {
+    const jobSkills = job?.['job-skills'] && typeof job['job-skills'] === 'object' ? job['job-skills'] : {}
+    const skills = skillsData && typeof skillsData === 'object' ? skillsData : {}
+    const seen = new Set()
+    const result = []
+    const add = (rawId) => {
+        const key = canonicalSkillKey(rawId, skills)
+        if (!key || seen.has(key)) return
+        seen.add(key)
+        const displayName = skills[key]?.name || jobSkills[key] || jobSkills[rawId] || key
+        result.push({ skillKey: key, displayName })
+    }
+    if (Array.isArray(job?.skillIDs)) job.skillIDs.forEach(add)
+    Object.keys(jobSkills).forEach(add)
+    for (const slug of descriptionSlugs || []) add(slug)
+    return result.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' }))
+}
+
+/**
+ * Inner HTML of a biz card's .skills-text span: one clickable .biz-card-skill-title per entry,
+ * joined by " • ". Shared by the scene cDiv and resume rDiv so both render identically.
+ *
+ * @param {{ skillKey: string, skillCardId?: string|null }[]} entries  from {@link orderedBizCardSkillEntries}
+ * @param {Record<string, { name?: string }>} skillsData
+ * @returns {string}
+ */
+export function renderBizCardSkillTitleSpansHtml(entries, skillsData) {
+    const skills = skillsData && typeof skillsData === 'object' ? skillsData : {}
+    return (entries || []).map(({ skillKey, skillCardId }) => {
+        const skillObj = skills[skillKey]
+        const cardIdAttr = skillCardId ? ` data-skill-card-id="${escapeHtml(skillCardId)}"` : ''
+        const ariaLabel = `View skill: ${skillLabelText(skillKey, skillObj)}`
+        return `<span class="biz-card-skill-title" tabindex="0" role="link" aria-label="${escapeHtml(ariaLabel)}"${cardIdAttr} data-skill-name="${escapeHtml(skillKey)}">${skillLabelHtml(skillKey, skillObj)}</span>`
+    }).join(' • ')
 }
 
 /**
