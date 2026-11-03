@@ -498,7 +498,8 @@ function onMatrixCellClick(jobIndex, skillRow) {
   if (!matrixCellInteractive(job)) return;
   const resumeId = props.resumeId;
   const map = skillsMap.value;
-  // Only keep IDs that exist in the skills map; drop any stale display-name orphans.
+  // The selection is already canonical (display-name skillIDs resolve to their key), so
+  // this only drops ids that match no skill at all.
   const existing = new Set(
     [...getSelectedSkillIdsForJob(job, map)].filter((id) => map[id] != null)
   );

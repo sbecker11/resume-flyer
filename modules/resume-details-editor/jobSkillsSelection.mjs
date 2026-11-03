@@ -1,14 +1,25 @@
 /**
  * Same definition of "which skills are linked to a job" as Job skills tab:
  * explicit job.skillIDs plus [bracket] terms in Description that match skills.json keys.
+ *
+ * Every id is resolved to its canonical skills-map key via canonicalSkillKey, because
+ * job.skillIDs has historically held both keys ("ai-ml") and display names ("AI/ML").
+ * Without that, a display-name link never matches the key the matrix rows, the
+ * Find-skill modal, and the scene cards are keyed by, and its months count as zero.
  */
 
-/** @param {string} name @param {Record<string, { name?: string }>} skillsMap */
+import { canonicalSkillKey } from '../utils/skillLabel.mjs';
+
+/**
+ * Canonical skills-map key for a key or display name; null when it matches no skill.
+ * @param {string} name
+ * @param {Record<string, { name?: string }>} skillsMap
+ * @returns {string|null}
+ */
 function resolveSkillKey(name, skillsMap) {
   if (!name || !skillsMap || typeof skillsMap !== 'object') return null;
-  if (skillsMap[name]) return name;
-  const entry = Object.entries(skillsMap).find(([, s]) => s && (s.name === name || s.name === name.trim()));
-  return entry ? entry[0] : null;
+  const key = canonicalSkillKey(name, skillsMap);
+  return key && skillsMap[key] != null ? key : null;
 }
 
 /** @param {unknown} description @param {Record<string, unknown>} skillsMap */
@@ -30,12 +41,21 @@ function skillKeysFromDescription(description, skillsMap) {
 }
 
 /**
+ * Canonical skill keys linked to a job: job.skillIDs (each resolved through
+ * canonicalSkillKey; an id that matches no skill is kept as typed so the caller can
+ * still see and clean it up) plus [bracket] terms in the Description.
+ *
  * @param {unknown} job
  * @param {Record<string, unknown>} skillsMap
  * @returns {Set<string>}
  */
 export function getSelectedSkillIdsForJob(job, skillsMap) {
-  const fromIds = new Set(job?.skillIDs || []);
+  const fromIds = new Set();
+  const ids = Array.isArray(job?.skillIDs) ? job.skillIDs : [];
+  for (const sid of ids) {
+    const key = canonicalSkillKey(sid, skillsMap);
+    if (key) fromIds.add(key);
+  }
   const fromDesc = skillKeysFromDescription(job?.Description ?? job?.description, skillsMap);
   fromDesc.forEach((id) => fromIds.add(id));
   return fromIds;

@@ -201,6 +201,33 @@ describe('skill finder experience', () => {
         expect(options.find((row) => row.slug === 'python').label).toBe('Python (18)')
         expect(options.find((row) => row.slug === 'vite').label).toBe('Vite (10)')
     })
+
+    it('counts a job whose skillIDs entry is the display name, not the key', () => {
+        const cards = [
+            skillCard('skill-card-div-1', 'ai-ml'),
+            skillCard('skill-card-div-2', 'ai-agents'),
+        ]
+        const skills = {
+            'ai-ml': { name: 'AI/ML' },
+            'ai-agents': { name: 'AI Agents' },
+        }
+        const jobs = [
+            { skillIDs: ['AI Agents', 'AI/ML'], durationMonths: 21, Description: '' },
+            { skillIDs: ['AI/ML'], durationMonths: 14, Description: '' },
+            { skillIDs: ['ai-ml'], durationMonths: 6, Description: '' },
+        ]
+        const options = buildSkillSearchOptions(cards, skills, null, jobs)
+        expect(options.find((row) => row.slug === 'ai-ml').label).toBe('AI/ML (41)')
+        expect(options.find((row) => row.slug === 'ai-agents').label).toBe('AI Agents (21)')
+
+        const biz = document.createElement('div')
+        biz.className = 'biz-card-div'
+        biz.setAttribute('data-job-number', '0')
+        biz.setAttribute('data-employer', 'resume-parser')
+        biz.setAttribute('data-role', 'Portfolio')
+        const jobOptions = buildJobSearchOptions([biz], jobs, skills)
+        expect(jobOptions[0].label).toBe('(21) resume-parser')
+    })
 })
 
 describe('resume skill copy identity', () => {

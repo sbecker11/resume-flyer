@@ -26,6 +26,31 @@ describe('jobSkillsSelection', () => {
     });
   });
 
+  describe('getSelectedSkillIdsForJob', () => {
+    const slugMap = {
+      'ai-ml': { name: 'AI/ML' },
+      'ai-agents': { name: 'AI Agents' },
+      python: { name: 'Python' },
+    };
+
+    it('resolves display-name skillIDs to the canonical key', () => {
+      const job = { skillIDs: ['AI Agents', 'AI/ML', 'python'], Description: '' };
+      const ids = getSelectedSkillIdsForJob(job, slugMap);
+      expect([...ids].sort()).toEqual(['ai-agents', 'ai-ml', 'python']);
+      expect(ids.has('AI/ML')).toBe(false);
+    });
+
+    it('does not double-count a skill listed by name and by bracket', () => {
+      const job = { skillIDs: ['AI/ML'], Description: 'Shipped [AI/ML] features in [Python].' };
+      expect([...getSelectedSkillIdsForJob(job, slugMap)].sort()).toEqual(['ai-ml', 'python']);
+    });
+
+    it('keeps an id that matches no skill as typed and skips blanks', () => {
+      const job = { skillIDs: ['Not A Skill', '', '  '], Description: '' };
+      expect([...getSelectedSkillIdsForJob(job, slugMap)]).toEqual(['Not A Skill']);
+    });
+  });
+
   describe('getSelectedSkillIdsForJob + filter round-trip', () => {
     it('after filtering to empty selection, job has no description-linked skills', () => {
       const job = { skillIDs: [], Description: 'Used [Python].' };
