@@ -37,7 +37,7 @@
       "genai",
       "ai-agents",
       "llm-apis-openai",
-      "llm-apis-anthropic",
+      "Anthropic API",
       "data-pipelines",
       "vector-dbs-chromadb"
     ]
@@ -143,7 +143,7 @@
     "name": "Frontend",
     "skillIDs": [
       "react",
-      "vue-3",
+      "Vue",
       "vite",
       "react-18",
       "vuetify",
@@ -155,7 +155,7 @@
     "name": "Framework",
     "skillIDs": [
       "react",
-      "vue-3",
+      "Vue",
       "express-js",
       "fastmcp",
       "react-18",
@@ -193,7 +193,7 @@
       "pyspark",
       "nservicebus",
       "llm-apis-openai",
-      "llm-apis-anthropic"
+      "Anthropic API"
     ]
   },
   "database": {

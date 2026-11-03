@@ -87,18 +87,6 @@
     ],
     "jobIDs": []
   },
-  "vue-3": {
-    "name": "Vue 3",
-    "url": "https://vuejs.org/",
-    "img": "",
-    "categoryIDs": [
-      "frontend",
-      "framework"
-    ],
-    "jobIDs": [
-      16
-    ]
-  },
   "typescript": {
     "name": "TypeScript",
     "url": "https://www.typescriptlang.org/",
@@ -127,7 +115,10 @@
       "framework"
     ],
     "jobIDs": [
-      5
+      5,
+      1,
+      2,
+      3
     ]
   },
   "fastmcp": {
@@ -174,7 +165,7 @@
     ]
   },
   "dall-e-3": {
-    "name": "DALL·E 3",
+    "name": "DALL\u00b7E 3",
     "url": "https://openai.com/index/dall-e-3/",
     "img": "",
     "categoryIDs": [
@@ -322,7 +313,9 @@
       "data-science",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      8
+    ]
   },
   "mlflow": {
     "name": "MLflow",
@@ -332,7 +325,9 @@
       "devops",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      8
+    ]
   },
   "optuna": {
     "name": "Optuna",
@@ -986,16 +981,6 @@
     ],
     "jobIDs": []
   },
-  "llm-apis-anthropic": {
-    "name": "LLM APIs Anthropic",
-    "url": "https://www.anthropic.com/",
-    "img": "",
-    "categoryIDs": [
-      "library",
-      "data-science"
-    ],
-    "jobIDs": []
-  },
   "data-pipelines": {
     "name": "Data Pipelines",
     "url": "https://en.wikipedia.org/wiki/Pipeline_(computing)",
@@ -1024,7 +1009,11 @@
       8,
       9
     ],
-    "url": "https://platform.claude.com/docs/en/api/overview"
+    "url": "https://platform.claude.com/docs/en/api/overview",
+    "categoryIDs": [
+      "library",
+      "data-science"
+    ]
   },
   "GMail API": {
     "name": "GMail API",
@@ -1059,12 +1048,6 @@
       9
     ],
     "url": "https://www.zsh.org/"
-  },
-  "MLFlow": {
-    "name": "MLFlow",
-    "jobIDs": [
-      8
-    ]
   },
   "scikit-learn": {
     "name": "scikit-learn",
@@ -1159,14 +1142,6 @@
       3
     ]
   },
-  "Express": {
-    "name": "Express",
-    "jobIDs": [
-      1,
-      2,
-      3
-    ]
-  },
   "JavaScript": {
     "name": "JavaScript",
     "jobIDs": [
@@ -1184,7 +1159,12 @@
   "Vue": {
     "name": "Vue",
     "jobIDs": [
-      2
+      2,
+      16
+    ],
+    "categoryIDs": [
+      "frontend",
+      "framework"
     ]
   },
   "AWS S3": {
@@ -1217,12 +1197,6 @@
     "jobIDs": [
       26,
       27
-    ]
-  },
-  "Snowflake Cortext Search": {
-    "name": "Snowflake Cortext Search",
-    "jobIDs": [
-      8
     ]
   },
   "PSI drift monitoring": {

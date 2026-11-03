@@ -10,7 +10,7 @@
     "css RGB": "#006688",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Agentic [DOCX]/[PDF] → [JSON] résumé parser with manual approval gates.",
+    "Description": "\u2022 Agentic [DOCX]/[PDF] \u2192 [JSON] r\u00e9sum\u00e9 parser with manual approval gates.",
     "outlineIndex": "1.1.1",
     "skillIDs": [
       "DOCX",
@@ -22,7 +22,6 @@
       "AI/ML",
       "React 18",
       "GenAI",
-      "LLM APIs Anthropic",
       "Bash"
     ],
     "jobID": "2"
@@ -38,14 +37,14 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
+    "Description": "\u2022 [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
     "outlineIndex": "1.1.2",
     "skillIDs": [
       "React",
       "K-means",
       "CIEDE2000",
       "AWS S3",
-      "Express",
+      "express-js",
       "JavaScript",
       "Node.js",
       "OpenCV",
@@ -66,22 +65,19 @@
     "css RGB": "#4400cd",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [Vue 3] + [TypeScript] + [Vite] SPA with an [Express.js] backend that parses an uploaded résumé via the resume-parser package into an interactive jobs × skills 3D card explorer.",
+    "Description": "\u2022 [Vue] + [TypeScript] + [Vite] SPA with an [Express.js] backend that parses an uploaded r\u00e9sum\u00e9 via the resume-parser package into an interactive jobs \u00d7 skills 3D card explorer.",
     "outlineIndex": "1.1.3",
     "skillIDs": [
-      "Vue 3",
+      "Vue",
       "TypeScript",
       "Vite",
-      "Express.js",
-      "Vue",
+      "express-js",
       "Node.js",
       "JavaScript",
-      "Express",
       "Anthropic API",
       "DOCX",
       "AI/ML",
       "GenAI",
-      "LLM APIs Anthropic",
       "Bash"
     ],
     "jobID": "4"
@@ -97,7 +93,7 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [FastMCP] + [LangChain] [LCEL] RAG server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "\u2022 [FastMCP] + [LangChain] [LCEL] RAG server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "outlineIndex": "1.1.4",
     "skillIDs": [
       "FastMCP",
@@ -109,7 +105,7 @@
       "Amazon RDS",
       "Chroma DB",
       "Docker Compose",
-      "Express",
+      "express-js",
       "JavaScript",
       "Node.js",
       "OpenAI API",
@@ -134,10 +130,10 @@
     "css RGB": "#800080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [DALL·E 3] + [OpenCV] campaign asset automation with brand-compliance validation.",
+    "Description": "\u2022 [DALL\u00b7E 3] + [OpenCV] campaign asset automation with brand-compliance validation.",
     "outlineIndex": "1.1.5",
     "skillIDs": [
-      "DALL·E 3",
+      "DALL\u00b7E 3",
       "OpenCV",
       "AI/ML",
       "GenAI"
@@ -155,7 +151,7 @@
     "css RGB": "#800000",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [React 18] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
+    "Description": "\u2022 [React 18] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
     "outlineIndex": "1.1.6",
     "skillIDs": [
       "express-js",
@@ -178,7 +174,7 @@
     "css RGB": "#ff4500",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [Spring Boot] + [pgvector] + [HuggingFace] [MiniLM] semantic search deployed on [ECS Fargate].",
+    "Description": "\u2022 [Spring Boot] + [pgvector] + [HuggingFace] [MiniLM] semantic search deployed on [ECS Fargate].",
     "outlineIndex": "1.1.7",
     "skillIDs": [
       "pgvector",
@@ -215,7 +211,7 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "• [Java] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "\u2022 [Java] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
     "outlineIndex": "1.1.8",
     "skillIDs": [
       "Spring Boot",
@@ -248,7 +244,7 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
+    "Description": "\u2022 [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
     "outlineIndex": "1.1.9",
     "skillIDs": [
       "LangGraph",
@@ -257,16 +253,15 @@
       "Optuna",
       "Anthropic API",
       "LangChain",
-      "MLFlow",
+      "mlflow",
       "Python",
       "scikit-learn",
       "Snowflake",
       "SQLite",
-      "Snowflake Cortext Search",
+      "snowflake-cortex-search",
       "AI/ML",
       "Agile",
       "GenAI",
-      "LLM APIs Anthropic",
       "PSI drift monitoring",
       "MLOps"
     ],
@@ -283,7 +278,7 @@
     "css RGB": "#008b8b",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [launchd]-scheduled pipeline orchestrating comms-migration inbox classification and job-tracker triage, [LLM] JD evaluation, and tailored résumé/cover-letter package generation.",
+    "Description": "\u2022 [launchd]-scheduled pipeline orchestrating comms-migration inbox classification and job-tracker triage, [LLM] JD evaluation, and tailored r\u00e9sum\u00e9/cover-letter package generation.",
     "outlineIndex": "1.1.10",
     "skillIDs": [
       "launchd",
@@ -297,8 +292,7 @@
       "Z3",
       "Zsh",
       "AI/ML",
-      "GenAI",
-      "LLM APIs Anthropic"
+      "GenAI"
     ],
     "jobID": "11"
   },
@@ -313,7 +307,7 @@
     "css RGB": "#0069AC",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Developed [Python]-based admin tools with [REST API] endpoints for Adobe's SEO platform; contributed to backend/cloud deployment, in [Jira]-tracked [Agile] sprints.",
+    "Description": "\u2022 Developed [Python]-based admin tools with [REST API] endpoints for Adobe's SEO platform; contributed to backend/cloud deployment, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.1",
     "skillIDs": [
       "python",
@@ -334,7 +328,7 @@
     "css RGB": "#006688",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Built [dbt] models and [AWS Glue]/[Glue Crawler] pipelines with explicit metadata lineage and schema-evolution tracking for regulated mortgage-finance data, deployed through [CodeCommit]/[CodeBuild]/[CodePipeline]/[CodeDeploy] with [AWS CloudWatch] monitoring, in [Jira]-tracked [Agile] sprints.",
+    "Description": "\u2022 Built [dbt] models and [AWS Glue]/[Glue Crawler] pipelines with explicit metadata lineage and schema-evolution tracking for regulated mortgage-finance data, deployed through [CodeCommit]/[CodeBuild]/[CodePipeline]/[CodeDeploy] with [AWS CloudWatch] monitoring, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.2",
     "skillIDs": [
       "dbt",
@@ -362,7 +356,7 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
+    "Description": "\u2022 Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.3",
     "skillIDs": [
       "CyberArk PAM",
@@ -387,7 +381,7 @@
     "css RGB": "#4400cd",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Engineered a [Segment CDP] pipeline unifying [Salesforce], [Shopify], [Google Ads], and [YouTube] data into [GCP]/[BigQuery] via [FastAPI], with [Airflow] orchestration and [Tableau] BI on top.",
+    "Description": "\u2022 Engineered a [Segment CDP] pipeline unifying [Salesforce], [Shopify], [Google Ads], and [YouTube] data into [GCP]/[BigQuery] via [FastAPI], with [Airflow] orchestration and [Tableau] BI on top.",
     "outlineIndex": "1.2.4",
     "skillIDs": [
       "airflow",
@@ -414,7 +408,7 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
+    "Description": "\u2022 Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.5",
     "skillIDs": [
       "PyTorch",
@@ -439,7 +433,7 @@
     "css RGB": "#800080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Designed a dimensional data warehouse in [PostgreSQL] using Type-2 slowly-changing dimensions to track real-estate FSBO property histories, building reusable data models for downstream reporting.",
+    "Description": "\u2022 Designed a dimensional data warehouse in [PostgreSQL] using Type-2 slowly-changing dimensions to track real-estate FSBO property histories, building reusable data models for downstream reporting.",
     "outlineIndex": "1.2.6",
     "skillIDs": [
       "postgresql"
@@ -457,10 +451,10 @@
     "css RGB": "#800000",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Built registration, login, and profile pages using [Vue 3] and [Node.js] with [Vuetify] UI and [Vuelidate] form validation, in [Jira]-tracked [Agile] sprints.",
+    "Description": "\u2022 Built registration, login, and profile pages using [Vue] and [Node.js] with [Vuetify] UI and [Vuelidate] form validation, in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.7",
     "skillIDs": [
-      "vue-3",
+      "Vue",
       "jira",
       "agile",
       "node-js",
@@ -480,7 +474,7 @@
     "css RGB": "#ff4500",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI expenses.• [Flyway] schema evolution/migrations.• First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
+    "Description": "\u2022 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline \u2192 date-partitioned [Parquet] in [AWS S3] \u2192 [Redshift] OLAP \u2192 [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline \u2192 date-partitioned [Parquet] in [AWS S3] \u2192 [Redshift] OLAP \u2192 [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline \u2192 date-partitioned [Parquet] in [AWS S3] \u2192 [Redshift] OLAP \u2192 [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline \u2192 date-partitioned [Parquet] in [AWS S3] \u2192 [Redshift] OLAP \u2192 [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline \u2192 date-partitioned [Parquet] in [AWS S3] \u2192 [Redshift] OLAP \u2192 [Tableau] self-service BI expenses.\u2022 [Flyway] schema evolution/migrations.\u2022 First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
     "outlineIndex": "2",
     "skillIDs": [
       "PySpark",
@@ -511,7 +505,7 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "• [Java], [JSP], [Spring], and [PostgreSQL] development.",
+    "Description": "\u2022 [Java], [JSP], [Spring], and [PostgreSQL] development.",
     "outlineIndex": "3",
     "skillIDs": [
       "postgresql",
@@ -523,7 +517,7 @@
   },
   {
     "index": 22,
-    "role": "Co-founder — AI/NLP Senior Full-Stack Engineer",
+    "role": "Co-founder \u2014 AI/NLP Senior Full-Stack Engineer",
     "employer": "ClipFile",
     "start": "01/2011",
     "end": "09/2016",
@@ -532,7 +526,7 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines.• Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
+    "Description": "\u2022 Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines.\u2022 Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
     "outlineIndex": "4",
     "skillIDs": [
       "Java",
@@ -554,7 +548,7 @@
     "css RGB": "#116611",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [Java], [JSP], and [PostgreSQL] systems.",
+    "Description": "\u2022 [Java], [JSP], and [PostgreSQL] systems.",
     "outlineIndex": "5.6",
     "skillIDs": [
       "Java",
@@ -575,7 +569,7 @@
     "css RGB": "#0069AC",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
+    "Description": "\u2022 Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
     "outlineIndex": "5.4",
     "skillIDs": [
       "c"
@@ -593,7 +587,7 @@
     "css RGB": "#006688",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• [Java], [JSP], and [FileMaker] systems.",
+    "Description": "\u2022 [Java], [JSP], and [FileMaker] systems.",
     "outlineIndex": "5.3",
     "skillIDs": [
       "java",
@@ -613,7 +607,7 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Enterprise systems using [SQL Anywhere], [NServiceBus], and [MS Mobile 5].",
+    "Description": "\u2022 Enterprise systems using [SQL Anywhere], [NServiceBus], and [MS Mobile 5].",
     "outlineIndex": "5.2",
     "skillIDs": [
       "sql-anywhere",
@@ -633,7 +627,7 @@
     "css RGB": "#4400cd",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• ICD/CPT Workers Compensation claims systems [Windows NT], ICD/CPT Workers Compensation claims systems [DB Design Tools].",
+    "Description": "\u2022 ICD/CPT Workers Compensation claims systems [Windows NT], ICD/CPT Workers Compensation claims systems [DB Design Tools].",
     "outlineIndex": "5.1",
     "skillIDs": [
       "windows-nt",
@@ -652,7 +646,7 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "• Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001.• Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5–7 independent consultants.",
+    "Description": "\u2022 Founded from start-up mode in Boston; successfully acquired in 2001.\u2022 Built a semantic product ontology and visual product catalog [Java], Founded from start-up mode in Boston; successfully acquired in 2001.\u2022 Built a semantic product ontology and visual product catalog [JSP], Founded from start-up mode in Boston; successfully acquired in 2001.\u2022 Built a semantic product ontology and visual product catalog [Oracle] spanning 700K+ products across 200+ categories; technical lead for 5\u20137 independent consultants.",
     "outlineIndex": "6",
     "skillIDs": [
       "java",
