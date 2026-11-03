@@ -26,6 +26,14 @@ import { reportError } from './modules/utils/errorReporting.mjs';
 import { createLocalDevQuitHandler } from './modules/server/localDevQuit.mjs';
 import { mergeSkillEntryInto } from './modules/server/skillMerge.mjs';
 import {
+    reindexSkillJobIdsAfterJobDelete,
+    reindexSkillJobIdsAfterJobInsert,
+    replaceSkillNameInDescriptions,
+    resolveSkillKey,
+    slugifyDisplayName,
+    withDerivedMetaPaths as withDerivedMetaPathsIn,
+} from './modules/server/resumeDataHelpers.mjs';
+import {
     archiveReparseBackup,
     listReparseHistory,
     restoreReparseBackup,
@@ -53,8 +61,10 @@ const PROJECT_ROOT = process.cwd();
 /** Local palette JSON directory (GET /api/palette-catalog, startup cache when S3 unset). */
 const PALETTE_DIR_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'colorPalettes');
 const CSS_FILE_PATH = path.resolve(PROJECT_ROOT, 'static_content', 'css', 'palette-styles.css');
-/** Persisted app state (layout, theme, currentResumeId, system-constants, etc.). */
-const STATE_FILE_PATH = path.resolve(PROJECT_ROOT, 'app_state.json');
+/** Persisted app state (layout, theme, currentResumeId, system-constants, etc.). Overridable via APP_STATE_FILE for tests. */
+const STATE_FILE_PATH = process.env.APP_STATE_FILE
+    ? path.resolve(PROJECT_ROOT, process.env.APP_STATE_FILE)
+    : path.resolve(PROJECT_ROOT, 'app_state.json');
 const STATE_DEFAULT_PATH = path.resolve(PROJECT_ROOT, 'public', 'app_state.default.json');
 /** Overridable via process.env.PARSED_RESUMES_DIR for integration tests */
 const PARSED_RESUMES_DIR = process.env.PARSED_RESUMES_DIR
@@ -64,10 +74,7 @@ const PARSED_RESUMES_DIR = process.env.PARSED_RESUMES_DIR
     : path.resolve(PROJECT_ROOT, 'parsed_resumes');
 
 /** Absolute folder of jobs.json / skills.json for a resume id. Not persisted in meta.json. */
-function withDerivedMetaPaths(id, meta) {
-    const folder = path.join(PARSED_RESUMES_DIR, id);
-    return { ...meta, parsedFolderPath: folder };
-}
+const withDerivedMetaPaths = (id, meta) => withDerivedMetaPathsIn(PARSED_RESUMES_DIR, id, meta);
 
 const SYNC_LOGS_DIR = path.resolve(PROJECT_ROOT, 'sync-logs');
 const SYNC_LOGS_INDEX_FILE = path.resolve(SYNC_LOGS_DIR, 'index.json');
@@ -140,18 +147,6 @@ app.use(cors());
 app.use(express.json());
 // Parse text bodies for the CSS endpoint
 app.use(express.text());
-
-/**
- * Convert a display name to a slug suitable for use as a folder name.
- * Lowercases, collapses non-alphanumeric runs to hyphens, trims leading/trailing hyphens.
- */
-function slugifyDisplayName(name) {
-    return name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        || 'resume';
-}
 
 /**
  * Find a unique folder name under PARSED_RESUMES_DIR based on displayName.
@@ -302,59 +297,6 @@ async function bakeEnrichedJobs(dir, jobs, skills) {
         console.log(`[bakeEnrichedJobs] ✅ Wrote enriched-jobs.json (${enriched.length} jobs incl. ${enriched.length - jobs.length} education)`);
     } catch (e) {
         reportError(e, '[bakeEnrichedJobs] Failed to write enriched-jobs.json — static host will fall back to live enrichment');
-    }
-}
-
-/**
- * Replace every [OldName] bracket reference in all job Descriptions with [NewName].
- * Called after a skill rename or merge so descriptions stay in sync with skills.json.
- * Mutates jobs in place; returns the number of replacements made.
- *
- * @param {Array<object>} jobs
- * @param {string} oldName  - the old skill.name (text inside brackets to replace)
- * @param {string} newName  - the new skill.name (replacement text inside brackets)
- * @returns {number}
- */
-function replaceSkillNameInDescriptions(jobs, oldName, newName) {
-    if (!oldName || !newName || oldName === newName) return 0;
-    const jobsArr = Array.isArray(jobs) ? jobs : Object.values(jobs);
-    const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`\\[${escaped}\\]`, 'g');
-    let count = 0;
-    for (const job of jobsArr) {
-        if (!job.Description) continue;
-        const before = job.Description;
-        job.Description = job.Description.replace(regex, `[${newName}]`);
-        if (job.Description !== before) count++;
-    }
-    return count;
-}
-
-/** Shift skill.jobIDs at/after insert so indices stay aligned with jobs.json (0-based). */
-function reindexSkillJobIdsAfterJobInsert(skills, insertAt) {
-    const at = Number(insertAt);
-    if (!Number.isFinite(at) || at < 0) return;
-    for (const s of Object.values(skills)) {
-        if (!s || typeof s !== 'object' || !Array.isArray(s.jobIDs)) continue;
-        const next = s.jobIDs.map((j) => {
-            const n = Number(j);
-            return Number.isFinite(n) && n >= at ? n + 1 : n;
-        });
-        s.jobIDs = [...new Set(next)].sort((a, b) => a - b);
-    }
-}
-
-/** Remove deleted job index from skill.jobIDs and decrement higher indices. */
-function reindexSkillJobIdsAfterJobDelete(skills, deletedIndex) {
-    const d = Number(deletedIndex);
-    if (!Number.isFinite(d) || d < 0) return;
-    for (const s of Object.values(skills)) {
-        if (!s || typeof s !== 'object' || !Array.isArray(s.jobIDs)) continue;
-        const next = s.jobIDs
-            .map((j) => Number(j))
-            .filter((n) => Number.isFinite(n) && n !== d)
-            .map((n) => (n > d ? n - 1 : n));
-        s.jobIDs = [...new Set(next)].sort((a, b) => a - b);
     }
 }
 
@@ -670,16 +612,6 @@ app.patch('/api/resumes/:id/education/:educationKey/skills', async (req, res) =>
 });
 
 // Resolve skill key: use direct key if present, else find key where skill.name matches (handles id-keyed skills from parser).
-function resolveSkillKey(skills, keyOrName) {
-    if (skills[keyOrName] != null) return keyOrName;
-    const want = (keyOrName && String(keyOrName).trim()) || '';
-    if (!want) return null;
-    for (const [k, s] of Object.entries(skills)) {
-        if (s && typeof s === 'object' && s.name != null && String(s.name).trim() === want) return k;
-    }
-    return null;
-}
-
 /**
  * After a skill key goes away (merge or rename), re-key its shared-catalog row so the
  * saved URL is not orphaned under a slug no resume uses any more. The surviving key's
@@ -732,9 +664,12 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
         const oldSkillName = oldSkill.name || resolvedOldKey;
         const jobIDsFromOld = oldSkill.jobIDs || [];
         delete skills[resolvedOldKey];
+        // Bracket text in descriptions must match the surviving skill's display name, not its key.
+        let newSkillName = newNameTrimmed;
         if (skills[newNameTrimmed] != null) {
             // Renaming onto an existing skill is a merge: keep the manually defined URL (shortest when both have one).
             mergeSkillEntryInto(oldSkill, skills[newNameTrimmed]);
+            newSkillName = skills[newNameTrimmed].name || newNameTrimmed;
         } else {
             skills[newNameTrimmed] = { name: newNameTrimmed, jobIDs: [...jobIDsFromOld] };
             if (oldSkill.url) skills[newNameTrimmed].url = oldSkill.url;
@@ -752,8 +687,8 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
             job.skillIDs = out;
         }
         // Replace [OldName] → [NewName] in all job descriptions
-        const descFixes = replaceSkillNameInDescriptions(jobs, oldSkillName, newNameTrimmed);
-        console.log(`[PATCH skills/rename] replaced [${oldSkillName}] → [${newNameTrimmed}] in ${descFixes} descriptions`);
+        const descFixes = replaceSkillNameInDescriptions(jobs, oldSkillName, newSkillName);
+        console.log(`[PATCH skills/rename] replaced [${oldSkillName}] → [${newSkillName}] in ${descFixes} descriptions`);
         await Promise.all([
             atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
             atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),

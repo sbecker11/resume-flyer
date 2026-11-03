@@ -66,6 +66,7 @@
     "happy-dom": "^20.8.3",
     "nodemon": "^1.14.10",
     "open-cli": "^9.0.0",
+    "supertest": "^7.3.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^4.0.18",
