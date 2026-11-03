@@ -165,7 +165,7 @@
     ]
   },
   "dall-e-3": {
-    "name": "DALL\u00b7E 3",
+    "name": "DALL·E 3",
     "url": "https://openai.com/index/dall-e-3/",
     "img": "",
     "categoryIDs": [
@@ -1165,7 +1165,8 @@
     "categoryIDs": [
       "frontend",
       "framework"
-    ]
+    ],
+    "url": "https://vuejs.org/"
   },
   "AWS S3": {
     "name": "AWS S3",

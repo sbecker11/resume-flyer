@@ -119,7 +119,7 @@
       "Bash"
     ],
     "references": [
-      "<a href=\"#\">[Vue]</a>",
+      "<a href=\"https://vuejs.org/\">[Vue]</a>",
       "<a href=\"https://www.typescriptlang.org/\">[TypeScript]</a>",
       "<a href=\"https://vite.dev/\">[Vite]</a>",
       "<a href=\"https://expressjs.com/\">[Express.js]</a>"
@@ -833,7 +833,7 @@
       "vuelidate"
     ],
     "references": [
-      "<a href=\"#\">[Vue]</a>",
+      "<a href=\"https://vuejs.org/\">[Vue]</a>",
       "<a href=\"https://nodejs.org/\">[Node.js]</a>",
       "<a href=\"https://vuetifyjs.com/\">[Vuetify]</a>",
       "<a href=\"https://vuelidate-next.netlify.app/\">[Vuelidate]</a>",
