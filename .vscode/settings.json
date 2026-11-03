@@ -1,3 +1,6 @@
 {
-    "liveServer.settings.port": 5501
+    "liveServer.settings.port": 5501,
+    // Cursor: do not offer/auto-open the local dev server ("Resume Flyer (local)")
+    // in the built-in Browser Tab; `npm run dev` opens the system browser itself.
+    "workbench.browser.openLocalhostLinks": false
 }

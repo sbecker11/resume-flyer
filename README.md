@@ -326,7 +326,7 @@ The app is built with **Vite** and uses ES modules. Use **Cursor** (or another e
 - Install dependencies: `npm install`
 - Start the dev server: `npm run dev`
 
-This runs the Vite dev server (frontend) and the backend API. Open the URL shown in the terminal (e.g. `http://localhost:5174`) in your browser. Upload a DOCX or PDF resume to explore your career as business cards and skill cards.
+This runs the Vite dev server (frontend) and the backend API, then opens the app in your system browser (set `OPEN_BROWSER=chrome` to force Chrome). If it does not open, use the URL shown in the terminal (e.g. `http://localhost:5174`). The workspace setting `workbench.browser.openLocalhostLinks: false` (`.vscode/settings.json`) stops Cursor from also offering to open "Resume Flyer (local)" in its built-in Browser Tab; to disable that globally, turn off **Cursor Settings → Tools & MCP → Browser → Show Localhost Links in Browser**. Upload a DOCX or PDF resume to explore your career as business cards and skill cards.
 
 # Explore your 3D space of skill cards and business cards
 
