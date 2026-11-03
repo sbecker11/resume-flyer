@@ -141,8 +141,9 @@ describe('GET /api/resumes/:id/data', () => {
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body.jobs)).toBe(true);
         expect(res.body.jobs).toHaveLength(3);
-        // Mixed slug/name keys are re-keyed by display name by the parser adapter.
-        expect(res.body.skills.Python.url).toBe('https://python.org/');
+        // A skills map whose keys are slugs or self-named passes through unchanged (no re-keying by display name).
+        expect(res.body.skills.python.url).toBe('https://python.org/');
+        expect(res.body.skills.Python).toBeUndefined();
         expect(res.body.categories).toEqual({});
     });
 
