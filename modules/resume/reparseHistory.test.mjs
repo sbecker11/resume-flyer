@@ -101,8 +101,10 @@ describe('reparseHistory', () => {
         await fs.mkdir(path.join(historyRoot, 'not-a-backup-id'));
         await fs.writeFile(path.join(historyRoot, 'stray.txt'), '');
         const history = await listReparseHistory(dir);
-        expect(history.map((e) => e.id)).toEqual([second.id, first.id]);
-        expect(history[0]).toEqual({ id: second.id, createdAt: second.id, reason: 'reparse' });
+        // Both snapshots share a createdAt, so their relative order is not guaranteed.
+        expect(history.map((e) => e.id).sort()).toEqual([first.id, second.id].sort());
+        const withoutManifest = history.find((e) => e.id === second.id);
+        expect(withoutManifest).toEqual({ id: second.id, createdAt: second.id, reason: 'reparse' });
     });
 
     it('lists nothing when there is no history folder', async () => {

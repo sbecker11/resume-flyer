@@ -29,19 +29,18 @@ export default defineConfig({
         // plus console debug helpers. Behaviour is covered by ResumeListController.test.mjs.
         'modules/resume/ResumeListController.mjs',
         'modules/resume/testFixtures.mjs',
-        'modules/composables/useBullsEyeVue3.mjs',
+        'modules/composables/testHost.mjs',
+        // ~46% covered by useCardsController.test.mjs (init, fast-fail, static placement,
+        // generation abort, reinitialize). The rest is pointer/selection/clone choreography
+        // that needs real layout geometry.
         'modules/composables/useCardsController.mjs',
-        'modules/composables/useColorPalette.mjs',
-        'modules/composables/useFocalPointVue3.mjs',
         'modules/composables/useCardRegistry.mjs',
         'modules/composables/useLayoutToggle.mjs',
-        'modules/composables/useParallaxVue3Enhanced.mjs',
         'modules/composables/useResizeHandle.mjs',
         'modules/composables/useCardsControllerOptimized.mjs',
         'modules/composables/useSelectedElementIdPersistence.mjs',
         'modules/composables/useTimeline.mjs',
         'modules/composables/useViewport.mjs',
-        'modules/composables/useKeyboardNavigation.mjs',
         'modules/composables/useResumeItemsController.mjs',
         'modules/composables/useScenePlaneOptimized.mjs',
         'modules/composables/useSceneAutoScroll.mjs',
