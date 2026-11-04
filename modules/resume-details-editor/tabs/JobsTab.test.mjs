@@ -108,7 +108,7 @@ describe('JobsTab.vue', () => {
         expect(api.updateJob).toHaveBeenCalledWith('r1', 0, expect.objectContaining({
             employer: 'Acme Corp', role: 'Engineer', start: '2020-03', end: '2021-06-15', Description: '• Built things',
         }));
-        expect(w.emitted('saved')).toEqual([[]]);
+        expect(w.emitted('saved')).toEqual([[{ jobFieldsSaved: true }]]);
         // The dropdown label reflects the in-memory update.
         expect(optionLabels(w)[0]).toBe('Acme Corp -- Engineer');
     });

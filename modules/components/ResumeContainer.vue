@@ -18,6 +18,11 @@ import { buildPrintHtml } from '@/modules/utils/buildPrintHtml.mjs';
 import ResumeManager from './ResumeManager.vue';
 import ResumeManagerDelete from './ResumeManagerDelete.vue';
 import { ResumeDetailsEditor } from '@/modules/resume-details-editor';
+import {
+  REFRESH_ACTION,
+  needsResumeListRefetch,
+  resumeRefreshAction,
+} from '@/modules/resume-details-editor/savedPayload.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import {
   LOCAL_DEV_QUIT_CONFIRM_MESSAGE,
@@ -669,25 +674,32 @@ function handleOpenResumeDetails(e) {
 async function handleDetailsSaved(payload) {
   // Only refetch resume list when Meta was saved (display name etc.); refetching on job/skills save
   // would re-render the container and wipe the imperatively-built resume item listing (rDivs).
-  if (payload?.metaSaved === true) {
+  if (needsResumeListRefetch(payload)) {
     try {
       await fetchResumeList();
     } catch (err) {
-      console.warn('[ResumeContainer] handleDetailsSaved fetchResumeList failed:', err);
+      reportError(err, '[ResumeContainer] handleDetailsSaved fetchResumeList failed', 'Continuing with the stale resume list');
     }
   }
-  if (payload?.reparsed === true || payload?.restored === true) {
-    // Force AppContent to reload the currently-selected resume data in-place.
-    emit('resume-selected', props.currentResumeId);
-    return;
+  const action = resumeRefreshAction(payload);
+  switch (action) {
+    case REFRESH_ACTION.RELOAD:
+      // Skill identity or job membership changed; scene skill cards and bizCard titles are built
+      // once, so force AppContent to reload the currently-selected resume in-place.
+      emit('resume-selected', props.currentResumeId);
+      return;
+    case REFRESH_ACTION.PATCH_JOB:
+      await patchJobSkillsFromSavedPayload(payload);
+      return;
+    case REFRESH_ACTION.REFETCH_LIST:
+    case REFRESH_ACTION.NONE:
+      return;
+    default:
+      throw new Error(`[ResumeContainer] handleDetailsSaved: unknown refresh action "${action}"`);
   }
-  // Merge/rename retire a skill key; the scene's skill card and bizCard titles are built once, so reload.
-  if (payload?.clearAllJobSkillLinks === true || payload?.removedSkill === true
-      || payload?.skillMerged === true || payload?.skillRenamed === true) {
-    emit('resume-selected', props.currentResumeId);
-    return;
-  }
-  if (payload == null || payload.jobIndex == null) return;
+}
+
+async function patchJobSkillsFromSavedPayload(payload) {
   const { jobIndex, skillIDs, jobSkills: payloadJobSkills } = payload;
   const jobs = getGlobalJobsDependency().getJobsData();
   if (!jobs[jobIndex]) return;
@@ -709,7 +721,9 @@ async function handleDetailsSaved(payload) {
       detail: { jobIndex, skillIDs, oldSkillIDs, jobSkills: newJobSkills }
     }));
   } catch (err) {
-    console.error('[ResumeContainer] handleDetailsSaved refresh failed:', err);
+    reportError(err, `[ResumeContainer] patchJobSkillsFromSavedPayload failed for job ${jobIndex}`, 'Reverting skillIDs to the previous value');
+    jobs[jobIndex].skillIDs = oldSkillIDs;
+    throw err;
   }
 }
 

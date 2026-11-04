@@ -46,7 +46,7 @@ vi.mock('@/modules/utils/selectionPersistence.mjs', () => ({
 const reportError = vi.fn();
 vi.mock('@/modules/utils/errorReporting.mjs', () => ({ reportError }));
 
-const { useCardsController, bumpCardsInitGeneration } = await import('./useCardsController.mjs');
+const { useCardsController, bumpCardsInitGeneration, isKnownSkillKey } = await import('./useCardsController.mjs');
 
 function fixtureJobs() {
     return [
@@ -197,6 +197,43 @@ describe('useCardsController', () => {
         await run;
         expect(ctl.isInitialized.value).toBe(false);
         expect(document.querySelectorAll('.biz-card-div')).toHaveLength(0);
+    });
+
+    it('skips a skill card for a job-skills key with no skillsData entry and reports it once per key', async () => {
+        const fixture = fixtureJobs();
+        // "React 18" was merged into another skill and no longer exists in skillsData, but two
+        // jobs still carry it in their baked job-skills. Display-name keys that DO resolve ("Vue") stay.
+        fixture[0]['job-skills'] = { Vue: 'Vue', 'React 18': 'React 18' };
+        fixture[0].skillIDs = ['Vue', 'React 18'];
+        fixture[2]['job-skills'] = { 'React 18': 'React 18' };
+        fixture[2].skillIDs = ['React 18'];
+        jobs.value = fixture;
+        mounted = mountController();
+        const ctl = mounted.result;
+        await vi.waitFor(() => expect(ctl.isInitialized.value).toBe(true));
+
+        const plane = document.getElementById('scene-plane');
+        const skillCards = Array.from(plane.querySelectorAll('.skill-card-div:not(.clone)'));
+        expect(skillCards.map((c) => c.getAttribute('data-skill-name')).sort()).toEqual(['kafka', 'vue']);
+        expect(plane.querySelector('.skill-card-div[data-skill-name="React 18"]')).toBeNull();
+        expect(window.resumeFlyer.allDivs.skillCardDivs).toHaveLength(2);
+
+        const orphanReports = reportError.mock.calls.filter(([, ctx]) => /Orphaned skill key/.test(ctx));
+        expect(orphanReports).toHaveLength(1);
+        const [err, ctx, remedy] = orphanReports[0];
+        expect(err.message).toContain('"React 18"');
+        expect(ctx).toBe('[CardsController] Orphaned skill key on job 0');
+        expect(remedy).toBe('Skipping its skill card');
+    });
+
+    it('isKnownSkillKey only accepts keys present in the skills map', () => {
+        expect(isKnownSkillKey('vue', skills)).toBe(true);
+        expect(isKnownSkillKey('Vue', skills)).toBe(false);
+        expect(isKnownSkillKey('react-18', skills)).toBe(false);
+        expect(isKnownSkillKey('', skills)).toBe(false);
+        expect(isKnownSkillKey('vue', null)).toBe(false);
+        expect(isKnownSkillKey('vue', undefined)).toBe(false);
+        expect(isKnownSkillKey('vue', 'vue')).toBe(false);
     });
 
     it('reinitializeResumeData clears the scene and rebuilds from the current jobs', async () => {

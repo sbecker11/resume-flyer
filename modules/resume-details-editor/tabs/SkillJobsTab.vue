@@ -162,6 +162,7 @@ import {
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { updateJobSkills, updateEducationJobSkills, deleteSkill } from '@/modules/api/resumeManagerApi.mjs';
 import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
+import { removedSkill, clearAllJobSkillLinks, jobSkills as jobSkillsPayload } from '../savedPayload.mjs';
 import { jobColumnHeaderText, rotatedJobHeaderRowMinPx, skillRowDisplayLabel } from '../skillJobsMatrixLabels.mjs';
 import {
   emptySkillJobsHighlight,
@@ -533,11 +534,11 @@ function onMatrixCellClick(jobIndex, skillRow) {
     initialSkillKeys.value = new Set(Object.keys(nextMap));
   }
   patchJobRowLocal(jobIndex, skillIDs, isEdu ? undefined : alignedDesc);
-  emit('saved', {
+  emit('saved', jobSkillsPayload({
     jobIndex,
     skillIDs,
     jobSkills: jobSkillsRecordFromMap(skillIDs, nextMap),
-  });
+  }));
   if (!canPersistToServer) return;
 
   pendingToggleSaves.value++;
@@ -594,7 +595,7 @@ async function confirmRemoveSkill() {
     jobs.value = jobsArray(data.jobs);
     skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
     initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
-    emit('saved', { removedSkill: true });
+    emit('saved', removedSkill());
   } catch (err) {
     reportError(err, '[SkillJobsTab] Remove skill failed', 'Refetching resume data to resync');
     try {
@@ -640,7 +641,7 @@ async function onClearGrid() {
     jobs.value = jobsArray(data.jobs);
     skillsMap.value = data.skills && typeof data.skills === 'object' ? data.skills : {};
     initialSkillKeys.value = new Set(Object.keys(skillsMap.value));
-    emit('saved', { clearAllJobSkillLinks: true });
+    emit('saved', clearAllJobSkillLinks());
   } catch (err) {
     reportError(err, '[SkillJobsTab] Clear all grid cells failed', 'Refetching resume data to resync');
     try {

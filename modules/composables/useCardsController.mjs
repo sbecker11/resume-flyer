@@ -98,6 +98,17 @@ export function bumpCardsInitGeneration() {
     return cardsInitGeneration;
 }
 
+/**
+ * True when `skillKey` is a real skills-map entry. `canonicalSkillKey` returns its input
+ * unchanged when nothing matches, so a key must be checked against the map before it is
+ * allowed to become a scene skill card.
+ * @param {string} skillKey
+ * @param {Record<string, unknown>|null|undefined} skillsData
+ */
+export function isKnownSkillKey(skillKey, skillsData) {
+    return !!skillKey && skillsData != null && typeof skillsData === 'object' && skillsData[skillKey] != null
+}
+
 // Instance counter to detect multiple instances
 let instanceCounter = 0;
 
@@ -321,12 +332,26 @@ export function useCardsController() {
             const skillsDataForCards = getGlobalJobsDependency().getSkillsData()
             const allSkillNames = new Set()
             const skillToJobIndices = Object.create(null)
+            const orphanedSkillKeysReported = new Set()
             for (let i = 0; i < jobs.length; i++) {
                 const job = jobs[i]
                 if (!job || isOutlineSectionJob(job) || !job['job-skills']) continue
                 for (const rawSkillName of Object.keys(job['job-skills'])) {
                     const skillName = canonicalSkillKey(rawSkillName, skillsDataForCards)
                     if (!skillName) continue
+                    // A job-skills key with no skills-map entry (e.g. retired by a merge/rename, or a
+                    // stale baked enriched-jobs.json) must not become a zero-experience orphan card.
+                    if (!isKnownSkillKey(skillName, skillsDataForCards)) {
+                        if (!orphanedSkillKeysReported.has(skillName)) {
+                            orphanedSkillKeysReported.add(skillName)
+                            reportError(
+                                new Error(`job-skills key "${rawSkillName}" (canonical "${skillName}") has no entry in skillsData`),
+                                `[CardsController] Orphaned skill key on job ${i}`,
+                                'Skipping its skill card'
+                            )
+                        }
+                        continue
+                    }
                     allSkillNames.add(skillName)
                     if (!skillToJobIndices[skillName]) skillToJobIndices[skillName] = []
                     if (!skillToJobIndices[skillName].includes(i)) skillToJobIndices[skillName].push(i)
@@ -1059,6 +1084,15 @@ export function useCardsController() {
      */
     function createSkillCardDiv(skillName, scenePlane, referencingBizCardIds, referencingJobIndices, jobsData) {
         if (!skillName || !referencingBizCardIds?.length) return null
+        const skillsDataForCard = getGlobalJobsDependency().getSkillsData()
+        if (!isKnownSkillKey(skillName, skillsDataForCard)) {
+            reportError(
+                new Error(`skill key "${skillName}" has no entry in skillsData`),
+                `[CardsController] createSkillCardDiv refused orphaned skill (jobs ${(referencingJobIndices || []).join(',')})`,
+                'Returning null so no orphan card is placed in the scene'
+            )
+            return null
+        }
         const id = `skill-card-div-${skillCardIdCounter++}`
         const skillCard = document.createElement('div')
         skillCard.className = 'skill-card-div'
@@ -1107,7 +1141,7 @@ export function useCardsController() {
         skillCard.style.wordBreak = 'break-word'
         skillCard.style.filter = filters.get_filterStr_from_z(sceneZ)
         const backIconUrl = basePathJoin('static_content/icons/anchors/icons8-back-16-black.png')
-        const skillObj = getGlobalJobsDependency().getSkillsData()[skillName]
+        const skillObj = skillsDataForCard[skillName]
         skillCard.setAttribute('aria-label', skillLabelText(skillName, skillObj))
         skillCard.innerHTML = renderSkillCardSceneInnerHtml({
             skillSlug: skillName,

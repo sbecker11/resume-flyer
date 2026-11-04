@@ -163,6 +163,7 @@ import { educationJobDisplayNameFromParts } from '@/modules/utils/educationJobDi
 import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
 import { filterSkillsBySearchQuery } from '@/modules/utils/skillSearch.mjs';
+import { skillRenamed, skillMerged, jobSkills as jobSkillsPayload } from '../savedPayload.mjs';
 
 const canPersistToServer = hasServer();
 const canEdit = true;
@@ -562,7 +563,7 @@ async function saveEditSkill() {
     editingSkillId.value = null;
     editingSkillName.value = '';
     skillEditModalOpen.value = false;
-    emit('saved', { skillRenamed: true });
+    emit('saved', skillRenamed());
   } catch (err) {
     console.error('[SkillsTab] rename skill failed:', err);
     alert('Failed to rename skill: ' + err.message);
@@ -591,7 +592,7 @@ async function mergeSkills() {
     initialSkillKeys.value = new Set(Object.keys(skills.value));
     mergeFromKey.value = '';
     mergeToKey.value = '';
-    emit('saved', { skillMerged: true });
+    emit('saved', skillMerged());
   } catch (err) {
     console.error('[SkillsTab] merge skill failed:', err);
     alert('Failed to merge skill: ' + err.message);
@@ -651,12 +652,12 @@ async function saveForCurrentJob() {
   );
   selected.value = getSelectedSkillIdsForJob(jobs.value[idx], nextSkills);
   if (!canPersistToServer) {
-    emit('saved', {
+    emit('saved', jobSkillsPayload({
       jobIndex: idx,
       skillIDs,
       jobSkills: jobSkillsRecordFromMap(skillIDs, nextSkills),
       sessionOnly: true,
-    });
+    }));
     return true;
   }
   saving.value = true;
@@ -671,11 +672,11 @@ async function saveForCurrentJob() {
         await api.updateJob(props.resumeId, idx, { Description: alignedDesc });
       }
     }
-    emit('saved', {
+    emit('saved', jobSkillsPayload({
       jobIndex: idx,
       skillIDs,
       jobSkills: jobSkillsRecordFromMap(skillIDs, nextSkills),
-    });
+    }));
     return true;
   } catch (err) {
     console.error('[SkillsTab] save failed:', err);

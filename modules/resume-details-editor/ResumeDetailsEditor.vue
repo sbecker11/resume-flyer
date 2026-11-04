@@ -220,6 +220,7 @@ import {
   restoreReparseHistory
 } from '@/modules/api/resumeManagerApi.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import * as savedPayload from './savedPayload.mjs';
 
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 240;
@@ -887,7 +888,7 @@ async function onMetaAutosave() {
     const saved = await api.updateResumeMeta(id, u);
     meta.value = { ...meta.value, ...saved };
     pendingMeta.value = null;
-    emit('saved', { metaSaved: true });
+    emit('saved', savedPayload.metaSaved());
   } catch (err) {
     reportError(err, '[ResumeDetailsEditor] autosave meta failed', '');
     alert('Failed to autosave meta: ' + (err instanceof Error ? err.message : String(err)));
@@ -914,7 +915,7 @@ async function onOtherSectionsAutosave(snapshot) {
     otherSections.value = snapshot;
     pendingOtherSections.value = null;
     // Do not use `metaSaved` so the resume list doesn't unnecessarily refetch.
-    emit('saved', { otherSectionsSaved: true });
+    emit('saved', savedPayload.otherSectionsSaved());
   } catch (err) {
     reportError(err, '[ResumeDetailsEditor] autosave other sections failed', '');
     alert('Failed to autosave other sections: ' + (err instanceof Error ? err.message : String(err)));
@@ -939,7 +940,7 @@ async function onEducationAutosave() {
     await api.updateResumeEducation(id, data);
     education.value = typeof data === 'object' && data !== null ? { ...data } : data;
     pendingEducation.value = null;
-    emit('saved', { educationSaved: true });
+    emit('saved', savedPayload.educationSaved());
   } catch (err) {
     reportError(err, '[ResumeDetailsEditor] autosave education failed', '');
     alert('Failed to autosave education: ' + (err instanceof Error ? err.message : String(err)));
@@ -962,21 +963,21 @@ async function flushCurrentTabBeforeLeave() {
     const saved = await api.updateResumeMeta(id, u);
     pendingMeta.value = null;
     meta.value = { ...meta.value, ...saved };
-    emit('saved', { metaSaved: true });
+    emit('saved', savedPayload.metaSaved());
   }
   if (tab === 'other-sections' && pendingOtherSections.value !== null) {
     const data = pendingOtherSections.value;
     await api.updateResumeOtherSections(id, data);
     pendingOtherSections.value = null;
     otherSections.value = typeof data === 'object' && data !== null ? { ...data } : data;
-    emit('saved', { metaSaved: true });
+    emit('saved', savedPayload.metaSaved());
   }
   if (tab === 'education' && pendingEducation.value !== null) {
     const data = pendingEducation.value;
     await api.updateResumeEducation(id, data);
     pendingEducation.value = null;
     education.value = typeof data === 'object' && data !== null ? { ...data } : data;
-    emit('saved', { metaSaved: true });
+    emit('saved', savedPayload.metaSaved());
   }
   if (tab === 'resume-jobs' && jobsTabRef.value?.saveCurrentJob) {
     const ok = await jobsTabRef.value.saveCurrentJob();
@@ -1014,8 +1015,8 @@ async function selectTab(nextId) {
 }
 
 function onJobsSaved(payload) {
-  if (payload?.jobsMutated) reloadNonce.value++;
-  emit('saved');
+  if (savedPayload.hasSavedKind(payload, savedPayload.SAVED_KIND.JOBS_MUTATED)) reloadNonce.value++;
+  emit('saved', payload);
 }
 
 function openSkillsForJob(jobIndex) {
@@ -1100,7 +1101,7 @@ async function restoreBackup(backupId) {
   try {
     await restoreReparseHistory(props.resumeId, backupId);
     await reloadDetailsFromServer();
-    emit('saved', { restored: true });
+    emit('saved', savedPayload.restored());
     showRestoreHistory.value = false;
   } catch (err) {
     reportError(err, '[ResumeDetailsEditor] Failed to restore resume backup', 'Reopen Restore previous; a snapshot taken just before this restore may be in the list');
@@ -1146,7 +1147,7 @@ async function reparse() {
 
     reparseOutput.value += 'Resume parsed successfully!\n';
     await reloadDetailsFromServer();
-    emit('saved', { reparsed: true });
+    emit('saved', savedPayload.reparsed());
     reparseSucceeded = true;
   } catch (err) {
     if (err?.name === 'AbortError') {
@@ -1169,7 +1170,7 @@ async function save() {
   }
   if (!canPersistToServer) {
     alert('Data changes are only stored in this session - not to the backend.');
-    emit('saved', { sessionOnly: true });
+    emit('saved', savedPayload.sessionOnly());
     emit('close');
     return;
   }
@@ -1194,7 +1195,7 @@ async function save() {
     if (pendingEducation.value !== null) {
       await api.updateResumeEducation(id, pendingEducation.value);
     }
-    emit('saved', { metaSaved: true });
+    emit('saved', savedPayload.metaSaved());
     emit('close');
   } catch (err) {
     console.error('[ResumeDetailsEditor] save failed:', err);

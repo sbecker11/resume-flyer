@@ -244,6 +244,7 @@ import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
+import { jobsMutated, jobFieldsSaved, sessionOnly } from '../savedPayload.mjs';
 import {
   isEducationDerivedJob,
   workJobDropdownEntries,
@@ -571,7 +572,7 @@ async function saveCurrentJob() {
   const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
   jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
   if (!canPersistToServer) {
-    emit('saved', { sessionOnly: true });
+    emit('saved', sessionOnly());
     return true;
   }
   if (saving.value) return true;
@@ -585,7 +586,7 @@ async function saveCurrentJob() {
     if (local.value.Description) patch.Description = local.value.Description;
     if (Object.keys(patch).length === 0) return true;
     await api.updateJob(props.resumeId, idx, patch);
-    emit('saved');
+    emit('saved', jobFieldsSaved());
     return true;
   } catch (err) {
     console.error('[JobsTab] save failed:', err);
@@ -765,7 +766,7 @@ async function confirmDeleteJob() {
       emit('update:selectedJobIndex', mergedIdx);
     }
     deleteConfirmOpen.value = false;
-    emit('saved', { jobsMutated: true });
+    emit('saved', jobsMutated());
   } catch (e) {
     reportError(e, '[JobsTab] Delete job failed', '');
     alert('Failed to delete job: ' + (e instanceof Error ? e.message : String(e)));
@@ -793,7 +794,7 @@ async function onAddJob() {
       : (afterIndex === -1 ? 0 : afterIndex + 1);
     jobIndexLocal.value = newIdx;
     emit('update:selectedJobIndex', newIdx);
-    emit('saved', { jobsMutated: true });
+    emit('saved', jobsMutated());
   } catch (e) {
     reportError(e, '[JobsTab] Add job failed', '');
     alert('Failed to add job: ' + (e instanceof Error ? e.message : String(e)));
