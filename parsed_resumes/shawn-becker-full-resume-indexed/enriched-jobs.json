@@ -62,7 +62,7 @@
     "start": "04/2025",
     "end": "05/2026",
     "durationMonths": 14,
-    "Description": "• [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
+    "Description": "• [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)",
     "educationKey": null,
     "skillIDs": [
       "react",

@@ -10,7 +10,7 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf, isOutlineSectionJob } from '../data/ResumeJob.mjs';
 import { displayJobHeading, outlineNestDepth } from '../utils/outlineIndex.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
-import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml } from '../scene/cardMarkup.mjs';
+import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml, renderProjectUrlAnchorsHtml, stripProjectUrlParentheticals } from '../scene/cardMarkup.mjs';
 import { tryParseFlexibleDateString, formatCardDatesDisplay, stripUnknownDatesFromTitle } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '../utils/skillInfoModal.mjs';
@@ -363,6 +363,14 @@ class ResumeItemsController {
             headerDiv.appendChild(datesDiv);
         }
 
+        const projectAnchorsHtml = renderProjectUrlAnchorsHtml(jobData.Description);
+        if (projectAnchorsHtml) {
+            const anchorsHost = document.createElement('div');
+            anchorsHost.innerHTML = projectAnchorsHtml;
+            const anchorsEl = anchorsHost.firstElementChild;
+            if (anchorsEl) headerDiv.appendChild(anchorsEl);
+        }
+
         const debugRow = document.createElement('div');
         debugRow.className = 'biz-details-debug-row';
         const idAndHexSpan = document.createElement('span');
@@ -481,6 +489,7 @@ class ResumeItemsController {
      */
     parseDescriptionToBullets(description, container, options = {}) {
         if (!description) return new Set();
+        description = stripProjectUrlParentheticals(description);
         const requireResolvedSkills = options.requireResolvedSkills !== false;
 
         const escapeHtml = (str) => String(str)
@@ -767,6 +776,10 @@ class ResumeItemsController {
 
     handleBizResumeDivClickEvent(bizResumeDiv, event) {
         if (!bizResumeDiv) return;
+        if (event?.target?.closest?.('a.project-url-anchor')) {
+            event.stopPropagation?.();
+            return;
+        }
 
         // Check if click was on a skill title link
         const skillTitleEl = event?.target?.closest('.biz-card-skill-title');

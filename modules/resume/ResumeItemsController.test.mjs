@@ -148,6 +148,27 @@ describe('ResumeItemsController', () => {
             expect(ric.parseDescriptionToBullets('', container).size).toBe(0);
         });
 
+        it('shows GitHub and GitHub Pages anchors and keeps them out of the achievement text', () => {
+            jobsDep.setJobs([{
+                employer: 'color-palette-maker',
+                role: 'Portfolio Project: color-palette-maker',
+                start: '04/2025',
+                end: '05/2026',
+                Description: '• React app generating color palettes. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)',
+                skillIDs: [],
+            }]);
+            const el = ric.createEnhancedResumeDetailsDiv(0);
+            const links = [...el.querySelectorAll('a.project-url-anchor')];
+            expect(links.map((a) => a.textContent)).toEqual(['GitHub', 'GitHub Pages']);
+            expect(links[0].getAttribute('href')).toBe('https://github.com/sbecker11/color-palette-maker');
+            expect(links[1].getAttribute('href')).toBe('https://sbecker11.github.io/color-palette-maker/');
+            expect(el.querySelector('.description-content').textContent).not.toMatch(/github/);
+            const event = { target: links[0], stopPropagation: () => {} };
+            selectionManager.selectedJobNumber = 0;
+            ric.handleBizResumeDivClickEvent(el, event);
+            expect(selectionManager.selectedJobNumber).toBe(0);
+        });
+
         it('leaves unresolved brackets as text when resolution is optional', () => {
             const container = document.createElement('div');
             const slugs = ric.parseDescriptionToBullets('[Mystery] item', container, { requireResolvedSkills: false });

@@ -905,12 +905,17 @@ export function useCardsController() {
             jobNumber,
             sceneZ,
             hasSkills,
+            description: job?.Description || '',
         })
 
         attachBizCardEditButtonListeners(card, jobNumber)
 
         // Add click handler: select this card or deselect if it is the selected card (one at a time). Clicking a skill title (by element id) selects that skill card.
         card.addEventListener('click', (event) => {
+            if (event.target.closest('a.project-url-anchor')) {
+                event.stopPropagation()
+                return
+            }
             event.stopPropagation()
             const skillTitleEl = event.target.closest('.biz-card-skill-title')
             if (skillTitleEl) {

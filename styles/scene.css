@@ -782,6 +782,28 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     line-height: 1.2;
 }
 
+/* GitHub and GitHub Pages links on a project card. Text uses the card link color so it stays visible on dark and light backgrounds. */
+.project-url-anchors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 2px 0 8px;
+    pointer-events: auto;
+}
+a.project-url-anchor {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    pointer-events: auto;
+    cursor: pointer;
+    user-select: text;
+    -webkit-user-select: text;
+    position: relative;
+    z-index: 3;
+}
+
 /* Debug row: job number, z, hex, three contrast icons (separate row under dates).
    Hidden by default for a clean UI after load/refresh; add body class "show-card-debug" to reveal. */
 .biz-details-debug-row {
@@ -830,7 +852,7 @@ body.show-card-debug .biz-details-debug-row {
 .biz-card-details-div > h2:not(.header-text),
 .biz-card-details-div > h3:not(.header-text),
 .biz-card-details-div > p:not(.header-text),
-.biz-card-details-div > div:not(.header-text):not(.biz-details-employer):not(.biz-details-employer-wrap):not(.biz-details-role):not(.biz-details-dates):not(.biz-details-debug-row):not(.resume-skills),
+.biz-card-details-div > div:not(.header-text):not(.biz-details-employer):not(.biz-details-employer-wrap):not(.biz-details-role):not(.biz-details-dates):not(.biz-details-debug-row):not(.resume-skills):not(.project-url-anchors),
 .biz-card-details-div > ul:not(.header-text),
 .biz-card-details-div > li:not(.header-text) {
     display: none;

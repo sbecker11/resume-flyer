@@ -8,6 +8,7 @@ import {
     renderSkillCardContentHtml,
     renderBizCardSceneBodyHtml,
     renderBizResumeHeaderHtml,
+    extractProjectUrlAnchors,
     orderedBizCardSkillEntries,
     renderBizCardSkillTitleSpansHtml,
 } from './cardMarkup.mjs'
@@ -116,6 +117,25 @@ describe('cardMarkup', () => {
         // Pencil is resume chrome next to ×, not inside the name/URL row.
         expect(html).toMatch(/skill-url-edit-btn[\s\S]*skill-resume-div-close/)
         expect(html).not.toMatch(/skill-card-name-row[\s\S]*skill-url-edit-btn[\s\S]*skill-card-info-url/)
+    })
+
+    it('renders GitHub and GitHub Pages anchors from a project description', () => {
+        const description = '• [React] app. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)'
+        expect(extractProjectUrlAnchors(description)).toEqual([
+            { kind: 'github', label: 'GitHub', href: 'https://github.com/sbecker11/color-palette-maker' },
+            { kind: 'github-pages', label: 'GitHub Pages', href: 'https://sbecker11.github.io/color-palette-maker/' },
+        ])
+        const html = renderBizCardSceneBodyHtml({
+            employer: 'color-palette-maker',
+            role: 'Portfolio Project: color-palette-maker',
+            datesDisplay: 'Apr 2025 - May 2026',
+            description,
+        })
+        expect(html).toContain('href="https://github.com/sbecker11/color-palette-maker"')
+        expect(html).toContain('href="https://sbecker11.github.io/color-palette-maker/"')
+        expect(html).toContain('>GitHub</a>')
+        expect(html).toContain('>GitHub Pages</a>')
+        expect(renderBizCardSceneBodyHtml({ employer: 'Acme' })).not.toContain('project-url-anchor')
     })
 
     it('renderBizCardSceneBodyHtml and renderBizResumeHeaderHtml share field classes', () => {
