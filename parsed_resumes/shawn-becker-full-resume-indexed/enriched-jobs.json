@@ -986,7 +986,8 @@
       "spring",
       "dynamodb",
       "nlp",
-      "ai-ml"
+      "ai-ml",
+      "k-means"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
@@ -1000,7 +1001,8 @@
       "dynamodb": "dynamodb",
       "nlp": "nlp",
       "data-pipelines": "data-pipelines",
-      "ai-ml": "ai-ml"
+      "ai-ml": "ai-ml",
+      "k-means": "k-means"
     },
     "outlineIndex": "4",
     "outlineKind": "job",
@@ -1055,11 +1057,17 @@
     "start": "12/2003",
     "end": "06/2004",
     "durationMonths": 7,
-    "Description": "• Architected a real-time network security monitoring platform in C++ for packet analysis and network intrusion detection.",
+    "Description": "• Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
     "educationKey": null,
-    "skillIDs": [],
-    "references": [],
-    "job-skills": {},
+    "skillIDs": [
+      "C++"
+    ],
+    "references": [
+      "<a href=\"https://isocpp.org/\">[C++]</a>"
+    ],
+    "job-skills": {
+      "C++": "C++"
+    },
     "outlineIndex": "5.4",
     "outlineKind": "job",
     "index": 25,

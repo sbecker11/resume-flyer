@@ -172,7 +172,8 @@
     "skillIDs": [
       "typescript",
       "java",
-      "python"
+      "python",
+      "C++"
     ]
   },
   "library": {

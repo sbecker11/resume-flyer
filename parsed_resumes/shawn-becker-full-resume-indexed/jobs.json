@@ -535,7 +535,8 @@
       "spring",
       "dynamodb",
       "nlp",
-      "ai-ml"
+      "ai-ml",
+      "k-means"
     ],
     "jobID": "22"
   },
@@ -571,9 +572,11 @@
     "css RGB": "#0069AC",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Architected a real-time network security monitoring platform in C++ for packet analysis and network intrusion detection.",
+    "Description": "\u2022 Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
     "outlineIndex": "5.4",
-    "skillIDs": [],
+    "skillIDs": [
+      "C++"
+    ],
     "jobID": "25"
   },
   {
