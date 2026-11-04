@@ -42,6 +42,8 @@ import {
     orderedBizCardSkillEntries,
     renderBizCardSkillTitleSpansHtml,
 } from '@/modules/scene/cardMarkup.mjs'
+import { ignoreProjectLinkClick, projectLinksForJob } from '@/modules/data/projectLinks.mjs'
+import { omitSceneProjectLinksUnlessTheyFit } from '@/modules/scene/sceneProjectLinks.mjs'
 import {
     markFocusedSkillLinkForJob,
     markSourceBizBackLinkForSkill,
@@ -309,6 +311,7 @@ export function useCardsController() {
                         console.error(`[CardsController] ❌ Could not apply palette to job ${index}:`, error)
                         throw error
                     }
+                    omitSceneProjectLinksUnlessTheyFit(card)
                     updateBizCardSkillsVisibility(card)
                 } else {
                     console.warn('[CardsController] Card creation failed for job', index)
@@ -424,14 +427,20 @@ export function useCardsController() {
                         const skillsData = getGlobalJobsDependency().getSkillsData()
                         const displayNames = entries.map(e => skillLabelText(e.skillKey, skillsData[e.skillKey]))
                         expandBizCardToFitSkills(card, displayNames)
+                        omitSceneProjectLinksUnlessTheyFit(card)
                         updateBizCardSkillsVisibility(card)
                     } else {
+                        omitSceneProjectLinksUnlessTheyFit(card)
                         updateBizCardSkillsVisibility(card)
                     }
                 }
                 // Re-check after layout (getBoundingClientRect needs painted geometry)
                 requestAnimationFrame(() => {
-                    for (const card of cards) updateBizCardSkillsVisibility(card)
+                    for (const card of cards) {
+                        if (!card) continue
+                        omitSceneProjectLinksUnlessTheyFit(card)
+                        updateBizCardSkillsVisibility(card)
+                    }
                 })
                 console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
                 if (window.resumeFlyer?.allDivs) window.resumeFlyer.allDivs.skillCardDivs = [...skillCardsCreated]
@@ -905,6 +914,7 @@ export function useCardsController() {
             jobNumber,
             sceneZ,
             hasSkills,
+            projectLinks: projectLinksForJob(job),
         })
 
         attachBizCardEditButtonListeners(card, jobNumber)
@@ -912,6 +922,7 @@ export function useCardsController() {
         // Add click handler: select this card or deselect if it is the selected card (one at a time). Clicking a skill title (by element id) selects that skill card.
         card.addEventListener('click', (event) => {
             event.stopPropagation()
+            if (ignoreProjectLinkClick(event)) return
             const skillTitleEl = event.target.closest('.biz-card-skill-title')
             if (skillTitleEl) {
                 selectSkillCardById(
@@ -2086,6 +2097,7 @@ export function useCardsController() {
     function attachBizSceneCardCloneListeners(clone, jobNumber, originalId) {
         clone.addEventListener('click', (event) => {
             event.stopPropagation()
+            if (ignoreProjectLinkClick(event)) return
             if (!selectionManager) return
 
             if (event.target.closest('.biz-details-edit-btn')) return

@@ -20,6 +20,7 @@ import { AppState, saveState } from '../core/stateManager.mjs';
 import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 // Import new Vue composable for color palette functionality
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
+import { ignoreProjectLinkClick } from '../data/projectLinks.mjs';
 // Import fundamental components to ensure they're registered with IM
 // import '../core/jobsDataManager.mjs'; // No longer exists - using Vue composables
 // import '../core/colorPaletteManager.mjs'; // No longer exists - using Vue composables
@@ -1878,7 +1879,10 @@ class ResumeListController extends BaseComponent {
     const jobNumber = bizResumeDiv.getAttribute('data-job-number')
     console.log(`[ResumeListController] 🖱️ Setting up mouse listeners for job ${jobNumber}`)
     
-    bizResumeDiv.addEventListener('click', () => this.handleBizResumeDivClickEvent(bizResumeDiv));
+    bizResumeDiv.addEventListener('click', (event) => {
+      if (ignoreProjectLinkClick(event)) return;
+      this.handleBizResumeDivClickEvent(bizResumeDiv);
+    });
     bizResumeDiv.addEventListener('mouseenter', () => this.handleMouseEnterEvent(bizResumeDiv));
     bizResumeDiv.addEventListener('mouseleave', () => this.handleMouseLeaveEvent(bizResumeDiv));
     

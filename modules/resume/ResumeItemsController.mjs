@@ -10,7 +10,8 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf, isOutlineSectionJob } from '../data/ResumeJob.mjs';
 import { displayJobHeading, outlineNestDepth } from '../utils/outlineIndex.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
-import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml } from '../scene/cardMarkup.mjs';
+import { orderedBizCardSkillEntries, renderBizCardProjectLinksHtml, renderBizCardSkillTitleSpansHtml } from '../scene/cardMarkup.mjs';
+import { ignoreProjectLinkClick, projectLinksForJob } from '../data/projectLinks.mjs';
 import { tryParseFlexibleDateString, formatCardDatesDisplay, stripUnknownDatesFromTitle } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '../utils/skillInfoModal.mjs';
@@ -361,6 +362,14 @@ class ResumeItemsController {
         if (datesDisplay) {
             datesDiv.textContent = datesDisplay;
             headerDiv.appendChild(datesDiv);
+        }
+
+        const projectLinksHtml = renderBizCardProjectLinksHtml(projectLinksForJob(jobData));
+        if (projectLinksHtml) {
+            const projectLinksHost = document.createElement('div');
+            projectLinksHost.innerHTML = projectLinksHtml;
+            const projectLinksEl = projectLinksHost.firstElementChild;
+            if (projectLinksEl) headerDiv.appendChild(projectLinksEl);
         }
 
         const debugRow = document.createElement('div');
@@ -767,6 +776,7 @@ class ResumeItemsController {
 
     handleBizResumeDivClickEvent(bizResumeDiv, event) {
         if (!bizResumeDiv) return;
+        if (ignoreProjectLinkClick(event)) return;
 
         // Check if click was on a skill title link
         const skillTitleEl = event?.target?.closest('.biz-card-skill-title');

@@ -202,7 +202,31 @@ export function renderBizCardSkillTitleSpansHtml(entries, skillsData) {
 }
 
 /**
+ * GitHub project and GitHub Pages anchors. Each opens in a new window via target=_blank.
+ * @param {{ githubUrl?: string, pagesUrl?: string } | null | undefined} links
+ */
+export function renderBizCardProjectLinksHtml(links) {
+    const items = []
+    const githubUrl = String(links?.githubUrl || '').trim()
+    const pagesUrl = String(links?.pagesUrl || '').trim()
+    if (githubUrl) {
+        items.push(renderBizCardProjectLinkHtml(githubUrl, 'GitHub project', 'Open GitHub project in a new window'))
+    }
+    if (pagesUrl) {
+        items.push(renderBizCardProjectLinkHtml(pagesUrl, 'GitHub Pages', 'Open GitHub Pages in a new window'))
+    }
+    if (!items.length) return ''
+    return `<div class="biz-card-project-links">${items.join('')}</div>`
+}
+
+function renderBizCardProjectLinkHtml(href, label, title) {
+    return `<a class="biz-card-project-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(title)}">${escapeHtml(label)}</a>`
+}
+
+/**
  * Scene biz card body (header + optional skills block). Matches useCardsController.createBizCardDiv.
+ * Project links are included here and then removed by omitSceneProjectLinksUnlessTheyFit
+ * when the fixed scene card cannot show them in full. Resume cards always keep them.
  */
 export function renderBizCardSceneBodyHtml({
     employer = 'Unknown Employer',
@@ -211,7 +235,9 @@ export function renderBizCardSceneBodyHtml({
     jobNumber = 0,
     sceneZ = 0,
     hasSkills = false,
+    projectLinks = null,
 }) {
+    const projectLinksHtml = renderBizCardProjectLinksHtml(projectLinks)
     return `
             <div class="biz-details-employer-wrap">
                 <div class="biz-details-employer">${escapeHtml(employer)}</div>
@@ -219,6 +245,7 @@ export function renderBizCardSceneBodyHtml({
             </div>
             <div class="biz-details-role">${escapeHtml(role)}</div>
             ${datesDisplay ? `<div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>` : ''}
+            ${projectLinksHtml}
             <div class="biz-details-debug-row"><span class="biz-details-id-and-hex">#${escapeHtml(String(jobNumber))} z:${escapeHtml(String(sceneZ))} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span></div>
             ${hasSkills ? `
             <div class="resume-skills">
@@ -240,7 +267,9 @@ export function renderBizResumeHeaderHtml({
     employer = 'Unknown Employer',
     role = 'Unknown Role',
     datesDisplay = '',
+    projectLinks = null,
 }) {
+    const projectLinksHtml = renderBizCardProjectLinksHtml(projectLinks)
     return `
     <div class="biz-resume-details-div">
         <div class="resume-header">
@@ -249,6 +278,7 @@ export function renderBizResumeHeaderHtml({
             </div>
             <div class="biz-details-role">${escapeHtml(role)}</div>
             ${datesDisplay ? `<div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>` : ''}
+            ${projectLinksHtml}
         </div>
     </div>`
 }

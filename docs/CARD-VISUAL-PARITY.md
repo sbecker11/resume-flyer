@@ -40,4 +40,5 @@ Scene cards and resume listing cards must look the same where they represent the
 ## Known intentional differences
 
 - **Resume-only UI**: rDiv/skill × remove buttons, listing scrollport padding, full job description sections on rDivs (scene shows compact card).
+- **Project links**: resume cards always include GitHub / GitHub Pages anchors. Scene cards include them only when every anchor fits above the 20px bottom crop.
 - **Scene parallax**: `.skill-card-div` / `.biz-card-div` may have `transform` in the scene view; resume listing cards do not. Parity tests compare CSS typography/padding, not transform scale.
