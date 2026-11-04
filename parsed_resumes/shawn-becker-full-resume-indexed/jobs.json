@@ -23,7 +23,10 @@
       "genai",
       "Bash",
       "react",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "jobID": "2"
   },
@@ -52,7 +55,9 @@
       "python",
       "vite",
       "ai-ml",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "HTML",
+      "CSS"
     ],
     "jobID": "3"
   },
@@ -81,7 +86,9 @@
       "ai-ml",
       "genai",
       "Bash",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "HTML",
+      "CSS"
     ],
     "jobID": "4"
   },
@@ -120,7 +127,9 @@
       "Bash",
       "rag",
       "aws-aurora-postgresql",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "HTML",
+      "CSS"
     ],
     "jobID": "5"
   },
@@ -166,7 +175,10 @@
       "bcrypt",
       "rbac",
       "aws-aurora-postgresql",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "jobID": "7"
   },
@@ -303,7 +315,10 @@
       "Zsh",
       "ai-ml",
       "genai",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "jobID": "11"
   },
@@ -478,7 +493,10 @@
       "node-js",
       "vuetify",
       "vuelidate",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "jobID": "19"
   },

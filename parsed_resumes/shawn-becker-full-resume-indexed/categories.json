@@ -152,7 +152,9 @@
       "vite",
       "vuetify",
       "vuelidate",
-      "jsp"
+      "jsp",
+      "HTML",
+      "CSS"
     ]
   },
   "framework": {

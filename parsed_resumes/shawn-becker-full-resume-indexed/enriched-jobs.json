@@ -19,7 +19,10 @@
       "genai",
       "Bash",
       "react",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "references": [
       "<a href=\"https://www.ecma-international.org/publications-and-standards/standards/ecma-376/\">[docx]</a>",
@@ -37,7 +40,10 @@
       "genai": "genai",
       "Bash": "Bash",
       "react": "react",
-      "Spexture Portfolio Project": "Spexture Portfolio Project"
+      "Spexture Portfolio Project": "Spexture Portfolio Project",
+      "JavaScript": "JavaScript",
+      "HTML": "HTML",
+      "CSS": "CSS"
     },
     "outlineIndex": "1.1.1",
     "outlineKind": "job",
@@ -70,7 +76,9 @@
       "python",
       "vite",
       "ai-ml",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "HTML",
+      "CSS"
     ],
     "references": [
       "<a href=\"https://react.dev/\">[react]</a>",
@@ -89,7 +97,9 @@
       "python": "python",
       "vite": "vite",
       "ai-ml": "ai-ml",
-      "Spexture Portfolio Project": "Spexture Portfolio Project"
+      "Spexture Portfolio Project": "Spexture Portfolio Project",
+      "HTML": "HTML",
+      "CSS": "CSS"
     },
     "outlineIndex": "1.1.2",
     "outlineKind": "job",
@@ -122,7 +132,9 @@
       "ai-ml",
       "genai",
       "Bash",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "HTML",
+      "CSS"
     ],
     "references": [
       "<a href=\"https://vuejs.org/\">[Vue]</a>",
@@ -142,7 +154,9 @@
       "ai-ml": "ai-ml",
       "genai": "genai",
       "Bash": "Bash",
-      "Spexture Portfolio Project": "Spexture Portfolio Project"
+      "Spexture Portfolio Project": "Spexture Portfolio Project",
+      "HTML": "HTML",
+      "CSS": "CSS"
     },
     "outlineIndex": "1.1.3",
     "outlineKind": "job",
@@ -185,7 +199,9 @@
       "Bash",
       "rag",
       "aws-aurora-postgresql",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "HTML",
+      "CSS"
     ],
     "references": [
       "<a href=\"https://gofastmcp.com/getting-started/welcome\">[fastmcp]</a>",
@@ -218,7 +234,9 @@
       "genai": "genai",
       "llm-apis-openai": "llm-apis-openai",
       "Bash": "Bash",
-      "Spexture Portfolio Project": "Spexture Portfolio Project"
+      "Spexture Portfolio Project": "Spexture Portfolio Project",
+      "HTML": "HTML",
+      "CSS": "CSS"
     },
     "outlineIndex": "1.1.4",
     "outlineKind": "job",
@@ -283,7 +301,10 @@
       "bcrypt",
       "rbac",
       "aws-aurora-postgresql",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "references": [
       "<a href=\"https://react.dev/\">[react]</a>",
@@ -300,7 +321,10 @@
       "bcrypt": "bcrypt",
       "rbac": "rbac",
       "aws-aurora-postgresql": "aws-aurora-postgresql",
-      "Spexture Portfolio Project": "Spexture Portfolio Project"
+      "Spexture Portfolio Project": "Spexture Portfolio Project",
+      "JavaScript": "JavaScript",
+      "HTML": "HTML",
+      "CSS": "CSS"
     },
     "outlineIndex": "1.1.6",
     "outlineKind": "job",
@@ -539,7 +563,10 @@
       "Zsh",
       "ai-ml",
       "genai",
-      "Spexture Portfolio Project"
+      "Spexture Portfolio Project",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "references": [
       "<a href=\"https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html\">[launchd]</a>",
@@ -558,7 +585,10 @@
       "Zsh": "Zsh",
       "ai-ml": "ai-ml",
       "genai": "genai",
-      "Spexture Portfolio Project": "Spexture Portfolio Project"
+      "Spexture Portfolio Project": "Spexture Portfolio Project",
+      "JavaScript": "JavaScript",
+      "HTML": "HTML",
+      "CSS": "CSS"
     },
     "outlineIndex": "1.1.10",
     "outlineKind": "job",
@@ -874,7 +904,10 @@
       "node-js",
       "vuetify",
       "vuelidate",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "JavaScript",
+      "HTML",
+      "CSS"
     ],
     "references": [
       "<a href=\"https://vuejs.org/\">[Vue]</a>",
@@ -891,7 +924,10 @@
       "vuelidate": "vuelidate",
       "jira": "jira",
       "agile": "agile",
-      "Spexture Client Engagement": "Spexture Client Engagement"
+      "Spexture Client Engagement": "Spexture Client Engagement",
+      "JavaScript": "JavaScript",
+      "HTML": "HTML",
+      "CSS": "CSS"
     },
     "outlineIndex": "1.2.7",
     "outlineKind": "job",

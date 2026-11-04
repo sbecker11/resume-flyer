@@ -1296,9 +1296,13 @@
   "JavaScript": {
     "name": "JavaScript",
     "jobIDs": [
+      0,
       1,
       2,
-      3
+      3,
+      5,
+      9,
+      16
     ]
   },
   "OpenAI API": {
@@ -1449,6 +1453,38 @@
     ],
     "categoryIDs": [
       "methodology"
+    ]
+  },
+  "HTML": {
+    "name": "HTML",
+    "url": "https://developer.mozilla.org/docs/Web/HTML",
+    "jobIDs": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      9,
+      16
+    ],
+    "categoryIDs": [
+      "frontend"
+    ]
+  },
+  "CSS": {
+    "name": "CSS",
+    "url": "https://developer.mozilla.org/docs/Web/CSS",
+    "jobIDs": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      9,
+      16
+    ],
+    "categoryIDs": [
+      "frontend"
     ]
   }
 }
