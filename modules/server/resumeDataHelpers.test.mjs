@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+    recomputeSkillJobIds,
+    recordIndicesReferencingSkill,
     reindexSkillJobIdsAfterJobDelete,
     reindexSkillJobIdsAfterJobInsert,
+    replaceSkillKeyInCategories,
     replaceSkillNameInDescriptions,
     resolveSkillKey,
+    rewriteSkillIdInRecords,
+    skillAliasSet,
     slugifyDisplayName,
     withDerivedMetaPaths,
 } from './resumeDataHelpers.mjs';
@@ -59,6 +64,107 @@ describe('replaceSkillNameInDescriptions', () => {
         expect(replaceSkillNameInDescriptions(jobs, 'X', '')).toBe(0);
         expect(replaceSkillNameInDescriptions(jobs, 'X', 'X')).toBe(0);
         expect(jobs[0].Description).toBe('[X]');
+    });
+
+    it('also rewrites the lowercase description field used by education entries', () => {
+        const education = { phd: { description: 'Thesis on [React 18].' }, ms: { description: 'none' } };
+        expect(replaceSkillNameInDescriptions(education, 'React 18', 'React')).toBe(1);
+        expect(education.phd.description).toBe('Thesis on [React].');
+    });
+});
+
+describe('skillAliasSet', () => {
+    it('collects trimmed, lowercased, non-empty ids', () => {
+        expect([...skillAliasSet('react-18', ' React 18 ', '', null, 'react-18')]).toEqual(['react-18', 'react 18']);
+    });
+});
+
+describe('rewriteSkillIdInRecords', () => {
+    it('rewrites key, request key, and display-name references, dedupes, and counts changed records', () => {
+        const jobs = [
+            { skillIDs: ['vue', 'react-18', 'aws'] },
+            { skillIDs: ['React 18', 'react'] },
+            { skillIDs: ['python'] },
+            { skillIDs: null },
+            null,
+        ];
+        const aliases = skillAliasSet('react-18', 'React 18');
+        expect(rewriteSkillIdInRecords(jobs, aliases, 'react')).toBe(2);
+        expect(jobs[0].skillIDs).toEqual(['vue', 'react', 'aws']);
+        expect(jobs[1].skillIDs).toEqual(['react']);
+        expect(jobs[2].skillIDs).toEqual(['python']);
+    });
+
+    it('accepts id-keyed records and a plain string alias', () => {
+        const education = { phd: { skillIDs: ['react-18'] } };
+        expect(rewriteSkillIdInRecords(education, 'react-18', 'react')).toBe(1);
+        expect(education.phd.skillIDs).toEqual(['react']);
+        expect(rewriteSkillIdInRecords(undefined, 'x', 'y')).toBe(0);
+    });
+
+    it('leaves lists that never mention the skill untouched, duplicates included', () => {
+        const ids = ['aws', 'aws'];
+        const jobs = [{ skillIDs: ids }];
+        expect(rewriteSkillIdInRecords(jobs, 'react-18', 'react')).toBe(0);
+        expect(jobs[0].skillIDs).toBe(ids);
+    });
+});
+
+describe('replaceSkillKeyInCategories', () => {
+    it('swaps the retired key for the survivor in place, dedupes, and leaves other lists alone', () => {
+        const categories = {
+            frontend: { name: 'Frontend', skillIDs: ['vue', 'react-18', 'react'] },
+            framework: { name: 'Framework', skillIDs: ['express', 'react-18'] },
+            data: { name: 'Data', skillIDs: ['pyspark'] },
+            bare: ['react-18', 'd3'],
+        };
+        expect(replaceSkillKeyInCategories(categories, 'react-18', 'react')).toBe(3);
+        expect(categories.frontend.skillIDs).toEqual(['vue', 'react']);
+        expect(categories.framework.skillIDs).toEqual(['express', 'react']);
+        expect(categories.data.skillIDs).toEqual(['pyspark']);
+        expect(categories.bare).toEqual(['react', 'd3']);
+    });
+
+    it('removes the key when no survivor is given and tolerates missing data', () => {
+        const categories = { frontend: { skillIDs: ['react-18', 'vue'] }, odd: { name: 'no list' }, nil: null };
+        expect(replaceSkillKeyInCategories(categories, ['react-18'], '')).toBe(1);
+        expect(categories.frontend.skillIDs).toEqual(['vue']);
+        expect(replaceSkillKeyInCategories(null, 'a', 'b')).toBe(0);
+        expect(replaceSkillKeyInCategories({ x: { skillIDs: ['a'] } }, 'zzz', 'b')).toBe(0);
+    });
+});
+
+describe('recordIndicesReferencingSkill', () => {
+    it('returns ascending merged indices that list the skill by key or display name', () => {
+        const merged = [
+            { skillIDs: ['react'] },
+            { skillIDs: ['aws'] },
+            { skillIDs: ['React'] },
+            {},
+            { skillIDs: ['vue', 'react'] },
+        ];
+        expect(recordIndicesReferencingSkill(merged, skillAliasSet('react', 'React'))).toEqual([0, 2, 4]);
+        expect(recordIndicesReferencingSkill([], 'react')).toEqual([]);
+    });
+});
+
+describe('recomputeSkillJobIds', () => {
+    it('unions existing ids with referencing indices, sorted and deduped, dropping junk', () => {
+        const skill = { name: 'React', jobIDs: [5, '5', 'x', -1, 2.5] };
+        const merged = [
+            { skillIDs: ['react'] },
+            { skillIDs: ['aws'] },
+            { skillIDs: ['React'] },
+        ];
+        expect(recomputeSkillJobIds(skill, merged, skillAliasSet('react', 'React'))).toBe(skill);
+        expect(skill.jobIDs).toEqual([0, 2, 5]);
+    });
+
+    it('starts from an empty list when jobIDs is missing and fails fast without a skill', () => {
+        const skill = { name: 'AWS' };
+        recomputeSkillJobIds(skill, [{ skillIDs: ['aws'] }], 'aws');
+        expect(skill.jobIDs).toEqual([0]);
+        expect(() => recomputeSkillJobIds(null, [], 'aws')).toThrow(/skill entry is required/);
     });
 });
 

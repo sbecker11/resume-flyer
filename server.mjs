@@ -25,11 +25,16 @@ import {
 import { reportError } from './modules/utils/errorReporting.mjs';
 import { createLocalDevQuitHandler } from './modules/server/localDevQuit.mjs';
 import { mergeSkillEntryInto } from './modules/server/skillMerge.mjs';
+import { writeResumeJson } from './modules/server/resumeJsonFile.mjs';
 import {
+    recomputeSkillJobIds,
     reindexSkillJobIdsAfterJobDelete,
     reindexSkillJobIdsAfterJobInsert,
+    replaceSkillKeyInCategories,
     replaceSkillNameInDescriptions,
     resolveSkillKey,
+    rewriteSkillIdInRecords,
+    skillAliasSet,
     slugifyDisplayName,
     withDerivedMetaPaths as withDerivedMetaPathsIn,
 } from './modules/server/resumeDataHelpers.mjs';
@@ -293,7 +298,7 @@ async function bakeEnrichedJobs(dir, jobs, skills) {
         const merged = mergeJobsWithEducation(jobs, education);
         const enriched = enrichJobsWithSkills(merged, skills);
         const enrichedPath = path.join(dir, 'enriched-jobs.json');
-        await atomicWriteWithLock(enrichedPath, JSON.stringify(enriched, null, 2));
+        await writeResumeJson(enrichedPath, enriched);
         console.log(`[bakeEnrichedJobs] ✅ Wrote enriched-jobs.json (${enriched.length} jobs incl. ${enriched.length - jobs.length} education)`);
     } catch (e) {
         reportError(e, '[bakeEnrichedJobs] Failed to write enriched-jobs.json — static host will fall back to live enrichment');
@@ -518,8 +523,8 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
         }
 
         await Promise.all([
-            atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
-            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+            writeResumeJson(jobsPath, jobs),
+            writeResumeJson(skillsPath, skills),
         ]);
         bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
         res.json({ ok: true, skillIDs: newSkillIDs });
@@ -592,8 +597,8 @@ app.patch('/api/resumes/:id/education/:educationKey/skills', async (req, res) =>
         }
 
         await Promise.all([
-            atomicWriteWithLock(educationPath, JSON.stringify(educationData, null, 2)),
-            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+            writeResumeJson(educationPath, educationData),
+            writeResumeJson(skillsPath, skills),
         ]);
         // Re-bake using current jobs.json (education changes affect enrichment too)
         try {
@@ -635,6 +640,48 @@ async function carrySharedSkillUrlEntry(fromKey, toKey) {
     }
 }
 
+/** Parse an optional sibling file (education.json, categories.json); null when it does not exist. */
+async function readOptionalJson(filePath) {
+    try {
+        return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+    } catch (err) {
+        if (err.code === 'ENOENT') return null;
+        throw err;
+    }
+}
+
+/**
+ * Point every reference to a retired skill at its survivor, in place: job and education
+ * skillIDs, [bracket] text in their descriptions, category lists, then the survivor's jobIDs.
+ * jobIDs are indices into the merged work + education list (education rows follow jobs.json
+ * order), the same convention PATCH jobs/:n/skills and education/:key/skills maintain, so a
+ * job that referenced the retired skill by display name (never in its jobIDs) is picked up.
+ *
+ * @param {{ jobs: unknown, education: object|null, categories: object|null, skills: Record<string, object>,
+ *           fromAliases: Set<string>, fromName: string, toKey: string }} data
+ * @returns {{ descriptionFixes: number, educationChanged: boolean, categoriesChanged: boolean }}
+ */
+function retargetSkillReferences({ jobs, education, categories, skills, fromAliases, fromName, toKey }) {
+    const toSkill = skills[toKey];
+    if (!toSkill || typeof toSkill !== 'object') throw new Error(`[retargetSkillReferences] surviving skill "${toKey}" is missing`);
+    const toName = toSkill.name || toKey;
+    rewriteSkillIdInRecords(jobs, fromAliases, toKey);
+    let descriptionFixes = replaceSkillNameInDescriptions(jobs, fromName, toName);
+    let educationChanged = false;
+    if (education && typeof education === 'object') {
+        const idFixes = rewriteSkillIdInRecords(education, fromAliases, toKey);
+        const eduDescFixes = replaceSkillNameInDescriptions(education, fromName, toName);
+        descriptionFixes += eduDescFixes;
+        educationChanged = idFixes > 0 || eduDescFixes > 0;
+    }
+    const categoriesChanged = categories && typeof categories === 'object'
+        ? replaceSkillKeyInCategories(categories, fromAliases, toKey) > 0
+        : false;
+    const merged = mergeJobsWithEducation(toJobsArray(normalizeParserJobs(jobs)), education);
+    recomputeSkillJobIds(toSkill, merged, skillAliasSet(toKey, toName));
+    return { descriptionFixes, educationChanged, categoriesChanged };
+}
+
 // PATCH /api/resumes/:id/skills/rename: Rename a skill (update key and all job references). If newName already exists, merge into it.
 app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
     const { id } = req.params;
@@ -649,10 +696,14 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
     const dir = path.join(PARSED_RESUMES_DIR, id);
     const jobsPath = path.join(dir, 'jobs.json');
     const skillsPath = path.join(dir, 'skills.json');
+    const educationPath = path.join(dir, 'education.json');
+    const categoriesPath = path.join(dir, 'categories.json');
     try {
-        const [jobsContent, skillsContent] = await Promise.all([
+        const [jobsContent, skillsContent, education, categories] = await Promise.all([
             fs.readFile(jobsPath, 'utf-8'),
             fs.readFile(skillsPath, 'utf-8'),
+            readOptionalJson(educationPath),
+            readOptionalJson(categoriesPath),
         ]);
         const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
         const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
@@ -664,35 +715,26 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
         const oldSkillName = oldSkill.name || resolvedOldKey;
         const jobIDsFromOld = oldSkill.jobIDs || [];
         delete skills[resolvedOldKey];
-        // Bracket text in descriptions must match the surviving skill's display name, not its key.
-        let newSkillName = newNameTrimmed;
         if (skills[newNameTrimmed] != null) {
             // Renaming onto an existing skill is a merge: keep the manually defined URL (shortest when both have one).
             mergeSkillEntryInto(oldSkill, skills[newNameTrimmed]);
-            newSkillName = skills[newNameTrimmed].name || newNameTrimmed;
         } else {
             skills[newNameTrimmed] = { name: newNameTrimmed, jobIDs: [...jobIDsFromOld] };
             if (oldSkill.url) skills[newNameTrimmed].url = oldSkill.url;
         }
-        const jobEntries = Array.isArray(jobs) ? jobs.map((j, i) => [i, j]) : Object.entries(jobs);
-        for (const [, job] of jobEntries) {
-            const ids = job.skillIDs;
-            if (!Array.isArray(ids)) continue;
-            const out = [];
-            const seen = new Set();
-            for (const sid of ids) {
-                const use = (sid === resolvedOldKey || sid === oldKey) ? newNameTrimmed : sid;
-                if (!seen.has(use)) { out.push(use); seen.add(use); }
-            }
-            job.skillIDs = out;
-        }
-        // Replace [OldName] → [NewName] in all job descriptions
-        const descFixes = replaceSkillNameInDescriptions(jobs, oldSkillName, newSkillName);
+        // Bracket text in descriptions must match the surviving skill's display name, not its key.
+        const newSkillName = skills[newNameTrimmed].name || newNameTrimmed;
+        const { descriptionFixes: descFixes, educationChanged, categoriesChanged } = retargetSkillReferences({
+            jobs, education, categories, skills,
+            fromAliases: skillAliasSet(resolvedOldKey, oldKey, oldSkillName),
+            fromName: oldSkillName,
+            toKey: newNameTrimmed,
+        });
         console.log(`[PATCH skills/rename] replaced [${oldSkillName}] → [${newSkillName}] in ${descFixes} descriptions`);
-        await Promise.all([
-            atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
-            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
-        ]);
+        const writes = [writeResumeJson(jobsPath, jobs), writeResumeJson(skillsPath, skills)];
+        if (educationChanged) writes.push(writeResumeJson(educationPath, education));
+        if (categoriesChanged) writes.push(writeResumeJson(categoriesPath, categories));
+        await Promise.all(writes);
         bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
         await carrySharedSkillUrlEntry(resolvedOldKey, newNameTrimmed);
         res.json({ ok: true, key: newNameTrimmed, descriptionFixes: descFixes });
@@ -715,10 +757,14 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
     const dir = path.join(PARSED_RESUMES_DIR, id);
     const jobsPath = path.join(dir, 'jobs.json');
     const skillsPath = path.join(dir, 'skills.json');
+    const educationPath = path.join(dir, 'education.json');
+    const categoriesPath = path.join(dir, 'categories.json');
     try {
-        const [jobsContent, skillsContent] = await Promise.all([
+        const [jobsContent, skillsContent, education, categories] = await Promise.all([
             fs.readFile(jobsPath, 'utf-8'),
             fs.readFile(skillsPath, 'utf-8'),
+            readOptionalJson(educationPath),
+            readOptionalJson(categoriesPath),
         ]);
         const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
         const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
@@ -738,28 +784,17 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
         // Union jobIDs and keep the manually defined URL (shortest when both skills have one).
         mergeSkillEntryInto(skills[resolvedFromKey], skills[resolvedToKey]);
         delete skills[resolvedFromKey];
-        const jobEntries = Array.isArray(jobs) ? jobs.map((j, i) => [i, j]) : Object.entries(jobs);
-        for (const [, job] of jobEntries) {
-            const ids = job.skillIDs;
-            if (!Array.isArray(ids)) continue;
-            const out = [];
-            const seen = new Set();
-            for (const sid of ids) {
-                if (sid === resolvedFromKey || sid === fromKey) {
-                    if (!seen.has(resolvedToKey)) { out.push(resolvedToKey); seen.add(resolvedToKey); }
-                } else {
-                    if (!seen.has(sid)) { out.push(sid); seen.add(sid); }
-                }
-            }
-            job.skillIDs = out;
-        }
-        // Replace [FromName] → [ToName] in all job descriptions
-        const descFixes = replaceSkillNameInDescriptions(jobs, fromSkillName, toSkillName);
+        const { descriptionFixes: descFixes, educationChanged, categoriesChanged } = retargetSkillReferences({
+            jobs, education, categories, skills,
+            fromAliases: skillAliasSet(resolvedFromKey, fromKey, fromSkillName),
+            fromName: fromSkillName,
+            toKey: resolvedToKey,
+        });
         console.log(`[PATCH skills/merge] replaced [${fromSkillName}] → [${toSkillName}] in ${descFixes} descriptions`);
-        await Promise.all([
-            atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
-            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
-        ]);
+        const writes = [writeResumeJson(jobsPath, jobs), writeResumeJson(skillsPath, skills)];
+        if (educationChanged) writes.push(writeResumeJson(educationPath, education));
+        if (categoriesChanged) writes.push(writeResumeJson(categoriesPath, categories));
+        await Promise.all(writes);
         bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
         await carrySharedSkillUrlEntry(resolvedFromKey, resolvedToKey);
         res.json({ ok: true, mergedInto: toKey, descriptionFixes: descFixes });
@@ -805,14 +840,14 @@ app.patch('/api/resumes/:id/skills/remove', async (req, res) => {
             return res.status(404).json({ error: removed.error });
         }
         const writes = [
-            atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2)),
-            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+            writeResumeJson(jobsPath, jobs),
+            writeResumeJson(skillsPath, skills),
         ];
         if (education && typeof education === 'object') {
-            writes.push(atomicWriteWithLock(educationPath, JSON.stringify(education, null, 2)));
+            writes.push(writeResumeJson(educationPath, education));
         }
         if (categories && typeof categories === 'object') {
-            writes.push(atomicWriteWithLock(categoriesPath, JSON.stringify(categories, null, 2)));
+            writes.push(writeResumeJson(categoriesPath, categories));
         }
         await Promise.all(writes);
         bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
@@ -859,7 +894,7 @@ app.patch('/api/resumes/:id/skills/url', async (req, res) => {
             skills[resolvedKey] = { name: resolvedKey };
         }
         skills[resolvedKey].url = urlTrimmed;
-        await atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2));
+        await writeResumeJson(skillsPath, skills);
         try {
             const jobsContent = await fs.readFile(jobsPath, 'utf-8');
             const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
@@ -943,7 +978,7 @@ app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     const idx = Array.isArray(jobs) ? parseInt(jobIndex, 10) : String(jobIndex);
     if (jobs[idx] == null) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
     Object.assign(jobs[idx], updates);
-    await atomicWriteWithLock(jobsPath, JSON.stringify(jobs, null, 2));
+    await writeResumeJson(jobsPath, jobs);
     // Bake if Description changed (affects job-skills / references)
     if ('Description' in updates) {
         try {
@@ -998,8 +1033,8 @@ app.post('/api/resumes/:id/jobs', async (req, res) => {
         arr.splice(insertAt, 0, newJob);
         reindexSkillJobIdsAfterJobInsert(skills, insertAt);
         await Promise.all([
-            atomicWriteWithLock(jobsPath, JSON.stringify(arr, null, 2)),
-            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+            writeResumeJson(jobsPath, arr),
+            writeResumeJson(skillsPath, skills),
         ]);
         bakeEnrichedJobs(dir, arr, normalizeParserSkills(skills));
         res.json({ ok: true, insertIndex: insertAt });
@@ -1044,8 +1079,8 @@ app.delete('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
         arr.splice(idx, 1);
         reindexSkillJobIdsAfterJobDelete(skills, idx);
         await Promise.all([
-            atomicWriteWithLock(jobsPath, JSON.stringify(arr, null, 2)),
-            atomicWriteWithLock(skillsPath, JSON.stringify(skills, null, 2)),
+            writeResumeJson(jobsPath, arr),
+            writeResumeJson(skillsPath, skills),
         ]);
         bakeEnrichedJobs(dir, arr, normalizeParserSkills(skills));
         res.json({ ok: true });
@@ -1132,7 +1167,7 @@ app.patch('/api/resumes/:id/meta', async (req, res) => {
         if (displayName !== undefined) meta.displayName = displayName;
         if (fileName !== undefined) meta.fileName = fileName;
         if (originalPath !== undefined) meta.originalPath = String(originalPath ?? '').trim();
-        await atomicWriteWithLock(metaPath, JSON.stringify(meta, null, 2));
+        await writeResumeJson(metaPath, meta);
 
         // displayName affects static index ordering/default resume selection,
         // but regenerate on any rename-related meta update to keep static listing in sync.
@@ -1170,7 +1205,7 @@ app.patch('/api/resumes/:id/other-sections', async (req, res) => {
     const filePath = path.join(dir, 'other-sections.json');
     try {
         await fs.mkdir(dir, { recursive: true });
-        await atomicWriteWithLock(filePath, JSON.stringify(payload, null, 2));
+        await writeResumeJson(filePath, payload);
         res.json(payload);
     } catch (err) {
         console.error('[PATCH other-sections]', err);
@@ -1202,7 +1237,7 @@ app.patch('/api/resumes/:id/education', async (req, res) => {
     const filePath = path.join(dir, 'education.json');
     try {
         await fs.mkdir(dir, { recursive: true });
-        await atomicWriteWithLock(filePath, JSON.stringify(payload, null, 2));
+        await writeResumeJson(filePath, payload);
         res.json(payload);
     } catch (err) {
         console.error('[PATCH education]', err);
@@ -1220,7 +1255,7 @@ app.patch('/api/resumes/:id/categories', async (req, res) => {
     const filePath = path.join(dir, 'categories.json');
     try {
         await fs.mkdir(dir, { recursive: true });
-        await atomicWriteWithLock(filePath, JSON.stringify(categories, null, 2));
+        await writeResumeJson(filePath, categories);
         res.json({ categories });
     } catch (err) {
         console.error('[PATCH categories]', err);

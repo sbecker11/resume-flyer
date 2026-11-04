@@ -85,6 +85,74 @@ async function readJson(rel) {
     return JSON.parse(await fs.readFile(path.join(parsedDir, RESUME_ID, rel), 'utf-8'));
 }
 
+async function readText(rel) {
+    return fs.readFile(path.join(parsedDir, RESUME_ID, rel), 'utf-8');
+}
+
+/** Parser-style output: ensure_ascii escapes plus a trailing newline. */
+function asciiJson(value) {
+    return `${JSON.stringify(value, null, 2).replace(/[\u007f-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`)}\n`;
+}
+
+/**
+ * The React 18 → React case from the Skill jobs tab: job 1 lists the retired skill by display
+ * name (so react-18.jobIDs never knew about it), an education entry lists it by key, and two
+ * categories carry the key. jobs.json is written parser-style (escaped, trailing newline).
+ */
+async function writeReactMergeScenario() {
+    const dir = path.join(parsedDir, RESUME_ID);
+    const jobs = fixtureJobs();
+    jobs[1].skillIDs = ['Express', 'React 18', 'aws'];
+    jobs[1].Description = '• [React 18] services on [AWS] → fast.';
+    jobs[2].skillIDs = ['python', 'react'];
+    const skills = {
+        ...fixtureSkills(),
+        'react-18': { name: 'React 18', url: 'https://react.dev/blog/2022/03/29/react-v18', jobIDs: [] },
+        react: { name: 'React', jobIDs: [2] },
+    };
+    const education = {
+        phd: { index: 0, degree: 'PhD', institution: 'MIT', start: '1990/09', end: '1996/06', description: 'Built demos in [React 18] — early.', skillIDs: ['react-18'] },
+    };
+    const categories = {
+        frontend: { name: 'Frontend', skillIDs: ['vue-3', 'react-18', 'react'] },
+        framework: { name: 'Framework', skillIDs: ['Express', 'react-18'] },
+        data: { name: 'Data', skillIDs: ['python'] },
+    };
+    await fs.writeFile(path.join(dir, 'jobs.json'), asciiJson(jobs));
+    await fs.writeFile(path.join(dir, 'skills.json'), JSON.stringify(skills, null, 2));
+    await fs.writeFile(path.join(dir, 'education.json'), JSON.stringify(education, null, 2));
+    await fs.writeFile(path.join(dir, 'categories.json'), `${JSON.stringify(categories, null, 2)}\n`);
+}
+
+/** Every discrepancy the merge must leave behind: none. */
+async function expectReactFullyMerged() {
+    const [skills, jobs, education, categories] = await Promise.all([
+        readJson('skills.json'), readJson('jobs.json'), readJson('education.json'), readJson('categories.json'),
+    ]);
+    expect(skills['react-18']).toBeUndefined();
+    // Job 1 (display-name reference), job 2 (already on react), education row at merged index 3.
+    expect(skills.react).toEqual({ name: 'React', jobIDs: [1, 2, 3], url: 'https://react.dev/blog/2022/03/29/react-v18' });
+    expect(jobs[1].skillIDs).toEqual(['Express', 'react', 'aws']);
+    expect(jobs[1].Description).toBe('• [React] services on [AWS] → fast.');
+    expect(jobs[2].skillIDs).toEqual(['python', 'react']);
+    expect(education.phd.skillIDs).toEqual(['react']);
+    expect(education.phd.description).toBe('Built demos in [React] — early.');
+    expect(categories.frontend.skillIDs).toEqual(['vue-3', 'react']);
+    expect(categories.framework.skillIDs).toEqual(['Express', 'react']);
+    expect(categories.data.skillIDs).toEqual(['python']);
+    for (const rel of ['skills.json', 'jobs.json', 'education.json', 'categories.json']) {
+        const text = await readText(rel);
+        expect(text, rel).not.toMatch(/react-18|React 18/);
+        expect(text.endsWith('\n'), `${rel} ends with one newline`).toBe(true);
+        expect(text.endsWith('\n\n'), `${rel} ends with one newline`).toBe(false);
+    }
+    // jobs.json stays in the parser's ensure_ascii style; the others stay raw UTF-8.
+    const jobsText = await readText('jobs.json');
+    expect(jobsText).toContain('\\u2022 [React] services on [AWS] \\u2192 fast.');
+    expect(jobsText).not.toMatch(/[^\x00-\x7f]/);
+    expect(await readText('education.json')).toContain('[React] — early.');
+}
+
 /** bakeEnrichedJobs runs fire-and-forget; wait for it so temp cleanup does not race it. */
 async function waitForBake() {
     const p = path.join(parsedDir, RESUME_ID, 'enriched-jobs.json');
@@ -216,6 +284,35 @@ describe('PATCH /api/resumes/:id/skills/rename', () => {
         await waitForBake();
     });
 
+    it('renaming onto an existing key is a full merge: display-name refs, education, categories, jobIDs', async () => {
+        await writeReactMergeScenario();
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/skills/rename`)
+            .send({ oldKey: 'react-18', newName: 'react' });
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ ok: true, key: 'react', descriptionFixes: 2 });
+        await expectReactFullyMerged();
+        await waitForBake();
+    });
+
+    it('a plain rename moves the key in categories and picks up display-name job references', async () => {
+        const dir = path.join(parsedDir, RESUME_ID);
+        const jobs = fixtureJobs();
+        jobs[1].skillIDs = ['Express', 'aws', 'Python'];
+        await fs.writeFile(path.join(dir, 'jobs.json'), JSON.stringify(jobs, null, 2));
+        await fs.writeFile(path.join(dir, 'categories.json'), JSON.stringify({ lang: { name: 'Languages', skillIDs: ['python', 'other'] } }, null, 2));
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/skills/rename`)
+            .send({ oldKey: 'python', newName: 'Python 3' });
+        expect(res.status).toBe(200);
+        const skills = await readJson('skills.json');
+        const after = await readJson('jobs.json');
+        expect(skills['Python 3'].jobIDs).toEqual([1, 2]);
+        expect(after[1].skillIDs).toEqual(['Express', 'aws', 'Python 3']);
+        expect((await readJson('categories.json')).lang.skillIDs).toEqual(['Python 3', 'other']);
+        await waitForBake();
+    });
+
     it('is a no-op for an identical name and 404s for an unknown key', async () => {
         const same = await request(app).patch(`/api/resumes/${RESUME_ID}/skills/rename`).send({ oldKey: 'aws', newName: 'aws' });
         expect(same.status).toBe(200);
@@ -241,6 +338,28 @@ describe('PATCH /api/resumes/:id/skills/merge', () => {
         expect(skills.Vue).toEqual({ name: 'Vue', jobIDs: [0], url: 'https://vuejs.org/' });
         expect(jobs[0].skillIDs).toEqual(['Vue', 'Express']);
         expect(jobs[0].Description).toBe('• Built a [Vue] + [Express] app.');
+        await waitForBake();
+    });
+
+    it('leaves no trace of the retired skill: display-name job refs, education, categories, jobIDs, file style', async () => {
+        await writeReactMergeScenario();
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/skills/merge`)
+            .send({ fromKey: 'react-18', toKey: 'react' });
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ ok: true, mergedInto: 'react', descriptionFixes: 2 });
+        await expectReactFullyMerged();
+        await waitForBake();
+    });
+
+    it('does not rewrite education.json or categories.json when they hold no reference', async () => {
+        const dir = path.join(parsedDir, RESUME_ID);
+        const categoriesText = '{\n  "cloud": {\n    "name": "Cloud",\n    "skillIDs": [\n      "aws"\n    ]\n  }\n}';
+        await fs.writeFile(path.join(dir, 'categories.json'), categoriesText);
+        const res = await request(app).patch(`/api/resumes/${RESUME_ID}/skills/merge`).send({ fromKey: 'vue-3', toKey: 'Vue' });
+        expect(res.status).toBe(200);
+        expect(await readText('categories.json')).toBe(categoriesText);
+        await fs.access(path.join(dir, 'education.json')).then(() => { throw new Error('education.json should not be created'); }, (e) => expect(e.code).toBe('ENOENT'));
         await waitForBake();
     });
 
@@ -277,7 +396,8 @@ describe('PATCH /api/resumes/:id/skills/remove', () => {
         expect(skills.Express).toBeUndefined();
         expect(jobs[0].skillIDs).toEqual(['vue-3']);
         expect(jobs[1].skillIDs).toEqual(['aws']);
-        expect(jobs[0].Description).not.toContain('[Express]');
+        expect(jobs[0].Description).toBe('• Built a [Vue 3] + Express app.');
+        expect(jobs[1].Description).toBe('• Express services on [AWS].');
         await waitForBake();
     });
 
