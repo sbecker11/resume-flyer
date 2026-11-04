@@ -155,7 +155,7 @@
     "start": "10/2025",
     "end": "03/2026",
     "durationMonths": 6,
-    "Description": "• [FastMCP] + [LangChain] [LCEL] RAG server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "• [FastMCP] + [LangChain] [LCEL] [RAG] server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "educationKey": null,
     "skillIDs": [
       "fastmcp",
@@ -177,12 +177,14 @@
       "ai-ml",
       "genai",
       "llm-apis-openai",
-      "Bash"
+      "Bash",
+      "rag"
     ],
     "references": [
       "<a href=\"https://gofastmcp.com/getting-started/welcome\">[fastmcp]</a>",
       "<a href=\"https://www.langchain.com/\">[langchain]</a>",
       "<a href=\"https://www.langchain.com/blog/langchain-expression-language\">[lcel]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Retrieval-augmented_generation\">[rag]</a>",
       "<a href=\"#\">[Chroma DB]</a>",
       "<a href=\"https://www.postgresql.org/\">[postgresql]</a>",
       "<a href=\"https://react.dev/\">[react]</a>"
@@ -191,6 +193,7 @@
       "fastmcp": "fastmcp",
       "langchain": "langchain",
       "lcel": "lcel",
+      "rag": "rag",
       "Chroma DB": "Chroma DB",
       "postgresql": "postgresql",
       "react": "react",
@@ -375,7 +378,7 @@
     "start": "03/2026",
     "end": "07/2026",
     "durationMonths": 5,
-    "Description": "• [Java] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "• [Java] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
     "educationKey": null,
     "skillIDs": [
       "spring-boot",
@@ -393,12 +396,14 @@
       "ai-ml",
       "devops",
       "genai",
-      "Bash"
+      "Bash",
+      "rag"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
       "<a href=\"https://spring.io/projects/spring-boot\">[spring-boot]</a>",
       "<a href=\"https://spring.io/projects/spring-ai\">[spring-ai]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Retrieval-augmented_generation\">[rag]</a>",
       "<a href=\"https://www.postgresql.org/\">[postgresql]</a>",
       "<a href=\"https://aws.amazon.com/bedrock/\">[Amazon Bedrock]</a>"
     ],
@@ -406,6 +411,7 @@
       "java": "java",
       "spring-boot": "spring-boot",
       "spring-ai": "spring-ai",
+      "rag": "rag",
       "postgresql": "postgresql",
       "Amazon Bedrock": "Amazon Bedrock",
       "spring": "spring",
@@ -438,7 +444,7 @@
     "start": "06/2026",
     "end": "07/2026",
     "durationMonths": 2,
-    "Description": "• [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
+    "Description": "• [LangGraph] corrective-[RAG] on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
     "educationKey": null,
     "skillIDs": [
       "langgraph",
@@ -455,16 +461,19 @@
       "agile",
       "genai",
       "PSI drift monitoring",
-      "mlops"
+      "mlops",
+      "rag"
     ],
     "references": [
       "<a href=\"https://docs.langchain.com/oss/python/langgraph/overview\">[langgraph]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Retrieval-augmented_generation\">[rag]</a>",
       "<a href=\"https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview\">[snowflake-cortex-search]</a>",
       "<a href=\"https://mlflow.org/\">[mlflow]</a>",
       "<a href=\"https://optuna.org/\">[optuna]</a>"
     ],
     "job-skills": {
       "langgraph": "langgraph",
+      "rag": "rag",
       "snowflake-cortex-search": "snowflake-cortex-search",
       "mlflow": "mlflow",
       "optuna": "optuna",

@@ -38,7 +38,8 @@
       "ai-agents",
       "llm-apis-openai",
       "Anthropic API",
-      "data-pipelines"
+      "data-pipelines",
+      "rag"
     ]
   },
   "methodology": {
@@ -58,7 +59,8 @@
       "nlp",
       "genai",
       "ai-agents",
-      "data-pipelines"
+      "data-pipelines",
+      "rag"
     ]
   },
   "devops": {

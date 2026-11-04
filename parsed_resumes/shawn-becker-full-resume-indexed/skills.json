@@ -1377,5 +1377,19 @@
     "jobIDs": [
       8
     ]
+  },
+  "rag": {
+    "name": "RAG",
+    "url": "https://en.wikipedia.org/wiki/Retrieval-augmented_generation",
+    "img": "",
+    "categoryIDs": [
+      "data-science",
+      "methodology"
+    ],
+    "jobIDs": [
+      3,
+      7,
+      8
+    ]
   }
 }

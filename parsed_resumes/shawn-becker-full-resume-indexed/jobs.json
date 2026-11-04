@@ -93,7 +93,7 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 [FastMCP] + [LangChain] [LCEL] RAG server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "\u2022 [FastMCP] + [LangChain] [LCEL] [RAG] server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "outlineIndex": "1.1.4",
     "skillIDs": [
       "fastmcp",
@@ -115,7 +115,8 @@
       "ai-ml",
       "genai",
       "llm-apis-openai",
-      "Bash"
+      "Bash",
+      "rag"
     ],
     "jobID": "5"
   },
@@ -211,7 +212,7 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "\u2022 [Java] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "\u2022 [Java] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
     "outlineIndex": "1.1.8",
     "skillIDs": [
       "spring-boot",
@@ -229,7 +230,8 @@
       "ai-ml",
       "devops",
       "genai",
-      "Bash"
+      "Bash",
+      "rag"
     ],
     "jobID": "9"
   },
@@ -244,7 +246,7 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
+    "Description": "\u2022 [LangGraph] corrective-[RAG] on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
     "outlineIndex": "1.1.9",
     "skillIDs": [
       "langgraph",
@@ -261,7 +263,8 @@
       "agile",
       "genai",
       "PSI drift monitoring",
-      "mlops"
+      "mlops",
+      "rag"
     ],
     "jobID": "10"
   },
