@@ -1,6 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import fs from 'fs/promises';
+import os from 'os';
 import path from 'path';
-import { parseArgs, getParserEnv } from './run-parse-resume.mjs';
+import { finalizeParserOutput, parseArgs, getParserEnv } from './run-parse-resume.mjs';
 
 describe('run-parse-resume', () => {
   const cwd = process.cwd();
@@ -82,6 +84,44 @@ describe('run-parse-resume', () => {
       expect(env.OPENAI_API_KEY).toBe('y');
       expect(result.ANTHROPIC_API_KEY).toBe('x');
       expect(result).not.toHaveProperty('OPENAI_API_KEY');
+    });
+  });
+
+  describe('finalizeParserOutput', () => {
+    let tmp;
+    beforeEach(async () => { tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'run-parse-finalize-')); });
+    afterEach(async () => { await fs.rm(tmp, { recursive: true, force: true }); });
+
+    async function writeParserOutput(dir) {
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(path.join(dir, 'jobs.json'), JSON.stringify([{ employer: 'A', Description: '[Python]', skillIDs: ['Python'] }]));
+      await fs.writeFile(path.join(dir, 'skills.json'), JSON.stringify({ python: { name: 'Python', jobIDs: [] } }));
+    }
+
+    it('normalizes and bakes the parser output; the index is refreshed only under parsed_resumes', async () => {
+      const parsedDir = path.join(tmp, 'parsed_resumes');
+      const inside = path.join(parsedDir, 'r1');
+      await writeParserOutput(inside);
+      const result = await finalizeParserOutput(inside, parsedDir);
+      expect(result.writtenFiles).toEqual(['jobs.json', 'skills.json', 'enriched-jobs.json', 'non-local-resumes.json']);
+      expect(JSON.parse(await fs.readFile(path.join(inside, 'skills.json'), 'utf-8')).python.jobIDs).toEqual([0]);
+
+      const outside = path.join(tmp, 'elsewhere', 'r2');
+      await writeParserOutput(outside);
+      const r2 = await finalizeParserOutput(outside, parsedDir);
+      expect(r2.writtenFiles).not.toContain('non-local-resumes.json');
+      await expect(fs.access(path.join(tmp, 'elsewhere', 'non-local-resumes.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    });
+
+    it('rejects when the parser output violates an invariant, leaving the files as written', async () => {
+      const dir = path.join(tmp, 'parsed_resumes', 'bad');
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(path.join(dir, 'jobs.json'), JSON.stringify([{ employer: 'A', Description: '[Ghost]', skillIDs: [] }]));
+      await fs.writeFile(path.join(dir, 'skills.json'), '{}');
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await expect(finalizeParserOutput(dir, path.join(tmp, 'parsed_resumes'))).rejects.toMatchObject({ name: 'ResumeConsistencyError' });
+      vi.restoreAllMocks();
+      await expect(fs.access(path.join(dir, 'enriched-jobs.json'))).rejects.toMatchObject({ code: 'ENOENT' });
     });
   });
 });

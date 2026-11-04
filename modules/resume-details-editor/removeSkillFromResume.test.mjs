@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { removeSkillFromResumeData } from './removeSkillFromResume.mjs';
 
 describe('removeSkillFromResumeData', () => {
-  it('removes the skill, display-name skillIDs, brackets, education, and category links', () => {
+  it('removes the skill, display-name skillIDs, brackets, and education links; categories are left for commitResume', () => {
     const jobs = [
       {
         employer: 'resume-flyer',
@@ -28,7 +28,7 @@ describe('removeSkillFromResumeData', () => {
       frontend: { name: 'Frontend', skillIDs: ['vite', 'vue-3', 'Vite'] },
     };
 
-    const result = removeSkillFromResumeData({ jobs, skills, education, categories, key: 'vite' });
+    const result = removeSkillFromResumeData({ jobs, skills, education, key: 'vite' });
 
     expect(result).toEqual({ ok: true, key: 'vite', name: 'Vite', descriptionFixes: 2 });
     expect(skills.vite).toBeUndefined();
@@ -39,7 +39,7 @@ describe('removeSkillFromResumeData', () => {
     expect(jobs[1].Description).toBe('Uses [Python] and [Java 21].');
     expect(education[0].skillIDs).toEqual(['Computer Vision']);
     expect(education[0].description).toBe('Studied Vite.');
-    expect(categories.frontend.skillIDs).toEqual(['vue-3']);
+    expect(categories.frontend.skillIDs).toEqual(['vite', 'vue-3', 'Vite']);
   });
 
   describe('bracket unwrapping keeps the prose intact', () => {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { formatJsonLike, listResumeIds, loadResumeFolder, parseArgs, runCli } from './check-resume-data-consistency.mjs';
+import { listResumeIds, loadResumeFolder, parseArgs, runCli } from './check-resume-data-consistency.mjs';
 
 const SKILLS = {
   'vue-js': { name: 'Vue.js', url: 'https://vuejs.org/', img: '', categoryIDs: ['frontend'], jobIDs: [] },
@@ -43,8 +43,8 @@ describe('check-resume-data-consistency CLI', () => {
 
   describe('parseArgs', () => {
     it('parses flags', () => {
-      expect(parseArgs([], '/p')).toEqual({ resume: null, fix: false, dryRun: false, parsedDir: '/p', help: false });
-      expect(parseArgs(['--resume', 'abc', '--fix', '--dry-run'], '/p')).toMatchObject({ resume: 'abc', fix: true, dryRun: true });
+      expect(parseArgs([], '/p')).toEqual({ resume: null, fix: false, dryRun: false, warningsOk: false, parsedDir: '/p', help: false });
+      expect(parseArgs(['--resume', 'abc', '--fix', '--dry-run', '--warnings-ok'], '/p')).toMatchObject({ resume: 'abc', fix: true, dryRun: true, warningsOk: true });
       expect(parseArgs(['--resume=xyz'], '/p').resume).toBe('xyz');
       expect(parseArgs(['--parsed-dir', '/tmp/x'], '/p').parsedDir).toBe(path.resolve('/tmp/x'));
       expect(parseArgs(['-h'], '/p').help).toBe(true);
@@ -54,22 +54,6 @@ describe('check-resume-data-consistency CLI', () => {
       expect(() => parseArgs(['--resume'], '/p')).toThrow(/--resume requires/);
       expect(() => parseArgs(['--parsed-dir'], '/p')).toThrow(/--parsed-dir requires/);
       expect(() => parseArgs(['--bogus'], '/p')).toThrow(/Unknown argument/);
-    });
-  });
-
-  describe('formatJsonLike', () => {
-    it('keeps \\uXXXX escaping and trailing newline when the existing file has them', () => {
-      const out = formatJsonLike({ a: '• é' }, '{\n  "a": "\\u2022"\n}\n');
-      expect(out).toBe('{\n  "a": "\\u2022 \\u00e9"\n}\n');
-    });
-
-    it('writes raw UTF-8 and no trailing newline when the existing file does', () => {
-      expect(formatJsonLike({ a: '•' }, '{"a":"•"}')).toBe('{\n  "a": "•"\n}');
-    });
-
-    it('adds a trailing newline for new or empty files', () => {
-      expect(formatJsonLike([1], null)).toBe('[\n  1\n]\n');
-      expect(formatJsonLike([1], '')).toBe('[\n  1\n]\n');
     });
   });
 
@@ -95,9 +79,8 @@ describe('check-resume-data-consistency CLI', () => {
 
     it('marks a missing enriched-jobs.json as null', async () => {
       const dir = await writeResume(parsedDir, 'r', { enriched: false });
-      const { data, texts } = await loadResumeFolder(dir);
+      const { data } = await loadResumeFolder(dir);
       expect(data.enrichedJobs).toBeNull();
-      expect(texts.enrichedJobs).toBeNull();
       expect(data.education).toBeUndefined();
     });
   });
@@ -127,15 +110,30 @@ describe('check-resume-data-consistency CLI', () => {
       expect(code).toBe(1);
       const text = lines.join('\n');
       expect(text).toContain('=== r1 ');
-      expect(text).toContain('WARNINGS (');
-      expect(text).toContain('[skill-id-not-key] jobs.json[0].skillIDs[0]');
+      expect(text).toContain('ERRORS (');
       expect(text).toContain('[category-skill-unknown]');
       expect(text).toContain('[enriched-jobs-stale]');
+      expect(text).toContain('[skill-jobids-missing]');
+      expect(text).toContain('WARNINGS (');
+      expect(text).toContain('[skill-id-not-key] jobs.json[0].skillIDs[0]');
       expect(text).toContain('INFO (');
       expect(text).toContain('[skill-url-orphan]');
       expect(text).toContain('[index-count-mismatch]');
-      expect(text).not.toContain('ERRORS (');
       expect(text).not.toContain('DRY-RUN');
+    });
+
+    it('--warnings-ok passes a resume with only warnings and still fails on errors', async () => {
+      await writeResume(parsedDir, 'warn', {
+        jobsText: JSON.stringify([{ employer: 'A', Description: '[Python]', skillIDs: ['Python'] }]),
+        skillsText: JSON.stringify({ python: { name: 'Python', jobIDs: [0] } }),
+        categoriesText: '{}',
+        enriched: false,
+      });
+      expect(await runCli(['--parsed-dir', parsedDir, '--resume', 'warn'], io)).toBe(1);
+      expect(lines.join('\n')).toContain('0 error(s), 1 warning(s)');
+      expect(await runCli(['--parsed-dir', parsedDir, '--resume', 'warn', '--warnings-ok'], io)).toBe(0);
+      await writeResume(parsedDir, 'err');
+      expect(await runCli(['--parsed-dir', parsedDir, '--resume', 'err', '--warnings-ok'], io)).toBe(1);
     });
 
     it('returns 0 when only informational findings remain', async () => {
@@ -168,7 +166,7 @@ describe('check-resume-data-consistency CLI', () => {
       expect(text).not.toContain('wrote ');
     });
 
-    it('--fix writes files preserving formatting and re-checks', async () => {
+    it('--fix writes through commitResume, preserving escape style, and re-checks', async () => {
       const dir = await writeResume(parsedDir, 'r1');
       const code = await runCli(['--parsed-dir', parsedDir, '--resume', 'r1', '--fix'], io);
       expect(code).toBe(0);
@@ -182,7 +180,9 @@ describe('check-resume-data-consistency CLI', () => {
       expect(JSON.parse(jobsText)[0].skillIDs).toEqual(['vue-js']);
 
       const skillsText = await fs.readFile(path.join(dir, 'skills.json'), 'utf-8');
-      expect(skillsText.endsWith('\n')).toBe(false);
+      // The one write path always ends a file in exactly one newline.
+      expect(skillsText.endsWith('\n')).toBe(true);
+      expect(skillsText.endsWith('\n\n')).toBe(false);
       expect(skillsText.startsWith('{\n  "vue-js": {\n    "name"')).toBe(true);
       expect(JSON.parse(skillsText)['vue-js'].jobIDs).toEqual([0]);
 
@@ -203,8 +203,11 @@ describe('check-resume-data-consistency CLI', () => {
       });
       vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.spyOn(console, 'log').mockImplementation(() => {});
+      const before = await fs.readFile(path.join(parsedDir, 'r1', 'skills.json'), 'utf-8');
       expect(await runCli(['--parsed-dir', parsedDir, '--resume', 'r1', '--fix'], io)).toBe(1);
+      expect(lines.join('\n')).toContain('FIX REFUSED');
       expect(lines.join('\n')).toContain('REMAINING ERRORS');
+      expect(await fs.readFile(path.join(parsedDir, 'r1', 'skills.json'), 'utf-8')).toBe(before);
     });
 
     it('checks every resume and reports shared skill-urls orphans once', async () => {

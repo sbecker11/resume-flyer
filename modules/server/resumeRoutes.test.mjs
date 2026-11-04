@@ -10,6 +10,7 @@ import os from 'os';
 import path from 'path';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { checkResumeDataConsistency, hasBlockingFindings } from '../data/resumeDataConsistency.mjs';
 
 vi.mock('../utils/anthropicEnv.mjs', () => ({
     getAnthropicApiKey: vi.fn(() => ''),
@@ -58,7 +59,7 @@ function fixtureSkills() {
     };
 }
 
-/** bakeEnrichedJobs is fire-and-forget; rm can race it. Retry until the folder is gone. */
+/** Atomic writes may still be releasing locks; retry until the folder is gone. */
 async function removeFixtureDir(dir) {
     for (let attempt = 0; attempt < 20; attempt++) {
         try {
@@ -131,7 +132,8 @@ async function expectReactFullyMerged() {
     ]);
     expect(skills['react-18']).toBeUndefined();
     // Job 1 (display-name reference), job 2 (already on react), education row at merged index 3.
-    expect(skills.react).toEqual({ name: 'React', jobIDs: [1, 2, 3], url: 'https://react.dev/blog/2022/03/29/react-v18' });
+    // categoryIDs mirror the two categories.json lists that now name react.
+    expect(skills.react).toEqual({ name: 'React', jobIDs: [1, 2, 3], url: 'https://react.dev/blog/2022/03/29/react-v18', categoryIDs: ['frontend', 'framework'] });
     expect(jobs[1].skillIDs).toEqual(['Express', 'react', 'aws']);
     expect(jobs[1].Description).toBe('• [React] services on [AWS] → fast.');
     expect(jobs[2].skillIDs).toEqual(['python', 'react']);
@@ -153,10 +155,40 @@ async function expectReactFullyMerged() {
     expect(await readText('education.json')).toContain('[React] — early.');
 }
 
-/** bakeEnrichedJobs runs fire-and-forget; wait for it so temp cleanup does not race it. */
+/** commitResume rebakes enriched-jobs.json synchronously; this confirms the file exists before the checker reads it. */
 async function waitForBake() {
     const p = path.join(parsedDir, RESUME_ID, 'enriched-jobs.json');
     await vi.waitFor(async () => { await fs.access(p); }, { timeout: 2000 });
+}
+
+async function readOptionalJson(absPath) {
+    try {
+        return JSON.parse(await fs.readFile(absPath, 'utf-8'));
+    } catch (e) {
+        if (e.code === 'ENOENT') return undefined;
+        throw e;
+    }
+}
+
+/**
+ * The checker is the gate: after any mutating route, the files on disk must hold every
+ * invariant (no error or warning findings). Prints the findings when they do not.
+ */
+async function expectConsistent(resumeId = RESUME_ID) {
+    const dir = path.join(parsedDir, resumeId);
+    const [jobs, skills, education, categories, enrichedJobs, skillUrls] = await Promise.all([
+        readOptionalJson(path.join(dir, 'jobs.json')),
+        readOptionalJson(path.join(dir, 'skills.json')),
+        readOptionalJson(path.join(dir, 'education.json')),
+        readOptionalJson(path.join(dir, 'categories.json')),
+        readOptionalJson(path.join(dir, 'enriched-jobs.json')),
+        readOptionalJson(path.join(parsedDir, 'skill-urls.json')),
+    ]);
+    const findings = checkResumeDataConsistency({
+        jobs, skills, education, categories, enrichedJobs: enrichedJobs ?? null, skillUrls, resumeId,
+    });
+    const blocking = findings.filter((f) => f.severity !== 'info');
+    expect(hasBlockingFindings(findings), `consistency findings after route:\n${JSON.stringify(blocking, null, 2)}`).toBe(false);
 }
 
 beforeAll(async () => {
@@ -223,21 +255,47 @@ describe('GET /api/resumes/:id/data', () => {
 });
 
 describe('PATCH /api/resumes/:id/jobs/:jobIndex/skills', () => {
-    it('updates the job, creates new skills, and syncs skills.jobIDs both ways', async () => {
+    it('updates the job, creates new skills, canonicalizes display names, and syncs skills.jobIDs both ways', async () => {
+        // 'Vue 3' is a display name; [Python] stays bracketed in job 2's Description so python must stay linked.
         const res = await request(app)
-            .patch(`/api/resumes/${RESUME_ID}/jobs/0/skills`)
-            .send({ skillIDs: ['vue-3', 'Kafka'], newSkills: ['Kafka', '  ', { name: 'Ignored?' }] });
+            .patch(`/api/resumes/${RESUME_ID}/jobs/2/skills`)
+            .send({ skillIDs: ['Vue 3', 'python', 'Kafka'], newSkills: ['Kafka', '  ', { name: 'Ignored?' }] });
         expect(res.status).toBe(200);
-        expect(res.body).toEqual({ ok: true, skillIDs: ['vue-3', 'Kafka'] });
+        expect(res.body).toEqual({ ok: true, skillIDs: ['vue-3', 'python', 'Kafka'] });
 
         const jobs = await readJson('jobs.json');
         const skills = await readJson('skills.json');
-        expect(jobs[0].skillIDs).toEqual(['vue-3', 'Kafka']);
-        expect(skills.Kafka).toEqual({ name: 'Kafka', jobIDs: [0] });
+        expect(jobs[2].skillIDs).toEqual(['vue-3', 'python', 'Kafka']);
+        expect(skills.Kafka).toEqual({ name: 'Kafka', jobIDs: [2] });
         expect(skills['Ignored?']).toEqual({ name: 'Ignored?', jobIDs: [] });
-        // Express lost job 0 but still has job 1.
-        expect(skills.Express.jobIDs).toEqual([1]);
+        expect(skills['vue-3'].jobIDs).toEqual([0, 2]);
+        expect(skills.python.jobIDs).toEqual([2]);
         await waitForBake();
+        await expectConsistent();
+    });
+
+    it('refuses (422, nothing written) to unlink a skill the Description still references in [brackets]', async () => {
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const before = await readText('jobs.json');
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/jobs/0/skills`)
+            .send({ skillIDs: ['vue-3'] });
+        errSpy.mockRestore();
+        expect(res.status).toBe(422);
+        expect(res.body.error).toMatch(/bracket-not-linked/);
+        expect(res.body.findings).toEqual([expect.objectContaining({ code: 'bracket-not-linked', where: 'jobs.json[0].Description' })]);
+        expect(await readText('jobs.json')).toBe(before);
+        expect((await readJson('skills.json')).Express.jobIDs).toEqual([0, 1]);
+        await fs.access(path.join(parsedDir, RESUME_ID, 'enriched-jobs.json')).then(() => { throw new Error('enriched-jobs.json should not be written'); }, (e) => expect(e.code).toBe('ENOENT'));
+    });
+
+    it('rejects an unknown skill id that is not in newSkills', async () => {
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const res = await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/2/skills`).send({ skillIDs: ['python', 'Nope'] });
+        errSpy.mockRestore();
+        expect(res.status).toBe(422);
+        expect(res.body.findings.map((f) => f.code)).toEqual(['skill-id-unknown']);
+        expect((await readJson('jobs.json'))[2].skillIDs).toEqual(['python']);
     });
 
     it('rejects a missing skillIDs array and an unknown job index', async () => {
@@ -263,6 +321,7 @@ describe('PATCH /api/resumes/:id/skills/rename', () => {
         expect(jobs[2].skillIDs).toEqual(['Python 3']);
         expect(jobs[2].Description).toBe('• [Python 3] tooling.');
         await waitForBake();
+        await expectConsistent();
     });
 
     it('merges onto an existing name, keeping the shortest manually defined URL', async () => {
@@ -282,6 +341,7 @@ describe('PATCH /api/resumes/:id/skills/rename', () => {
         expect(jobs[0].Description).toBe('• Built a [Vue 3] + [Express.js] app.');
         expect(jobs[1].Description).toBe('• [Express.js] services on [AWS].');
         await waitForBake();
+        await expectConsistent();
     });
 
     it('renaming onto an existing key is a full merge: display-name refs, education, categories, jobIDs', async () => {
@@ -293,6 +353,7 @@ describe('PATCH /api/resumes/:id/skills/rename', () => {
         expect(res.body).toEqual({ ok: true, key: 'react', descriptionFixes: 2 });
         await expectReactFullyMerged();
         await waitForBake();
+        await expectConsistent();
     });
 
     it('a plain rename moves the key in categories and picks up display-name job references', async () => {
@@ -308,9 +369,12 @@ describe('PATCH /api/resumes/:id/skills/rename', () => {
         const skills = await readJson('skills.json');
         const after = await readJson('jobs.json');
         expect(skills['Python 3'].jobIDs).toEqual([1, 2]);
+        expect(skills['Python 3'].categoryIDs).toEqual(['lang']);
         expect(after[1].skillIDs).toEqual(['Express', 'aws', 'Python 3']);
-        expect((await readJson('categories.json')).lang.skillIDs).toEqual(['Python 3', 'other']);
+        // The dangling 'other' entry (no such skill) is dropped on write.
+        expect((await readJson('categories.json')).lang.skillIDs).toEqual(['Python 3']);
         await waitForBake();
+        await expectConsistent();
     });
 
     it('is a no-op for an identical name and 404s for an unknown key', async () => {
@@ -339,6 +403,7 @@ describe('PATCH /api/resumes/:id/skills/merge', () => {
         expect(jobs[0].skillIDs).toEqual(['Vue', 'Express']);
         expect(jobs[0].Description).toBe('• Built a [Vue] + [Express] app.');
         await waitForBake();
+        await expectConsistent();
     });
 
     it('leaves no trace of the retired skill: display-name job refs, education, categories, jobIDs, file style', async () => {
@@ -350,6 +415,7 @@ describe('PATCH /api/resumes/:id/skills/merge', () => {
         expect(res.body).toEqual({ ok: true, mergedInto: 'react', descriptionFixes: 2 });
         await expectReactFullyMerged();
         await waitForBake();
+        await expectConsistent();
     });
 
     it('does not rewrite education.json or categories.json when they hold no reference', async () => {
@@ -361,6 +427,7 @@ describe('PATCH /api/resumes/:id/skills/merge', () => {
         expect(await readText('categories.json')).toBe(categoriesText);
         await fs.access(path.join(dir, 'education.json')).then(() => { throw new Error('education.json should not be created'); }, (e) => expect(e.code).toBe('ENOENT'));
         await waitForBake();
+        await expectConsistent();
     });
 
     it('re-keys the shared catalog row from the retired slug to the surviving one', async () => {
@@ -372,6 +439,7 @@ describe('PATCH /api/resumes/:id/skills/merge', () => {
         // The old row is left in place (last-write-wins history); the surviving slug now resolves.
         expect(catalog.entries['vue-3']).toBeTruthy();
         await waitForBake();
+        await expectConsistent();
     });
 
     it('validates keys', async () => {
@@ -399,6 +467,7 @@ describe('PATCH /api/resumes/:id/skills/remove', () => {
         expect(jobs[0].Description).toBe('• Built a [Vue 3] + Express app.');
         expect(jobs[1].Description).toBe('• Express services on [AWS].');
         await waitForBake();
+        await expectConsistent();
     });
 
     it('404s for an unknown skill or resume and 400s without a key', async () => {
@@ -419,6 +488,7 @@ describe('PATCH /api/resumes/:id/skills/url', () => {
         expect(clear.status).toBe(200);
         expect((await readJson('skills.json')).aws.url).toBe('');
         await waitForBake();
+        await expectConsistent();
     });
 
     it('rejects non-http URLs and unknown skills', async () => {
@@ -467,6 +537,7 @@ describe('job insert and delete', () => {
         expect(skills.aws.jobIDs).toEqual([2]);
         expect(skills.python.jobIDs).toEqual([3]);
         await waitForBake();
+        await expectConsistent();
     });
 
     it('inserts at the front when afterIndex is -1 or omitted, clamping to the array', async () => {
@@ -477,6 +548,7 @@ describe('job insert and delete', () => {
         expect(far.body.insertIndex).toBe(4);
         expect((await request(app).post('/api/resumes/missing/jobs').send({})).status).toBe(404);
         await waitForBake();
+        await expectConsistent();
     });
 
     it('deletes a job and compacts skills.jobIDs', async () => {
@@ -489,12 +561,122 @@ describe('job insert and delete', () => {
         expect(skills.aws.jobIDs).toEqual([]);
         expect(skills.python.jobIDs).toEqual([1]);
         await waitForBake();
+        await expectConsistent();
     });
 
     it('validates the job index', async () => {
         expect((await request(app).delete(`/api/resumes/${RESUME_ID}/jobs/abc`)).status).toBe(400);
         expect((await request(app).delete(`/api/resumes/${RESUME_ID}/jobs/42`)).status).toBe(404);
         expect((await request(app).delete('/api/resumes/missing/jobs/0')).status).toBe(404);
+    });
+});
+
+describe('PATCH /api/resumes/:id/jobs/:jobIndex (fields)', () => {
+    it('updates fields and a Description whose brackets stay linked, baking synchronously', async () => {
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/jobs/2`)
+            .send({ role: 'Principal', Description: '• [Python] tooling and more [Python].', ignored: 'x' });
+        expect(res.status).toBe(200);
+        expect(res.body.ok).toBe(true);
+        expect(res.body.job).toMatchObject({ employer: 'Gamma', role: 'Principal', Description: '• [Python] tooling and more [Python].', skillIDs: ['python'] });
+        const jobs = await readJson('jobs.json');
+        expect(jobs[2].role).toBe('Principal');
+        const enriched = await readJson('enriched-jobs.json');
+        expect(enriched[2]['job-skills']).toEqual({ python: 'python' });
+        await waitForBake();
+        await expectConsistent();
+    });
+
+    it('refuses a Description with an unresolved or unlinked [Bracket] and leaves the file alone', async () => {
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const before = await readText('jobs.json');
+        const unresolved = await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/2`).send({ Description: '• [Python] and [Rust].' });
+        expect(unresolved.status).toBe(422);
+        expect(unresolved.body.findings.map((f) => f.code)).toContain('bracket-unresolved');
+        const unlinked = await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/2`).send({ Description: '• [Python] on [AWS].' });
+        expect(unlinked.status).toBe(422);
+        expect(unlinked.body.findings.map((f) => f.code)).toEqual(['bracket-not-linked']);
+        errSpy.mockRestore();
+        expect(await readText('jobs.json')).toBe(before);
+    });
+
+    it('validates input and the job index', async () => {
+        expect((await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/2`).send({ nothing: 1 })).status).toBe(400);
+        expect((await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/9`).send({ role: 'x' })).status).toBe(404);
+        expect((await request(app).patch('/api/resumes/missing/jobs/0').send({ role: 'x' })).status).toBe(404);
+    });
+});
+
+describe('PATCH /api/resumes/:id/education/:educationKey/skills', () => {
+    it('updates the entry, canonicalizes ids, creates new skills, and indexes jobIDs after the work jobs', async () => {
+        await writeReactMergeScenario();
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/education/phd/skills`)
+            .send({ skillIDs: ['React', 'Python', 'Vision'], newSkills: ['Vision'] });
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ ok: true, skillIDs: ['react', 'python', 'Vision'] });
+        const education = await readJson('education.json');
+        const skills = await readJson('skills.json');
+        expect(education.phd.skillIDs).toEqual(['react', 'python', 'Vision']);
+        // Merged index 3 = 3 work jobs + the first education row.
+        expect(skills.react.jobIDs).toEqual([2, 3]);
+        expect(skills.python.jobIDs).toEqual([2, 3]);
+        expect(skills.Vision).toEqual({ name: 'Vision', jobIDs: [3] });
+        expect(skills['react-18'].jobIDs).toEqual([1]);
+        await waitForBake();
+        await expectConsistent();
+    });
+
+    it('404s for an unknown education key or resume and 400s without skillIDs', async () => {
+        expect((await request(app).patch(`/api/resumes/${RESUME_ID}/education/phd/skills`).send({ skillIDs: [] })).status).toBe(404);
+        expect((await request(app).patch('/api/resumes/missing/education/phd/skills').send({ skillIDs: [] })).status).toBe(404);
+        expect((await request(app).patch(`/api/resumes/${RESUME_ID}/education/phd/skills`).send({})).status).toBe(400);
+    });
+});
+
+describe('PATCH /api/resumes/:id/education and /categories (whole-file)', () => {
+    it('replacing education.json re-indexes skills.jobIDs for the shifted education rows', async () => {
+        await writeReactMergeScenario();
+        const payload = {
+            ms: { index: 0, degree: 'MS', institution: 'BYU', start: '1988/09', end: '1990/06', description: '', skillIDs: ['python'] },
+            phd: { index: 1, degree: 'PhD', institution: 'MIT', start: '1990/09', end: '1996/06', description: 'Built demos in [React 18] — early.', skillIDs: ['React 18'] },
+        };
+        const res = await request(app).patch(`/api/resumes/${RESUME_ID}/education`).send(payload);
+        expect(res.status).toBe(200);
+        expect(res.body.phd.skillIDs).toEqual(['react-18']);
+        const skills = await readJson('skills.json');
+        expect(skills.python.jobIDs).toEqual([2, 3]);
+        expect(skills['react-18'].jobIDs).toEqual([1, 4]);
+        expect((await readJson('enriched-jobs.json'))).toHaveLength(5);
+        await waitForBake();
+        await expectConsistent();
+    });
+
+    it('replacing categories.json makes the payload authoritative for skill.categoryIDs', async () => {
+        await writeReactMergeScenario();
+        const first = await request(app).patch(`/api/resumes/${RESUME_ID}/categories`).send({ categories: { frontend: { name: 'Frontend', skillIDs: ['vue-3', 'React 18'] }, data: { name: 'Data', skillIDs: ['python', 'ghost'] } } });
+        expect(first.status).toBe(200);
+        expect(first.body).toEqual({ categories: { frontend: { name: 'Frontend', skillIDs: ['vue-3', 'react-18'] }, data: { name: 'Data', skillIDs: ['python'] } } });
+        let skills = await readJson('skills.json');
+        expect(skills['react-18'].categoryIDs).toEqual(['frontend']);
+        expect(skills.python.categoryIDs).toEqual(['data']);
+        await expectConsistent();
+
+        // Dropping a membership sticks: additive sync does not re-add it from the stale categoryIDs.
+        const second = await request(app).patch(`/api/resumes/${RESUME_ID}/categories`).send({ categories: { frontend: { name: 'Frontend', skillIDs: ['vue-3'] } } });
+        expect(second.status).toBe(200);
+        skills = await readJson('skills.json');
+        expect(skills['react-18'].categoryIDs).toEqual([]);
+        expect(skills.python.categoryIDs).toEqual([]);
+        expect(await readJson('categories.json')).toEqual({ frontend: { name: 'Frontend', skillIDs: ['vue-3'] } });
+        await waitForBake();
+        await expectConsistent();
+    });
+
+    it('validates payloads and 404s for a missing resume', async () => {
+        expect((await request(app).patch(`/api/resumes/${RESUME_ID}/education`).send([])).status).toBe(400);
+        expect((await request(app).patch(`/api/resumes/${RESUME_ID}/categories`).send({})).status).toBe(400);
+        expect((await request(app).patch('/api/resumes/missing/categories').send({ categories: {} })).status).toBe(404);
     });
 });
 

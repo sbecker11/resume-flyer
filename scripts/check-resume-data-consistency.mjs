@@ -3,14 +3,16 @@
  * Check (and optionally mechanically fix) cross-file consistency of parsed resume data.
  *
  * Usage:
- *   node scripts/check-resume-data-consistency.mjs [--resume <id>] [--fix] [--dry-run] [--parsed-dir <dir>]
+ *   node scripts/check-resume-data-consistency.mjs [--resume <id>] [--fix] [--dry-run] [--warnings-ok] [--parsed-dir <dir>]
  *
- *   (no flags)   report findings for every resume under parsed_resumes/; exit 1 on any error/warning
- *   --resume id  limit to one resume folder
- *   --fix        apply mechanical fixes and write files back (formatting preserved)
- *   --dry-run    show what --fix would change without writing
+ *   (no flags)     report findings for every resume under parsed_resumes/; exit 1 on any error/warning
+ *   --resume id    limit to one resume folder
+ *   --fix          apply mechanical fixes through resumeStore.commitResume (the one write path);
+ *                  refuses to write when a non-mechanical finding would remain
+ *   --dry-run      show what --fix would change without writing
+ *   --warnings-ok  exit 0 when only warnings/info remain (CI gate: errors still fail)
  *
- * Exit codes: 0 clean (or only informational findings) · 1 blocking findings remain · 2 usage / IO failure
+ * Exit codes: 0 clean (or only informational findings; with --warnings-ok, only warnings/info) · 1 blocking findings remain · 2 usage / IO failure
  */
 import fs from 'fs/promises';
 import path from 'path';
@@ -21,7 +23,9 @@ import {
   fixResumeDataConsistency,
   groupFindingsBySeverity,
   hasBlockingFindings,
+  SEVERITY,
 } from '../modules/data/resumeDataConsistency.mjs';
+import { ResumeConsistencyError, commitResume } from '../modules/server/resumeStore.mjs';
 import { reportError } from '../modules/utils/errorReporting.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,10 +44,10 @@ const RESUME_FILES = {
 
 /**
  * @param {string[]} argv
- * @returns {{ resume: string|null, fix: boolean, dryRun: boolean, parsedDir: string, help: boolean }}
+ * @returns {{ resume: string|null, fix: boolean, dryRun: boolean, warningsOk: boolean, parsedDir: string, help: boolean }}
  */
 export function parseArgs(argv, defaultParsedDir = DEFAULT_PARSED_DIR) {
-  const out = { resume: null, fix: false, dryRun: false, parsedDir: defaultParsedDir, help: false };
+  const out = { resume: null, fix: false, dryRun: false, warningsOk: false, parsedDir: defaultParsedDir, help: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--resume') {
@@ -55,6 +59,8 @@ export function parseArgs(argv, defaultParsedDir = DEFAULT_PARSED_DIR) {
       out.fix = true;
     } else if (a === '--dry-run') {
       out.dryRun = true;
+    } else if (a === '--warnings-ok') {
+      out.warningsOk = true;
     } else if (a === '--parsed-dir') {
       const dir = argv[++i];
       if (!dir) throw new Error('--parsed-dir requires a path');
@@ -68,23 +74,7 @@ export function parseArgs(argv, defaultParsedDir = DEFAULT_PARSED_DIR) {
   return out;
 }
 
-const UNICODE_ESCAPE_RE = /\\u[0-9a-fA-F]{4}/;
-
-/**
- * Serialize like the existing file: 2-space indent, \uXXXX escapes for non-ASCII when the
- * current text uses them (resume-parser writes ensure_ascii JSON), and the same trailing-newline
- * state. New files get a trailing newline.
- * @param {unknown} value
- * @param {string|null} existingText
- */
-export function formatJsonLike(value, existingText) {
-  let text = JSON.stringify(value, null, 2);
-  if (existingText != null && UNICODE_ESCAPE_RE.test(existingText)) {
-    text = text.replace(/[\u0080-\uffff]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
-  }
-  const wantNewline = existingText == null || existingText.length === 0 || existingText.endsWith('\n');
-  return wantNewline ? `${text}\n` : text;
-}
+const USAGE = 'Usage: node scripts/check-resume-data-consistency.mjs [--resume <id>] [--fix] [--dry-run] [--warnings-ok] [--parsed-dir <dir>]';
 
 async function readTextIfExists(filePath) {
   try {
@@ -97,14 +87,12 @@ async function readTextIfExists(filePath) {
 
 /**
  * @param {string} dir resume folder
- * @returns {Promise<{ data: Record<string, unknown>, texts: Record<string, string|null> }>}
+ * @returns {Promise<{ data: Record<string, unknown> }>}
  */
 export async function loadResumeFolder(dir) {
-  const texts = {};
   const data = {};
   for (const [field, fileName] of Object.entries(RESUME_FILES)) {
     const text = await readTextIfExists(path.join(dir, fileName));
-    texts[field] = text;
     if (text == null) {
       data[field] = undefined;
       continue;
@@ -119,7 +107,7 @@ export async function loadResumeFolder(dir) {
   if (data.jobs === undefined) throw new Error(`[check-resume-data-consistency] ${path.join(dir, 'jobs.json')} not found`);
   if (data.skills === undefined) throw new Error(`[check-resume-data-consistency] ${path.join(dir, 'skills.json')} not found`);
   if (data.enrichedJobs === undefined) data.enrichedJobs = null;
-  return { data, texts };
+  return { data };
 }
 
 /**
@@ -159,11 +147,11 @@ export async function runCli(argv, io = {}) {
     args = parseArgs(argv);
   } catch (error) {
     reportError(error, '[check-resume-data-consistency] Invalid arguments');
-    errorLog('Usage: node scripts/check-resume-data-consistency.mjs [--resume <id>] [--fix] [--dry-run] [--parsed-dir <dir>]');
+    errorLog(USAGE);
     return 2;
   }
   if (args.help) {
-    log('Usage: node scripts/check-resume-data-consistency.mjs [--resume <id>] [--fix] [--dry-run] [--parsed-dir <dir>]');
+    log(USAGE);
     return 0;
   }
 
@@ -187,6 +175,9 @@ export async function runCli(argv, io = {}) {
 
   let blocking = false;
   const allSkillsMaps = [];
+  const isBlocking = (findings) => (args.warningsOk
+    ? findings.some((f) => f.severity === SEVERITY.ERROR)
+    : hasBlockingFindings(findings));
 
   for (const id of ids) {
     const dir = path.join(args.parsedDir, id);
@@ -197,7 +188,7 @@ export async function runCli(argv, io = {}) {
       reportError(error, `[check-resume-data-consistency] Failed to load resume "${id}"`);
       return 2;
     }
-    const { data, texts } = loaded;
+    const { data } = loaded;
     allSkillsMaps.push(data.skills);
 
     let findings = checkResumeDataConsistency({ ...data, skillUrls, index, resumeId: id });
@@ -210,7 +201,7 @@ export async function runCli(argv, io = {}) {
     printGroup(log, 'INFO', groups.info);
     log(`\n${groups.error.length} error(s), ${groups.warning.length} warning(s), ${groups.info.length} info`);
 
-    if (args.fix || args.dryRun) {
+    if (args.dryRun) {
       const fixed = fixResumeDataConsistency(data);
       const changedFiles = [];
       for (const [field, fileName] of Object.entries(RESUME_FILES)) {
@@ -218,34 +209,44 @@ export async function runCli(argv, io = {}) {
         const after = fixed[field];
         if (after == null && before == null) continue;
         if (JSON.stringify(before) === JSON.stringify(after)) continue;
-        changedFiles.push({ field, fileName, after });
+        changedFiles.push(fileName);
       }
-      log(`\n${args.fix && !args.dryRun ? 'FIXES APPLIED' : 'DRY-RUN: fixes --fix would apply'} (${fixed.applied.length})`);
+      log(`\nDRY-RUN: fixes --fix would apply (${fixed.applied.length})`);
       for (const a of fixed.applied) log(`  [${a.code}] ${a.where}\n      ${a.message}`);
-      log(`  files that would change: ${changedFiles.length ? changedFiles.map((c) => c.fileName).join(', ') : 'none'}`);
-
-      if (args.fix && !args.dryRun) {
-        for (const { field, fileName, after } of changedFiles) {
-          const filePath = path.join(dir, fileName);
-          try {
-            await fs.writeFile(filePath, formatJsonLike(after, texts[field]), 'utf-8');
-            log(`  wrote ${filePath}`);
-          } catch (error) {
-            reportError(error, `[check-resume-data-consistency] Failed to write ${filePath}`);
-            throw error;
-          }
-        }
-        const after = checkResumeDataConsistency({ ...fixed, skillUrls, index, resumeId: id })
-          .filter((f) => !checkingAll || f.code !== 'skill-url-orphan');
-        const remaining = groupFindingsBySeverity(after);
-        log(`\nAfter fix: ${remaining.error.length} error(s), ${remaining.warning.length} warning(s), ${remaining.info.length} info`);
+      log(`  files that would change: ${changedFiles.length ? changedFiles.join(', ') : 'none'}`);
+    } else if (args.fix) {
+      let result;
+      try {
+        result = await commitResume(args.parsedDir, id, {
+          jobs: data.jobs,
+          skills: data.skills,
+          education: data.education ?? {},
+          categories: data.categories ?? {},
+        }, { log: () => {} });
+      } catch (error) {
+        if (!(error instanceof ResumeConsistencyError)) throw error;
+        const remaining = groupFindingsBySeverity(error.findings);
+        log(`\nFIX REFUSED: ${remaining.error.length} error(s), ${remaining.warning.length} warning(s) are not mechanical; nothing written`);
         printGroup(log, 'REMAINING ERRORS', remaining.error);
         printGroup(log, 'REMAINING WARNINGS', remaining.warning);
-        if (hasBlockingFindings(after)) blocking = true;
+        blocking = true;
         continue;
       }
+      log(`\nFIXES APPLIED (${result.appliedFixes.length})`);
+      for (const a of result.appliedFixes) log(`  [${a.code}] ${a.where}\n      ${a.message}`);
+      for (const fileName of result.writtenFiles) {
+        log(`  wrote ${fileName === 'non-local-resumes.json' ? path.join(args.parsedDir, fileName) : path.join(dir, fileName)}`);
+      }
+      const after = checkResumeDataConsistency({ ...result.data, skillUrls, index, resumeId: id })
+        .filter((f) => !checkingAll || f.code !== 'skill-url-orphan');
+      const remaining = groupFindingsBySeverity(after);
+      log(`\nAfter fix: ${remaining.error.length} error(s), ${remaining.warning.length} warning(s), ${remaining.info.length} info`);
+      printGroup(log, 'REMAINING ERRORS', remaining.error);
+      printGroup(log, 'REMAINING WARNINGS', remaining.warning);
+      if (isBlocking(after)) blocking = true;
+      continue;
     }
-    if (hasBlockingFindings(findings)) blocking = true;
+    if (isBlocking(findings)) blocking = true;
   }
 
   if (checkingAll && skillUrls !== undefined) {

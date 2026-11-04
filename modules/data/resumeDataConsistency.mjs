@@ -12,6 +12,8 @@
  *  - Every [Bracketed] token in a work-job Description must resolve via labelToSlug (content-index
  *    tags like [1.2.3] excepted); enrichJobsWithSkills throws otherwise. Education descriptions are
  *    never scanned for skills.
+ *  - skillIDs is the source of truth for job<->skill links: a [Bracket] whose skill is not in that
+ *    job's skillIDs is a blocking finding (bracket-not-linked), never a jobIDs source.
  *  - skill.categoryIDs and categories[c].skillIDs must mirror each other.
  *  - enriched-jobs.json must equal enrichJobsWithSkills(mergeJobsWithEducation(jobs, education), skills)
  *    (durationMonths excluded: blank end dates make it date-dependent).
@@ -253,19 +255,26 @@ export function checkResumeDataConsistency({
     checkSkillIdList(job?.skillIDs, skills, where, out);
     const description = typeof job?.Description === 'string' ? job.Description : (typeof job?.description === 'string' ? job.description : '');
     if (!description) return;
+    const linked = referencedKeys(job, skills);
     const reported = new Set();
     BRACKET_RE.lastIndex = 0;
     let m;
     while ((m = BRACKET_RE.exec(description)) !== null) {
       const label = String(m[1]).trim();
       if (!label || parseOutlineIndex(label)) continue;
-      if (labelToSlug(label, skills)) continue;
       const lower = label.toLowerCase();
       if (reported.has(lower)) continue;
       reported.add(lower);
-      out.push(finding('bracket-unresolved', SEVERITY.ERROR,
-        `[${label}] in Description of job ${describeRow(job, i)} resolves to no skill (enrichJobsWithSkills will throw)`,
-        `${where}.Description`, { label }));
+      const key = labelToSlug(label, skills);
+      if (!key) {
+        out.push(finding('bracket-unresolved', SEVERITY.ERROR,
+          `[${label}] in Description of job ${describeRow(job, i)} resolves to no skill (enrichJobsWithSkills will throw)`,
+          `${where}.Description`, { label }));
+      } else if (!linked.has(key)) {
+        out.push(finding('bracket-not-linked', SEVERITY.ERROR,
+          `[${label}] in Description of job ${describeRow(job, i)} resolves to ${JSON.stringify(key)} but the job's skillIDs do not list it`,
+          `${where}.Description`, { label, resolvedKey: key }));
+      }
     }
   });
 
@@ -285,7 +294,7 @@ export function checkResumeDataConsistency({
     const expected = expectedJobIds.get(key) || [];
     const raw = skill.jobIDs;
     if (raw !== undefined && !Array.isArray(raw)) {
-      out.push(finding('skill-jobids-malformed', SEVERITY.WARNING, `jobIDs must be an array; got ${typeof raw}`, where, { expected }));
+      out.push(finding('skill-jobids-malformed', SEVERITY.ERROR, `jobIDs must be an array; got ${typeof raw}`, where, { expected }));
       continue;
     }
     const actualRaw = Array.isArray(raw) ? raw : [];
@@ -297,17 +306,17 @@ export function checkResumeDataConsistency({
       if (Number.isInteger(n)) ints.push(n);
     }
     if (malformed.length) {
-      out.push(finding('skill-jobids-malformed', SEVERITY.WARNING,
+      out.push(finding('skill-jobids-malformed', SEVERITY.ERROR,
         `jobIDs contains non-integer entries ${JSON.stringify(malformed)}`, where, { malformed, expected }));
     }
     const sortedUnique = [...new Set(ints)].sort((a, b) => a - b);
     if (!malformed.length && JSON.stringify(sortedUnique) !== JSON.stringify(actualRaw)) {
-      out.push(finding('skill-jobids-malformed', SEVERITY.WARNING,
+      out.push(finding('skill-jobids-malformed', SEVERITY.ERROR,
         `jobIDs ${JSON.stringify(actualRaw)} is not sorted and unique`, where, { expected }));
     }
     const outOfRange = sortedUnique.filter((n) => n < 0 || n >= merged.length);
     if (outOfRange.length) {
-      out.push(finding('skill-jobids-out-of-range', SEVERITY.WARNING,
+      out.push(finding('skill-jobids-out-of-range', SEVERITY.ERROR,
         `jobIDs ${JSON.stringify(outOfRange)} outside 0..${merged.length - 1} (${jobsArr.length} jobs + ${eduEntries.length} education)`,
         where, { outOfRange, expected }));
     }
@@ -315,12 +324,12 @@ export function checkResumeDataConsistency({
     const missing = expected.filter((n) => !actualSet.has(n));
     const extraneous = sortedUnique.filter((n) => n >= 0 && n < merged.length && !expectedJobIds.get(key)?.includes(n));
     if (missing.length) {
-      out.push(finding('skill-jobids-missing', SEVERITY.WARNING,
+      out.push(finding('skill-jobids-missing', SEVERITY.ERROR,
         `jobIDs lacks ${JSON.stringify(missing)} — referenced by skillIDs of ${missing.map((n) => describeRow(merged[n], n)).join(', ')}`,
         where, { missing, expected }));
     }
     if (extraneous.length) {
-      out.push(finding('skill-jobids-extraneous', SEVERITY.WARNING,
+      out.push(finding('skill-jobids-extraneous', SEVERITY.ERROR,
         `jobIDs lists ${JSON.stringify(extraneous)} but ${extraneous.map((n) => describeRow(merged[n], n)).join(', ')} do not reference this skill`,
         where, { extraneous, expected }));
     }
@@ -369,7 +378,7 @@ export function checkResumeDataConsistency({
           const where = `${whereCat}.skillIDs[${i}]`;
           const key = resolveSkillKeyOrNull(sid, skills);
           if (key == null) {
-            out.push(finding('category-skill-unknown', SEVERITY.WARNING,
+            out.push(finding('category-skill-unknown', SEVERITY.ERROR,
               `category lists ${JSON.stringify(sid)} which is no skills.json key or name (dangling)`, where, { skillID: sid }));
             return;
           }
@@ -404,7 +413,7 @@ export function checkResumeDataConsistency({
       out.push(finding('enriched-jobs-missing', SEVERITY.INFO,
         `enriched-jobs.json is missing; ${rebuilt.rows.length} rows would be baked`, 'enriched-jobs.json'));
     } else if (!Array.isArray(enrichedJobs)) {
-      out.push(finding('enriched-jobs-stale', SEVERITY.WARNING, 'enriched-jobs.json is not an array', 'enriched-jobs.json'));
+      out.push(finding('enriched-jobs-stale', SEVERITY.ERROR, 'enriched-jobs.json is not an array', 'enriched-jobs.json'));
     } else {
       const staleRows = [];
       const n = Math.max(enrichedJobs.length, rebuilt.rows.length);
@@ -412,7 +421,7 @@ export function checkResumeDataConsistency({
         if (stableStringify(withoutDuration(enrichedJobs[i])) !== stableStringify(withoutDuration(rebuilt.rows[i]))) staleRows.push(i);
       }
       if (staleRows.length) {
-        out.push(finding('enriched-jobs-stale', SEVERITY.WARNING,
+        out.push(finding('enriched-jobs-stale', SEVERITY.ERROR,
           `enriched-jobs.json differs from enrichJobsWithSkills(jobs+education, skills) at row(s) ${JSON.stringify(staleRows.slice(0, 20))}${staleRows.length > 20 ? '…' : ''} (file ${enrichedJobs.length} rows, rebuilt ${rebuilt.rows.length})`,
           'enriched-jobs.json', { staleRows, fileRows: enrichedJobs.length, rebuiltRows: rebuilt.rows.length }));
       }
@@ -533,7 +542,10 @@ function fixSkillIdList(ids, skills) {
 }
 
 /**
- * Apply only mechanical fixes. Never changes skill names, urls, descriptions, or job fields
+ * The one normalization every write path runs (resumeStore.commitResume and the CLI --fix):
+ * skillIDs → exact keys and deduped; category lists → exact keys, dangling dropped, deduped;
+ * categories <-> skill.categoryIDs synced additively; every skill.jobIDs recomputed from the
+ * merged work + education references. Never changes names, urls, descriptions, or job fields
  * other than skillIDs. Returns deep copies; inputs are untouched.
  *
  * @param {{
@@ -541,14 +553,13 @@ function fixSkillIdList(ids, skills) {
  *   jobs: unknown,
  *   categories?: Record<string, object> | null,
  *   education?: Record<string, object> | null,
- *   enrichedJobs?: unknown,
  * }} input
  * @returns {{
  *   skills: Record<string, object>, jobs: unknown, categories: unknown, education: unknown,
- *   enrichedJobs: unknown, applied: Array<{ code: string, message: string, where: string }>
+ *   applied: Array<{ code: string, message: string, where: string }>
  * }}
  */
-export function fixResumeDataConsistency({ skills, jobs, categories, education, enrichedJobs }) {
+export function normalizeResumeData({ skills, jobs, categories, education }) {
   if (!skills || typeof skills !== 'object' || Array.isArray(skills)) {
     throw new Error('[resumeDataConsistency] fix: skills must be an object keyed by skill key');
   }
@@ -654,22 +665,43 @@ export function fixResumeDataConsistency({ skills, jobs, categories, education, 
     }
   }
 
-  // 5. re-bake enriched-jobs from the fixed primary files
-  let fixedEnriched = clone(enrichedJobs);
-  const rebuilt = rebuildEnrichedJobs({ jobs: fixedJobs, skills: fixedSkills, education: fixedEducation });
-  if (!rebuilt.ok) {
-    reportError(rebuilt.error, '[resumeDataConsistency] Cannot re-bake enriched-jobs after fixes', 'Leaving enriched-jobs unchanged; fix the unresolved bracket tokens first');
-  } else if (stableStringify((Array.isArray(fixedEnriched) ? fixedEnriched : []).map(withoutDuration)) !== stableStringify(rebuilt.rows.map(withoutDuration))) {
-    fixedEnriched = rebuilt.rows;
-    record('enriched-jobs-rebaked', `enriched-jobs re-baked (${rebuilt.rows.length} rows)`, 'enriched-jobs.json');
-  }
-
   return {
     skills: fixedSkills,
     jobs: fixedJobs,
     categories: fixedCategories,
     education: fixedEducation,
-    enrichedJobs: fixedEnriched,
     applied,
   };
+}
+
+/**
+ * normalizeResumeData plus a re-bake of enriched-jobs from the normalized primary files.
+ * Pure preview used by the CLI (--dry-run) and tests; resumeStore.commitResume is the writer.
+ *
+ * @param {{
+ *   skills: Record<string, object>,
+ *   jobs: unknown,
+ *   categories?: Record<string, object> | null,
+ *   education?: Record<string, object> | null,
+ *   enrichedJobs?: unknown,
+ * }} input
+ * @returns {{
+ *   skills: Record<string, object>, jobs: unknown, categories: unknown, education: unknown,
+ *   enrichedJobs: unknown, applied: Array<{ code: string, message: string, where: string }>
+ * }}
+ */
+export function fixResumeDataConsistency({ skills, jobs, categories, education, enrichedJobs }) {
+  const normalized = normalizeResumeData({ skills, jobs, categories, education });
+  const { applied } = normalized;
+
+  let fixedEnriched = clone(enrichedJobs);
+  const rebuilt = rebuildEnrichedJobs(normalized);
+  if (!rebuilt.ok) {
+    reportError(rebuilt.error, '[resumeDataConsistency] Cannot re-bake enriched-jobs after fixes', 'Leaving enriched-jobs unchanged; fix the unresolved bracket tokens first');
+  } else if (stableStringify((Array.isArray(fixedEnriched) ? fixedEnriched : []).map(withoutDuration)) !== stableStringify(rebuilt.rows.map(withoutDuration))) {
+    fixedEnriched = rebuilt.rows;
+    applied.push({ code: 'enriched-jobs-rebaked', message: `enriched-jobs re-baked (${rebuilt.rows.length} rows)`, where: 'enriched-jobs.json' });
+  }
+
+  return { ...normalized, enrichedJobs: fixedEnriched, applied };
 }

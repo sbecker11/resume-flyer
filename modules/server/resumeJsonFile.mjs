@@ -44,20 +44,49 @@ export function formatResumeJson(value, existingText = '') {
 }
 
 /**
+ * @param {string} filePath
+ * @returns {Promise<string|null>} current text, null when the file does not exist
+ */
+async function readExistingText(filePath) {
+    try {
+        return await fs.readFile(filePath, 'utf-8');
+    } catch (err) {
+        if (err.code === 'ENOENT') return null;
+        reportError(err, `[resumeJsonFile] Failed to read ${filePath} before writing it`);
+        throw err;
+    }
+}
+
+/**
  * Atomically write `value` to `filePath`, preserving the file's existing escape style.
  * A missing file is written in raw UTF-8.
  * @param {string} filePath
  * @param {unknown} value
  */
 export async function writeResumeJson(filePath, value) {
-    let existingText = '';
-    try {
-        existingText = await fs.readFile(filePath, 'utf-8');
-    } catch (err) {
-        if (err.code !== 'ENOENT') {
-            reportError(err, `[resumeJsonFile] Failed to read ${filePath} before writing it`);
-            throw err;
+    const existingText = await readExistingText(filePath);
+    await atomicWriteWithLock(filePath, formatResumeJson(value, existingText ?? ''));
+}
+
+/**
+ * Like writeResumeJson, but skips the write when the file already holds the same JSON data
+ * (compared structurally, so whitespace, escape style, or a missing trailing newline do not
+ * count as a change). An unparseable existing file is overwritten.
+ * @param {string} filePath
+ * @param {unknown} value
+ * @returns {Promise<boolean>} true when the file was written
+ */
+export async function writeResumeJsonIfChanged(filePath, value) {
+    const existingText = await readExistingText(filePath);
+    if (existingText != null) {
+        let same = false;
+        try {
+            same = JSON.stringify(JSON.parse(existingText)) === JSON.stringify(value);
+        } catch (err) {
+            reportError(err, `[resumeJsonFile] ${filePath} is not valid JSON`, 'Overwriting it with the new value');
         }
+        if (same) return false;
     }
-    await atomicWriteWithLock(filePath, formatResumeJson(value, existingText));
+    await atomicWriteWithLock(filePath, formatResumeJson(value, existingText ?? ''));
+    return true;
 }

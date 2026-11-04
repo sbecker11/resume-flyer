@@ -18,6 +18,7 @@ import {
 } from '../modules/config/defaultResumeParserModule.mjs';
 import { reportError } from '../modules/utils/errorReporting.mjs';
 import { getParserSpawnEnv } from '../modules/utils/anthropicEnv.mjs';
+import { commitResume, loadResume } from '../modules/server/resumeStore.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -94,6 +95,22 @@ export function parseArgs(argv = process.argv.slice(2), cwd = process.cwd()) {
     out.out = null;
   }
   return out;
+}
+
+/**
+ * Run the parser's files through the one write path (normalize skillIDs, recompute
+ * skill.jobIDs, sync categories, bake enriched-jobs.json, check). The index under
+ * parsed_resumes/ is refreshed only when the output folder lives there.
+ * Exported for unit tests.
+ * @param {string} outDir
+ * @param {string} [parsedResumesDir=PARSED_RESUMES_DIR]
+ */
+export async function finalizeParserOutput(outDir, parsedResumesDir = PARSED_RESUMES_DIR) {
+  const parentDir = path.dirname(path.resolve(outDir));
+  const id = path.basename(path.resolve(outDir));
+  const updateIndex = parentDir === path.resolve(parsedResumesDir);
+  const data = await loadResume(parentDir, id);
+  return commitResume(parentDir, id, data, { updateIndex });
 }
 
 async function outputDirHasJobs(outDir) {
@@ -188,15 +205,23 @@ async function main() {
     });
     child.on('close', (code, signal) => {
       clearTimeout(t);
-      if (code === 0) {
-        console.log('Parser wrote output to:', outDir);
-        if (id != null) {
-          console.log('To use in resume-flyer, set app_state.json user-settings.currentResumeId to:', JSON.stringify(id));
-        }
-        resolve();
-      } else {
+      if (code !== 0) {
         reject(new Error(`Parser exited with code ${code}${signal ? ` signal ${signal}` : ''}`));
+        return;
       }
+      console.log('Parser wrote output to:', outDir);
+      finalizeParserOutput(outDir)
+        .then(({ appliedFixes, writtenFiles }) => {
+          console.log(`Normalized parser output: ${appliedFixes.length} fix(es); wrote ${writtenFiles.join(', ') || 'nothing'}`);
+          if (id != null) {
+            console.log('To use in resume-flyer, set app_state.json user-settings.currentResumeId to:', JSON.stringify(id));
+          }
+          resolve();
+        })
+        .catch((err) => {
+          reportError(err, '[run-parse-resume] Parser output violates the resume data invariants', `Parser files were kept in ${outDir}; fix the findings, then run: npm run check:data -- --fix`);
+          reject(err);
+        });
     });
   });
 }

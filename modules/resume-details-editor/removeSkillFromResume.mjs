@@ -1,8 +1,9 @@
 /**
- * Remove one skill from a resume's in-memory jobs, skills, education, and categories.
+ * Remove one skill from a resume's in-memory jobs, skills, and education.
  * Mutates the objects in place. Strips matching skillIDs and unwraps [Skill] brackets to
  * plain text so the prose survives and a leftover bracket cannot fail description
- * enrichment after the skill is gone.
+ * enrichment after the skill is gone. Category lists and skill.jobIDs are derived data:
+ * resumeStore.commitResume drops the dangling key and recomputes jobIDs on write.
  */
 import { labelToSlug } from '../utils/skillLabel.mjs';
 
@@ -83,12 +84,11 @@ function stripRecord(record, skills, resolvedKey, nameLower, keyLower) {
  *   jobs: unknown,
  *   skills: Record<string, { name?: string }>,
  *   education?: Record<string, object> | null,
- *   categories?: Record<string, { skillIDs?: string[] }> | null,
  *   key: string,
  * }} data
  * @returns {{ ok: true, key: string, name: string, descriptionFixes: number } | { ok: false, error: string }}
  */
-export function removeSkillFromResumeData({ jobs, skills, education, categories, key }) {
+export function removeSkillFromResumeData({ jobs, skills, education, key }) {
   if (!skills || typeof skills !== 'object') {
     return { ok: false, error: 'Skills data is missing.' };
   }
@@ -109,13 +109,6 @@ export function removeSkillFromResumeData({ jobs, skills, education, categories,
   for (const entry of recordList(education)) {
     descriptionFixes += stripRecord(entry, skills, resolvedKey, nameLower, keyLower);
   }
-  for (const category of recordList(categories)) {
-    if (!category || typeof category !== 'object' || !Array.isArray(category.skillIDs)) continue;
-    category.skillIDs = category.skillIDs.filter(
-      (sid) => !idMatchesSkill(sid, skills, resolvedKey, nameLower, keyLower)
-    );
-  }
-
   delete skills[resolvedKey];
   return { ok: true, key: resolvedKey, name, descriptionFixes };
 }

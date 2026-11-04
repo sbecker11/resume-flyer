@@ -12,9 +12,7 @@ import sanitizeFilename from 'sanitize-filename';
 import fetch from 'node-fetch';
 import { parseMjsExport } from './modules/data/parseMjsExport.mjs';
 import { normalizeParserJobs, normalizeParserSkills, normalizeParserCategories } from './modules/data/parsedResumeAdapter.mjs';
-import { mergeJobsWithEducation, toJobsArray } from './modules/data/mergeEducationIntoJobs.mjs';
 import { removeSkillFromResumeData } from './modules/resume-details-editor/removeSkillFromResume.mjs';
-import { enrichJobsWithSkills } from './modules/data/enrichedJobs.mjs';
 import { atomicWriteWithLock, cleanStaleLock } from './modules/utils/atomicFileUtils.mjs';
 import { assertSkillInfoUrl } from './modules/utils/skillUrlCatalog.mjs';
 import {
@@ -26,10 +24,9 @@ import { reportError } from './modules/utils/errorReporting.mjs';
 import { createLocalDevQuitHandler } from './modules/server/localDevQuit.mjs';
 import { mergeSkillEntryInto } from './modules/server/skillMerge.mjs';
 import { writeResumeJson } from './modules/server/resumeJsonFile.mjs';
+import { ResumeConsistencyError, commitResume, loadResume } from './modules/server/resumeStore.mjs';
 import {
-    recomputeSkillJobIds,
-    reindexSkillJobIdsAfterJobDelete,
-    reindexSkillJobIdsAfterJobInsert,
+    mirrorCategoriesIntoSkills,
     replaceSkillKeyInCategories,
     replaceSkillNameInDescriptions,
     resolveSkillKey,
@@ -274,35 +271,66 @@ async function keepReparseBackup(dir, backupDir) {
 }
 
 /**
- * Run enrichJobsWithSkills on the current jobs+skills+education for a resume
- * folder and write the result to enriched-jobs.json.  Called automatically
- * after any write that touches jobs.json, skills.json, or education.json so
- * the file stays current without a separate build step.  Errors are logged but
- * never thrown — a stale or missing enriched-jobs.json is not fatal; the
- * client falls back to live enrichment.
+ * Run the parser's (or a restored backup's) files through the one write path: normalize,
+ * re-bake enriched-jobs.json, check. Consistency failures are reported and returned, not
+ * thrown: the parser output is kept as written so the resume can be opened and repaired
+ * in the editor (or with `npm run check:data -- --resume <id> --fix`). Other failures throw.
+ * The caller regenerates the index itself, so updateIndex is off.
  *
- * @param {string} dir          - absolute path to the resume folder
- * @param {Array}  jobs         - already-normalized work-jobs array
- * @param {object} skills       - already-normalized skills map
+ * @param {string} id
+ * @param {string} label  log prefix
+ * @returns {Promise<{ ok: boolean, findings: object[], appliedFixes: object[], writtenFiles: string[] }>}
  */
-async function bakeEnrichedJobs(dir, jobs, skills) {
+async function finalizeParsedResume(id, label) {
     try {
-        // Always read education.json fresh so education-derived jobs are included.
-        let education = {};
-        try {
-            const eduContent = await fs.readFile(path.join(dir, 'education.json'), 'utf-8');
-            education = JSON.parse(eduContent);
-        } catch (e) {
-            if (e.code !== 'ENOENT') throw e;
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const result = await commitResume(PARSED_RESUMES_DIR, id, data, { updateIndex: false });
+        return { ok: true, findings: [], appliedFixes: result.appliedFixes, writtenFiles: result.writtenFiles };
+    } catch (err) {
+        if (err instanceof ResumeConsistencyError) {
+            reportError(
+                err,
+                `[${label}] Parsed files for "${id}" violate the resume data invariants`,
+                `Keeping the files as written; fix the findings in the editor or run: npm run check:data -- --resume ${id} --fix`
+            );
+            return { ok: false, findings: err.findings, appliedFixes: [], writtenFiles: [] };
         }
-        const merged = mergeJobsWithEducation(jobs, education);
-        const enriched = enrichJobsWithSkills(merged, skills);
-        const enrichedPath = path.join(dir, 'enriched-jobs.json');
-        await writeResumeJson(enrichedPath, enriched);
-        console.log(`[bakeEnrichedJobs] ✅ Wrote enriched-jobs.json (${enriched.length} jobs incl. ${enriched.length - jobs.length} education)`);
-    } catch (e) {
-        reportError(e, '[bakeEnrichedJobs] Failed to write enriched-jobs.json — static host will fall back to live enrichment');
+        throw err;
     }
+}
+
+/**
+ * Create skills named in a route's `newSkills` list that do not exist yet (by key or display name).
+ * @param {Record<string, object>} skills
+ * @param {unknown} newSkills  strings or { name } objects
+ */
+function createMissingSkills(skills, newSkills) {
+    for (const entry of (Array.isArray(newSkills) ? newSkills : [])) {
+        const name = typeof entry === 'string' ? entry.trim() : (entry?.name && String(entry.name).trim());
+        if (!name) continue;
+        if (skills[name] == null && resolveSkillKey(skills, name) == null) {
+            skills[name] = { name, jobIDs: [] };
+        }
+    }
+}
+
+/**
+ * Error response for the resume write routes: 422 with the findings when commitResume refused
+ * the write, 404 when the resume folder is missing, 500 otherwise.
+ * @param {import('express').Response} res
+ * @param {unknown} err
+ * @param {string} label  log prefix
+ * @param {string} [notFoundMessage]
+ */
+function sendResumeWriteError(res, err, label, notFoundMessage = 'Resume not found.') {
+    if (err instanceof ResumeConsistencyError) {
+        return res.status(422).json({ error: err.message, findings: err.findings });
+    }
+    if (err?.code === 'ENOENT') {
+        return res.status(404).json({ error: notFoundMessage });
+    }
+    console.error(`[${label}]`, err);
+    return res.status(500).json({ error: err?.message || String(err) });
 }
 
 /** If state file is missing, create it from app_state.default.json (safe defaults). */
@@ -476,143 +504,47 @@ app.get('/api/resumes/:id/data', async (req, res) => {
     }
 });
 
-// PATCH /api/resumes/:id/jobs/:jobIndex/skills: Update skillIDs for one job, sync skills.json jobIDs. Optional newSkills: names to create if missing.
+// PATCH /api/resumes/:id/jobs/:jobIndex/skills: Replace one job's skillIDs. Optional newSkills: names to create if missing.
+// commitResume canonicalizes the ids to skills.json keys and recomputes every skill.jobIDs.
 app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
     const { id, jobIndex } = req.params;
     const { skillIDs, newSkills } = req.body;
     if (!id || jobIndex == null || !Array.isArray(skillIDs)) {
         return res.status(400).json({ error: 'Missing id, jobIndex, or skillIDs array.' });
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
     try {
-        const [jobsContent, skillsContent] = await Promise.all([
-            fs.readFile(jobsPath, 'utf-8'),
-            fs.readFile(skillsPath, 'utf-8'),
-        ]);
-        const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
-        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
-
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
         const idx = String(jobIndex);
-        if (!jobs[idx]) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
-
-        // Create any new skills so they exist before sync
-        const toCreate = Array.isArray(newSkills) ? newSkills : [];
-        for (const entry of toCreate) {
-            const name = typeof entry === 'string' ? entry.trim() : (entry?.name && String(entry.name).trim());
-            if (!name) continue;
-            if (skills[name] == null) {
-                skills[name] = { name, jobIDs: [] };
-            }
-        }
-
-        const oldSkillIDs = jobs[idx].skillIDs || [];
-        const newSkillIDs = skillIDs;
-        jobs[idx].skillIDs = newSkillIDs;
-
-        // Sync skills.jobIDs: remove jobIndex from removed skills, add to new ones
-        const jobNum = parseInt(jobIndex, 10);
-        const removed = oldSkillIDs.filter(s => !newSkillIDs.includes(s));
-        const added   = newSkillIDs.filter(s => !oldSkillIDs.includes(s));
-        for (const sid of removed) {
-            if (skills[sid]) skills[sid].jobIDs = (skills[sid].jobIDs || []).filter(j => j !== jobNum);
-        }
-        for (const sid of added) {
-            if (skills[sid] && !skills[sid].jobIDs.includes(jobNum)) skills[sid].jobIDs.push(jobNum);
-        }
-
-        await Promise.all([
-            writeResumeJson(jobsPath, jobs),
-            writeResumeJson(skillsPath, skills),
-        ]);
-        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
-        res.json({ ok: true, skillIDs: newSkillIDs });
+        if (!data.jobs[idx]) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
+        createMissingSkills(data.skills, newSkills);
+        data.jobs[idx].skillIDs = skillIDs;
+        const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
+        res.json({ ok: true, skillIDs: saved.jobs[idx].skillIDs });
     } catch (err) {
-        console.error('[PATCH jobs skills]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH jobs skills');
     }
 });
 
-// PATCH /api/resumes/:id/education/:educationKey/skills: Update skillIDs on one education entry; sync skills.json jobIDs using merged job index.
+// PATCH /api/resumes/:id/education/:educationKey/skills: Replace one education entry's skillIDs.
+// jobIDs (merged work + education indices) are recomputed by commitResume.
 app.patch('/api/resumes/:id/education/:educationKey/skills', async (req, res) => {
     const { id, educationKey } = req.params;
     const { skillIDs, newSkills } = req.body;
     if (!id || educationKey == null || !Array.isArray(skillIDs)) {
         return res.status(400).json({ error: 'Missing id, educationKey, or skillIDs array.' });
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
-    const educationPath = path.join(dir, 'education.json');
     try {
-        const [jobsContent, skillsContent, educationContent] = await Promise.all([
-            fs.readFile(jobsPath, 'utf-8'),
-            fs.readFile(skillsPath, 'utf-8'),
-            fs.readFile(educationPath, 'utf-8'),
-        ]);
-        const rawJobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
-        const workJobs = normalizeParserJobs(rawJobs);
-        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
-        const educationData = JSON.parse(educationContent);
-        if (!educationData || typeof educationData !== 'object' || educationData[educationKey] == null) {
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const eduEntry = data.education[educationKey];
+        if (eduEntry == null || typeof eduEntry !== 'object') {
             return res.status(404).json({ error: `Education key "${educationKey}" not found.` });
         }
-        const merged = mergeJobsWithEducation(toJobsArray(workJobs), educationData);
-        const mergedIdx = merged.findIndex((j) => {
-            const ek = j?.educationKey ?? j?.__educationKey;
-            return ek != null && String(ek) === String(educationKey);
-        });
-        if (mergedIdx < 0) {
-            return res.status(404).json({ error: `Education key "${educationKey}" not found in merged jobs.` });
-        }
-
-        const toCreate = Array.isArray(newSkills) ? newSkills : [];
-        for (const entry of toCreate) {
-            const name = typeof entry === 'string' ? entry.trim() : (entry?.name && String(entry.name).trim());
-            if (!name) continue;
-            if (skills[name] == null) {
-                skills[name] = { name, jobIDs: [] };
-            }
-        }
-
-        const eduEntry = educationData[educationKey];
-        const oldSkillIDs = Array.isArray(eduEntry.skillIDs) ? eduEntry.skillIDs.map(String) : [];
-        const newSkillIDs = skillIDs.map(String);
-        eduEntry.skillIDs = newSkillIDs;
-
-        const jobNum = mergedIdx;
-        const removed = oldSkillIDs.filter((s) => !newSkillIDs.includes(s));
-        const added = newSkillIDs.filter((s) => !oldSkillIDs.includes(s));
-        for (const sid of removed) {
-            if (skills[sid]) skills[sid].jobIDs = (skills[sid].jobIDs || []).filter((j) => j !== jobNum);
-        }
-        for (const sid of added) {
-            if (skills[sid] && !skills[sid].jobIDs.includes(jobNum)) skills[sid].jobIDs.push(jobNum);
-        }
-        for (const s of Object.values(skills)) {
-            if (s && typeof s === 'object' && Array.isArray(s.jobIDs)) {
-                s.jobIDs = [...new Set(s.jobIDs)].sort((a, b) => a - b);
-            }
-        }
-
-        await Promise.all([
-            writeResumeJson(educationPath, educationData),
-            writeResumeJson(skillsPath, skills),
-        ]);
-        // Re-bake using current jobs.json (education changes affect enrichment too)
-        try {
-            const jobsContent = await fs.readFile(path.join(dir, 'jobs.json'), 'utf-8');
-            const rawJobs = parseResumeFile(jobsContent, path.join(dir, 'jobs.json'), 'jobs');
-            bakeEnrichedJobs(dir, normalizeParserJobs(rawJobs), normalizeParserSkills(skills));
-        } catch { /* bake failure is non-fatal */ }
-        res.json({ ok: true, skillIDs: newSkillIDs });
+        createMissingSkills(data.skills, newSkills);
+        eduEntry.skillIDs = skillIDs.map(String);
+        const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
+        res.json({ ok: true, skillIDs: saved.education[educationKey].skillIDs });
     } catch (err) {
-        if (err.code === 'ENOENT') {
-            return res.status(404).json({ error: 'education.json or related file not found.' });
-        }
-        console.error('[PATCH education skills]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH education skills', 'education.json or related file not found.');
     }
 });
 
@@ -640,26 +572,14 @@ async function carrySharedSkillUrlEntry(fromKey, toKey) {
     }
 }
 
-/** Parse an optional sibling file (education.json, categories.json); null when it does not exist. */
-async function readOptionalJson(filePath) {
-    try {
-        return JSON.parse(await fs.readFile(filePath, 'utf-8'));
-    } catch (err) {
-        if (err.code === 'ENOENT') return null;
-        throw err;
-    }
-}
-
 /**
  * Point every reference to a retired skill at its survivor, in place: job and education
- * skillIDs, [bracket] text in their descriptions, category lists, then the survivor's jobIDs.
- * jobIDs are indices into the merged work + education list (education rows follow jobs.json
- * order), the same convention PATCH jobs/:n/skills and education/:key/skills maintain, so a
- * job that referenced the retired skill by display name (never in its jobIDs) is picked up.
+ * skillIDs, [bracket] text in their descriptions, and category lists. skill.jobIDs and the
+ * categories <-> categoryIDs mirror are derived by commitResume afterwards.
  *
- * @param {{ jobs: unknown, education: object|null, categories: object|null, skills: Record<string, object>,
+ * @param {{ jobs: unknown, education: object, categories: object, skills: Record<string, object>,
  *           fromAliases: Set<string>, fromName: string, toKey: string }} data
- * @returns {{ descriptionFixes: number, educationChanged: boolean, categoriesChanged: boolean }}
+ * @returns {number} descriptions rewritten
  */
 function retargetSkillReferences({ jobs, education, categories, skills, fromAliases, fromName, toKey }) {
     const toSkill = skills[toKey];
@@ -667,22 +587,13 @@ function retargetSkillReferences({ jobs, education, categories, skills, fromAlia
     const toName = toSkill.name || toKey;
     rewriteSkillIdInRecords(jobs, fromAliases, toKey);
     let descriptionFixes = replaceSkillNameInDescriptions(jobs, fromName, toName);
-    let educationChanged = false;
-    if (education && typeof education === 'object') {
-        const idFixes = rewriteSkillIdInRecords(education, fromAliases, toKey);
-        const eduDescFixes = replaceSkillNameInDescriptions(education, fromName, toName);
-        descriptionFixes += eduDescFixes;
-        educationChanged = idFixes > 0 || eduDescFixes > 0;
-    }
-    const categoriesChanged = categories && typeof categories === 'object'
-        ? replaceSkillKeyInCategories(categories, fromAliases, toKey) > 0
-        : false;
-    const merged = mergeJobsWithEducation(toJobsArray(normalizeParserJobs(jobs)), education);
-    recomputeSkillJobIds(toSkill, merged, skillAliasSet(toKey, toName));
-    return { descriptionFixes, educationChanged, categoriesChanged };
+    rewriteSkillIdInRecords(education, fromAliases, toKey);
+    descriptionFixes += replaceSkillNameInDescriptions(education, fromName, toName);
+    replaceSkillKeyInCategories(categories, fromAliases, toKey);
+    return descriptionFixes;
 }
 
-// PATCH /api/resumes/:id/skills/rename: Rename a skill (update key and all job references). If newName already exists, merge into it.
+// PATCH /api/resumes/:id/skills/rename: Rename a skill (update key and all references). If newName names an existing skill (key or display name), merge into it.
 app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
     const { id } = req.params;
     const { oldKey, newName } = req.body;
@@ -693,54 +604,38 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
     if (oldKey === newNameTrimmed) {
         return res.json({ ok: true, key: oldKey });
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
-    const educationPath = path.join(dir, 'education.json');
-    const categoriesPath = path.join(dir, 'categories.json');
     try {
-        const [jobsContent, skillsContent, education, categories] = await Promise.all([
-            fs.readFile(jobsPath, 'utf-8'),
-            fs.readFile(skillsPath, 'utf-8'),
-            readOptionalJson(educationPath),
-            readOptionalJson(categoriesPath),
-        ]);
-        const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
-        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const { skills } = data;
         const resolvedOldKey = resolveSkillKey(skills, oldKey);
         if (resolvedOldKey == null) {
             return res.status(404).json({ error: `Skill "${oldKey}" not found.` });
         }
         const oldSkill = skills[resolvedOldKey];
         const oldSkillName = oldSkill.name || resolvedOldKey;
-        const jobIDsFromOld = oldSkill.jobIDs || [];
         delete skills[resolvedOldKey];
-        if (skills[newNameTrimmed] != null) {
+        const existingKey = resolveSkillKey(skills, newNameTrimmed);
+        const newKey = existingKey ?? newNameTrimmed;
+        if (existingKey != null) {
             // Renaming onto an existing skill is a merge: keep the manually defined URL (shortest when both have one).
-            mergeSkillEntryInto(oldSkill, skills[newNameTrimmed]);
+            mergeSkillEntryInto(oldSkill, skills[existingKey]);
         } else {
-            skills[newNameTrimmed] = { name: newNameTrimmed, jobIDs: [...jobIDsFromOld] };
-            if (oldSkill.url) skills[newNameTrimmed].url = oldSkill.url;
+            skills[newKey] = { ...oldSkill, name: newNameTrimmed };
         }
         // Bracket text in descriptions must match the surviving skill's display name, not its key.
-        const newSkillName = skills[newNameTrimmed].name || newNameTrimmed;
-        const { descriptionFixes: descFixes, educationChanged, categoriesChanged } = retargetSkillReferences({
-            jobs, education, categories, skills,
+        const newSkillName = skills[newKey].name || newKey;
+        const descFixes = retargetSkillReferences({
+            ...data,
             fromAliases: skillAliasSet(resolvedOldKey, oldKey, oldSkillName),
             fromName: oldSkillName,
-            toKey: newNameTrimmed,
+            toKey: newKey,
         });
         console.log(`[PATCH skills/rename] replaced [${oldSkillName}] → [${newSkillName}] in ${descFixes} descriptions`);
-        const writes = [writeResumeJson(jobsPath, jobs), writeResumeJson(skillsPath, skills)];
-        if (educationChanged) writes.push(writeResumeJson(educationPath, education));
-        if (categoriesChanged) writes.push(writeResumeJson(categoriesPath, categories));
-        await Promise.all(writes);
-        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
-        await carrySharedSkillUrlEntry(resolvedOldKey, newNameTrimmed);
-        res.json({ ok: true, key: newNameTrimmed, descriptionFixes: descFixes });
+        await commitResume(PARSED_RESUMES_DIR, id, data);
+        await carrySharedSkillUrlEntry(resolvedOldKey, newKey);
+        res.json({ ok: true, key: newKey, descriptionFixes: descFixes });
     } catch (err) {
-        console.error('[PATCH skills/rename]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH skills/rename');
     }
 });
 
@@ -754,20 +649,9 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
     if (fromKey === toKey) {
         return res.status(400).json({ error: 'fromKey and toKey must be different.' });
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
-    const educationPath = path.join(dir, 'education.json');
-    const categoriesPath = path.join(dir, 'categories.json');
     try {
-        const [jobsContent, skillsContent, education, categories] = await Promise.all([
-            fs.readFile(jobsPath, 'utf-8'),
-            fs.readFile(skillsPath, 'utf-8'),
-            readOptionalJson(educationPath),
-            readOptionalJson(categoriesPath),
-        ]);
-        const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
-        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const { skills } = data;
         const resolvedFromKey = resolveSkillKey(skills, fromKey);
         const resolvedToKey = resolveSkillKey(skills, toKey);
         if (resolvedFromKey == null) {
@@ -781,84 +665,43 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
         }
         const fromSkillName = skills[resolvedFromKey].name || resolvedFromKey;
         const toSkillName = skills[resolvedToKey].name || resolvedToKey;
-        // Union jobIDs and keep the manually defined URL (shortest when both skills have one).
+        // Keep the manually defined URL (shortest when both skills have one).
         mergeSkillEntryInto(skills[resolvedFromKey], skills[resolvedToKey]);
         delete skills[resolvedFromKey];
-        const { descriptionFixes: descFixes, educationChanged, categoriesChanged } = retargetSkillReferences({
-            jobs, education, categories, skills,
+        const descFixes = retargetSkillReferences({
+            ...data,
             fromAliases: skillAliasSet(resolvedFromKey, fromKey, fromSkillName),
             fromName: fromSkillName,
             toKey: resolvedToKey,
         });
         console.log(`[PATCH skills/merge] replaced [${fromSkillName}] → [${toSkillName}] in ${descFixes} descriptions`);
-        const writes = [writeResumeJson(jobsPath, jobs), writeResumeJson(skillsPath, skills)];
-        if (educationChanged) writes.push(writeResumeJson(educationPath, education));
-        if (categoriesChanged) writes.push(writeResumeJson(categoriesPath, categories));
-        await Promise.all(writes);
-        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
+        await commitResume(PARSED_RESUMES_DIR, id, data);
         await carrySharedSkillUrlEntry(resolvedFromKey, resolvedToKey);
         res.json({ ok: true, mergedInto: toKey, descriptionFixes: descFixes });
     } catch (err) {
-        console.error('[PATCH skills/merge]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH skills/merge');
     }
 });
 
-// PATCH /api/resumes/:id/skills/remove: Delete one skill and every job, education, category, and [bracket] reference to it.
+// PATCH /api/resumes/:id/skills/remove: Delete one skill and every job, education, and [bracket] reference to it.
+// Category lists drop the dangling key in commitResume.
 app.patch('/api/resumes/:id/skills/remove', async (req, res) => {
     const { id } = req.params;
     const key = req.body?.key != null ? String(req.body.key).trim() : '';
     if (!id || id === 'default' || !key) {
         return res.status(400).json({ error: 'Missing id or key.' });
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
-    const educationPath = path.join(dir, 'education.json');
-    const categoriesPath = path.join(dir, 'categories.json');
     try {
-        const [jobsContent, skillsContent] = await Promise.all([
-            fs.readFile(jobsPath, 'utf-8'),
-            fs.readFile(skillsPath, 'utf-8'),
-        ]);
-        const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
-        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
-        let education = null;
-        let categories = null;
-        try {
-            education = JSON.parse(await fs.readFile(educationPath, 'utf-8'));
-        } catch (err) {
-            if (err.code !== 'ENOENT') throw err;
-        }
-        try {
-            categories = JSON.parse(await fs.readFile(categoriesPath, 'utf-8'));
-        } catch (err) {
-            if (err.code !== 'ENOENT') throw err;
-        }
-        const removed = removeSkillFromResumeData({ jobs, skills, education, categories, key });
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const removed = removeSkillFromResumeData({ jobs: data.jobs, skills: data.skills, education: data.education, key });
         if (!removed.ok) {
             return res.status(404).json({ error: removed.error });
         }
-        const writes = [
-            writeResumeJson(jobsPath, jobs),
-            writeResumeJson(skillsPath, skills),
-        ];
-        if (education && typeof education === 'object') {
-            writes.push(writeResumeJson(educationPath, education));
-        }
-        if (categories && typeof categories === 'object') {
-            writes.push(writeResumeJson(categoriesPath, categories));
-        }
-        await Promise.all(writes);
-        bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
+        await commitResume(PARSED_RESUMES_DIR, id, data);
         console.log(`[PATCH skills/remove] removed "${removed.name}" (${removed.key}); ${removed.descriptionFixes} descriptions updated`);
         res.json({ ok: true, key: removed.key, name: removed.name, descriptionFixes: removed.descriptionFixes });
     } catch (err) {
-        if (err.code === 'ENOENT') {
-            return res.status(404).json({ error: `Resume "${id}" not found.` });
-        }
-        console.error('[PATCH skills/remove]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH skills/remove', `Resume "${id}" not found.`);
     }
 });
 
@@ -880,12 +723,9 @@ app.patch('/api/resumes/:id/skills/url', async (req, res) => {
             return res.status(400).json({ error: 'url must be an absolute http(s) URL.' });
         }
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
     try {
-        const skillsContent = await fs.readFile(skillsPath, 'utf-8');
-        const skills = parseResumeFile(skillsContent, skillsPath, 'skills');
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const { skills } = data;
         const resolvedKey = resolveSkillKey(skills, key);
         if (resolvedKey == null) {
             return res.status(404).json({ error: `Skill "${key}" not found.` });
@@ -894,21 +734,10 @@ app.patch('/api/resumes/:id/skills/url', async (req, res) => {
             skills[resolvedKey] = { name: resolvedKey };
         }
         skills[resolvedKey].url = urlTrimmed;
-        await writeResumeJson(skillsPath, skills);
-        try {
-            const jobsContent = await fs.readFile(jobsPath, 'utf-8');
-            const jobs = parseResumeFile(jobsContent, jobsPath, 'jobs');
-            bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(skills));
-        } catch {
-            /* bake failure is non-fatal */
-        }
+        await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, key: resolvedKey, url: urlTrimmed });
     } catch (err) {
-        if (err.code === 'ENOENT') {
-            return res.status(404).json({ error: 'skills.json not found.' });
-        }
-        console.error('[PATCH skills/url]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH skills/url', 'skills.json not found.');
     }
 });
 
@@ -951,7 +780,8 @@ app.put('/api/skill-urls', async (req, res) => {
     }
 });
 
-// PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description)
+// PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description).
+// A Description whose [Brackets] do not resolve to skills linked on the job is refused (422) by commitResume.
 app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     const { id, jobIndex } = req.params;
     if (!id || id === 'default' || jobIndex == null) {
@@ -965,57 +795,28 @@ app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: 'No allowed job fields provided.' });
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
     try {
-        await fs.access(jobsPath);
-    } catch (e) {
-        if (e.code === 'ENOENT') return res.status(404).json({ error: 'Resume or jobs.json not found.' });
-        throw e;
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const idx = Array.isArray(data.jobs) ? parseInt(jobIndex, 10) : String(jobIndex);
+        if (data.jobs[idx] == null) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
+        Object.assign(data.jobs[idx], updates);
+        const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
+        res.json({ ok: true, job: saved.jobs[idx] });
+    } catch (err) {
+        sendResumeWriteError(res, err, 'PATCH job', 'Resume or jobs.json not found.');
     }
-    const content = await fs.readFile(jobsPath, 'utf-8');
-    const jobs = parseResumeFile(content, jobsPath, 'jobs');
-    const idx = Array.isArray(jobs) ? parseInt(jobIndex, 10) : String(jobIndex);
-    if (jobs[idx] == null) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
-    Object.assign(jobs[idx], updates);
-    await writeResumeJson(jobsPath, jobs);
-    // Bake if Description changed (affects job-skills / references)
-    if ('Description' in updates) {
-        try {
-            const skillsContent = await fs.readFile(path.join(dir, 'skills.json'), 'utf-8').catch(() => '{}');
-            const rawSkills = parseResumeFile(skillsContent, path.join(dir, 'skills.json'), 'skills') || {};
-            bakeEnrichedJobs(dir, normalizeParserJobs(jobs), normalizeParserSkills(rawSkills));
-        } catch { /* bake failure is non-fatal */ }
-    }
-    res.json({ ok: true, job: jobs[idx] });
 });
 
-// POST /api/resumes/:id/jobs: Insert empty work job after `afterIndex` (-1 = at index 0)
+// POST /api/resumes/:id/jobs: Insert empty work job after `afterIndex` (-1 = at index 0). skills.jobIDs follow in commitResume.
 app.post('/api/resumes/:id/jobs', async (req, res) => {
     const { id } = req.params;
     if (!id || id === 'default') {
         return res.status(400).json({ error: 'Invalid resume id.' });
     }
     const rawAfter = req.body?.afterIndex;
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
     try {
-        await fs.access(jobsPath);
-    } catch (e) {
-        if (e.code === 'ENOENT') return res.status(404).json({ error: 'Resume or jobs.json not found.' });
-        throw e;
-    }
-    try {
-        const jobsContent = await fs.readFile(jobsPath, 'utf-8');
-        let skills = {};
-        try {
-            const skillsContent = await fs.readFile(skillsPath, 'utf-8');
-            skills = parseResumeFile(skillsContent, skillsPath, 'skills') || {};
-        } catch (e2) {
-            if (e2.code !== 'ENOENT') throw e2;
-        }
-        const arr = normalizeParserJobs(parseResumeFile(jobsContent, jobsPath, 'jobs'));
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const arr = normalizeParserJobs(data.jobs);
         let insertAt = 0;
         if (rawAfter != null && rawAfter !== '' && Number(rawAfter) >= 0) {
             insertAt = Number(rawAfter) + 1;
@@ -1031,20 +832,15 @@ app.post('/api/resumes/:id/jobs', async (req, res) => {
             skillIDs: [],
         };
         arr.splice(insertAt, 0, newJob);
-        reindexSkillJobIdsAfterJobInsert(skills, insertAt);
-        await Promise.all([
-            writeResumeJson(jobsPath, arr),
-            writeResumeJson(skillsPath, skills),
-        ]);
-        bakeEnrichedJobs(dir, arr, normalizeParserSkills(skills));
+        data.jobs = arr;
+        await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, insertIndex: insertAt });
     } catch (err) {
-        console.error('[POST jobs]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'POST jobs', 'Resume or jobs.json not found.');
     }
 });
 
-// DELETE /api/resumes/:id/jobs/:jobIndex: Remove one work job; reindex skills.json jobIDs
+// DELETE /api/resumes/:id/jobs/:jobIndex: Remove one work job. skills.jobIDs are recomputed in commitResume.
 app.delete('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     const { id, jobIndex } = req.params;
     if (!id || id === 'default' || jobIndex == null) {
@@ -1054,39 +850,18 @@ app.delete('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     if (Number.isNaN(idx) || idx < 0) {
         return res.status(400).json({ error: 'Invalid job index.' });
     }
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const jobsPath = path.join(dir, 'jobs.json');
-    const skillsPath = path.join(dir, 'skills.json');
     try {
-        await fs.access(jobsPath);
-    } catch (e) {
-        if (e.code === 'ENOENT') return res.status(404).json({ error: 'Resume or jobs.json not found.' });
-        throw e;
-    }
-    try {
-        const jobsContent = await fs.readFile(jobsPath, 'utf-8');
-        let skills = {};
-        try {
-            const skillsContent = await fs.readFile(skillsPath, 'utf-8');
-            skills = parseResumeFile(skillsContent, skillsPath, 'skills') || {};
-        } catch (e2) {
-            if (e2.code !== 'ENOENT') throw e2;
-        }
-        const arr = normalizeParserJobs(parseResumeFile(jobsContent, jobsPath, 'jobs'));
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        const arr = normalizeParserJobs(data.jobs);
         if (arr[idx] == null) {
             return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
         }
         arr.splice(idx, 1);
-        reindexSkillJobIdsAfterJobDelete(skills, idx);
-        await Promise.all([
-            writeResumeJson(jobsPath, arr),
-            writeResumeJson(skillsPath, skills),
-        ]);
-        bakeEnrichedJobs(dir, arr, normalizeParserSkills(skills));
+        data.jobs = arr;
+        await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true });
     } catch (err) {
-        console.error('[DELETE jobs]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'DELETE jobs', 'Resume or jobs.json not found.');
     }
 });
 
@@ -1227,39 +1002,38 @@ app.get('/api/resumes/:id/education', async (req, res) => {
     }
 });
 
-// PATCH /api/resumes/:id/education: Update or create education.json
+// PATCH /api/resumes/:id/education: Replace education.json. skillIDs are canonicalized and
+// skills.jobIDs recomputed (education rows follow work jobs in the merged index) by commitResume.
 app.patch('/api/resumes/:id/education', async (req, res) => {
     const { id } = req.params;
     if (!id || id === 'default') return res.status(400).json({ error: 'Cannot update education for default resume.' });
     const payload = req.body;
-    if (!payload || typeof payload !== 'object') return res.status(400).json({ error: 'Invalid payload.' });
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const filePath = path.join(dir, 'education.json');
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return res.status(400).json({ error: 'Invalid payload.' });
     try {
-        await fs.mkdir(dir, { recursive: true });
-        await writeResumeJson(filePath, payload);
-        res.json(payload);
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        data.education = payload;
+        const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
+        res.json(saved.education);
     } catch (err) {
-        console.error('[PATCH education]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH education');
     }
 });
 
-// PATCH /api/resumes/:id/categories: Update or create categories.json
+// PATCH /api/resumes/:id/categories: Replace categories.json. The payload is authoritative:
+// every skill.categoryIDs is re-derived from it before commitResume syncs and checks the mirror.
 app.patch('/api/resumes/:id/categories', async (req, res) => {
     const { id } = req.params;
     if (!id || id === 'default') return res.status(400).json({ error: 'Cannot update categories for default resume.' });
     const { categories } = req.body;
-    if (!categories || typeof categories !== 'object') return res.status(400).json({ error: 'Invalid categories payload.' });
-    const dir = path.join(PARSED_RESUMES_DIR, id);
-    const filePath = path.join(dir, 'categories.json');
+    if (!categories || typeof categories !== 'object' || Array.isArray(categories)) return res.status(400).json({ error: 'Invalid categories payload.' });
     try {
-        await fs.mkdir(dir, { recursive: true });
-        await writeResumeJson(filePath, categories);
-        res.json({ categories });
+        const data = await loadResume(PARSED_RESUMES_DIR, id);
+        data.categories = categories;
+        mirrorCategoriesIntoSkills(data.skills, categories);
+        const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
+        res.json({ categories: saved.categories });
     } catch (err) {
-        console.error('[PATCH categories]', err);
-        res.status(500).json({ error: err.message });
+        sendResumeWriteError(res, err, 'PATCH categories');
     }
 });
 
@@ -1439,6 +1213,8 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
             const skillsPath = path.join(dir, 'skills.json');
             const categoriesPath = path.join(dir, 'categories.json');
             const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+            // Normalize + bake through the one write path before stamping the parse baseline.
+            const consistency = await finalizeParsedResume(id, 'ResumeReparse');
 
             // Recreate meta.json (it was stashed as part of the reparse).
             const metadata = await writeMetaWithParseBaseline(metaPath, {
@@ -1463,7 +1239,8 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
                 displayName: metadata.displayName,
                 jobCount: jobs.length,
                 skillCount: Object.keys(skills).length,
-                metadata
+                metadata,
+                consistencyFindings: consistency.findings
             });
         } catch (parseError) {
             const failedLogPath = path.join(dir, 'parser-output.log');
@@ -1678,6 +1455,9 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             );
         }
 
+        // Normalize + bake through the one write path before stamping the parse baseline.
+        const consistency = await finalizeParsedResume(id, 'ResumeReparseStream');
+
         // Recreate meta.json with parse baseline (derivedSnapshotHash) after parser output is ready.
         const metadata = await writeMetaWithParseBaseline(metaPath, {
             id,
@@ -1701,7 +1481,8 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
             displayName: metadata.displayName,
             jobCount: jobs.length,
             skillCount: Object.keys(skills).length,
-            metadata
+            metadata,
+            consistencyFindings: consistency.findings
         }));
         res.end();
     } catch (e) {
@@ -1744,22 +1525,10 @@ app.post('/api/resumes/:id/reparse-history/:backupId/restore', async (req, res) 
     try {
         await fs.access(dir);
         const restored = await restoreReparseHistoryEntry(dir, backupId);
-        try {
-            const { jobs, skills } = await readAndNormalizeResumeData(
-                path.join(dir, 'jobs.json'),
-                path.join(dir, 'skills.json'),
-                path.join(dir, 'categories.json')
-            );
-            await bakeEnrichedJobs(dir, jobs, skills);
-        } catch (bakeErr) {
-            reportError(
-                bakeErr,
-                '[POST reparse-history restore] Failed to rebake enriched-jobs.json',
-                'Restored derived files were kept'
-            );
-        }
+        // Restored files go through the one write path (normalize + re-bake enriched-jobs.json).
+        const consistency = await finalizeParsedResume(id, 'POST reparse-history restore');
         await regenerateNonLocalResumesIndex(`resume backup restored (${id} ${restored.id})`);
-        res.json({ ok: true, id: restored.id });
+        res.json({ ok: true, id: restored.id, consistencyFindings: consistency.findings });
     } catch (error) {
         const status = error?.statusCode || (error?.code === 'ENOENT' ? 404 : 500);
         reportError(
@@ -2046,6 +1815,8 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
         const categoriesPath = path.join(outputDir, 'categories.json');
 
         const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+        // Normalize + bake through the one write path before stamping the parse baseline.
+        const consistency = await finalizeParsedResume(resumeId, 'ResumeUpload');
 
         // Stamp meta last so derivedSnapshotHash matches clean parser output.
         const metaPath = path.join(outputDir, 'meta.json');
@@ -2069,7 +1840,8 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
             jobCount: jobs.length,
             skillCount: Object.keys(skills).length,
             metadata: metadata,
-            parserOutput
+            parserOutput,
+            consistencyFindings: consistency.findings
         });
 
     } catch (error) {
@@ -2261,6 +2033,8 @@ app.post('/api/resumes/upload-stream', upload.single('resume'), async (req, res)
         const skillsPath = path.join(outputDir, 'skills.json');
         const categoriesPath = path.join(outputDir, 'categories.json');
         const { jobs, skills } = await readAndNormalizeResumeData(jobsPath, skillsPath, categoriesPath);
+        // Normalize + bake through the one write path.
+        const consistency = await finalizeParsedResume(resumeId, 'ResumeUploadStream');
 
         const metadata = { id: resumeId, displayName, createdAt: new Date().toISOString() };
         sendEvent('done', JSON.stringify({
@@ -2270,6 +2044,7 @@ app.post('/api/resumes/upload-stream', upload.single('resume'), async (req, res)
             jobCount: jobs.length,
             skillCount: Object.keys(skills).length,
             metadata,
+            consistencyFindings: consistency.findings,
         }));
 
         await regenerateNonLocalResumesIndex(`resume created via upload-stream (${resumeId})`);

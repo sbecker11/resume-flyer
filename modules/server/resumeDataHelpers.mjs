@@ -165,69 +165,34 @@ export function replaceSkillKeyInCategories(categories, fromKey, toKey) {
 }
 
 /**
- * Positions in `records` (merged work jobs followed by education rows, as
- * mergeJobsWithEducation orders them) whose skillIDs reference the skill.
- * @param {Array<object>} records
- * @param {Set<string>|string[]|string} aliases - the skill's key and display name
- * @returns {number[]} ascending
+ * Make categories.json authoritative for skill.categoryIDs: every skill's categoryIDs becomes
+ * the list of categories whose skillIDs name it (by key or display name). Used by
+ * PATCH /categories, where the client sends the whole categories object; the additive sync in
+ * normalizeResumeData alone could never remove a membership. A skill that had no categoryIDs
+ * field and belongs to no category is left without one. Mutates skills in place.
+ * @param {Record<string, { name?: unknown, categoryIDs?: unknown }>} skills
+ * @param {Record<string, { skillIDs?: unknown[] } | unknown[]>|null|undefined} categories
+ * @returns {number} skills whose categoryIDs changed
  */
-export function recordIndicesReferencingSkill(records, aliases) {
-    const set = toAliasSet(aliases);
-    const out = [];
-    recordList(records).forEach((record, i) => {
-        if (!record || typeof record !== 'object' || !Array.isArray(record.skillIDs)) return;
-        if (record.skillIDs.some((sid) => set.has(normalizeSkillId(sid)))) out.push(i);
-    });
-    return out;
-}
-
-/**
- * Rebuild skill.jobIDs as the union of its current ids and every record index that lists
- * the skill. Same convention as PATCH jobs/:n/skills and education/:key/skills: integer
- * indices into the merged work + education list. Sorted ascending, deduped, non-numeric
- * ids dropped. Mutates and returns `skill`.
- * @param {{ jobIDs?: unknown[] }} skill
- * @param {Array<object>} records
- * @param {Set<string>|string[]|string} aliases
- */
-export function recomputeSkillJobIds(skill, records, aliases) {
-    if (!skill || typeof skill !== 'object') throw new Error('[resumeDataHelpers] skill entry is required to recompute jobIDs');
-    const ids = new Set();
-    for (const id of (Array.isArray(skill.jobIDs) ? skill.jobIDs : [])) {
-        const n = Number(id);
-        if (Number.isInteger(n) && n >= 0) ids.add(n);
+export function mirrorCategoriesIntoSkills(skills, categories) {
+    const cats = categories && typeof categories === 'object' && !Array.isArray(categories) ? categories : {};
+    let count = 0;
+    for (const [key, skill] of Object.entries(skills)) {
+        if (!skill || typeof skill !== 'object') continue;
+        const aliases = skillAliasSet(key, skill.name);
+        const next = Object.entries(cats)
+            .filter(([, cat]) => {
+                const ids = Array.isArray(cat) ? cat : (cat && typeof cat === 'object' && Array.isArray(cat.skillIDs) ? cat.skillIDs : []);
+                return ids.some((sid) => aliases.has(normalizeSkillId(sid)));
+            })
+            .map(([cid]) => cid);
+        const prev = Array.isArray(skill.categoryIDs) ? skill.categoryIDs : undefined;
+        if (prev === undefined && next.length === 0) continue;
+        if (prev !== undefined && JSON.stringify(prev) === JSON.stringify(next)) continue;
+        skill.categoryIDs = next;
+        count++;
     }
-    for (const i of recordIndicesReferencingSkill(records, aliases)) ids.add(i);
-    skill.jobIDs = [...ids].sort((a, b) => a - b);
-    return skill;
-}
-
-/** Shift skill.jobIDs at/after insert so indices stay aligned with jobs.json (0-based). */
-export function reindexSkillJobIdsAfterJobInsert(skills, insertAt) {
-    const at = Number(insertAt);
-    if (!Number.isFinite(at) || at < 0) return;
-    for (const s of Object.values(skills)) {
-        if (!s || typeof s !== 'object' || !Array.isArray(s.jobIDs)) continue;
-        const next = s.jobIDs.map((j) => {
-            const n = Number(j);
-            return Number.isFinite(n) && n >= at ? n + 1 : n;
-        });
-        s.jobIDs = [...new Set(next)].sort((a, b) => a - b);
-    }
-}
-
-/** Remove deleted job index from skill.jobIDs and decrement higher indices. */
-export function reindexSkillJobIdsAfterJobDelete(skills, deletedIndex) {
-    const d = Number(deletedIndex);
-    if (!Number.isFinite(d) || d < 0) return;
-    for (const s of Object.values(skills)) {
-        if (!s || typeof s !== 'object' || !Array.isArray(s.jobIDs)) continue;
-        const next = s.jobIDs
-            .map((j) => Number(j))
-            .filter((n) => Number.isFinite(n) && n !== d)
-            .map((n) => (n > d ? n - 1 : n));
-        s.jobIDs = [...new Set(next)].sort((a, b) => a - b);
-    }
+    return count;
 }
 
 /**

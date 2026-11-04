@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-    recomputeSkillJobIds,
-    recordIndicesReferencingSkill,
-    reindexSkillJobIdsAfterJobDelete,
-    reindexSkillJobIdsAfterJobInsert,
+    mirrorCategoriesIntoSkills,
     replaceSkillKeyInCategories,
     replaceSkillNameInDescriptions,
     resolveSkillKey,
@@ -134,80 +131,32 @@ describe('replaceSkillKeyInCategories', () => {
     });
 });
 
-describe('recordIndicesReferencingSkill', () => {
-    it('returns ascending merged indices that list the skill by key or display name', () => {
-        const merged = [
-            { skillIDs: ['react'] },
-            { skillIDs: ['aws'] },
-            { skillIDs: ['React'] },
-            {},
-            { skillIDs: ['vue', 'react'] },
-        ];
-        expect(recordIndicesReferencingSkill(merged, skillAliasSet('react', 'React'))).toEqual([0, 2, 4]);
-        expect(recordIndicesReferencingSkill([], 'react')).toEqual([]);
-    });
-});
-
-describe('recomputeSkillJobIds', () => {
-    it('unions existing ids with referencing indices, sorted and deduped, dropping junk', () => {
-        const skill = { name: 'React', jobIDs: [5, '5', 'x', -1, 2.5] };
-        const merged = [
-            { skillIDs: ['react'] },
-            { skillIDs: ['aws'] },
-            { skillIDs: ['React'] },
-        ];
-        expect(recomputeSkillJobIds(skill, merged, skillAliasSet('react', 'React'))).toBe(skill);
-        expect(skill.jobIDs).toEqual([0, 2, 5]);
-    });
-
-    it('starts from an empty list when jobIDs is missing and fails fast without a skill', () => {
-        const skill = { name: 'AWS' };
-        recomputeSkillJobIds(skill, [{ skillIDs: ['aws'] }], 'aws');
-        expect(skill.jobIDs).toEqual([0]);
-        expect(() => recomputeSkillJobIds(null, [], 'aws')).toThrow(/skill entry is required/);
-    });
-});
-
-describe('reindexSkillJobIdsAfterJobInsert', () => {
-    it('shifts ids at or after the insert point, dedupes, and sorts', () => {
+describe('mirrorCategoriesIntoSkills', () => {
+    it('rewrites every skill.categoryIDs from the category lists, matching by key or display name', () => {
         const skills = {
-            a: { jobIDs: [0, 2, 5] },
-            b: { jobIDs: ['3', 1] },
-            c: { name: 'no ids' },
-            d: null,
+            react: { name: 'React', categoryIDs: ['frontend', 'stale'] },
+            aws: { name: 'AWS', categoryIDs: [] },
+            python: { name: 'Python' },
+            bare: null,
         };
-        reindexSkillJobIdsAfterJobInsert(skills, 2);
-        expect(skills.a.jobIDs).toEqual([0, 3, 6]);
-        expect(skills.b.jobIDs).toEqual([1, 4]);
-        expect(skills.c).toEqual({ name: 'no ids' });
-    });
-
-    it('ignores invalid insert positions', () => {
-        const skills = { a: { jobIDs: [1, 2] } };
-        reindexSkillJobIdsAfterJobInsert(skills, -1);
-        reindexSkillJobIdsAfterJobInsert(skills, 'x');
-        expect(skills.a.jobIDs).toEqual([1, 2]);
-    });
-});
-
-describe('reindexSkillJobIdsAfterJobDelete', () => {
-    it('drops the deleted index, decrements higher ids, dedupes, and sorts', () => {
-        const skills = {
-            a: { jobIDs: [0, 2, 3, 5] },
-            b: { jobIDs: ['2'] },
-            c: { jobIDs: [3, 2, 'nan'] },
+        const categories = {
+            frontend: { name: 'Frontend', skillIDs: ['React'] },
+            cloud: ['aws'],
+            empty: { name: 'Empty' },
         };
-        reindexSkillJobIdsAfterJobDelete(skills, 2);
-        expect(skills.a.jobIDs).toEqual([0, 2, 4]);
-        expect(skills.b.jobIDs).toEqual([]);
-        expect(skills.c.jobIDs).toEqual([2]);
+        expect(mirrorCategoriesIntoSkills(skills, categories)).toBe(2);
+        expect(skills.react.categoryIDs).toEqual(['frontend']);
+        expect(skills.aws.categoryIDs).toEqual(['cloud']);
+        expect(skills.python).toEqual({ name: 'Python' });
     });
 
-    it('ignores invalid delete positions', () => {
-        const skills = { a: { jobIDs: [1, 2] } };
-        reindexSkillJobIdsAfterJobDelete(skills, -3);
-        reindexSkillJobIdsAfterJobDelete(skills, undefined);
-        expect(skills.a.jobIDs).toEqual([1, 2]);
+    it('removes memberships the categories no longer list and tolerates missing categories', () => {
+        const skills = { react: { name: 'React', categoryIDs: ['frontend'] }, vue: { name: 'Vue', categoryIDs: ['frontend'] } };
+        expect(mirrorCategoriesIntoSkills(skills, { frontend: { skillIDs: ['vue'] } })).toBe(1);
+        expect(skills.react.categoryIDs).toEqual([]);
+        expect(mirrorCategoriesIntoSkills(skills, null)).toBe(1);
+        expect(skills.vue.categoryIDs).toEqual([]);
+        expect(mirrorCategoriesIntoSkills(skills, null)).toBe(0);
     });
 });
 

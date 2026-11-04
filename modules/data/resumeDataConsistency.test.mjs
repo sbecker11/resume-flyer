@@ -148,6 +148,40 @@ describe('checkResumeDataConsistency', () => {
     expect(unresolved[0]).toMatchObject({ severity: 'error', where: 'jobs.json[1].Description', details: { label: 'Kubernetes' } });
   });
 
+  it('flags a [Bracket] whose skill is not in the job skillIDs as blocking (skillIDs is the source of truth)', () => {
+    const data = baseData();
+    data.jobs[1].Description = '• Wrote [Python] tooling on a [Vue.js] UI, twice [vue.js]';
+    const findings = checkResumeDataConsistency({ skills: data.skills, jobs: data.jobs });
+    const notLinked = byCode(findings, 'bracket-not-linked');
+    expect(notLinked).toHaveLength(1);
+    expect(notLinked[0]).toMatchObject({
+      severity: 'error', where: 'jobs.json[1].Description', details: { label: 'Vue.js', resolvedKey: 'vue-js' },
+    });
+    expect(hasBlockingFindings(findings)).toBe(true);
+    // Linking by display name counts: the id resolves to the same key.
+    data.jobs[1].skillIDs = ['python', 'Vue.js'];
+    expect(byCode(checkResumeDataConsistency({ skills: data.skills, jobs: data.jobs }), 'bracket-not-linked')).toEqual([]);
+  });
+
+  it('reports derived-data drift as errors, not warnings', () => {
+    const data = baseData();
+    data.skills['vue-js'].jobIDs = [1];
+    data.skills.Bash.jobIDs = [7, '2'];
+    data.categories.language.skillIDs = ['python', 'nope'];
+    const stale = JSON.parse(JSON.stringify(data.enrichedJobs));
+    stale[0]['job-skills'] = {};
+    const findings = checkResumeDataConsistency({ ...data, enrichedJobs: stale });
+    const severities = Object.fromEntries(findings.map((f) => [f.code, f.severity]));
+    expect(severities).toMatchObject({
+      'skill-jobids-missing': 'error',
+      'skill-jobids-extraneous': 'error',
+      'skill-jobids-out-of-range': 'error',
+      'skill-jobids-malformed': 'error',
+      'category-skill-unknown': 'error',
+      'enriched-jobs-stale': 'error',
+    });
+  });
+
   it('reads lowercase description field too', () => {
     const data = baseData();
     const jobs = [{ employer: 'X', description: '[Nope]' }];
