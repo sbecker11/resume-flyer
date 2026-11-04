@@ -213,7 +213,6 @@
       3,
       5,
       6,
-      7,
       15,
       18,
       20
@@ -1402,6 +1401,18 @@
     ],
     "jobIDs": [
       12
+    ]
+  },
+  "aws-aurora-postgresql": {
+    "name": "AWS Aurora PostgreSQL",
+    "url": "https://aws.amazon.com/rds/aurora/",
+    "img": "",
+    "categoryIDs": [
+      "database",
+      "cloud"
+    ],
+    "jobIDs": [
+      7
     ]
   }
 }

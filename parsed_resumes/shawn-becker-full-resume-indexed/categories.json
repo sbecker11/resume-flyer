@@ -208,7 +208,8 @@
       "filemaker",
       "sql-anywhere",
       "db-design-tools",
-      "oracle"
+      "oracle",
+      "aws-aurora-postgresql"
     ]
   },
   "computer-vision": {
@@ -238,7 +239,8 @@
       "kinesis",
       "AWS S3",
       "redshift",
-      "dynamodb"
+      "dynamodb",
+      "aws-aurora-postgresql"
     ]
   }
 }

@@ -212,7 +212,7 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "\u2022 [Java] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "\u2022 [Java] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [AWS Aurora PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
     "outlineIndex": "1.1.8",
     "skillIDs": [
       "spring-boot",
@@ -225,7 +225,7 @@
       "flyway",
       "java",
       "pgvector",
-      "postgresql",
+      "aws-aurora-postgresql",
       "Terraform",
       "ai-ml",
       "devops",

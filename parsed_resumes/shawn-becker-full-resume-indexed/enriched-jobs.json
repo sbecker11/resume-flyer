@@ -378,7 +378,7 @@
     "start": "03/2026",
     "end": "07/2026",
     "durationMonths": 5,
-    "Description": "• [Java] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
+    "Description": "• [Java] / [Spring Boot] / [Spring AI] entity-resolution [RAG] service on [AWS Aurora PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
     "educationKey": null,
     "skillIDs": [
       "spring-boot",
@@ -391,7 +391,7 @@
       "flyway",
       "java",
       "pgvector",
-      "postgresql",
+      "aws-aurora-postgresql",
       "Terraform",
       "ai-ml",
       "devops",
@@ -404,7 +404,7 @@
       "<a href=\"https://spring.io/projects/spring-boot\">[spring-boot]</a>",
       "<a href=\"https://spring.io/projects/spring-ai\">[spring-ai]</a>",
       "<a href=\"https://en.wikipedia.org/wiki/Retrieval-augmented_generation\">[rag]</a>",
-      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>",
+      "<a href=\"https://aws.amazon.com/rds/aurora/\">[aws-aurora-postgresql]</a>",
       "<a href=\"https://aws.amazon.com/bedrock/\">[Amazon Bedrock]</a>"
     ],
     "job-skills": {
@@ -412,8 +412,9 @@
       "spring-boot": "spring-boot",
       "spring-ai": "spring-ai",
       "rag": "rag",
-      "postgresql": "postgresql",
+      "aws-aurora-postgresql": "aws-aurora-postgresql",
       "Amazon Bedrock": "Amazon Bedrock",
+      "postgresql": "postgresql",
       "spring": "spring",
       "Amazon ECS": "Amazon ECS",
       "AWS CloudWatch": "AWS CloudWatch",
