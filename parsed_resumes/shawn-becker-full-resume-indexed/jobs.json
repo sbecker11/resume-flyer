@@ -93,13 +93,12 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 [FastMCP] + [LangChain] [LCEL] [RAG] server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "\u2022 [FastMCP] + [LangChain] [LCEL] [RAG] server with [Chroma DB], [AWS Aurora PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "outlineIndex": "1.1.4",
     "skillIDs": [
       "fastmcp",
       "langchain",
       "lcel",
-      "postgresql",
       "react",
       "Amazon ECS",
       "Amazon RDS",
@@ -116,7 +115,8 @@
       "genai",
       "llm-apis-openai",
       "Bash",
-      "rag"
+      "rag",
+      "aws-aurora-postgresql"
     ],
     "jobID": "5"
   },
@@ -152,15 +152,15 @@
     "css RGB": "#800000",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 [React] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
+    "Description": "\u2022 [React] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [AWS Aurora PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
     "outlineIndex": "1.1.6",
     "skillIDs": [
       "express-js",
-      "postgresql",
       "react",
       "jwt",
       "bcrypt",
-      "rbac"
+      "rbac",
+      "aws-aurora-postgresql"
     ],
     "jobID": "7"
   },
@@ -191,13 +191,13 @@
       "Flask",
       "java",
       "Pandas",
-      "postgresql",
       "python",
       "pytorch",
       "sentence-transformers",
       "ai-ml",
       "devops",
-      "Bash"
+      "Bash",
+      "aws-aurora-postgresql"
     ],
     "jobID": "8"
   },
@@ -435,10 +435,10 @@
     "css RGB": "#800080",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Designed a dimensional data warehouse in [PostgreSQL] using Type-2 slowly-changing dimensions to track real-estate FSBO property histories, building reusable data models for downstream reporting.",
+    "Description": "\u2022 Designed a dimensional data warehouse in [AWS Aurora PostgreSQL] using Type-2 slowly-changing dimensions to track real-estate FSBO property histories, building reusable data models for downstream reporting.",
     "outlineIndex": "1.2.6",
     "skillIDs": [
-      "postgresql"
+      "aws-aurora-postgresql"
     ],
     "jobID": "18"
   },
@@ -507,13 +507,13 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "Description": "\u2022 [Java], [JSP], [Spring], and [PostgreSQL] development.",
+    "Description": "\u2022 [Java], [JSP], [Spring], and [AWS Aurora PostgreSQL] development.",
     "outlineIndex": "3",
     "skillIDs": [
-      "postgresql",
       "java",
       "jsp",
-      "spring"
+      "spring",
+      "aws-aurora-postgresql"
     ],
     "jobID": "21"
   },
@@ -550,13 +550,13 @@
     "css RGB": "#116611",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 [Java], [JSP], and [PostgreSQL] systems.",
+    "Description": "\u2022 [Java], [JSP], and [AWS Aurora PostgreSQL] systems.",
     "outlineIndex": "5.6",
     "skillIDs": [
       "java",
       "jsp",
-      "postgresql",
-      "dynamodb"
+      "dynamodb",
+      "aws-aurora-postgresql"
     ],
     "jobID": "24"
   },

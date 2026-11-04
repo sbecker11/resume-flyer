@@ -199,7 +199,6 @@
     "name": "Database",
     "skillIDs": [
       "Chroma DB",
-      "postgresql",
       "pgvector",
       "bigquery",
       "snowflake",

@@ -202,22 +202,6 @@
       3
     ]
   },
-  "postgresql": {
-    "name": "PostgreSQL",
-    "url": "https://www.postgresql.org/",
-    "img": "",
-    "categoryIDs": [
-      "database"
-    ],
-    "jobIDs": [
-      3,
-      5,
-      6,
-      15,
-      18,
-      20
-    ]
-  },
   "dall-e-3": {
     "name": "DALL·E 3",
     "url": "https://openai.com/index/dall-e-3/",
@@ -1412,7 +1396,13 @@
       "cloud"
     ],
     "jobIDs": [
-      7
+      3,
+      5,
+      6,
+      7,
+      15,
+      18,
+      20
     ]
   }
 }

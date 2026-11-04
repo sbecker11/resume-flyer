@@ -155,13 +155,12 @@
     "start": "10/2025",
     "end": "03/2026",
     "durationMonths": 6,
-    "Description": "• [FastMCP] + [LangChain] [LCEL] [RAG] server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
+    "Description": "• [FastMCP] + [LangChain] [LCEL] [RAG] server with [Chroma DB], [AWS Aurora PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "educationKey": null,
     "skillIDs": [
       "fastmcp",
       "langchain",
       "lcel",
-      "postgresql",
       "react",
       "Amazon ECS",
       "Amazon RDS",
@@ -178,7 +177,8 @@
       "genai",
       "llm-apis-openai",
       "Bash",
-      "rag"
+      "rag",
+      "aws-aurora-postgresql"
     ],
     "references": [
       "<a href=\"https://gofastmcp.com/getting-started/welcome\">[fastmcp]</a>",
@@ -186,7 +186,7 @@
       "<a href=\"https://www.langchain.com/blog/langchain-expression-language\">[lcel]</a>",
       "<a href=\"https://en.wikipedia.org/wiki/Retrieval-augmented_generation\">[rag]</a>",
       "<a href=\"#\">[Chroma DB]</a>",
-      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>",
+      "<a href=\"https://aws.amazon.com/rds/aurora/\">[aws-aurora-postgresql]</a>",
       "<a href=\"https://react.dev/\">[react]</a>"
     ],
     "job-skills": {
@@ -195,7 +195,7 @@
       "lcel": "lcel",
       "rag": "rag",
       "Chroma DB": "Chroma DB",
-      "postgresql": "postgresql",
+      "aws-aurora-postgresql": "aws-aurora-postgresql",
       "react": "react",
       "Amazon ECS": "Amazon ECS",
       "Amazon RDS": "Amazon RDS",
@@ -264,15 +264,15 @@
     "start": "12/2025",
     "end": "07/2026",
     "durationMonths": 8,
-    "Description": "• [React] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
+    "Description": "• [React] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [AWS Aurora PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
     "educationKey": null,
     "skillIDs": [
       "express-js",
-      "postgresql",
       "react",
       "jwt",
       "bcrypt",
-      "rbac"
+      "rbac",
+      "aws-aurora-postgresql"
     ],
     "references": [
       "<a href=\"https://react.dev/\">[react]</a>",
@@ -280,7 +280,7 @@
       "<a href=\"https://www.jwt.io/\">[jwt]</a>",
       "<a href=\"https://github.com/kelektiv/node.bcrypt.js\">[bcrypt]</a>",
       "<a href=\"https://en.wikipedia.org/wiki/Role-based_access_control\">[rbac]</a>",
-      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
+      "<a href=\"https://aws.amazon.com/rds/aurora/\">[aws-aurora-postgresql]</a>"
     ],
     "job-skills": {
       "react": "react",
@@ -288,7 +288,7 @@
       "jwt": "jwt",
       "bcrypt": "bcrypt",
       "rbac": "rbac",
-      "postgresql": "postgresql"
+      "aws-aurora-postgresql": "aws-aurora-postgresql"
     },
     "outlineIndex": "1.1.6",
     "outlineKind": "job",
@@ -323,13 +323,13 @@
       "Flask",
       "java",
       "Pandas",
-      "postgresql",
       "python",
       "pytorch",
       "sentence-transformers",
       "ai-ml",
       "devops",
-      "Bash"
+      "Bash",
+      "aws-aurora-postgresql"
     ],
     "references": [
       "<a href=\"https://spring.io/projects/spring-boot\">[spring-boot]</a>",
@@ -353,13 +353,13 @@
       "Flask": "Flask",
       "java": "java",
       "Pandas": "Pandas",
-      "postgresql": "postgresql",
       "python": "python",
       "pytorch": "pytorch",
       "sentence-transformers": "sentence-transformers",
       "ai-ml": "ai-ml",
       "devops": "devops",
-      "Bash": "Bash"
+      "Bash": "Bash",
+      "aws-aurora-postgresql": "aws-aurora-postgresql"
     },
     "outlineIndex": "1.1.7",
     "outlineKind": "job",
@@ -414,7 +414,6 @@
       "rag": "rag",
       "aws-aurora-postgresql": "aws-aurora-postgresql",
       "Amazon Bedrock": "Amazon Bedrock",
-      "postgresql": "postgresql",
       "spring": "spring",
       "Amazon ECS": "Amazon ECS",
       "AWS CloudWatch": "AWS CloudWatch",
@@ -806,16 +805,16 @@
     "start": "01/2020",
     "end": "11/2021",
     "durationMonths": 23,
-    "Description": "• Designed a dimensional data warehouse in [PostgreSQL] using Type-2 slowly-changing dimensions to track real-estate FSBO property histories, building reusable data models for downstream reporting.",
+    "Description": "• Designed a dimensional data warehouse in [AWS Aurora PostgreSQL] using Type-2 slowly-changing dimensions to track real-estate FSBO property histories, building reusable data models for downstream reporting.",
     "educationKey": null,
     "skillIDs": [
-      "postgresql"
+      "aws-aurora-postgresql"
     ],
     "references": [
-      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
+      "<a href=\"https://aws.amazon.com/rds/aurora/\">[aws-aurora-postgresql]</a>"
     ],
     "job-skills": {
-      "postgresql": "postgresql"
+      "aws-aurora-postgresql": "aws-aurora-postgresql"
     },
     "outlineIndex": "1.2.6",
     "outlineKind": "job",
@@ -943,25 +942,25 @@
     "start": "09/2016",
     "end": "02/2017",
     "durationMonths": 6,
-    "Description": "• [Java], [JSP], [Spring], and [PostgreSQL] development.",
+    "Description": "• [Java], [JSP], [Spring], and [AWS Aurora PostgreSQL] development.",
     "educationKey": null,
     "skillIDs": [
-      "postgresql",
       "java",
       "jsp",
-      "spring"
+      "spring",
+      "aws-aurora-postgresql"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
       "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
       "<a href=\"https://spring.io/projects/spring-framework\">[spring]</a>",
-      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
+      "<a href=\"https://aws.amazon.com/rds/aurora/\">[aws-aurora-postgresql]</a>"
     ],
     "job-skills": {
       "java": "java",
       "jsp": "jsp",
       "spring": "spring",
-      "postgresql": "postgresql"
+      "aws-aurora-postgresql": "aws-aurora-postgresql"
     },
     "outlineIndex": "3",
     "outlineKind": "job",
@@ -1020,23 +1019,23 @@
     "start": "12/2002",
     "end": "12/2003",
     "durationMonths": 13,
-    "Description": "• [Java], [JSP], and [PostgreSQL] systems.",
+    "Description": "• [Java], [JSP], and [AWS Aurora PostgreSQL] systems.",
     "educationKey": null,
     "skillIDs": [
       "java",
       "jsp",
-      "postgresql",
-      "dynamodb"
+      "dynamodb",
+      "aws-aurora-postgresql"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
       "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
-      "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
+      "<a href=\"https://aws.amazon.com/rds/aurora/\">[aws-aurora-postgresql]</a>"
     ],
     "job-skills": {
       "java": "java",
       "jsp": "jsp",
-      "postgresql": "postgresql",
+      "aws-aurora-postgresql": "aws-aurora-postgresql",
       "dynamodb": "dynamodb"
     },
     "outlineIndex": "5.6",
