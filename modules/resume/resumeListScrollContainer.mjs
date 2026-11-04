@@ -7,6 +7,7 @@
 
 import { applyPaletteToElement } from '../composables/useColorPalette.mjs';
 import { selectionManager } from '../core/selectionManager.mjs';
+import { ignoreProjectLinkClick } from '../data/projectLinks.mjs';
 
 /**
  * Configuration for resume list scroll (wrapping) behavior
@@ -199,6 +200,7 @@ class ResumeListScrollContainer {
     const jobNumber = parseInt(jobNumberStr, 10);
     if (Number.isNaN(jobNumber)) return;
     rDivOrClone.addEventListener('click', (e) => {
+      if (ignoreProjectLinkClick(e)) return;
       if (e.target.closest('.r-div-close')) return;
       const itemsController = window.resumeFlyer?.resumeItemsController;
       if (itemsController && typeof itemsController.handleBizResumeDivClickEvent === 'function') {

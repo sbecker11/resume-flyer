@@ -8,6 +8,7 @@ import {
     renderSkillCardContentHtml,
     renderBizCardSceneBodyHtml,
     renderBizResumeHeaderHtml,
+    renderBizCardProjectLinksHtml,
     orderedBizCardSkillEntries,
     renderBizCardSkillTitleSpansHtml,
 } from './cardMarkup.mjs'
@@ -133,6 +134,36 @@ describe('cardMarkup', () => {
             expect(scene).toContain(cls)
             expect(resume).toContain(cls)
         }
+    })
+
+    it('renderBizCardProjectLinksHtml opens GitHub and Pages in a new window', () => {
+        const links = {
+            githubUrl: 'https://github.com/sbecker11/resume-flyer',
+            pagesUrl: 'https://sbecker11.github.io/resume-flyer/',
+        }
+        const html = renderBizCardProjectLinksHtml(links)
+        expect(html).toContain('class="biz-card-project-links"')
+        expect(html).toContain('href="https://github.com/sbecker11/resume-flyer"')
+        expect(html).toContain('href="https://sbecker11.github.io/resume-flyer/"')
+        expect(html).toContain('target="_blank"')
+        expect(html).toContain('rel="noopener noreferrer"')
+        expect(html).toContain('GitHub project')
+        expect(html).toContain('GitHub Pages')
+
+        const scene = renderBizCardSceneBodyHtml({
+            employer: 'resume-flyer',
+            role: 'Portfolio Project: resume-flyer',
+            projectLinks: links,
+        })
+        const resume = renderBizResumeHeaderHtml({
+            employer: 'resume-flyer',
+            role: 'Portfolio Project: resume-flyer',
+            projectLinks: links,
+        })
+        expect(scene).toContain('biz-card-project-link')
+        expect(resume).toContain('biz-card-project-link')
+        expect(renderBizCardProjectLinksHtml(null)).toBe('')
+        expect(renderBizCardProjectLinksHtml({ githubUrl: 'https://github.com/sbecker11/resume-parser' })).not.toContain('GitHub Pages')
     })
 })
 

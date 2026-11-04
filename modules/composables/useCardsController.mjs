@@ -42,6 +42,7 @@ import {
     orderedBizCardSkillEntries,
     renderBizCardSkillTitleSpansHtml,
 } from '@/modules/scene/cardMarkup.mjs'
+import { ignoreProjectLinkClick, projectLinksForJob } from '@/modules/data/projectLinks.mjs'
 import {
     markFocusedSkillLinkForJob,
     markSourceBizBackLinkForSkill,
@@ -905,6 +906,7 @@ export function useCardsController() {
             jobNumber,
             sceneZ,
             hasSkills,
+            projectLinks: projectLinksForJob(job),
         })
 
         attachBizCardEditButtonListeners(card, jobNumber)
@@ -912,6 +914,7 @@ export function useCardsController() {
         // Add click handler: select this card or deselect if it is the selected card (one at a time). Clicking a skill title (by element id) selects that skill card.
         card.addEventListener('click', (event) => {
             event.stopPropagation()
+            if (ignoreProjectLinkClick(event)) return
             const skillTitleEl = event.target.closest('.biz-card-skill-title')
             if (skillTitleEl) {
                 selectSkillCardById(
@@ -2086,6 +2089,7 @@ export function useCardsController() {
     function attachBizSceneCardCloneListeners(clone, jobNumber, originalId) {
         clone.addEventListener('click', (event) => {
             event.stopPropagation()
+            if (ignoreProjectLinkClick(event)) return
             if (!selectionManager) return
 
             if (event.target.closest('.biz-details-edit-btn')) return
