@@ -188,13 +188,40 @@ export function stripCorporateSuffix(label) {
 }
 
 /**
- * @param {string} label
+ * Lower-cased name/key → slug index per skills map. The map is scanned once instead
+ * of once per lookup (the finder resolves hundreds of job skill ids against ~120
+ * skills). Entries are verified against the live map on every hit so an in-place
+ * edit can never return a stale slug; a verified miss falls back to the full scan.
+ * @type {WeakMap<object, Map<string, string>>}
+ */
+const lowerIndexBySkillsData = new WeakMap()
+
+/**
+ * @param {Record<string, { name?: string }>} skillsData
+ * @returns {Map<string, string>}
+ */
+function lowerIndexFor(skillsData) {
+    let index = lowerIndexBySkillsData.get(skillsData)
+    if (index) return index
+    index = new Map()
+    for (const [slug, skill] of Object.entries(skillsData)) {
+        const name = (skill?.name || '').toLowerCase()
+        if (name && !index.has(name)) index.set(name, slug)
+    }
+    for (const slug of Object.keys(skillsData)) {
+        const lower = slug.toLowerCase()
+        if (!index.has(lower)) index.set(lower, slug)
+    }
+    lowerIndexBySkillsData.set(skillsData, index)
+    return index
+}
+
+/**
+ * @param {string} lower
  * @param {Record<string, { name?: string }>} skillsData
  * @returns {string|null}
  */
-function matchLabelToSlugExact(label, skillsData) {
-    const lower = String(label).trim().toLowerCase()
-    if (!lower) return null
+function scanLabelToSlug(lower, skillsData) {
     for (const [slug, skill] of Object.entries(skillsData)) {
         if ((skill?.name || '').toLowerCase() === lower) return slug
     }
@@ -202,4 +229,24 @@ function matchLabelToSlugExact(label, skillsData) {
         if (slug.toLowerCase() === lower) return slug
     }
     return null
+}
+
+/**
+ * @param {string} label
+ * @param {Record<string, { name?: string }>} skillsData
+ * @returns {string|null}
+ */
+function matchLabelToSlugExact(label, skillsData) {
+    const lower = String(label).trim().toLowerCase()
+    if (!lower) return null
+    if (typeof skillsData !== 'object') return scanLabelToSlug(lower, skillsData)
+    const index = lowerIndexFor(skillsData)
+    const hit = index.get(lower)
+    if (hit !== undefined && skillsData[hit] != null) {
+        const skill = skillsData[hit]
+        if ((skill?.name || '').toLowerCase() === lower || hit.toLowerCase() === lower) return hit
+    }
+    const scanned = scanLabelToSlug(lower, skillsData)
+    if (scanned !== null || hit !== undefined) lowerIndexBySkillsData.delete(skillsData)
+    return scanned
 }

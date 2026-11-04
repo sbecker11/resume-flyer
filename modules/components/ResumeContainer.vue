@@ -681,7 +681,9 @@ async function handleDetailsSaved(payload) {
     emit('resume-selected', props.currentResumeId);
     return;
   }
-  if (payload?.clearAllJobSkillLinks === true || payload?.removedSkill === true) {
+  // Merge/rename retire a skill key; the scene's skill card and bizCard titles are built once, so reload.
+  if (payload?.clearAllJobSkillLinks === true || payload?.removedSkill === true
+      || payload?.skillMerged === true || payload?.skillRenamed === true) {
     emit('resume-selected', props.currentResumeId);
     return;
   }

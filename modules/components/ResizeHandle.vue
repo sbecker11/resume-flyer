@@ -431,21 +431,30 @@ watch([skillSearchOpen, searchResumeId], ([open]) => {
   if (open) void refreshSearchExperience();
 });
 
-const filteredSearchOptions = computed<SearchOption[]>(() => {
+/**
+ * Full option list, built when the finder opens or its mode / experience data / URL
+ * catalog changes. It must not depend on the query: building it walks every scene
+ * card and resolves every job's skill links, which is far too slow per keystroke.
+ */
+const searchOptions = computed<SearchOption[]>(() => {
   skillUrlRevision.value;
-  const q = skillSearchQuery.value.trim().toLowerCase();
+  if (!skillSearchOpen.value) return [];
   const jobs = searchExperienceReady.value ? searchExperienceJobs.value : null;
   const skillsData = searchExperienceReady.value
     ? searchExperienceSkills.value
     : (getGlobalJobsDependency().getSkillsData() || {});
   if (searchMode.value === 'skill') {
     const cards = Array.from(document.querySelectorAll('.skill-card-div[data-skill-name]:not(.clone)'));
-    return filterSearchOptionsByQuery(buildSkillSearchOptions(cards, skillsData, getSkillUrlCatalog(), jobs), q);
+    return buildSkillSearchOptions(cards, skillsData, getSkillUrlCatalog(), jobs);
   }
 
   const cards = Array.from(document.querySelectorAll('.biz-card-div[id^="biz-card-div-"]:not(.clone)'));
-  return filterSearchOptionsByQuery(buildJobSearchOptions(cards, jobs, skillsData), q);
+  return buildJobSearchOptions(cards, jobs, skillsData);
 });
+
+const filteredSearchOptions = computed<SearchOption[]>(
+  () => filterSearchOptionsByQuery(searchOptions.value, skillSearchQuery.value),
+);
 
 function openSkillSearch(event: MouseEvent): void {
   event.stopPropagation();
@@ -458,6 +467,27 @@ function closeSkillSearch(): void {
   skillSearchOpen.value = false;
   resetSkillSearchDrag();
 }
+
+function focusSkillSearchInput(): void {
+  const input = skillSearchInputRef.value;
+  if (input && document.activeElement !== input) input.focus();
+}
+
+/**
+ * A mousedown anywhere in the modal except the text field (mode radios, their labels,
+ * results padding) would move focus off the field and typing would go nowhere.
+ * Radios still toggle on click; preventing default only keeps focus where typing lands.
+ */
+function onSkillSearchModalMousedown(event: MouseEvent): void {
+  const target = event.target as Element | null;
+  if (target?.closest?.('.skill-search-input')) return;
+  event.preventDefault();
+}
+
+watch(searchMode, () => {
+  if (!skillSearchOpen.value) return;
+  nextTick(focusSkillSearchInput);
+});
 
 function onSkillSearchOverlayClick(): void {
   if (ignoreNextSkillSearchOverlayClick.value || skillSearchDragging.value) {
@@ -605,7 +635,7 @@ watch(skillSearchOpen, (open) => {
             aria-label="Skill search"
             :style="skillSearchTransformStyle"
             @pointerdown.stop
-            @mousedown.stop
+            @mousedown.stop="onSkillSearchModalMousedown"
             @click.stop
           >
             <div

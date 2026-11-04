@@ -228,6 +228,69 @@ describe('skill finder experience', () => {
         const jobOptions = buildJobSearchOptions([biz], jobs, skills)
         expect(jobOptions[0].label).toBe('(21) resume-parser')
     })
+
+    it('labels C++ with its skills.json name when the key collapsed to "c"', () => {
+        const skills = { c: { name: 'C++', url: 'https://isocpp.org/' } }
+        const jobs = [
+            { skillIDs: ['c'], durationMonths: 7, Description: 'Platform in [C++].', 'job-skills': { c: 'c' } },
+            { skillIDs: ['C++'], durationMonths: 3, Description: '', 'job-skills': { 'C++': 'C++' } },
+            { skillIDs: ['c++'], durationMonths: 2, Description: '' },
+        ]
+        const options = buildSkillSearchOptions([skillCard('skill-card-div-1', 'c')], skills, null, jobs)
+        expect(options).toEqual([
+            { kind: 'skill', id: 'skill-card-div-1', label: 'C++ (12)', sublabel: 'https://isocpp.org/', slug: 'c' },
+        ])
+        expect(filterSearchOptionsByQuery(options, 'c++').map((row) => row.label)).toEqual(['C++ (12)'])
+        expect(buildSkillSearchOptions([skillCard('skill-card-div-1', 'c')], skills)[0].label).toBe('C++')
+    })
+
+    it('shows skill.name for a card keyed by a display-name variant and never re-cases an unknown token', () => {
+        const skills = { c: { name: 'C++', url: 'https://isocpp.org/' } }
+        const jobs = [
+            { skillIDs: ['c'], durationMonths: 7, Description: 'Platform in [C++].', 'job-skills': { c: 'c' } },
+            { skillIDs: ['c++'], durationMonths: 2, Description: '' },
+        ]
+        for (const token of ['C++', 'c++']) {
+            const [row] = buildSkillSearchOptions([skillCard('skill-card-div-3', token)], skills, null, jobs)
+            expect(row).toEqual({ kind: 'skill', id: 'skill-card-div-3', label: 'C++ (9)', sublabel: 'https://isocpp.org/', slug: token })
+            expect(buildSkillSearchOptions([skillCard('skill-card-div-3', token)], skills)[0].label).toBe('C++')
+        }
+        const [unknown] = buildSkillSearchOptions([skillCard('skill-card-div-4', 'Rust++')], skills, null, jobs)
+        expect(unknown.label).toBe('Rust++ (0)')
+        expect(buildSkillSearchOptions([skillCard('skill-card-div-4', 'Rust++')], skills)[0].label).toBe('Rust++')
+    })
+
+    it('resolves each job\'s skill links once per build, not once per card', () => {
+        const skills = {}
+        const cards = []
+        for (let i = 0; i < 120; i++) {
+            skills[`skill-${i}`] = { name: `Skill ${i}` }
+            cards.push(skillCard(`skill-card-div-${i}`, `skill-${i}`))
+        }
+        let descriptionReads = 0
+        const jobs = Array.from({ length: 30 }, (_, j) => new Proxy({
+            durationMonths: j + 1,
+            skillIDs: [`skill-${j}`, `Skill ${j + 1}`, `SKILL-${j + 2}`],
+            Description: `Used [Skill ${j + 3}] and [skill-${j + 4}].`,
+        }, {
+            get(target, prop, receiver) {
+                if (prop === 'Description') descriptionReads += 1
+                return Reflect.get(target, prop, receiver)
+            },
+        }))
+
+        const options = buildSkillSearchOptions(cards, skills, null, jobs)
+        expect(options).toHaveLength(120)
+        // One link resolution per job; before, this was cards × jobs (3,600 here).
+        expect(descriptionReads).toBe(jobs.length)
+
+        const byLabel = Object.fromEntries(options.map((o) => [o.slug, o.label]))
+        // skill-0: job 0 (1). skill-4: jobs 0..4 (1+2+3+4+5). skill-33: job 29 only (30).
+        expect(byLabel['skill-0']).toBe('Skill 0 (1)')
+        expect(byLabel['skill-4']).toBe('Skill 4 (15)')
+        expect(byLabel['skill-33']).toBe('Skill 33 (30)')
+        expect(byLabel['skill-40']).toBe('Skill 40 (0)')
+    })
 })
 
 describe('resume skill copy identity', () => {

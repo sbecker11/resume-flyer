@@ -94,11 +94,57 @@ describe('skillLabel', () => {
       expect(canonicalSkillKey(' vue ', skillsData)).toBe('Vue');
     });
 
+    it('resolves a name whose slug collapsed to one letter (C++ → "c") in any case', () => {
+      const cpp = { c: { name: 'C++' } };
+      expect(canonicalSkillKey('C++', cpp)).toBe('c');
+      expect(canonicalSkillKey('c++', cpp)).toBe('c');
+      expect(canonicalSkillKey('c', cpp)).toBe('c');
+      expect(labelToSlug('c++', cpp)).toBe('c');
+      expect(skillLabelForSlug(canonicalSkillKey('c++', cpp), cpp)).toBe('C++');
+      expect(skillLabelText('c', cpp.c)).toBe('<c> C++');
+    });
+
     it('returns the trimmed input when nothing matches, and empty for blank input', () => {
       expect(canonicalSkillKey('Unknown Thing', skillsData)).toBe('Unknown Thing');
       expect(canonicalSkillKey('  ', skillsData)).toBe('');
       expect(canonicalSkillKey(null, skillsData)).toBe('');
       expect(canonicalSkillKey('express-js', null)).toBe('express-js');
+    });
+
+    it('scans the skills map once per map, not once per display-name lookup', () => {
+      const raw = {};
+      for (let i = 0; i < 120; i++) raw[`skill-${i}`] = { name: `Skill Number ${i}` };
+      let enumerations = 0;
+      const skills = new Proxy(raw, {
+        ownKeys(target) { enumerations += 1; return Reflect.ownKeys(target); },
+      });
+
+      for (let round = 0; round < 3; round++) {
+        for (let i = 0; i < 120; i++) {
+          expect(canonicalSkillKey(`skill number ${i}`, skills)).toBe(`skill-${i}`);
+          expect(canonicalSkillKey(`SKILL-${i}`, skills)).toBe(`skill-${i}`);
+        }
+      }
+      // Building the index enumerates the map twice (names, then keys); 720 resolved
+      // lookups must not add a per-lookup scan on top of that.
+      expect(enumerations).toBeLessThanOrEqual(2);
+    });
+
+    it('never returns a stale slug after the skills map is edited in place', () => {
+      const skills = { 'vue-js': { name: 'Vue.js' }, docx: { name: 'DOCX' } };
+      expect(canonicalSkillKey('vue.js', skills)).toBe('vue-js');
+      expect(canonicalSkillKey('pdf', skills)).toBe('pdf');
+
+      skills.pdf = { name: 'PDF' };
+      expect(canonicalSkillKey('PDF', skills)).toBe('pdf');
+
+      skills['vue-js'].name = 'Vue 3';
+      expect(canonicalSkillKey('Vue 3', skills)).toBe('vue-js');
+      expect(canonicalSkillKey('vue.js', skills)).toBe('vue.js');
+
+      delete skills.docx;
+      expect(canonicalSkillKey('DOCX', skills)).toBe('DOCX');
+      expect(labelToSlug('docx', skills)).toBeNull();
     });
   });
 });

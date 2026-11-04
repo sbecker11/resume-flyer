@@ -55,6 +55,15 @@ vi.mock('@/modules/utils/skillUrlSync.mjs', () => ({ getSkillUrlCatalog: () => (
 vi.mock('@/modules/resume-details-editor/api.mjs', () => ({ getResumeData: vi.fn(async () => ({ jobs: [], skills: {} })) }));
 const reportError = vi.fn();
 vi.mock('@/modules/utils/errorReporting.mjs', () => ({ reportError }));
+vi.mock('@/modules/utils/skillCardIdentity.mjs', async (importOriginal) => {
+    const actual = await importOriginal();
+    return {
+        ...actual,
+        buildSkillSearchOptions: vi.fn(actual.buildSkillSearchOptions),
+        buildJobSearchOptions: vi.fn(actual.buildJobSearchOptions),
+    };
+});
+const { buildSkillSearchOptions, buildJobSearchOptions } = await import('@/modules/utils/skillCardIdentity.mjs');
 
 const { default: ResizeHandle } = await import('./ResizeHandle.vue');
 
@@ -87,7 +96,8 @@ beforeEach(() => {
     orientation.value = 'scene-left';
     appState.value = { 'user-settings': { resizeHandle: { stepCount: 1 }, currentResumeId: 'default' } };
     store.focalPoint.mode = 'LOCKED';
-    [resize.collapseLeft, resize.collapseRight, resize.startDrag, layout.toggleOrientation, updateAppState, setFocalPointMode, selectCard, reportError]
+    [resize.collapseLeft, resize.collapseRight, resize.startDrag, layout.toggleOrientation, updateAppState, setFocalPointMode, selectCard, reportError,
+        buildSkillSearchOptions, buildJobSearchOptions]
         .forEach((fn) => fn.mockClear());
     document.body.innerHTML = '';
     componentErrors.length = 0;
@@ -234,6 +244,41 @@ describe('ResizeHandle.vue', () => {
         expect(w.find('.skill-search-modal').exists()).toBe(false);
     });
 
+    it('builds the option list once per open and only filters it on each keystroke', async () => {
+        addSceneCards();
+        const w = mountHandle();
+        await w.get('#skill-search-toggle').trigger('click');
+        await flushPromises();
+        const buildsAfterOpen = buildSkillSearchOptions.mock.calls.length;
+        expect(buildsAfterOpen).toBeGreaterThanOrEqual(1);
+        expect(buildsAfterOpen).toBeLessThanOrEqual(2);
+
+        const input = w.get('.skill-search-input');
+        for (const typed of ['k', 'ka', 'kaf', 'kafk', 'kafka']) {
+            await input.setValue(typed);
+            expect(w.findAll('.skill-search-result-item').map((i) => i.get('.skill-search-result-title').text()))
+                .toEqual([expect.stringMatching(/^Kafka/)]);
+        }
+        expect(buildSkillSearchOptions.mock.calls.length).toBe(buildsAfterOpen);
+        expect(buildJobSearchOptions).not.toHaveBeenCalled();
+
+        // Switching mode builds the job list once; typing again does not rebuild it.
+        await w.get('input[type="radio"][value="job"]').setValue(true);
+        await nextTick();
+        const jobBuilds = buildJobSearchOptions.mock.calls.length;
+        expect(jobBuilds).toBe(1);
+        await input.setValue('be');
+        await input.setValue('bet');
+        expect(buildJobSearchOptions.mock.calls.length).toBe(jobBuilds);
+        expect(buildSkillSearchOptions.mock.calls.length).toBe(buildsAfterOpen);
+
+        // Reopening rebuilds from the current scene cards.
+        await w.get('.skill-search-close').trigger('click');
+        await w.get('#skill-search-toggle').trigger('click');
+        await flushPromises();
+        expect(buildSkillSearchOptions.mock.calls.length).toBeGreaterThan(buildsAfterOpen);
+    });
+
     it('job mode searches biz cards and selects by job number', async () => {
         addSceneCards();
         const w = mountHandle();
@@ -247,6 +292,55 @@ describe('ResizeHandle.vue', () => {
         await items[0].trigger('click');
         expect(selectCard).toHaveBeenCalledWith({ type: 'biz', jobNumber: 1 }, 'ResizeHandle.jobSearch');
         expect(document.getElementById('biz-card-div-1').scrollIntoView).toHaveBeenCalled();
+    });
+
+    it('keeps typing routed to the finder input after switching the search mode', async () => {
+        addSceneCards();
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const w = mount(ResizeHandle, {
+            attachTo: host,
+            global: { stubs: { Scene3DSettings: true }, config: { errorHandler: (err) => { componentErrors.push(err); } } },
+        });
+        try {
+            await w.get('#skill-search-toggle').trigger('click');
+            await flushPromises();
+            const input = w.get('.skill-search-input');
+            expect(document.activeElement).toBe(input.element);
+
+            // A browser moves focus on mousedown; the modal must keep it on the text field.
+            const rowDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+            w.get('.skill-search-mode-row').element.dispatchEvent(rowDown);
+            expect(rowDown.defaultPrevented).toBe(true);
+            const inputDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+            input.element.dispatchEvent(inputDown);
+            expect(inputDown.defaultPrevented).toBe(false);
+
+            // Focus that still lands on the radio (keyboard, or a browser that ignores the
+            // prevented mousedown) is handed back to the text field once the mode changes.
+            const jobRadio = w.get('input[type="radio"][value="job"]');
+            jobRadio.element.focus();
+            expect(document.activeElement).toBe(jobRadio.element);
+            await jobRadio.setValue(true);
+            await nextTick();
+            expect(document.activeElement).toBe(input.element);
+
+            await input.setValue('be');
+            expect(input.element.value).toBe('be');
+            expect(w.findAll('.skill-search-result-item').map((i) => i.get('.skill-search-result-title').text()))
+                .toEqual([expect.stringMatching(/Beta$/)]);
+
+            await w.get('input[type="radio"][value="skill"]').setValue(true);
+            await nextTick();
+            expect(document.activeElement).toBe(input.element);
+            await input.setValue('ka');
+            expect(input.element.value).toBe('ka');
+            expect(w.findAll('.skill-search-result-item').map((i) => i.get('.skill-search-result-title').text()))
+                .toEqual([expect.stringMatching(/^Kafka/)]);
+        } finally {
+            w.unmount();
+            host.remove();
+        }
     });
 
     it('clicking the overlay backdrop closes the search', async () => {

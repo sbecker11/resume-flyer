@@ -26,8 +26,15 @@ function loadIndexedResume() {
   const skills = normalizeParserSkills(read('skills.json'));
   const eduPath = path.join(INDEXED_RESUME_DIR, 'education.json');
   const education = existsSync(eduPath) ? read('education.json') : {};
+  // The snapshot's skillIDs spelling changes as the data is normalized; this regression is about
+  // display-name links, so the resume-parser job is re-spelled by display name regardless of what
+  // the snapshot currently holds.
+  const rawJobs = read('jobs.json');
+  const resumeParser = Object.values(rawJobs).find((j) => j?.employer === 'resume-parser');
+  if (!resumeParser) throw new Error('indexed resume snapshot has no resume-parser job');
+  resumeParser.skillIDs = (resumeParser.skillIDs || []).map((sid) => skills[sid]?.name || sid);
   // Same pipeline as resume-details-editor/api.getResumeData (Skill jobs tab + Find-skill modal).
-  const jobs = enrichJobsWithSkills(mergeJobsWithEducation(toJobsArray(normalizeParserJobs(read('jobs.json'))), education), skills);
+  const jobs = enrichJobsWithSkills(mergeJobsWithEducation(toJobsArray(normalizeParserJobs(rawJobs)), education), skills);
   return { skills, jobs };
 }
 

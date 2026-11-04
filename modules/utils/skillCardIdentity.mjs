@@ -12,6 +12,7 @@
 
 import { reportError } from './errorReporting.mjs'
 import { userDefinedSkillUrl } from './skillUrlCatalog.mjs'
+import { canonicalSkillKey } from './skillLabel.mjs'
 import { getSelectedSkillIdsForJob } from '../resume-details-editor/jobSkillsSelection.mjs'
 import { jobColumnHeaderText, skillRowDisplayLabel } from '../resume-details-editor/skillJobsMatrixLabels.mjs'
 import { isEducationDerivedJob } from '../data/ResumeJob.mjs'
@@ -67,17 +68,31 @@ export function skillCardIdBySlugFromElements(elements) {
 }
 
 /**
- * Same month total the Skill jobs tab shows in parentheses after a skill name.
- * @param {string} skillId
+ * Each job's linked skill keys, resolved once per build. Resolving per card would
+ * repeat the display-name → key lookups cards × jobs times.
  * @param {Array<object>|null|undefined} jobs
  * @param {Record<string, unknown>} skillsData
+ * @returns {Array<{ job: object, skillIds: Set<string> }>}
+ */
+function jobSkillSets(jobs, skillsData) {
+    const out = []
+    for (const job of jobs || []) {
+        out.push({ job, skillIds: getSelectedSkillIdsForJob(job, skillsData) })
+    }
+    return out
+}
+
+/**
+ * Same month total the Skill jobs tab shows in parentheses after a skill name.
+ * @param {string} skillId
+ * @param {Array<{ job: object, skillIds: Set<string> }>} jobSets from jobSkillSets()
  * @returns {{ jobCount: number, monthsTotal: number }}
  */
-function skillJobsExperience(skillId, jobs, skillsData) {
+function skillJobsExperience(skillId, jobSets) {
     let jobCount = 0
     let monthsTotal = 0
-    for (const job of jobs || []) {
-        if (!getSelectedSkillIdsForJob(job, skillsData).has(skillId)) continue
+    for (const { job, skillIds } of jobSets) {
+        if (!skillIds.has(skillId)) continue
         jobCount += 1
         const n = job?.durationMonths
         if (typeof n === 'number' && Number.isFinite(n) && n > 0) monthsTotal += n
@@ -100,21 +115,28 @@ function jobRowExperience(job, skillsData) {
 }
 
 /**
+ * A card's data-skill-name is normally the skills-map key, but it may also be a
+ * display-name variant ("C++" / "c++" for key "c"). Resolve it like any other id so
+ * the row shows skill.name and counts the same months as the Skill jobs tab; a token
+ * that matches no skill is shown exactly as written (never re-cased).
+ *
  * @param {Iterable<Element>} cardElements
  * @param {Record<string, { name?: string }>} [skillsData]
  * @param {unknown} [catalog] shared skill-URL catalog, used only when the skill has no url
  * @param {Array<object>|null} [jobs] when set, labels use the Skill jobs month total: "Name (number)"
- * @returns {{ kind: 'skill', id: string, label: string, sublabel: string }[]}
+ * @returns {{ kind: 'skill', id: string, label: string, sublabel: string, slug: string }[]}
  */
 export function buildSkillSearchOptions(cardElements, skillsData = {}, catalog = null, jobs = null) {
     const bySlug = skillCardIdBySlugFromElements(cardElements)
+    const jobSets = Array.isArray(jobs) ? jobSkillSets(jobs, skillsData) : null
     const options = Object.entries(bySlug).map(([slug, id]) => {
-        const skill = skillsData[slug]
-        const url = userDefinedSkillUrl(catalog, slug, skill?.name, skill?.url)
+        const key = canonicalSkillKey(slug, skillsData) || slug
+        const skill = skillsData[key]
+        const url = userDefinedSkillUrl(catalog, key, skill?.name, skill?.url)
         const name = skill?.name || slug
         let label = name
-        if (Array.isArray(jobs)) {
-            const { jobCount, monthsTotal } = skillJobsExperience(slug, jobs, skillsData)
+        if (jobSets) {
+            const { jobCount, monthsTotal } = skillJobsExperience(key, jobSets)
             label = skillRowDisplayLabel(name, jobCount, monthsTotal)
         }
         return {
