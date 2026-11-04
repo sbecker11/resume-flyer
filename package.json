@@ -41,6 +41,7 @@
     "test:watch": "vitest --config vitest.config.js",
     "test:coverage": "vitest run --config vitest.config.js --coverage && (cd color-palette-utils-ts && npm run test:coverage)",
     "parse-resume": "node scripts/run-parse-resume.mjs",
+    "check:data": "node scripts/check-resume-data-consistency.mjs",
     "compliance": "node scripts/run-compliance-scan.mjs",
     "sync-color-palette-utils-ts": "node scripts/sync-color-palette-utils-ts.mjs",
     "anthropic-usage": "node scripts/anthropic-usage-report.mjs",
