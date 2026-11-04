@@ -1,7 +1,8 @@
 /**
  * Remove one skill from a resume's in-memory jobs, skills, education, and categories.
- * Mutates the objects in place. Strips matching skillIDs and [Skill] brackets so a
- * leftover bracket cannot fail description enrichment after the skill is gone.
+ * Mutates the objects in place. Strips matching skillIDs and unwraps [Skill] brackets to
+ * plain text so the prose survives and a leftover bracket cannot fail description
+ * enrichment after the skill is gone.
  */
 import { labelToSlug } from '../utils/skillLabel.mjs';
 
@@ -13,19 +14,6 @@ function recordList(jobs) {
   if (Array.isArray(jobs)) return jobs;
   if (jobs && typeof jobs === 'object') return Object.values(jobs);
   return [];
-}
-
-/**
- * @param {string} description
- * @returns {string}
- */
-function tidyDescription(description) {
-  return description
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trimEnd();
 }
 
 /**
@@ -45,6 +33,8 @@ function idMatchesSkill(sid, skills, resolvedKey, nameLower, keyLower) {
 }
 
 /**
+ * Unwrap `[Token]` → `Token` for brackets that reference the removed skill. Surrounding
+ * text and spacing are left exactly as-is; only the two bracket characters are dropped.
  * @param {string} description
  * @param {Record<string, { name?: string }>} skills
  * @param {string} resolvedKey
@@ -52,14 +42,13 @@ function idMatchesSkill(sid, skills, resolvedKey, nameLower, keyLower) {
  * @param {string} keyLower
  * @returns {string}
  */
-function stripSkillBrackets(description, skills, resolvedKey, nameLower, keyLower) {
-  const out = description.replace(/\[([^\]]+)\]/g, (match, inner) => {
+function unwrapSkillBrackets(description, skills, resolvedKey, nameLower, keyLower) {
+  return description.replace(/\[([^\]]+)\]/g, (match, inner) => {
     const label = String(inner).trim();
     if (!label) return match;
-    if (idMatchesSkill(label, skills, resolvedKey, nameLower, keyLower)) return '';
+    if (idMatchesSkill(label, skills, resolvedKey, nameLower, keyLower)) return inner;
     return match;
   });
-  return tidyDescription(out);
 }
 
 /**
@@ -80,7 +69,7 @@ function stripRecord(record, skills, resolvedKey, nameLower, keyLower) {
   let descriptionFixes = 0;
   for (const field of ['Description', 'description']) {
     if (typeof record[field] !== 'string' || !record[field]) continue;
-    const next = stripSkillBrackets(record[field], skills, resolvedKey, nameLower, keyLower);
+    const next = unwrapSkillBrackets(record[field], skills, resolvedKey, nameLower, keyLower);
     if (next !== record[field]) {
       record[field] = next;
       descriptionFixes = 1;
