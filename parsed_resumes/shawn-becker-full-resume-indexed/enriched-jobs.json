@@ -57,17 +57,17 @@
     "Description": "• [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
     "educationKey": null,
     "skillIDs": [
-      "React",
-      "K-means",
-      "CIEDE2000",
+      "react",
+      "k-means",
+      "ciede2000",
       "AWS S3",
       "express-js",
       "JavaScript",
-      "Node.js",
-      "OpenCV",
-      "Python",
-      "Vite",
-      "AI/ML"
+      "node-js",
+      "opencv",
+      "python",
+      "vite",
+      "ai-ml"
     ],
     "references": [
       "<a href=\"https://react.dev/\">[react]</a>",
@@ -108,15 +108,15 @@
     "educationKey": null,
     "skillIDs": [
       "Vue",
-      "TypeScript",
-      "Vite",
+      "typescript",
+      "vite",
       "express-js",
-      "Node.js",
+      "node-js",
       "JavaScript",
       "Anthropic API",
-      "DOCX",
-      "AI/ML",
-      "GenAI",
+      "docx",
+      "ai-ml",
+      "genai",
       "Bash"
     ],
     "references": [
@@ -158,25 +158,25 @@
     "Description": "• [FastMCP] + [LangChain] [LCEL] RAG server with [Chroma DB], [PostgreSQL], and a [React] frontend exposing 3 MCP tools.",
     "educationKey": null,
     "skillIDs": [
-      "FastMCP",
-      "LangChain",
-      "LCEL",
-      "PostgreSQL",
-      "React",
+      "fastmcp",
+      "langchain",
+      "lcel",
+      "postgresql",
+      "react",
       "Amazon ECS",
       "Amazon RDS",
       "Chroma DB",
       "Docker Compose",
       "express-js",
       "JavaScript",
-      "Node.js",
+      "node-js",
       "OpenAI API",
-      "Python",
+      "python",
       "SQLite",
-      "Vite",
-      "AI/ML",
-      "GenAI",
-      "LLM APIs OpenAI",
+      "vite",
+      "ai-ml",
+      "genai",
+      "llm-apis-openai",
       "Bash"
     ],
     "references": [
@@ -229,10 +229,10 @@
     "Description": "• [DALL·E 3] + [OpenCV] campaign asset automation with brand-compliance validation.",
     "educationKey": null,
     "skillIDs": [
-      "DALL·E 3",
-      "OpenCV",
-      "AI/ML",
-      "GenAI"
+      "dall-e-3",
+      "opencv",
+      "ai-ml",
+      "genai"
     ],
     "references": [
       "<a href=\"https://openai.com/index/dall-e-3/\">[dall-e-3]</a>",
@@ -309,23 +309,23 @@
     "skillIDs": [
       "pgvector",
       "Docker Compose",
-      "Spring Boot",
-      "HuggingFace",
-      "MiniLM",
-      "ECS Fargate",
+      "spring-boot",
+      "huggingface",
+      "minilm",
+      "ecs-fargate",
       "Amazon ECS",
       "Amazon RDS",
       "AWS CloudFormation",
-      "Docker",
+      "docker",
       "Flask",
-      "Java",
+      "java",
       "Pandas",
-      "PostgreSQL",
-      "Python",
-      "PyTorch",
+      "postgresql",
+      "python",
+      "pytorch",
       "sentence-transformers",
-      "AI/ML",
-      "DevOps",
+      "ai-ml",
+      "devops",
       "Bash"
     ],
     "references": [
@@ -378,21 +378,21 @@
     "Description": "• [Java] / [Spring Boot] / [Spring AI] entity-resolution RAG service on [PostgreSQL] + [Amazon Bedrock]; 149 tests, 94.5% instruction coverage.",
     "educationKey": null,
     "skillIDs": [
-      "Spring Boot",
-      "Spring AI",
+      "spring-boot",
+      "spring-ai",
       "Amazon Bedrock",
       "Amazon ECS",
       "AWS CloudWatch",
       "AWS CostExplorer",
-      "Docker",
-      "Flyway",
-      "Java",
+      "docker",
+      "flyway",
+      "java",
       "pgvector",
-      "PostgreSQL",
+      "postgresql",
       "Terraform",
-      "AI/ML",
-      "DevOps",
-      "GenAI",
+      "ai-ml",
+      "devops",
+      "genai",
       "Bash"
     ],
     "references": [
@@ -441,24 +441,24 @@
     "Description": "• [LangGraph] corrective-RAG on [Snowflake Cortex Search] with [MLflow], [Optuna] TPE HPO, and PSI drift monitoring.",
     "educationKey": null,
     "skillIDs": [
-      "LangGraph",
-      "Optuna",
+      "langgraph",
+      "optuna",
       "Anthropic API",
-      "LangChain",
+      "langchain",
       "mlflow",
-      "Python",
+      "python",
       "scikit-learn",
-      "Snowflake",
+      "snowflake",
       "SQLite",
       "snowflake-cortex-search",
-      "AI/ML",
-      "Agile",
-      "GenAI",
+      "ai-ml",
+      "agile",
+      "genai",
       "PSI drift monitoring",
-      "MLOps"
+      "mlops"
     ],
     "references": [
-      "<a href=\"https://langchain-ai.github.io/langgraph/\">[langgraph]</a>",
+      "<a href=\"https://docs.langchain.com/oss/python/langgraph/overview\">[langgraph]</a>",
       "<a href=\"https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview\">[snowflake-cortex-search]</a>",
       "<a href=\"https://mlflow.org/\">[mlflow]</a>",
       "<a href=\"https://optuna.org/\">[optuna]</a>"
@@ -503,15 +503,15 @@
       "launchd",
       "Anthropic API",
       "GMail API",
-      "LLM",
+      "llm",
       "Bash",
-      "Python",
-      "React",
-      "TypeScript",
+      "python",
+      "react",
+      "typescript",
       "Z3",
       "Zsh",
-      "AI/ML",
-      "GenAI"
+      "ai-ml",
+      "genai"
     ],
     "references": [
       "<a href=\"https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html\">[launchd]</a>",
@@ -590,15 +590,15 @@
     "skillIDs": [
       "dbt",
       "AWS CloudWatch",
-      "AWS Glue",
-      "Glue Crawler",
-      "CodeCommit",
-      "CodeBuild",
-      "CodePipeline",
-      "CodeDeploy",
-      "Jira",
-      "Agile",
-      "DevOps"
+      "aws-glue",
+      "glue-crawler",
+      "codecommit",
+      "codebuild",
+      "codepipeline",
+      "codedeploy",
+      "jira",
+      "agile",
+      "devops"
     ],
     "references": [
       "<a href=\"https://www.getdbt.com/\">[dbt]</a>",
@@ -645,14 +645,14 @@
     "Description": "• Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
     "educationKey": null,
     "skillIDs": [
-      "CyberArk PAM",
-      "Kafka",
-      "Airflow",
-      "Xray",
-      "Jira",
-      "CI/CD",
-      "Agile",
-      "DevOps"
+      "cyberark-pam",
+      "kafka",
+      "airflow",
+      "xray",
+      "jira",
+      "ci-cd",
+      "agile",
+      "devops"
     ],
     "references": [
       "<a href=\"https://www.cyberark.com/products/privileged-access-manager/\">[cyberark-pam]</a>",
@@ -714,7 +714,7 @@
       "<a href=\"https://cloud.google.com/bigquery\">[bigquery]</a>",
       "<a href=\"https://fastapi.tiangolo.com/\">[fastapi]</a>",
       "<a href=\"https://airflow.apache.org/\">[airflow]</a>",
-      "<a href=\"https://www.tableau.com/\">[tableau]</a>"
+      "<a href=\"https://en.wikipedia.org/wiki/Tableau_Software\">[tableau]</a>"
     ],
     "job-skills": {
       "segment-cdp": "segment-cdp",
@@ -748,14 +748,14 @@
     "Description": "• Delivered [PyTorch] [CNN] models on [SageMaker] alongside a [Looker] + [Snowflake] BI layer, in [Jira]-tracked [Agile] sprints.",
     "educationKey": null,
     "skillIDs": [
-      "PyTorch",
-      "CNN",
-      "SageMaker",
-      "Looker",
-      "Snowflake",
-      "Jira",
-      "Agile",
-      "AI/ML"
+      "pytorch",
+      "cnn",
+      "sagemaker",
+      "looker",
+      "snowflake",
+      "jira",
+      "agile",
+      "ai-ml"
     ],
     "references": [
       "<a href=\"https://pytorch.org/foundation/\">[pytorch]</a>",
@@ -867,20 +867,20 @@
     "Description": "• 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI filter by date, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI region, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI department, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI revenue, 3 yrs [PySpark] on [AWS EMR]; [Kinesis] stream ingestion and [RabbitMQ] messaging feeding a [JSON] schema-governed event pipeline → date-partitioned [Parquet] in [AWS S3] → [Redshift] OLAP → [Tableau] self-service BI expenses.• [Flyway] schema evolution/migrations.• First engagement with legitimate [Agile]/[Scrum] practice, [Jira]-tracked sprints.",
     "educationKey": null,
     "skillIDs": [
-      "PySpark",
-      "AWS EMR",
-      "Kinesis",
-      "RabbitMQ",
-      "JSON",
-      "Parquet",
+      "pyspark",
+      "aws-emr",
+      "kinesis",
+      "rabbitmq",
+      "json",
+      "parquet",
       "AWS S3",
-      "Redshift",
-      "Tableau",
-      "Flyway",
-      "Agile",
-      "Scrum",
-      "Jira",
-      "Data Pipelines"
+      "redshift",
+      "tableau",
+      "flyway",
+      "agile",
+      "scrum",
+      "jira",
+      "data-pipelines"
     ],
     "references": [
       "<a href=\"https://spark.apache.org/docs/latest/api/python/\">[pyspark]</a>",
@@ -891,7 +891,7 @@
       "<a href=\"https://parquet.apache.org/\">[parquet]</a>",
       "<a href=\"#\">[AWS S3]</a>",
       "<a href=\"https://aws.amazon.com/redshift/\">[redshift]</a>",
-      "<a href=\"https://www.tableau.com/\">[tableau]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Tableau_Software\">[tableau]</a>",
       "<a href=\"https://flywaydb.org/\">[flyway]</a>",
       "<a href=\"https://www.atlassian.com/agile\">[agile]</a>",
       "<a href=\"https://www.scrum.org/\">[scrum]</a>",
@@ -941,7 +941,7 @@
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
       "<a href=\"https://www.oracle.com/java/technologies/jspt.html\">[jsp]</a>",
-      "<a href=\"https://spring.io/\">[spring]</a>",
+      "<a href=\"https://spring.io/projects/spring-framework\">[spring]</a>",
       "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
@@ -970,15 +970,15 @@
     "Description": "• Built a content-curation platform [Java], Built a content-curation platform [Spring], Built a content-curation platform [DynamoDB] with large-scale content/data pipelines.• Co-invented 3 [NLP] patents in vector-embedding recommendation systems.",
     "educationKey": null,
     "skillIDs": [
-      "Java",
-      "Spring",
-      "DynamoDB",
-      "NLP",
-      "AI/ML"
+      "java",
+      "spring",
+      "dynamodb",
+      "nlp",
+      "ai-ml"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
-      "<a href=\"https://spring.io/\">[spring]</a>",
+      "<a href=\"https://spring.io/projects/spring-framework\">[spring]</a>",
       "<a href=\"https://aws.amazon.com/dynamodb/\">[dynamodb]</a>",
       "<a href=\"https://en.wikipedia.org/wiki/Natural_language_processing\">[nlp]</a>"
     ],
@@ -1010,10 +1010,10 @@
     "Description": "• [Java], [JSP], and [PostgreSQL] systems.",
     "educationKey": null,
     "skillIDs": [
-      "Java",
-      "JSP",
-      "PostgreSQL",
-      "DynamoDB"
+      "java",
+      "jsp",
+      "postgresql",
+      "dynamodb"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
@@ -1109,7 +1109,7 @@
     "references": [
       "<a href=\"https://www.sap.com/products/technology-platform/sql-anywhere.html\">[sql-anywhere]</a>",
       "<a href=\"https://particular.net/nservicebus\">[nservicebus]</a>",
-      "<a href=\"https://en.wikipedia.org/wiki/Windows_Mobile_5\">[ms-mobile-5]</a>"
+      "<a href=\"https://en.wikipedia.org/wiki/Windows_Mobile_5.0\">[ms-mobile-5]</a>"
     ],
     "job-skills": {
       "sql-anywhere": "sql-anywhere",

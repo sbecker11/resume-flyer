@@ -8,13 +8,13 @@
       "ciede2000",
       "langchain",
       "lcel",
-      "chromadb",
+      "Chroma DB",
       "dall-e-3",
       "pgvector",
       "huggingface",
       "minilm",
       "spring-ai",
-      "bedrock",
+      "Amazon Bedrock",
       "langgraph",
       "snowflake-cortex-search",
       "mlflow",
@@ -38,8 +38,7 @@
       "ai-agents",
       "llm-apis-openai",
       "Anthropic API",
-      "data-pipelines",
-      "vector-dbs-chromadb"
+      "data-pipelines"
     ]
   },
   "methodology": {
@@ -75,7 +74,7 @@
       "codebuild",
       "codepipeline",
       "codedeploy",
-      "cloudwatch",
+      "AWS CloudWatch",
       "cyberark-pam",
       "xray",
       "ci-cd",
@@ -93,7 +92,7 @@
       "dall-e-3",
       "jwt",
       "launchd",
-      "gmail",
+      "GMail API",
       "jira",
       "dbt",
       "cyberark-pam",
@@ -109,7 +108,7 @@
       "looker",
       "rabbitmq",
       "parquet",
-      "s3",
+      "AWS S3",
       "flyway",
       "filemaker",
       "ms-mobile-5",
@@ -168,9 +167,8 @@
     "name": "Programming Language",
     "skillIDs": [
       "typescript",
-      "java-21",
-      "python",
-      "java"
+      "java",
+      "python"
     ]
   },
   "library": {
@@ -196,10 +194,9 @@
   "database": {
     "name": "Database",
     "skillIDs": [
-      "chromadb",
+      "Chroma DB",
       "postgresql",
       "pgvector",
-      "aurora-postgresql-serverless-v2",
       "bigquery",
       "snowflake",
       "redshift",
@@ -207,8 +204,7 @@
       "filemaker",
       "sql-anywhere",
       "db-design-tools",
-      "oracle",
-      "vector-dbs-chromadb"
+      "oracle"
     ]
   },
   "computer-vision": {
@@ -221,8 +217,7 @@
     "name": "Cloud",
     "skillIDs": [
       "ecs-fargate",
-      "aurora-postgresql-serverless-v2",
-      "bedrock",
+      "Amazon Bedrock",
       "snowflake-cortex-search",
       "aws-glue",
       "glue-crawler",
@@ -230,14 +225,14 @@
       "codebuild",
       "codepipeline",
       "codedeploy",
-      "cloudwatch",
+      "AWS CloudWatch",
       "gcp",
       "bigquery",
       "sagemaker",
       "snowflake",
       "aws-emr",
       "kinesis",
-      "s3",
+      "AWS S3",
       "redshift",
       "dynamodb"
     ]

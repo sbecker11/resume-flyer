@@ -8,7 +8,17 @@
       "methodology"
     ],
     "jobIDs": [
-      0
+      0,
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      14,
+      19
     ]
   },
   "devops": {
@@ -19,7 +29,12 @@
       "devops",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      6,
+      7,
+      11,
+      12
+    ]
   },
   "mlops": {
     "name": "MLOps",
@@ -29,7 +44,9 @@
       "devops",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      8
+    ]
   },
   "docx": {
     "name": "DOCX",
@@ -39,7 +56,8 @@
       "tool"
     ],
     "jobIDs": [
-      0
+      0,
+      2
     ]
   },
   "pdf": {
@@ -62,7 +80,8 @@
       "backend"
     ],
     "jobIDs": [
-      0
+      0,
+      17
     ]
   },
   "react": {
@@ -89,7 +108,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      1
+    ]
   },
   "ciede2000": {
     "name": "CIEDE2000",
@@ -99,7 +120,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      1
+    ]
   },
   "typescript": {
     "name": "TypeScript",
@@ -108,7 +131,10 @@
     "categoryIDs": [
       "programming-language"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      2,
+      9
+    ]
   },
   "vite": {
     "name": "Vite",
@@ -118,7 +144,11 @@
       "tool",
       "frontend"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      1,
+      2,
+      3
+    ]
   },
   "express-js": {
     "name": "Express.js",
@@ -129,10 +159,10 @@
       "framework"
     ],
     "jobIDs": [
-      5,
       1,
       2,
-      3
+      3,
+      5
     ]
   },
   "fastmcp": {
@@ -143,7 +173,9 @@
       "backend",
       "framework"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      3
+    ]
   },
   "langchain": {
     "name": "LangChain",
@@ -153,7 +185,10 @@
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      3,
+      8
+    ]
   },
   "lcel": {
     "name": "LCEL",
@@ -163,7 +198,9 @@
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      3
+    ]
   },
   "postgresql": {
     "name": "PostgreSQL",
@@ -173,9 +210,13 @@
       "database"
     ],
     "jobIDs": [
+      3,
       5,
+      6,
+      7,
       15,
-      18
+      18,
+      20
     ]
   },
   "dall-e-3": {
@@ -186,7 +227,9 @@
       "data-science",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      4
+    ]
   },
   "opencv": {
     "name": "OpenCV",
@@ -196,7 +239,10 @@
       "library",
       "computer-vision"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      1,
+      4
+    ]
   },
   "jwt": {
     "name": "JWT",
@@ -242,7 +288,10 @@
       "backend",
       "framework"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      6,
+      7
+    ]
   },
   "pgvector": {
     "name": "pgvector",
@@ -265,7 +314,9 @@
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      6
+    ]
   },
   "minilm": {
     "name": "MiniLM",
@@ -275,7 +326,9 @@
       "data-science",
       "library"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      6
+    ]
   },
   "ecs-fargate": {
     "name": "ECS Fargate",
@@ -285,7 +338,9 @@
       "cloud",
       "devops"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      6
+    ]
   },
   "spring-ai": {
     "name": "Spring AI",
@@ -295,17 +350,21 @@
       "framework",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      7
+    ]
   },
   "langgraph": {
     "name": "LangGraph",
-    "url": "https://langchain-ai.github.io/langgraph/",
+    "url": "https://docs.langchain.com/oss/python/langgraph/overview",
     "img": "",
     "categoryIDs": [
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      8
+    ]
   },
   "snowflake-cortex-search": {
     "name": "Snowflake Cortex Search",
@@ -339,7 +398,9 @@
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      8
+    ]
   },
   "launchd": {
     "name": "launchd",
@@ -361,7 +422,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      9
+    ]
   },
   "python": {
     "name": "Python",
@@ -371,8 +434,13 @@
       "programming-language"
     ],
     "jobIDs": [
-      10,
-      0
+      0,
+      1,
+      3,
+      6,
+      8,
+      9,
+      10
     ]
   },
   "rest-api": {
@@ -397,7 +465,11 @@
     ],
     "jobIDs": [
       10,
-      16
+      11,
+      12,
+      14,
+      16,
+      17
     ]
   },
   "agile": {
@@ -408,8 +480,13 @@
       "methodology"
     ],
     "jobIDs": [
+      8,
       10,
-      16
+      11,
+      12,
+      14,
+      16,
+      17
     ]
   },
   "dbt": {
@@ -432,7 +509,9 @@
       "cloud",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      11
+    ]
   },
   "glue-crawler": {
     "name": "Glue Crawler",
@@ -442,7 +521,9 @@
       "cloud",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      11
+    ]
   },
   "codecommit": {
     "name": "CodeCommit",
@@ -452,7 +533,9 @@
       "devops",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      11
+    ]
   },
   "codebuild": {
     "name": "CodeBuild",
@@ -462,7 +545,9 @@
       "devops",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      11
+    ]
   },
   "codepipeline": {
     "name": "CodePipeline",
@@ -472,7 +557,9 @@
       "devops",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      11
+    ]
   },
   "codedeploy": {
     "name": "CodeDeploy",
@@ -482,7 +569,9 @@
       "devops",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      11
+    ]
   },
   "cyberark-pam": {
     "name": "CyberArk PAM",
@@ -492,7 +581,9 @@
       "tool",
       "devops"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      12
+    ]
   },
   "kafka": {
     "name": "Kafka",
@@ -502,7 +593,9 @@
       "backend",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      12
+    ]
   },
   "airflow": {
     "name": "Airflow",
@@ -513,6 +606,7 @@
       "data-science"
     ],
     "jobIDs": [
+      12,
       13
     ]
   },
@@ -524,7 +618,9 @@
       "devops",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      12
+    ]
   },
   "ci-cd": {
     "name": "CI/CD",
@@ -534,7 +630,9 @@
       "devops",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      12
+    ]
   },
   "segment-cdp": {
     "name": "Segment CDP",
@@ -629,14 +727,15 @@
   },
   "tableau": {
     "name": "Tableau",
-    "url": "https://www.tableau.com/",
+    "url": "https://en.wikipedia.org/wiki/Tableau_Software",
     "img": "",
     "categoryIDs": [
       "tool",
       "data-science"
     ],
     "jobIDs": [
-      13
+      13,
+      17
     ]
   },
   "pytorch": {
@@ -647,7 +746,10 @@
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      6,
+      14
+    ]
   },
   "cnn": {
     "name": "CNN",
@@ -657,7 +759,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      14
+    ]
   },
   "sagemaker": {
     "name": "SageMaker",
@@ -667,7 +771,9 @@
       "cloud",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      14
+    ]
   },
   "looker": {
     "name": "Looker",
@@ -677,7 +783,9 @@
       "tool",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      14
+    ]
   },
   "snowflake": {
     "name": "Snowflake",
@@ -687,7 +795,10 @@
       "database",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      8,
+      14
+    ]
   },
   "node-js": {
     "name": "Node.js",
@@ -698,6 +809,9 @@
       "framework"
     ],
     "jobIDs": [
+      1,
+      2,
+      3,
       16
     ]
   },
@@ -733,7 +847,9 @@
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "aws-emr": {
     "name": "AWS EMR",
@@ -743,7 +859,9 @@
       "cloud",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "kinesis": {
     "name": "Kinesis",
@@ -753,7 +871,9 @@
       "cloud",
       "backend"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "rabbitmq": {
     "name": "RabbitMQ",
@@ -763,7 +883,9 @@
       "backend",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "parquet": {
     "name": "Parquet",
@@ -773,7 +895,9 @@
       "tool",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "redshift": {
     "name": "Redshift",
@@ -783,7 +907,9 @@
       "database",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "flyway": {
     "name": "Flyway",
@@ -793,7 +919,10 @@
       "tool",
       "devops"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      7,
+      17
+    ]
   },
   "scrum": {
     "name": "Scrum",
@@ -802,7 +931,9 @@
     "categoryIDs": [
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "java": {
     "name": "Java",
@@ -812,7 +943,11 @@
       "programming-language"
     ],
     "jobIDs": [
+      6,
+      7,
       18,
+      19,
+      20,
       22,
       25
     ]
@@ -827,20 +962,22 @@
     ],
     "jobIDs": [
       18,
+      20,
       22,
       25
     ]
   },
   "spring": {
     "name": "Spring",
-    "url": "https://spring.io/",
+    "url": "https://spring.io/projects/spring-framework",
     "img": "",
     "categoryIDs": [
       "backend",
       "framework"
     ],
     "jobIDs": [
-      18
+      18,
+      19
     ]
   },
   "dynamodb": {
@@ -851,7 +988,10 @@
       "database",
       "cloud"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      19,
+      20
+    ]
   },
   "nlp": {
     "name": "NLP",
@@ -861,7 +1001,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      19
+    ]
   },
   "filemaker": {
     "name": "FileMaker",
@@ -900,7 +1042,7 @@
   },
   "ms-mobile-5": {
     "name": "MS Mobile 5",
-    "url": "https://en.wikipedia.org/wiki/Windows_Mobile_5",
+    "url": "https://en.wikipedia.org/wiki/Windows_Mobile_5.0",
     "img": "",
     "categoryIDs": [
       "tool"
@@ -952,7 +1094,13 @@
       "methodology"
     ],
     "jobIDs": [
-      0
+      0,
+      2,
+      3,
+      4,
+      7,
+      8,
+      9
     ]
   },
   "ai-agents": {
@@ -975,7 +1123,9 @@
       "library",
       "data-science"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      3
+    ]
   },
   "data-pipelines": {
     "name": "Data Pipelines",
@@ -985,7 +1135,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      17
+    ]
   },
   "docker": {
     "name": "Docker",
@@ -995,7 +1147,10 @@
       "devops",
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      6,
+      7
+    ]
   },
   "Anthropic API": {
     "name": "Anthropic API",
@@ -1015,6 +1170,9 @@
     "name": "GMail API",
     "jobIDs": [
       9
+    ],
+    "categoryIDs": [
+      "tool"
     ]
   },
   "Bash": {
@@ -1072,13 +1230,21 @@
     "jobIDs": [
       7
     ],
-    "url": "https://aws.amazon.com/bedrock/"
+    "url": "https://aws.amazon.com/bedrock/",
+    "categoryIDs": [
+      "data-science",
+      "cloud"
+    ]
   },
   "AWS CloudWatch": {
     "name": "AWS CloudWatch",
     "jobIDs": [
       7,
       11
+    ],
+    "categoryIDs": [
+      "devops",
+      "cloud"
     ]
   },
   "AWS CostExplorer": {
@@ -1137,6 +1303,10 @@
     "name": "Chroma DB",
     "jobIDs": [
       3
+    ],
+    "categoryIDs": [
+      "data-science",
+      "database"
     ]
   },
   "JavaScript": {
@@ -1168,7 +1338,12 @@
   "AWS S3": {
     "name": "AWS S3",
     "jobIDs": [
-      1
+      1,
+      17
+    ],
+    "categoryIDs": [
+      "tool",
+      "cloud"
     ]
   },
   "Computer Graphics": {
