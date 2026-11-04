@@ -257,9 +257,14 @@ describe('project url anchors are visible and selectable', () => {
         const resume = buildResumeCard(DARK, { selected: true })
         const scene = buildSceneCard(DARK, { selected: true })
         const lightResume = buildResumeCard(LIGHT, { selected: false })
+        // Real scene cards are ~200×200 and crop overflow. This is the scene-view case.
+        const sceneCrop = buildSceneCard(DARK, { selected: false })
         resume.id = 'dark-resume'
         scene.id = 'dark-scene'
         lightResume.id = 'light-resume'
+        sceneCrop.id = 'scene-crop'
+        sceneCrop.style.width = '200px'
+        sceneCrop.style.height = '200px'
 
         const html = `<!DOCTYPE html>
 <html>
@@ -272,6 +277,9 @@ describe('project url anchors are visible and selectable', () => {
 </style>
 </head>
 <body>
+<div id="scene-container" style="width:520px">
+${sceneCrop.outerHTML}
+</div>
 <div id="resume-content-listing" style="width:520px">
 ${resume.outerHTML}
 ${scene.outerHTML}
@@ -303,11 +311,13 @@ function bgOf(el) {
   return null;
 }
 const out = [];
-for (const card of document.querySelectorAll('#dark-resume, #dark-scene, #light-resume')) {
+for (const card of document.querySelectorAll('#dark-resume, #dark-scene, #light-resume, #scene-crop')) {
   for (const link of card.querySelectorAll('a.project-url-anchor')) {
+    link.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const cardRect = card.getBoundingClientRect();
     const rect = link.getBoundingClientRect();
     const cs = getComputedStyle(link);
-    const x = rect.left + rect.width / 2;
+    const x = rect.left + Math.min(rect.width / 2, 24);
     const y = rect.top + rect.height / 2;
     const hit = document.elementFromPoint(x, y);
     link.focus();
@@ -328,6 +338,7 @@ for (const card of document.querySelectorAll('#dark-resume, #dark-scene, #light-
       display: cs.display,
       opacity: cs.opacity,
       userSelect: cs.userSelect,
+      insideCrop: rect.width > 0 && rect.top >= cardRect.top - 1 && rect.bottom <= cardRect.bottom - 12,
     });
   }
 }
@@ -352,7 +363,7 @@ document.getElementById('probe-result').textContent = JSON.stringify(out);
         const match = probe.stdout.match(/<pre id="probe-result">([^<]*)<\/pre>/)
         expect(match, probe.stdout.slice(0, 500)).toBeTruthy()
         const rows = JSON.parse(match[1])
-        expect(rows).toHaveLength(6)
+        expect(rows).toHaveLength(8)
         for (const row of rows) {
             expect(row.width, JSON.stringify(row)).toBeGreaterThan(40)
             expect(row.height, JSON.stringify(row)).toBeGreaterThan(12)
@@ -365,6 +376,7 @@ document.getElementById('probe-result').textContent = JSON.stringify(out);
             expect(Number(row.opacity), JSON.stringify(row)).toBeGreaterThan(0.85)
             expect(row.userSelect, JSON.stringify(row)).not.toBe('none')
             expect(row.href, JSON.stringify(row)).toMatch(/^https:\/\//)
+            expect(row.insideCrop, JSON.stringify(row)).toBe(true)
         }
     }, 25000)
 })

@@ -265,9 +265,9 @@ export function renderBizCardSceneBodyHtml({
                 <div class="biz-details-employer">${escapeHtml(employer)}</div>
                 <button type="button" class="biz-details-edit-btn" aria-label="Edit employer">&#9998;</button>
             </div>
+            ${renderProjectUrlAnchorsHtml(description)}
             <div class="biz-details-role">${escapeHtml(role)}</div>
             ${datesDisplay ? `<div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>` : ''}
-            ${renderProjectUrlAnchorsHtml(description)}
             <div class="biz-details-debug-row"><span class="biz-details-id-and-hex">#${escapeHtml(String(jobNumber))} z:${escapeHtml(String(sceneZ))} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span></div>
             ${hasSkills ? `
             <div class="resume-skills">
