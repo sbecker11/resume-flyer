@@ -231,8 +231,7 @@
       "devops",
       "genai",
       "Bash",
-      "rag",
-      "aurora-postgresql-serverless-v2"
+      "rag"
     ],
     "jobID": "9"
   },

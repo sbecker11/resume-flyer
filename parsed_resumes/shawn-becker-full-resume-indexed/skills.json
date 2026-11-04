@@ -1403,17 +1403,5 @@
     "jobIDs": [
       12
     ]
-  },
-  "aurora-postgresql-serverless-v2": {
-    "name": "Aurora PostgreSQL Serverless v2",
-    "url": "https://aws.amazon.com/rds/aurora/serverless/",
-    "img": "",
-    "categoryIDs": [
-      "database",
-      "cloud"
-    ],
-    "jobIDs": [
-      7
-    ]
   }
 }

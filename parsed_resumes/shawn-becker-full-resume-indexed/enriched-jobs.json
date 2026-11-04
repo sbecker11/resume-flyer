@@ -397,8 +397,7 @@
       "devops",
       "genai",
       "Bash",
-      "rag",
-      "aurora-postgresql-serverless-v2"
+      "rag"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
@@ -426,8 +425,7 @@
       "ai-ml": "ai-ml",
       "devops": "devops",
       "genai": "genai",
-      "Bash": "Bash",
-      "aurora-postgresql-serverless-v2": "aurora-postgresql-serverless-v2"
+      "Bash": "Bash"
     },
     "outlineIndex": "1.1.8",
     "outlineKind": "job",
