@@ -1,0 +1,18 @@
+{
+  "modules/api/resumeManagerApi.mjs": 1,
+  "modules/components/AppContent.vue": 6,
+  "modules/components/ResumeContainer.vue": 9,
+  "modules/components/ResumeManager.vue": 1,
+  "modules/components/SceneContainer.vue": 4,
+  "modules/composables/useAppState.ts": 1,
+  "modules/composables/useCardsController.mjs": 19,
+  "modules/composables/useColorPalette.mjs": 2,
+  "modules/composables/useJobsDependency.mjs": 1,
+  "modules/composables/useResizeHandle.mjs": 1,
+  "modules/core/dragStateManager.mjs": 2,
+  "modules/core/selectionManager.mjs": 22,
+  "modules/resume/ResumeItemsController.mjs": 3,
+  "modules/resume/ResumeListController.mjs": 14,
+  "modules/resume/resumeListScrollContainer.mjs": 3,
+  "modules/resume/resumeSystemInitializer.mjs": 3
+}

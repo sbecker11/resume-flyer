@@ -18,7 +18,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html', 'lcov'],
       reportsDirectory: './coverage',
-      include: ['modules/**/*.mjs'],
+      include: ['modules/**/*.mjs', 'scripts/check-console-error-ratchet.mjs'],
       exclude: [
         '**/node_modules/**',
         '**/*.test.mjs',

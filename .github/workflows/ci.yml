@@ -39,6 +39,13 @@ jobs:
       - name: Check resume data consistency
         run: npm run check:data
 
+      # console.error ratchet: per-file counts may only go down relative to
+      # scripts/console-error-baseline.json. New errors go through reportError()
+      # (modules/utils/errorReporting.mjs). Lower the baseline with
+      # `npm run check:console-error -- --update` after removing calls.
+      - name: Check console.error ratchet
+        run: npm run check:console-error
+
       # Unit tests are fully mocked (no ANTHROPIC_API_KEY / AWS secrets required).
       # If a future test needs a real key, add it as a repo secret and pass it
       # here via `env:` rather than committing it.
