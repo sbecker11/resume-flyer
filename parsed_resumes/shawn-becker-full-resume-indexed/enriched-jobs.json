@@ -651,7 +651,7 @@
     "start": "05/2023",
     "end": "12/2023",
     "durationMonths": 8,
-    "Description": "• Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
+    "Description": "• Automated [CyberArk PAM] mutual-[TLS] credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
     "educationKey": null,
     "skillIDs": [
       "cyberark-pam",
@@ -661,10 +661,12 @@
       "jira",
       "ci-cd",
       "agile",
-      "devops"
+      "devops",
+      "tls"
     ],
     "references": [
       "<a href=\"https://www.cyberark.com/products/privileged-access-manager/\">[cyberark-pam]</a>",
+      "<a href=\"https://en.wikipedia.org/wiki/Transport_Layer_Security\">[tls]</a>",
       "<a href=\"https://kafka.apache.org/\">[kafka]</a>",
       "<a href=\"https://airflow.apache.org/\">[airflow]</a>",
       "<a href=\"https://aws.amazon.com/xray/\">[xray]</a>",
@@ -674,6 +676,7 @@
     ],
     "job-skills": {
       "cyberark-pam": "cyberark-pam",
+      "tls": "tls",
       "kafka": "kafka",
       "airflow": "airflow",
       "xray": "xray",

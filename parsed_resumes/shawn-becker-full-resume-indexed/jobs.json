@@ -357,7 +357,7 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Automated [CyberArk PAM] mutual-TLS credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
+    "Description": "\u2022 Automated [CyberArk PAM] mutual-[TLS] credential workflows and built [Kafka] event-streaming pipelines with [Airflow] orchestration; used [Xray] [Jira] test management in [CI/CD], in [Jira]-tracked [Agile] sprints.",
     "outlineIndex": "1.2.3",
     "skillIDs": [
       "cyberark-pam",
@@ -367,7 +367,8 @@
       "jira",
       "ci-cd",
       "agile",
-      "devops"
+      "devops",
+      "tls"
     ],
     "jobID": "15"
   },
