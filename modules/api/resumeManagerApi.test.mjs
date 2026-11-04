@@ -727,8 +727,25 @@ describe('resumeManagerApi', () => {
         });
 
         it('throws on HTTP error', async () => {
-            fetchMock.mockResolvedValue({ ok: false, status: 400 });
+            fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => { throw new Error('no body'); } });
             await expect(updateJobSkills('r', 0, [])).rejects.toThrow('HTTP 400');
+        });
+
+        it('surfaces a 422 refusal with the server reason and each finding', async () => {
+            fetchMock.mockResolvedValue({
+                ok: false,
+                status: 422,
+                json: async () => ({
+                    error: 'Resume "r" would be inconsistent (1 finding(s)); nothing was written',
+                    findings: [{ code: 'skill-name-duplicate', message: 'skills "k-means" and "K-Means" share the name "K-Means"' }]
+                })
+            });
+            const err = await updateJobSkills('r', 0, ['K-Means'], ['K-Means']).catch((e) => e);
+            expect(err).toBeInstanceOf(Error);
+            expect(err.status).toBe(422);
+            expect(err.message).toContain('nothing was written');
+            expect(err.message).toContain('• skills "k-means" and "K-Means" share the name "K-Means"');
+            expect(err.findings).toHaveLength(1);
         });
     });
 

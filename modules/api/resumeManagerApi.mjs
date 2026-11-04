@@ -39,6 +39,24 @@ async function fetchJsonOrThrow(url, options = {}) {
     return response.json();
 }
 
+/**
+ * Error for a failed write, carrying the server's reason. A 422 consistency refusal
+ * lists each finding's message so the user sees why nothing was written.
+ * @param {Response} response
+ * @returns {Promise<Error>}
+ */
+async function writeResponseError(response) {
+    const body = typeof response.json === 'function' ? await response.json().catch(() => null) : null;
+    const findings = Array.isArray(body?.findings)
+        ? body.findings.map((f) => f?.message).filter(Boolean)
+        : [];
+    const reason = body?.error || `HTTP ${response.status}`;
+    const err = new Error(findings.length ? `${reason}\n• ${findings.join('\n• ')}` : reason);
+    err.status = response.status;
+    err.findings = body?.findings ?? [];
+    return err;
+}
+
 async function fetchStaticResumesIndex() {
     return fetchJsonOrThrow(basePathJoin('parsed_resumes/non-local-resumes.json'));
 }
@@ -528,7 +546,7 @@ export async function updateJobSkills(resumeId, jobIndex, skillIDs, newSkills = 
             basePathJoin(`api/resumes/${encodeURIComponent(resumeId)}/jobs/${jobIndex}/skills`),
             { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
         );
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw await writeResponseError(response);
         return response.json();
     } else {
         throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');
@@ -552,7 +570,7 @@ export async function updateEducationJobSkills(resumeId, educationKey, skillIDs,
             ),
             { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
         );
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw await writeResponseError(response);
         return response.json();
     } else {
         throw new Error('Save is not available on static hosting (e.g. GitHub Pages). Run the app with a backend to persist changes.');

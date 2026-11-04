@@ -173,6 +173,20 @@ describe('resolveSkillKey', () => {
         expect(resolveSkillKey(skills, '  Vue ')).toBe('Vue');
     });
 
+    it('falls back to a case-insensitive match on key or name, so a retyped name cannot fork a skill', () => {
+        const withKmeans = { ...skills, 'k-means': { name: 'K-means' } };
+        expect(resolveSkillKey(withKmeans, 'K-Means')).toBe('k-means');
+        expect(resolveSkillKey(withKmeans, 'K-MEANS')).toBe('k-means');
+        expect(resolveSkillKey(withKmeans, 'EXPRESS.JS')).toBe('express-js');
+        expect(resolveSkillKey(withKmeans, 'vue')).toBe('Vue');
+    });
+
+    it('still prefers an exact key when two skills differ only by case', () => {
+        const pair = { ML: { name: 'ML' }, ml: { name: 'Machine Learning' } };
+        expect(resolveSkillKey(pair, 'ML')).toBe('ML');
+        expect(resolveSkillKey(pair, 'ml')).toBe('ml');
+    });
+
     it('returns null for unknown, empty, or null-valued keys', () => {
         expect(resolveSkillKey(skills, 'Angular')).toBeNull();
         expect(resolveSkillKey(skills, '')).toBeNull();

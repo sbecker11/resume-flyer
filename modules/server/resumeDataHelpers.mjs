@@ -197,6 +197,9 @@ export function mirrorCategoriesIntoSkills(skills, categories) {
 
 /**
  * Resolve a skill key that may be either the map key or the display name.
+ * An exact key wins; otherwise names and keys match case-insensitively, the same
+ * way bracket tokens resolve, so "K-Means" finds the existing "k-means" / "K-means"
+ * instead of becoming a duplicate skill.
  * @param {Record<string, { name?: unknown } | null>} skills
  * @param {string} keyOrName
  * @returns {string|null} the map key, or null when nothing matches
@@ -207,6 +210,12 @@ export function resolveSkillKey(skills, keyOrName) {
     if (!want) return null;
     for (const [k, s] of Object.entries(skills)) {
         if (s && typeof s === 'object' && s.name != null && String(s.name).trim() === want) return k;
+    }
+    const lower = want.toLowerCase();
+    for (const [k, s] of Object.entries(skills)) {
+        if (s == null || typeof s !== 'object') continue;
+        if (k.toLowerCase() === lower) return k;
+        if (s.name != null && String(s.name).trim().toLowerCase() === lower) return k;
     }
     return null;
 }

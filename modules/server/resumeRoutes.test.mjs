@@ -281,6 +281,19 @@ describe('PATCH /api/resumes/:id/jobs/:jobIndex/skills', () => {
         await expectConsistent();
     });
 
+    it('reuses an existing skill when newSkills retypes its name in a different case', async () => {
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/jobs/1/skills`)
+            .send({ skillIDs: ['Express', 'aws', 'PYTHON'], newSkills: ['PYTHON'] });
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ ok: true, skillIDs: ['Express', 'aws', 'python'] });
+        const skills = await readJson('skills.json');
+        expect(skills.PYTHON).toBeUndefined();
+        expect(skills.python.jobIDs).toEqual([1, 2]);
+        await waitForBake();
+        await expectConsistent();
+    });
+
     it('refuses (422, nothing written) to unlink a skill the Description still references in [brackets]', async () => {
         const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         errorReporting.reportError.mockClear();
