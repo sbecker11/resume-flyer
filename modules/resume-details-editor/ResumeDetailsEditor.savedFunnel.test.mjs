@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
-import { jobsMutated, jobFieldsSaved, jobSkills, removedSkill, skillMerged, resumeRefreshAction } from './savedPayload.mjs';
+import { jobsMutated, jobFieldsSaved, jobSkills, removedSkill, skillMerged, resumeRefreshAction, needsResumeListRefetch } from './savedPayload.mjs';
 
 const api = {
     getResumeMeta: vi.fn(async () => ({})),
@@ -31,7 +31,7 @@ const { default: ResumeDetailsEditor } = await import('./ResumeDetailsEditor.vue
 const tabStub = (name) => ({
     name,
     props: ['resumeId', 'reloadNonce', 'selectedJobIndex'],
-    emits: ['saved', 'update:selectedJobIndex', 'content-ready', 'open-skills-for-job', 'open-education-for-job'],
+    emits: ['saved', 'update:selectedJobIndex', 'content-ready', 'open-skills-for-job', 'open-education-for-job', 'update:meta', 'update:data', 'autosave'],
     template: `<div data-stub="${name}" :data-reload-nonce="reloadNonce"></div>`,
 });
 
@@ -58,6 +58,7 @@ async function mountOpenOn(initialTab) {
 }
 
 beforeEach(() => {
+    for (const fn of Object.values(api)) fn.mockClear();
     vi.useFakeTimers();
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -121,5 +122,88 @@ describe('ResumeDetailsEditor saved funnel', () => {
         await flushPromises();
         expect(w2.emitted('saved')).toEqual([[{ removedSkill: true }]]);
         w2.unmount();
+    });
+
+    describe('save() emits only what it flushed', () => {
+        async function clickSave(w) {
+            await w.get('.rde-btn.save').trigger('click');
+            await flushPromises();
+            await nextTick();
+        }
+
+        it('education pending → educationSaved (a reload, since education rows are scene jobs), then close', async () => {
+            const w = await mountOpenOn('education');
+            const education = { phd: { degree: 'PhD', institution: 'MIT', skillIDs: [] } };
+            w.findComponent({ name: 'EducationTab' }).vm.$emit('update:data', education);
+            await clickSave(w);
+
+            expect(api.updateResumeEducation).toHaveBeenCalledWith('r1', education);
+            expect(api.updateResumeMeta).not.toHaveBeenCalled();
+            expect(api.updateResumeOtherSections).not.toHaveBeenCalled();
+            expect(w.emitted('saved')).toEqual([[{ educationSaved: true }]]);
+            expect(resumeRefreshAction(w.emitted('saved')[0][0])).toBe('reload');
+            expect(needsResumeListRefetch(w.emitted('saved')[0][0])).toBe(false);
+            expect(w.emitted('close')).toHaveLength(1);
+            w.unmount();
+        });
+
+        it('meta pending → metaSaved only (refetch-list, no reload)', async () => {
+            const w = await mountOpenOn('meta');
+            w.findComponent({ name: 'MetaTab' }).vm.$emit('update:meta', { displayName: 'Renamed' });
+            await clickSave(w);
+
+            expect(api.updateResumeMeta).toHaveBeenCalledWith('r1', { displayName: 'Renamed' });
+            expect(api.updateResumeEducation).not.toHaveBeenCalled();
+            expect(w.emitted('saved')).toEqual([[{ metaSaved: true }]]);
+            expect(resumeRefreshAction(w.emitted('saved')[0][0])).toBe('refetch-list');
+            w.unmount();
+        });
+
+        it('other-sections pending reuses metaSaved (kept on purpose)', async () => {
+            const w = await mountOpenOn('other-sections');
+            w.findComponent({ name: 'OtherSectionsTab' }).vm.$emit('update:data', { summary: 'Hi' });
+            await clickSave(w);
+
+            expect(api.updateResumeOtherSections).toHaveBeenCalledWith('r1', { summary: 'Hi' });
+            expect(w.emitted('saved')).toEqual([[{ metaSaved: true }]]);
+            w.unmount();
+        });
+
+        it('meta + education pending → one combined payload; reload wins over refetch-list', async () => {
+            const w = await mountOpenOn('education');
+            w.findComponent({ name: 'EducationTab' }).vm.$emit('update:data', { phd: { degree: 'PhD' } });
+            w.vm.pendingMeta = { displayName: 'Both' };
+            await clickSave(w);
+
+            expect(api.updateResumeMeta).toHaveBeenCalledWith('r1', { displayName: 'Both' });
+            expect(api.updateResumeEducation).toHaveBeenCalledWith('r1', { phd: { degree: 'PhD' } });
+            expect(w.emitted('saved')).toEqual([[{ metaSaved: true, educationSaved: true }]]);
+            expect(resumeRefreshAction(w.emitted('saved')[0][0])).toBe('reload');
+            expect(needsResumeListRefetch(w.emitted('saved')[0][0])).toBe(true);
+            expect(w.emitted('close')).toHaveLength(1);
+            w.unmount();
+        });
+
+        it('nothing pending → no saved payload from the editor itself, still closes', async () => {
+            const w = await mountOpenOn('meta');
+            await clickSave(w);
+            expect(api.updateResumeMeta).not.toHaveBeenCalled();
+            expect(w.emitted('saved')).toBeUndefined();
+            expect(w.emitted('close')).toHaveLength(1);
+            w.unmount();
+        });
+
+        it('a failed write is reported with the keep-open remedy, alerts, and does not close', async () => {
+            const w = await mountOpenOn('education');
+            w.findComponent({ name: 'EducationTab' }).vm.$emit('update:data', { phd: {} });
+            api.updateResumeEducation.mockRejectedValueOnce(new Error('disk full'));
+            await clickSave(w);
+
+            expect(reportError).toHaveBeenCalledWith(expect.any(Error), '[ResumeDetailsEditor] Save failed', 'Keeping the editor open; nothing further written');
+            expect(globalThis.alert).toHaveBeenCalledWith('Failed to save: disk full');
+            expect(w.emitted('saved')).toBeUndefined();
+            expect(w.emitted('close')).toBeUndefined();
+            w.unmount();
+        });
     });
 });

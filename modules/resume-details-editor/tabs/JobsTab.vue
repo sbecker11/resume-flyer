@@ -394,7 +394,7 @@ watch(() => [props.resumeId, props.reloadNonce], ([id]) => {
         nextTick(() => emit('content-ready'));
       }, 0);
     } catch (err) {
-      console.error('[JobsTab] load failed:', err);
+      reportError(err, '[JobsTab] Load failed', 'Showing the load error in the tab; no jobs editable until reload');
       loadError.value = 'Failed to load jobs: ' + err.message;
       jobsLoaded.value = true;
       nextTick(() => emit('content-ready'));
@@ -589,7 +589,7 @@ async function saveCurrentJob() {
     emit('saved', jobFieldsSaved());
     return true;
   } catch (err) {
-    console.error('[JobsTab] save failed:', err);
+    reportError(err, '[JobsTab] Save failed', 'Alerting the user; the job keeps its previous field values');
     alert('Failed to save job: ' + err.message);
     return false;
   } finally {

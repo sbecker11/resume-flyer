@@ -806,7 +806,7 @@ watch(() => [props.isOpen, props.resumeId], ([open, id]) => {
       otherSections.value = typeof otherRes === 'object' && otherRes !== null ? { ...otherRes } : otherRes;
       education.value = typeof educationRes === 'object' && educationRes !== null ? { ...educationRes } : {};
     } catch (err) {
-      console.error('[ResumeDetailsEditor] load failed:', err);
+      reportError(err, '[ResumeDetailsEditor] Load failed', 'Leaving the meta, other-sections, and education fields at their previous values');
     }
   }, 0);
 }, { immediate: true });
@@ -977,7 +977,7 @@ async function flushCurrentTabBeforeLeave() {
     await api.updateResumeEducation(id, data);
     pendingEducation.value = null;
     education.value = typeof data === 'object' && data !== null ? { ...data } : data;
-    emit('saved', savedPayload.metaSaved());
+    emit('saved', savedPayload.educationSaved());
   }
   if (tab === 'resume-jobs' && jobsTabRef.value?.saveCurrentJob) {
     const ok = await jobsTabRef.value.saveCurrentJob();
@@ -1186,20 +1186,29 @@ async function save() {
       await skillsTabRef.value.saveForCurrentJob();
     }
 
+    // Emit only what actually flushed. Other-sections deliberately reuses metaSaved
+    // (same as flushCurrentTabBeforeLeave); education changes scene job membership.
+    let payload = null;
     if (pendingMeta.value) {
       await api.updateResumeMeta(id, pendingMeta.value);
+      pendingMeta.value = null;
+      payload = { ...payload, ...savedPayload.metaSaved() };
     }
     if (pendingOtherSections.value !== null) {
       await api.updateResumeOtherSections(id, pendingOtherSections.value);
+      pendingOtherSections.value = null;
+      payload = { ...payload, ...savedPayload.metaSaved() };
     }
     if (pendingEducation.value !== null) {
       await api.updateResumeEducation(id, pendingEducation.value);
+      pendingEducation.value = null;
+      payload = { ...payload, ...savedPayload.educationSaved() };
     }
-    emit('saved', savedPayload.metaSaved());
+    if (payload) emit('saved', payload);
     emit('close');
   } catch (err) {
-    console.error('[ResumeDetailsEditor] save failed:', err);
-    alert('Failed to save: ' + err.message);
+    reportError(err, '[ResumeDetailsEditor] Save failed', 'Keeping the editor open; nothing further written');
+    alert('Failed to save: ' + (err instanceof Error ? err.message : String(err)));
   } finally {
     saving.value = false;
   }

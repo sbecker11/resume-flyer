@@ -39,7 +39,9 @@ export const REFRESH_ACTION = Object.freeze({
 /**
  * Kinds that change skill identity (which keys exist) or job membership (which
  * jobs exist). The scene builds skill cards and biz-card skill titles once, so
- * these need a full in-place reload of the selected resume.
+ * these need a full in-place reload of the selected resume. Education entries
+ * become scene jobs via mergeJobsWithEducation, so an education save changes
+ * job membership exactly like jobsMutated.
  */
 export const RELOAD_KINDS = Object.freeze([
   SAVED_KIND.SKILL_MERGED,
@@ -47,6 +49,7 @@ export const RELOAD_KINDS = Object.freeze([
   SAVED_KIND.REMOVED_SKILL,
   SAVED_KIND.CLEAR_ALL_JOB_SKILL_LINKS,
   SAVED_KIND.JOBS_MUTATED,
+  SAVED_KIND.EDUCATION_SAVED,
   SAVED_KIND.REPARSED,
   SAVED_KIND.RESTORED,
 ]);
@@ -130,7 +133,7 @@ export function needsResumeListRefetch(payload) {
  * | any of {@link RELOAD_KINDS} (even with metaSaved) | `reload`        |
  * | metaSaved                                        | `refetch-list`  |
  * | `{ jobIndex, skillIDs, jobSkills }`              | `patch-job`     |
- * | jobFieldsSaved, otherSectionsSaved, educationSaved, sessionOnly, bare, null | `none` |
+ * | jobFieldsSaved, otherSectionsSaved, sessionOnly, bare, null | `none` |
  *
  * @param {unknown} payload
  * @returns {'reload'|'refetch-list'|'patch-job'|'none'}

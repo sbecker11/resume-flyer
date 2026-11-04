@@ -116,6 +116,7 @@ describe('resumeRefreshAction', () => {
     ['removedSkill', removedSkill()],
     ['clearAllJobSkillLinks', clearAllJobSkillLinks()],
     ['jobsMutated', jobsMutated()],
+    ['educationSaved', educationSaved()],
     ['reparsed', reparsed()],
     ['restored', restored()],
   ])('%s → reload', (_name, payload) => {
@@ -133,7 +134,9 @@ describe('resumeRefreshAction', () => {
     expect(resumeRefreshAction(metaSaved())).toBe('refetch-list');
     expect(resumeRefreshAction({ metaSaved: true, restored: true })).toBe('reload');
     expect(resumeRefreshAction({ metaSaved: true, reparsed: true })).toBe('reload');
+    expect(resumeRefreshAction({ metaSaved: true, educationSaved: true })).toBe('reload');
     expect(needsResumeListRefetch({ metaSaved: true, reparsed: true })).toBe(true);
+    expect(needsResumeListRefetch({ metaSaved: true, educationSaved: true })).toBe(true);
   });
 
   it('per-job skill payload → patch-job (server-backed and session-only)', () => {
@@ -154,7 +157,6 @@ describe('resumeRefreshAction', () => {
     ['number', 1],
     ['jobFieldsSaved', jobFieldsSaved()],
     ['otherSectionsSaved', otherSectionsSaved()],
-    ['educationSaved', educationSaved()],
     ['sessionOnly', sessionOnly()],
     ['false flags', { skillMerged: false, metaSaved: false, jobIndex: null }],
     ['truthy non-boolean flag', { skillMerged: 1 }],

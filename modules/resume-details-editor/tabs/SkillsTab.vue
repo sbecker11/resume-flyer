@@ -164,6 +164,7 @@ import { jobTenureMonthsInclusive } from '@/modules/utils/dateUtils.mjs';
 import { getSelectedSkillIdsForJob, filterDescriptionBracketsToSkillSelection } from '../jobSkillsSelection.mjs';
 import { filterSkillsBySearchQuery } from '@/modules/utils/skillSearch.mjs';
 import { skillRenamed, skillMerged, jobSkills as jobSkillsPayload } from '../savedPayload.mjs';
+import { reportError } from '@/modules/utils/errorReporting.mjs';
 
 const canPersistToServer = hasServer();
 const canEdit = true;
@@ -248,7 +249,7 @@ watch(() => [props.resumeId, props.reloadNonce], async ([id]) => {
       selected.value = getSelectedSkillIdsForJob(jobs.value[idx], skills.value);
     }
   } catch (err) {
-    console.error('[SkillsTab] load failed:', err);
+    reportError(err, '[SkillsTab] Load failed', 'Showing the load error in the tab; no skills editable until reload');
     loadError.value = 'Failed to load jobs and skills: ' + err.message;
   }
   nextTick(() => emit('content-ready'));
@@ -565,7 +566,7 @@ async function saveEditSkill() {
     skillEditModalOpen.value = false;
     emit('saved', skillRenamed());
   } catch (err) {
-    console.error('[SkillsTab] rename skill failed:', err);
+    reportError(err, '[SkillsTab] Rename skill failed', 'Alerting the user; the skill keeps its current name');
     alert('Failed to rename skill: ' + err.message);
   } finally {
     saving.value = false;
@@ -594,7 +595,7 @@ async function mergeSkills() {
     mergeToKey.value = '';
     emit('saved', skillMerged());
   } catch (err) {
-    console.error('[SkillsTab] merge skill failed:', err);
+    reportError(err, '[SkillsTab] Merge skill failed', 'Alerting the user; both skills left as they were');
     alert('Failed to merge skill: ' + err.message);
   } finally {
     saving.value = false;
@@ -679,7 +680,7 @@ async function saveForCurrentJob() {
     }));
     return true;
   } catch (err) {
-    console.error('[SkillsTab] save failed:', err);
+    reportError(err, '[SkillsTab] Save failed', 'Alerting the user; the job keeps its previous skill links');
     alert('Failed to save skills: ' + err.message);
     return false;
   } finally {
