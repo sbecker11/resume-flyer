@@ -314,23 +314,44 @@ function createMissingSkills(skills, newSkills) {
     }
 }
 
+const RESUME_NOT_FOUND = 'Resume not found.';
+
 /**
- * Error response for the resume write routes: 422 with the findings when commitResume refused
- * the write, 404 when the resume folder is missing, 500 otherwise.
+ * The one exit for route catch blocks.
+ * - ResumeConsistencyError → 422 with the findings (expected refusal; one info-level line, not an error).
+ * - ENOENT → 404 with `notFoundMessage` when the route passes one (expected; one info-level line).
+ * - Anything else is reported through reportError with what the server does next, then answered
+ *   with `status` (default 500) and either `body`, `{ error: message ?? err.message }`, or `html` for page routes.
  * @param {import('express').Response} res
  * @param {unknown} err
- * @param {string} label  log prefix
- * @param {string} [notFoundMessage]
+ * @param {string} label  log prefix, e.g. 'PATCH meta'
+ * @param {{
+ *   notFoundMessage?: string,
+ *   status?: number,
+ *   message?: string,
+ *   body?: unknown,
+ *   html?: string,
+ *   remedy?: string,
+ * }} [options]
  */
-function sendResumeWriteError(res, err, label, notFoundMessage = 'Resume not found.') {
+function sendRouteError(res, err, label, options = {}) {
+    const { notFoundMessage, status = 500, message, body, html, remedy } = options;
     if (err instanceof ResumeConsistencyError) {
+        console.log(`[${label}] Refused (422): ${err.message}`);
         return res.status(422).json({ error: err.message, findings: err.findings });
     }
-    if (err?.code === 'ENOENT') {
+    if (notFoundMessage && err?.code === 'ENOENT') {
+        console.log(`[${label}] Not found (404): ${err.message}`);
         return res.status(404).json({ error: notFoundMessage });
     }
-    console.error(`[${label}]`, err);
-    return res.status(500).json({ error: err?.message || String(err) });
+    reportError(err, `[${label}]`, remedy ?? `Responding ${status}; nothing further written`);
+    if (html !== undefined) {
+        return res.status(status).send(html);
+    }
+    if (body !== undefined) {
+        return res.status(status).json(body);
+    }
+    return res.status(status).json({ error: message ?? (err?.message || String(err)) });
 }
 
 /** If state file is missing, create it from app_state.default.json (safe defaults). */
@@ -344,7 +365,7 @@ async function ensureAppStateFile() {
                 await fs.writeFile(STATE_FILE_PATH, defaultState, 'utf-8');
                 console.log('📄 Initialized app_state.json from app_state.default.json');
             } catch (e) {
-                console.error('[server] Could not initialize app_state.json from default:', e.message);
+                reportError(e, '[server] Could not initialize app_state.json from default', 'Continuing without a state file; GET /api/state responds 404 until it exists');
             }
         }
     }
@@ -366,8 +387,7 @@ app.get('/api/state', async (req, res) => {
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: 'State file not found.' });
         } else {
-            console.error('Error reading state file:', error);
-            res.status(500).json({ error: 'Failed to read state file.' });
+            sendRouteError(res, error, 'GET state', { message: 'Failed to read state file.' });
         }
     }
 });
@@ -381,8 +401,7 @@ app.post('/api/state', async (req, res) => {
         console.log('💾 Saved app state to app_state.json - size:', sizeKB, 'KB');
         res.json({ success: true });
     } catch (error) {
-        console.error('Error writing state file:', error);
-        res.status(500).json({ error: 'Failed to write state file.' });
+        sendRouteError(res, error, 'POST state', { message: 'Failed to write state file.', remedy: 'Responding 500; app_state.json left as it was' });
     }
 });
 
@@ -473,8 +492,7 @@ app.get('/api/resumes/default/data', async (req, res) => {
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: 'Default resume data not found (parsed_resumes).' });
         } else {
-            console.error('Error reading default resume data:', error);
-            res.status(500).json({ error: 'Failed to read default resume data.' });
+            sendRouteError(res, error, 'GET default resume data', { message: 'Failed to read default resume data.' });
         }
     }
 });
@@ -498,8 +516,7 @@ app.get('/api/resumes/:id/data', async (req, res) => {
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: `Resume "${id}" not found.` });
         } else {
-            console.error('Error reading resume data:', error);
-            res.status(500).json({ error: 'Failed to read resume data.' });
+            sendRouteError(res, error, 'GET resume data', { message: 'Failed to read resume data.' });
         }
     }
 });
@@ -521,7 +538,7 @@ app.patch('/api/resumes/:id/jobs/:jobIndex/skills', async (req, res) => {
         const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, skillIDs: saved.jobs[idx].skillIDs });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH jobs skills');
+        sendRouteError(res, err, 'PATCH jobs skills', { notFoundMessage: RESUME_NOT_FOUND });
     }
 });
 
@@ -544,7 +561,7 @@ app.patch('/api/resumes/:id/education/:educationKey/skills', async (req, res) =>
         const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, skillIDs: saved.education[educationKey].skillIDs });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH education skills', 'education.json or related file not found.');
+        sendRouteError(res, err, 'PATCH education skills', { notFoundMessage: 'education.json or related file not found.' });
     }
 });
 
@@ -635,7 +652,7 @@ app.patch('/api/resumes/:id/skills/rename', async (req, res) => {
         await carrySharedSkillUrlEntry(resolvedOldKey, newKey);
         res.json({ ok: true, key: newKey, descriptionFixes: descFixes });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH skills/rename');
+        sendRouteError(res, err, 'PATCH skills/rename', { notFoundMessage: RESUME_NOT_FOUND });
     }
 });
 
@@ -679,7 +696,7 @@ app.patch('/api/resumes/:id/skills/merge', async (req, res) => {
         await carrySharedSkillUrlEntry(resolvedFromKey, resolvedToKey);
         res.json({ ok: true, mergedInto: toKey, descriptionFixes: descFixes });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH skills/merge');
+        sendRouteError(res, err, 'PATCH skills/merge', { notFoundMessage: RESUME_NOT_FOUND });
     }
 });
 
@@ -701,7 +718,7 @@ app.patch('/api/resumes/:id/skills/remove', async (req, res) => {
         console.log(`[PATCH skills/remove] removed "${removed.name}" (${removed.key}); ${removed.descriptionFixes} descriptions updated`);
         res.json({ ok: true, key: removed.key, name: removed.name, descriptionFixes: removed.descriptionFixes });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH skills/remove', `Resume "${id}" not found.`);
+        sendRouteError(res, err, 'PATCH skills/remove', { notFoundMessage: `Resume "${id}" not found.` });
     }
 });
 
@@ -737,7 +754,7 @@ app.patch('/api/resumes/:id/skills/url', async (req, res) => {
         await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, key: resolvedKey, url: urlTrimmed });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH skills/url', 'skills.json not found.');
+        sendRouteError(res, err, 'PATCH skills/url', { notFoundMessage: 'skills.json not found.' });
     }
 });
 
@@ -748,8 +765,7 @@ app.get('/api/skill-urls', async (req, res) => {
         res.set('Cache-Control', 'no-store');
         res.json(catalog);
     } catch (err) {
-        reportError(err, '[GET /api/skill-urls] Failed to read shared skill URL catalog');
-        res.status(500).json({ error: err.message });
+        sendRouteError(res, err, 'GET /api/skill-urls', { remedy: 'Responding 500; shared skill URL catalog not read' });
     }
 });
 
@@ -775,8 +791,7 @@ app.put('/api/skill-urls', async (req, res) => {
         res.set('Cache-Control', 'no-store');
         res.json(catalog);
     } catch (err) {
-        reportError(err, '[PUT /api/skill-urls] Failed to save shared skill URL');
-        res.status(500).json({ error: err.message });
+        sendRouteError(res, err, 'PUT /api/skill-urls', { remedy: 'Responding 500; shared skill URL not saved' });
     }
 });
 
@@ -803,7 +818,7 @@ app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
         const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, job: saved.jobs[idx] });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH job', 'Resume or jobs.json not found.');
+        sendRouteError(res, err, 'PATCH job', { notFoundMessage: 'Resume or jobs.json not found.' });
     }
 });
 
@@ -836,7 +851,7 @@ app.post('/api/resumes/:id/jobs', async (req, res) => {
         await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, insertIndex: insertAt });
     } catch (err) {
-        sendResumeWriteError(res, err, 'POST jobs', 'Resume or jobs.json not found.');
+        sendRouteError(res, err, 'POST jobs', { notFoundMessage: 'Resume or jobs.json not found.' });
     }
 });
 
@@ -861,7 +876,7 @@ app.delete('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
         await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true });
     } catch (err) {
-        sendResumeWriteError(res, err, 'DELETE jobs', 'Resume or jobs.json not found.');
+        sendRouteError(res, err, 'DELETE jobs', { notFoundMessage: 'Resume or jobs.json not found.' });
     }
 });
 
@@ -902,11 +917,7 @@ app.get('/api/resumes/:id/has-local-changes', async (req, res) => {
         }
         return res.json({ hasLocalChanges: false, reason: 'legacy-no-baseline' });
     } catch (err) {
-        if (err.code === 'ENOENT') {
-            return res.status(404).json({ error: 'Resume not found.' });
-        }
-        reportError(err, '[has-local-changes] Failed to inspect resume folder');
-        return res.status(500).json({ error: err.message });
+        return sendRouteError(res, err, 'has-local-changes', { notFoundMessage: RESUME_NOT_FOUND, remedy: 'Responding 500; resume folder not inspected' });
     }
 });
 
@@ -951,8 +962,7 @@ app.patch('/api/resumes/:id/meta', async (req, res) => {
         }
         res.json(withDerivedMetaPaths(id, meta));
     } catch (err) {
-        console.error('[PATCH meta]', err);
-        res.status(500).json({ error: err.message });
+        sendRouteError(res, err, 'PATCH meta');
     }
 });
 
@@ -983,8 +993,7 @@ app.patch('/api/resumes/:id/other-sections', async (req, res) => {
         await writeResumeJson(filePath, payload);
         res.json(payload);
     } catch (err) {
-        console.error('[PATCH other-sections]', err);
-        res.status(500).json({ error: err.message });
+        sendRouteError(res, err, 'PATCH other-sections');
     }
 });
 
@@ -1015,7 +1024,7 @@ app.patch('/api/resumes/:id/education', async (req, res) => {
         const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json(saved.education);
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH education');
+        sendRouteError(res, err, 'PATCH education', { notFoundMessage: RESUME_NOT_FOUND });
     }
 });
 
@@ -1033,7 +1042,7 @@ app.patch('/api/resumes/:id/categories', async (req, res) => {
         const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ categories: saved.categories });
     } catch (err) {
-        sendResumeWriteError(res, err, 'PATCH categories');
+        sendRouteError(res, err, 'PATCH categories', { notFoundMessage: RESUME_NOT_FOUND });
     }
 });
 
@@ -1065,8 +1074,7 @@ app.delete('/api/resumes/:id', async (req, res) => {
 
         res.json({ ok: true });
     } catch (err) {
-        console.error('[DELETE resume]', err);
-        res.status(500).json({ error: err.message });
+        sendRouteError(res, err, 'DELETE resume', { remedy: 'Responding 500; the resume folder may be partially removed' });
     }
 });
 
@@ -1169,7 +1177,7 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
             pythonProcess.stderr.on('data', (data) => {
                 const t = data.toString();
                 stderr += t;
-                console.error(`[Parser stderr]: ${t.trim()}`);
+                process.stderr.write(`[Parser stderr]: ${t.trim()}\n`);
             });
 
             await new Promise((resolve, reject) => {
@@ -1198,8 +1206,7 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
                     const details = String(error?.message || error);
                     const isModuleNotFound = details.includes('ModuleNotFoundError') && details.includes('resume_parser');
                     if (isModuleNotFound) {
-                        console.error(`[ResumeReparse] Parser module missing with ${pythonBin}:`, details);
-                        console.log(`Remedy: retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
+                        reportError(error, `[ResumeReparse] Parser module missing with ${pythonBin}`, `Retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
                         continue;
                     }
                     throw error;
@@ -1258,11 +1265,13 @@ app.post('/api/resumes/:id/reparse', async (req, res) => {
             throw parseError;
         }
     } catch (error) {
-        reportError(error, '[ResumeReparse] Failed to reparse resume folder', 'Remedy: previous derived files restored when backup existed');
-        res.status(500).json({
-            error: 'Failed to reparse resume',
-            details: error?.message || String(error),
-            parserOutput: error?.parserOutput || ''
+        sendRouteError(res, error, 'ResumeReparse', {
+            remedy: 'Responding 500; previous derived files restored when a backup existed',
+            body: {
+                error: 'Failed to reparse resume',
+                details: error?.message || String(error),
+                parserOutput: error?.parserOutput || ''
+            },
         });
     }
 });
@@ -1488,7 +1497,7 @@ app.post('/api/resumes/:id/reparse-stream', async (req, res) => {
     } catch (e) {
         try { if (tailTimer) clearInterval(tailTimer); } catch {}
         try { await tailOnce(true); } catch {}
-        reportError(e, '[ResumeReparseStream] Failed to reparse with stream', 'Remedy: previous derived files restored when backup existed');
+        reportError(e, '[ResumeReparseStream] Failed to reparse with stream', 'Sent SSE error event; previous derived files restored when backup existed');
         sendEvent('error', JSON.stringify({ message: e instanceof Error ? e.message : String(e) }));
         res.end();
     }
@@ -1507,11 +1516,11 @@ app.get('/api/resumes/:id/reparse-history', async (req, res) => {
         res.setHeader('Cache-Control', 'no-store');
         res.json({ history });
     } catch (error) {
-        if (error?.code === 'ENOENT') {
-            return res.status(404).json({ error: 'Resume not found.' });
-        }
-        reportError(error, '[GET reparse-history] Failed to list resume backups');
-        res.status(500).json({ error: error?.message || 'Failed to list resume backups' });
+        sendRouteError(res, error, 'GET reparse-history', {
+            notFoundMessage: RESUME_NOT_FOUND,
+            message: error?.message || 'Failed to list resume backups',
+            remedy: 'Responding 500; resume backups not listed',
+        });
     }
 });
 
@@ -1599,8 +1608,7 @@ app.get('/api/resumes', async (req, res) => {
 
         res.json(resumes);
     } catch (error) {
-        console.error('Error listing resumes:', error?.code || error?.message, error);
-        res.status(500).json({ error: 'Failed to list resumes.' });
+        sendRouteError(res, error, 'GET resumes', { message: 'Failed to list resumes.', remedy: 'Responding 500; resume list not built' });
     }
 });
 
@@ -1683,10 +1691,10 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
                     size: fileSize
                 };
             } catch (error) {
-                console.error('❌ Failed to fetch resume from URL:', error);
-                return res.status(400).json({
-                    error: 'Failed to fetch resume from URL',
-                    details: error.message
+                return sendRouteError(res, error, 'ResumeUpload fetch URL', {
+                    status: 400,
+                    body: { error: 'Failed to fetch resume from URL', details: error.message },
+                    remedy: 'Responding 400; nothing downloaded or parsed',
                 });
             }
         }
@@ -1762,7 +1770,7 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
             });
             pythonProcess.stderr.on('data', (data) => {
                 stderr += data.toString();
-                console.error(`[Parser stderr]: ${data.toString().trim()}`);
+                process.stderr.write(`[Parser stderr]: ${data.toString().trim()}\n`);
             });
 
             await new Promise((resolve, reject) => {
@@ -1796,8 +1804,7 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
                 const details = String(error?.message || error);
                 const isModuleNotFound = details.includes('ModuleNotFoundError') && details.includes('resume_parser');
                 if (isModuleNotFound) {
-                    console.error(`[ResumeUpload] Parser module missing with ${pythonBin}:`, details);
-                    console.log(`Remedy: retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
+                    reportError(error, `[ResumeUpload] Parser module missing with ${pythonBin}`, `Retrying parser with another Python binary (${pythonBinCandidates.join(', ')})`);
                     continue;
                 }
                 throw error;
@@ -1845,21 +1852,25 @@ app.post('/api/resumes/upload', upload.single('resume'), async (req, res) => {
         });
 
     } catch (error) {
-        reportError(error, '[ResumeUpload] Failed to process resume upload');
-
-        // Clean up uploaded file if it exists
+        let cleanupNote = '';
         if (req.file && req.file.path) {
             try {
                 await fs.unlink(req.file.path);
+                cleanupNote = '; uploaded temp file removed';
             } catch (e) {
-                // Ignore cleanup errors
+                if (e?.code !== 'ENOENT') {
+                    reportError(e, '[ResumeUpload] Failed to remove uploaded temp file', `Leaving ${req.file.path} in place`);
+                }
             }
         }
 
-        res.status(500).json({
-            error: 'Failed to process resume upload',
-            details: error.message,
-            parserOutput: error?.parserOutput || ''
+        sendRouteError(res, error, 'ResumeUpload', {
+            remedy: `Responding 500${cleanupNote}`,
+            body: {
+                error: 'Failed to process resume upload',
+                details: error.message,
+                parserOutput: error?.parserOutput || ''
+            },
         });
     }
 });
@@ -2178,11 +2189,14 @@ app.get('/api/palette-manifest', async (req, res) => {
         res.json(await getPaletteManifestForApi());
     } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.error('[palette-catalog] GET /api/palette-manifest failed:', msg);
-        res.status(503).json({
-            error: 'Palette catalog unavailable',
-            message: msg,
-            hint: 'No local static_content/colorPalettes and no warmed server catalog — configure S3 or add palette JSON files',
+        sendRouteError(res, error, 'palette-catalog GET /api/palette-manifest', {
+            status: 503,
+            remedy: 'Responding 503; configure S3 or add palette JSON files under static_content/colorPalettes',
+            body: {
+                error: 'Palette catalog unavailable',
+                message: msg,
+                hint: 'No local static_content/colorPalettes and no warmed server catalog — configure S3 or add palette JSON files',
+            },
         });
     }
 });
@@ -2192,8 +2206,13 @@ app.get('/api/palette-catalog', async (req, res) => {
     try {
         res.json(await getPaletteCatalogBundleV2ForApi());
     } catch (error) {
-        const status = error.code === 'ENOENT' ? 404 : 500;
-        res.status(status).json({ error: 'Failed to build palette catalog.', details: error.message });
+        if (error.code === 'ENOENT') {
+            console.log(`[GET /api/palette-catalog] Not found (404): ${error.message}`);
+            return res.status(404).json({ error: 'Failed to build palette catalog.', details: error.message });
+        }
+        sendRouteError(res, error, 'GET /api/palette-catalog', {
+            body: { error: 'Failed to build palette catalog.', details: error.message },
+        });
     }
 });
 
@@ -2204,7 +2223,7 @@ app.post('/api/write-css', async (req, res) => {
         await fs.writeFile(CSS_FILE_PATH, req.body);
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to write CSS file.' });
+        sendRouteError(res, error, 'POST write-css', { message: 'Failed to write CSS file.', remedy: 'Responding 500; palette-styles.css left as it was' });
     }
 });
 
@@ -2527,7 +2546,7 @@ async function initializeEventDataDirectories() {
         await fs.mkdir(ANALYSIS_REPORTS_DIR, { recursive: true });
         console.log('📁 Event data directories initialized');
     } catch (error) {
-        console.error('❌ Failed to initialize event data directories:', error);
+        reportError(error, '[server] Failed to initialize event data directories', 'Continuing startup; event-data and analysis routes will fail until the directories can be created');
     }
 }
 
@@ -2906,8 +2925,10 @@ app.post('/api/event-data', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Failed to process event data:', error);
-        res.status(500).json({ error: 'Failed to process event data', details: error.message });
+        sendRouteError(res, error, 'POST event-data', {
+            body: { error: 'Failed to process event data', details: error.message },
+            remedy: 'Responding 500; event data or analysis report may be partially written',
+        });
     }
 });
 
@@ -2925,7 +2946,7 @@ app.get('/api/analysis/:sessionId', async (req, res) => {
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: 'Analysis not found' });
         } else {
-            res.status(500).json({ error: 'Failed to retrieve analysis' });
+            sendRouteError(res, error, 'GET analysis', { message: 'Failed to retrieve analysis' });
         }
     }
 });
@@ -2961,8 +2982,7 @@ app.get('/analysis-dashboard', async (req, res) => {
         res.send(html);
 
     } catch (error) {
-        console.error('❌ Failed to generate analysis dashboard:', error);
-        res.status(500).send('Failed to generate analysis dashboard');
+        sendRouteError(res, error, 'GET analysis-dashboard', { html: 'Failed to generate analysis dashboard' });
     }
 });
 
@@ -3091,7 +3111,7 @@ async function initializeSyncLogsDirectory() {
             console.log('📝 Created sync logs index file');
         }
     } catch (error) {
-        console.error('❌ Failed to initialize sync logs directory:', error);
+        reportError(error, '[server] Failed to initialize sync logs directory', 'Continuing startup; sync-log routes will fail until the directory and index can be created');
     }
 }
 
@@ -3116,7 +3136,8 @@ async function updateSyncLogsIndex(sessionData) {
         
         await fs.writeFile(SYNC_LOGS_INDEX_FILE, JSON.stringify(index, null, 2));
     } catch (error) {
-        console.error('❌ Failed to update sync logs index:', error);
+        reportError(error, '[server] Failed to update sync logs index', 'Rethrowing so POST /api/sync-logs responds 500 (the session file was written; index.json is stale)');
+        throw error;
     }
 }
 
@@ -3165,8 +3186,7 @@ app.post('/api/sync-logs', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Failed to save sync log:', error);
-        res.status(500).json({ error: 'Failed to save sync log.' });
+        sendRouteError(res, error, 'POST sync-logs', { message: 'Failed to save sync log.' });
     }
 });
 
@@ -3185,8 +3205,7 @@ app.get('/api/sync-logs', async (req, res) => {
         if (error.code === 'ENOENT') {
             res.json({ totalSessions: 0, sessions: [] });
         } else {
-            console.error('❌ Failed to get sync logs index:', error);
-            res.status(500).json({ error: 'Failed to get sync logs index.' });
+            sendRouteError(res, error, 'GET sync-logs', { message: 'Failed to get sync logs index.' });
         }
     }
 });
@@ -3207,8 +3226,7 @@ app.get('/api/sync-logs/:sessionId', async (req, res) => {
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: 'Sync log session not found.' });
         } else {
-            console.error('❌ Failed to get sync log session:', error);
-            res.status(500).json({ error: 'Failed to get sync log session.' });
+            sendRouteError(res, error, 'GET sync-logs session', { message: 'Failed to get sync log session.' });
         }
     }
 });
@@ -3240,8 +3258,10 @@ app.delete('/api/sync-logs/:sessionId', async (req, res) => {
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: 'Sync log session not found.' });
         } else {
-            console.error('❌ Failed to delete sync log session:', error);
-            res.status(500).json({ error: 'Failed to delete sync log session.' });
+            sendRouteError(res, error, 'DELETE sync-logs session', {
+                message: 'Failed to delete sync log session.',
+                remedy: 'Responding 500; the session file may be deleted while index.json still lists it',
+            });
         }
     }
 });
@@ -3257,8 +3277,8 @@ app.get('/sync-logs-dashboard', async (req, res) => {
         res.send(html);
         
     } catch (error) {
-        console.error('❌ Failed to generate sync logs dashboard:', error);
-        res.status(500).send(`
+        sendRouteError(res, error, 'GET sync-logs-dashboard', {
+            html: `
             <html>
                 <head><title>Sync Logs Dashboard Error</title></head>
                 <body>
@@ -3266,7 +3286,8 @@ app.get('/sync-logs-dashboard', async (req, res) => {
                     <p>${error.message}</p>
                 </body>
             </html>
-        `);
+        `,
+        });
     }
 });
 
@@ -3390,7 +3411,7 @@ app.get('/api/check-dependencies', async (req, res) => {
         const hasViolations = scanResults.violatingComponents.length > 0;
         
         if (hasViolations) {
-            console.error(`❌ Server: Found ${scanResults.violatingComponents.length} dependency violations`);
+            console.warn(`❌ Server: Found ${scanResults.violatingComponents.length} dependency violations`);
             
             // Return violation details
             res.status(400).json({
@@ -3423,11 +3444,8 @@ app.get('/api/check-dependencies', async (req, res) => {
         }
         
     } catch (error) {
-        console.error('❌ Server: Dependency check failed:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Dependency check failed',
-            message: error.message
+        sendRouteError(res, error, 'GET check-dependencies', {
+            body: { success: false, error: 'Dependency check failed', message: error.message },
         });
     }
 });
@@ -3446,8 +3464,8 @@ app.get('/violations', async (req, res) => {
         res.send(html);
         
     } catch (error) {
-        console.error('❌ Server: Failed to generate violations page:', error);
-        res.status(500).send(`
+        sendRouteError(res, error, 'GET violations', {
+            html: `
             <html>
                 <head><title>Error</title></head>
                 <body>
@@ -3455,7 +3473,8 @@ app.get('/violations', async (req, res) => {
                     <p>${error.message}</p>
                 </body>
             </html>
-        `);
+        `,
+        });
     }
 });
 
@@ -3785,8 +3804,7 @@ app.get('/api/skills/:slug/info', async (req, res) => {
         skillInfoCache.set(slug, summary);
         res.json({ slug, summary, cached: false });
     } catch (e) {
-        reportError(e, '[skill-info] Failed to fetch from Anthropic');
-        res.status(502).json({ error: e.message });
+        sendRouteError(res, e, 'skill-info', { status: 502, remedy: 'Responding 502; nothing cached for this slug' });
     }
 });
 
@@ -3799,8 +3817,12 @@ const viteDevPort = parseInt(process.env.VITE_DEV_PORT, 10) || 5174;
 
 function startServer(port) {
     if (port >= START_PORT + MAX_PORT_RETRIES) {
-        console.error(`Failed to bind server after trying ports ${START_PORT} to ${port - 1}. Exiting.`);
-        process.exit(1); // Exit if no port found
+        reportError(
+            new Error(`Failed to bind server after trying ports ${START_PORT} to ${port - 1}`),
+            '[server] No free port',
+            'Exiting with code 1'
+        );
+        process.exit(1);
     }
 
     const server = app.listen(port, async () => {
@@ -3828,7 +3850,7 @@ function startServer(port) {
                 startServer(port + 1);
             });
         } else {
-            console.error("Server failed to start:", err);
+            reportError(err, '[server] Server failed to start', 'Exiting with code 1');
             process.exit(1);
         }
     });

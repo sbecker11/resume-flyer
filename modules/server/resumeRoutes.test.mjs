@@ -20,6 +20,11 @@ vi.mock('../utils/anthropicEnv.mjs', () => ({
 vi.mock('../utils/anthropicLlm.mjs', () => ({
     callAnthropicMessages: vi.fn(async () => 'A mocked summary.'),
 }));
+// Spy that calls through: server.mjs must report route failures via reportError, not bare console.error.
+vi.mock('../utils/errorReporting.mjs', async (importOriginal) => {
+    const actual = await importOriginal();
+    return { ...actual, reportError: vi.fn(actual.reportError) };
+});
 
 const PROJECT_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 
@@ -28,6 +33,7 @@ let parsedDir;
 let app;
 let anthropicEnv;
 let anthropicLlm;
+let errorReporting;
 
 const RESUME_ID = 'fixture-resume';
 
@@ -202,6 +208,7 @@ beforeAll(async () => {
     ({ app } = await import('../../server.mjs'));
     anthropicEnv = await import('../utils/anthropicEnv.mjs');
     anthropicLlm = await import('../utils/anthropicLlm.mjs');
+    errorReporting = await import('../utils/errorReporting.mjs');
 });
 
 afterAll(async () => {
@@ -276,12 +283,16 @@ describe('PATCH /api/resumes/:id/jobs/:jobIndex/skills', () => {
 
     it('refuses (422, nothing written) to unlink a skill the Description still references in [brackets]', async () => {
         const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        errorReporting.reportError.mockClear();
         const before = await readText('jobs.json');
         const res = await request(app)
             .patch(`/api/resumes/${RESUME_ID}/jobs/0/skills`)
             .send({ skillIDs: ['vue-3'] });
         errSpy.mockRestore();
         expect(res.status).toBe(422);
+        // The refusal is an expected client-facing outcome: the route logs it at info level, not as an error.
+        expect(errorReporting.reportError).not.toHaveBeenCalledWith(expect.anything(), '[PATCH jobs skills]', expect.anything());
+        expect(console.log).toHaveBeenCalledWith(expect.stringContaining('[PATCH jobs skills] Refused (422)'));
         expect(res.body.error).toMatch(/bracket-not-linked/);
         expect(res.body.findings).toEqual([expect.objectContaining({ code: 'bracket-not-linked', where: 'jobs.json[0].Description' })]);
         expect(await readText('jobs.json')).toBe(before);
@@ -729,10 +740,11 @@ describe('GET /api/skills/:slug/info', () => {
         anthropicEnv.getAnthropicApiKey.mockReturnValue('sk-test');
         anthropicLlm.callAnthropicMessages.mockRejectedValueOnce(new Error('upstream down'));
         const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        errorReporting.reportError.mockClear();
         const res = await request(app).get('/api/skills/airflow/info');
         expect(res.status).toBe(502);
         expect(res.body.error).toBe('upstream down');
-        expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('[skill-info] Failed to fetch from Anthropic'), expect.any(Error));
+        expect(errorReporting.reportError).toHaveBeenCalledWith(expect.any(Error), '[skill-info]', expect.stringContaining('Responding 502'));
         errSpy.mockRestore();
     });
 });
