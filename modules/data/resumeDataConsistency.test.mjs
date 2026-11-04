@@ -106,20 +106,30 @@ describe('checkResumeDataConsistency', () => {
     expect(f[0].where).toBe('jobs.json["1"].skillIDs[0]');
   });
 
-  it('flags skillIDs that are display names (with resolved key) and unknown ids', () => {
+  it('flags skillIDs that are display names (with resolved key) and unknown ids as errors', () => {
     const data = baseData();
     data.jobs[0].skillIDs = ['Vue.js', 'Rust'];
     const findings = checkResumeDataConsistency(data);
     const notKey = byCode(findings, 'skill-id-not-key');
     expect(notKey).toHaveLength(1);
     expect(notKey[0]).toMatchObject({
-      severity: 'warning',
+      severity: 'error',
       where: 'jobs.json[0].skillIDs[0]',
       details: { skillID: 'Vue.js', resolvedKey: 'vue-js' },
     });
+    expect(notKey[0].message).toBe('skillID "Vue.js" is not the exact skills.json key; resolves to "vue-js"');
     const unknown = byCode(findings, 'skill-id-unknown');
     expect(unknown).toHaveLength(1);
     expect(unknown[0]).toMatchObject({ severity: 'error', where: 'jobs.json[0].skillIDs[1]' });
+  });
+
+  it('treats a case-variant key as skill-id-not-key (error) and a duplicate as a warning', () => {
+    const data = baseData();
+    data.jobs[1].skillIDs = ['PYTHON', 'python'];
+    const findings = checkResumeDataConsistency({ skills: data.skills, jobs: data.jobs, education: data.education });
+    expect(byCode(findings, 'skill-id-not-key')[0]).toMatchObject({ severity: 'error', details: { skillID: 'PYTHON', resolvedKey: 'python' } });
+    expect(byCode(findings, 'skill-id-duplicate')[0].severity).toBe('warning');
+    expect(groupFindingsBySeverity(findings).error.map((f) => f.code)).toEqual(['skill-id-not-key']);
   });
 
   it('flags non-array skillIDs', () => {
@@ -193,7 +203,7 @@ describe('checkResumeDataConsistency', () => {
     const data = baseData();
     data.education[0].skillIDs = ['Bash', 'Python', 'Nope'];
     const findings = checkResumeDataConsistency(data);
-    expect(byCode(findings, 'skill-id-not-key')[0].where).toBe('education.json["0"].skillIDs[1]');
+    expect(byCode(findings, 'skill-id-not-key')[0]).toMatchObject({ severity: 'error', where: 'education.json["0"].skillIDs[1]' });
     expect(byCode(findings, 'skill-id-unknown')[0].where).toBe('education.json["0"].skillIDs[2]');
   });
 

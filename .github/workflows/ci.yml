@@ -32,12 +32,12 @@ jobs:
         working-directory: color-palette-utils-ts
         run: npm ci
 
-      # Resume data invariants (skillIDs are keys, skill.jobIDs match references,
+      # Resume data invariants (skillIDs are exact keys, skill.jobIDs match references,
       # categories mirror categoryIDs, enriched-jobs.json is fresh, every [Bracket]
-      # resolves to a linked skill). Errors fail the build; warnings are tolerated
-      # until Phase 3 promotes skill-id-not-key.
+      # resolves to a linked skill). Any error or warning fails the build; only
+      # informational findings are tolerated.
       - name: Check resume data consistency
-        run: npm run check:data -- --warnings-ok
+        run: npm run check:data
 
       # Unit tests are fully mocked (no ANTHROPIC_API_KEY / AWS secrets required).
       # If a future test needs a real key, add it as a repo secret and pass it

@@ -6,7 +6,8 @@
  * Conventions enforced (derived from server.mjs routes, enrichedJobs.mjs and skillLabel.mjs):
  *  - job.skillIDs / education.skillIDs / category.skillIDs hold exact skills.json map keys.
  *    Keys may be slugs ("express-js") or self-named ("Bash"); display names are resolvable by
- *    labelToSlug but the server's jobIDs sync (`skills[sid]`) only works for exact keys.
+ *    labelToSlug but the server's jobIDs sync (`skills[sid]`) only works for exact keys, so a
+ *    non-key id is an error (skill-id-not-key), not a warning.
  *  - skill.jobIDs are 0-based positions in mergeJobsWithEducation(jobs, education): work jobs in
  *    jobs.json order, then education entries sorted by `index`. Sorted unique integers.
  *  - Every [Bracketed] token in a work-job Description must resolve via labelToSlug (content-index
@@ -146,7 +147,7 @@ function checkSkillIdList(ids, skills, wherePrefix, out) {
       return;
     }
     if (key !== sid) {
-      out.push(finding('skill-id-not-key', SEVERITY.WARNING,
+      out.push(finding('skill-id-not-key', SEVERITY.ERROR,
         `skillID ${JSON.stringify(sid)} is not the exact skills.json key; resolves to ${JSON.stringify(key)}`,
         where, { skillID: sid, resolvedKey: key }));
     }

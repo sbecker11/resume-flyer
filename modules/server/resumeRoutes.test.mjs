@@ -627,6 +627,24 @@ describe('PATCH /api/resumes/:id/education/:educationKey/skills', () => {
         await expectConsistent();
     });
 
+    it('rejects (422, nothing written) an unknown skill id that is not in newSkills', async () => {
+        await writeReactMergeScenario();
+        const before = await readText('education.json');
+        const skillsBefore = await readText('skills.json');
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/education/phd/skills`)
+            .send({ skillIDs: ['react-18', 'Nope'] });
+        errSpy.mockRestore();
+        expect(res.status).toBe(422);
+        expect(res.body.error).toMatch(/skill-id-unknown/);
+        expect(res.body.findings).toEqual([expect.objectContaining({
+            code: 'skill-id-unknown', severity: 'error', where: 'education.json["phd"].skillIDs[1]', details: { skillID: 'Nope' },
+        })]);
+        expect(await readText('education.json')).toBe(before);
+        expect(await readText('skills.json')).toBe(skillsBefore);
+    });
+
     it('404s for an unknown education key or resume and 400s without skillIDs', async () => {
         expect((await request(app).patch(`/api/resumes/${RESUME_ID}/education/phd/skills`).send({ skillIDs: [] })).status).toBe(404);
         expect((await request(app).patch('/api/resumes/missing/education/phd/skills').send({ skillIDs: [] })).status).toBe(404);

@@ -103,19 +103,23 @@ describe('check-resume-data-consistency CLI', () => {
     });
 
     it('reports findings grouped by severity and exits 1 on blocking findings', async () => {
-      await writeResume(parsedDir, 'r1');
+      const jobs = JSON.parse(JSON.stringify(JOBS));
+      jobs[1].skillIDs = ['python', 'python'];
+      await writeResume(parsedDir, 'r1', { jobsText: JSON.stringify(jobs) });
       await fs.writeFile(path.join(parsedDir, 'skill-urls.json'), JSON.stringify({ entries: { Rust: { url: 'https://x/', updatedAt: '2026-01-01T00:00:00Z' } } }));
       await fs.writeFile(path.join(parsedDir, 'non-local-resumes.json'), JSON.stringify({ resumes: [{ id: 'r1', jobCount: 9, skillCount: 2 }] }));
       const code = await runCli(['--parsed-dir', parsedDir, '--resume', 'r1'], io);
       expect(code).toBe(1);
       const text = lines.join('\n');
       expect(text).toContain('=== r1 ');
-      expect(text).toContain('ERRORS (');
-      expect(text).toContain('[category-skill-unknown]');
-      expect(text).toContain('[enriched-jobs-stale]');
-      expect(text).toContain('[skill-jobids-missing]');
-      expect(text).toContain('WARNINGS (');
-      expect(text).toContain('[skill-id-not-key] jobs.json[0].skillIDs[0]');
+      const errorsSection = text.slice(text.indexOf('ERRORS ('), text.indexOf('WARNINGS ('));
+      expect(errorsSection).toContain('[category-skill-unknown]');
+      expect(errorsSection).toContain('[enriched-jobs-stale]');
+      expect(errorsSection).toContain('[skill-jobids-missing]');
+      expect(errorsSection).toContain('[skill-id-not-key] jobs.json[0].skillIDs[0]');
+      const warningsSection = text.slice(text.indexOf('WARNINGS ('), text.indexOf('INFO ('));
+      expect(warningsSection).toContain('[skill-id-duplicate] jobs.json[1].skillIDs[1]');
+      expect(warningsSection).not.toContain('[skill-id-not-key]');
       expect(text).toContain('INFO (');
       expect(text).toContain('[skill-url-orphan]');
       expect(text).toContain('[index-count-mismatch]');
@@ -124,7 +128,7 @@ describe('check-resume-data-consistency CLI', () => {
 
     it('--warnings-ok passes a resume with only warnings and still fails on errors', async () => {
       await writeResume(parsedDir, 'warn', {
-        jobsText: JSON.stringify([{ employer: 'A', Description: '[Python]', skillIDs: ['Python'] }]),
+        jobsText: JSON.stringify([{ employer: 'A', Description: '[Python]', skillIDs: ['python', 'python'] }]),
         skillsText: JSON.stringify({ python: { name: 'Python', jobIDs: [0] } }),
         categoriesText: '{}',
         enriched: false,
@@ -134,6 +138,19 @@ describe('check-resume-data-consistency CLI', () => {
       expect(await runCli(['--parsed-dir', parsedDir, '--resume', 'warn', '--warnings-ok'], io)).toBe(0);
       await writeResume(parsedDir, 'err');
       expect(await runCli(['--parsed-dir', parsedDir, '--resume', 'err', '--warnings-ok'], io)).toBe(1);
+    });
+
+    it('a display-name skillID is an error that --warnings-ok does not excuse', async () => {
+      await writeResume(parsedDir, 'name', {
+        jobsText: JSON.stringify([{ employer: 'A', Description: '[Python]', skillIDs: ['Python'] }]),
+        skillsText: JSON.stringify({ python: { name: 'Python', jobIDs: [0] } }),
+        categoriesText: '{}',
+        enriched: false,
+      });
+      expect(await runCli(['--parsed-dir', parsedDir, '--resume', 'name', '--warnings-ok'], io)).toBe(1);
+      const text = lines.join('\n');
+      expect(text).toContain('1 error(s), 0 warning(s)');
+      expect(text).toContain('[skill-id-not-key] jobs.json[0].skillIDs[0]');
     });
 
     it('returns 0 when only informational findings remain', async () => {

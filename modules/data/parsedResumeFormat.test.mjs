@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   validateJobs,
+  validateJobSkillIds,
   validateSkills,
   validateCategories,
   validateOtherSections
@@ -89,6 +90,15 @@ describe('parsedResumeFormat (parsed-resume format conformance)', () => {
       expect(() => validateSkills('skills')).toThrow('[ParsedResumeFormat] skills must be object');
     });
 
+    it('throws when a fixture job lists a skill by display name instead of its key', () => {
+      const jobs = JSON.parse(JSON.stringify(FIXTURE_JOBS_PARSED));
+      jobs['1'].skillIDs = ['Python'];
+      expect(() => validateJobSkillIds(jobs, FIXTURE_SKILLS_PARSED)).toThrow(
+        '[ParsedResumeFormat] jobs["1"] (Beta).skillIDs[0] "Python" is not an exact skills.json key; it resolves to key "python" — replace it with that key',
+      );
+      expect(() => validateJobSkillIds(FIXTURE_JOBS_PARSED, FIXTURE_SKILLS_PARSED)).not.toThrow();
+    });
+
     it('throws when categories is array', () => {
       expect(() => validateCategories([])).toThrow('[ParsedResumeFormat] categories must be object');
     });
@@ -132,6 +142,7 @@ describe('parsedResumeFormat (parsed-resume format conformance)', () => {
     it('jobs pipeline succeeds with spec-compliant fixture', () => {
       const raw = parseMjsExport(FIXTURE_JOBS_MJS, 'jobs');
       validateJobs(raw);
+      validateJobSkillIds(raw, parseMjsExport(FIXTURE_SKILLS_MJS, 'skills'));
       const jobs = normalizeParserJobs(raw);
       expect(jobs).toHaveLength(2);
       expect(jobs[0]).toHaveProperty('jobID', '0');
