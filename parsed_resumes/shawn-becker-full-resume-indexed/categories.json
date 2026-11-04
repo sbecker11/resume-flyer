@@ -145,7 +145,6 @@
       "react",
       "Vue",
       "vite",
-      "react-18",
       "vuetify",
       "vuelidate",
       "jsp"
@@ -158,7 +157,6 @@
       "Vue",
       "express-js",
       "fastmcp",
-      "react-18",
       "spring-boot",
       "spring-ai",
       "fastapi",
@@ -172,8 +170,7 @@
       "typescript",
       "java-21",
       "python",
-      "java",
-      "c"
+      "java"
     ]
   },
   "library": {

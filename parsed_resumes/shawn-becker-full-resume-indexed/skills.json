@@ -7,7 +7,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "devops": {
     "name": "DevOps",
@@ -36,7 +38,9 @@
     "categoryIDs": [
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "pdf": {
     "name": "PDF",
@@ -45,7 +49,9 @@
     "categoryIDs": [
       "tool"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "json": {
     "name": "JSON",
@@ -55,7 +61,9 @@
       "tool",
       "backend"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "react": {
     "name": "React",
@@ -65,7 +73,13 @@
       "frontend",
       "framework"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0,
+      1,
+      3,
+      5,
+      9
+    ]
   },
   "k-means": {
     "name": "K-means",
@@ -183,18 +197,6 @@
       "computer-vision"
     ],
     "jobIDs": []
-  },
-  "react-18": {
-    "name": "React 18",
-    "url": "https://react.dev/",
-    "img": "",
-    "categoryIDs": [
-      "frontend",
-      "framework"
-    ],
-    "jobIDs": [
-      5
-    ]
   },
   "jwt": {
     "name": "JWT",
@@ -369,7 +371,8 @@
       "programming-language"
     ],
     "jobIDs": [
-      10
+      10,
+      0
     ]
   },
   "rest-api": {
@@ -860,17 +863,6 @@
     ],
     "jobIDs": []
   },
-  "c": {
-    "name": "C++",
-    "url": "https://isocpp.org/",
-    "img": "",
-    "categoryIDs": [
-      "programming-language"
-    ],
-    "jobIDs": [
-      21
-    ]
-  },
   "filemaker": {
     "name": "FileMaker",
     "url": "https://www.claris.com/filemaker/",
@@ -959,7 +951,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "ai-agents": {
     "name": "AI Agents",
@@ -969,7 +963,9 @@
       "data-science",
       "methodology"
     ],
-    "jobIDs": []
+    "jobIDs": [
+      0
+    ]
   },
   "llm-apis-openai": {
     "name": "LLM APIs OpenAI",
@@ -1134,7 +1130,8 @@
     "name": "sentence-transformers",
     "jobIDs": [
       6
-    ]
+    ],
+    "url": "https://sbert.net/"
   },
   "Chroma DB": {
     "name": "Chroma DB",

@@ -91,6 +91,10 @@
     "snowflake-cortex-search": {
       "url": "https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-search/cortex-search-overview",
       "updatedAt": "2026-11-02T16:44:42.184Z"
+    },
+    "sentence-transformers": {
+      "url": "https://sbert.net/",
+      "updatedAt": "2026-11-03T03:55:47.690Z"
     }
   }
 }

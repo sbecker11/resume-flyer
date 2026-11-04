@@ -13,16 +13,16 @@
     "Description": "\u2022 Agentic [DOCX]/[PDF] \u2192 [JSON] r\u00e9sum\u00e9 parser with manual approval gates.",
     "outlineIndex": "1.1.1",
     "skillIDs": [
-      "DOCX",
-      "PDF",
-      "JSON",
+      "docx",
+      "pdf",
+      "json",
       "Anthropic API",
-      "Python",
-      "AI Agents",
-      "AI/ML",
-      "React 18",
-      "GenAI",
-      "Bash"
+      "python",
+      "ai-agents",
+      "ai-ml",
+      "genai",
+      "Bash",
+      "react"
     ],
     "jobID": "2"
   },
@@ -151,12 +151,12 @@
     "css RGB": "#800000",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 [React 18] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
+    "Description": "\u2022 [React] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
     "outlineIndex": "1.1.6",
     "skillIDs": [
       "express-js",
       "postgresql",
-      "react-18",
+      "react",
       "jwt",
       "bcrypt",
       "rbac"
@@ -567,11 +567,9 @@
     "css RGB": "#0069AC",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
+    "Description": "\u2022 Architected a real-time network security monitoring platform in C++ for packet analysis and network intrusion detection.",
     "outlineIndex": "5.4",
-    "skillIDs": [
-      "c"
-    ],
+    "skillIDs": [],
     "jobID": "25"
   },
   {

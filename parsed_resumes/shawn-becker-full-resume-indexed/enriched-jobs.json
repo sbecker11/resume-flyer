@@ -9,16 +9,16 @@
     "Description": "• Agentic [DOCX]/[PDF] → [JSON] résumé parser with manual approval gates.",
     "educationKey": null,
     "skillIDs": [
-      "DOCX",
-      "PDF",
-      "JSON",
+      "docx",
+      "pdf",
+      "json",
       "Anthropic API",
-      "Python",
-      "AI Agents",
-      "AI/ML",
-      "React 18",
-      "GenAI",
-      "Bash"
+      "python",
+      "ai-agents",
+      "ai-ml",
+      "genai",
+      "Bash",
+      "react"
     ],
     "references": [
       "<a href=\"https://www.ecma-international.org/publications-and-standards/standards/ecma-376/\">[docx]</a>",
@@ -33,9 +33,9 @@
       "python": "python",
       "ai-agents": "ai-agents",
       "ai-ml": "ai-ml",
-      "react-18": "react-18",
       "genai": "genai",
-      "Bash": "Bash"
+      "Bash": "Bash",
+      "react": "react"
     },
     "outlineIndex": "1.1.1",
     "outlineKind": "job",
@@ -261,18 +261,18 @@
     "start": "12/2025",
     "end": "07/2026",
     "durationMonths": 8,
-    "Description": "• [React 18] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
+    "Description": "• [React] + [Express.js] personal site with [JWT]/[bcrypt] auth, [RBAC], and [PostgreSQL]; foundation layer complete, job-tracking feature layer still planned.",
     "educationKey": null,
     "skillIDs": [
       "express-js",
       "postgresql",
-      "react-18",
+      "react",
       "jwt",
       "bcrypt",
       "rbac"
     ],
     "references": [
-      "<a href=\"https://react.dev/\">[react-18]</a>",
+      "<a href=\"https://react.dev/\">[react]</a>",
       "<a href=\"https://expressjs.com/\">[express-js]</a>",
       "<a href=\"https://www.jwt.io/\">[jwt]</a>",
       "<a href=\"https://github.com/kelektiv/node.bcrypt.js\">[bcrypt]</a>",
@@ -280,13 +280,12 @@
       "<a href=\"https://www.postgresql.org/\">[postgresql]</a>"
     ],
     "job-skills": {
-      "react-18": "react-18",
+      "react": "react",
       "express-js": "express-js",
       "jwt": "jwt",
       "bcrypt": "bcrypt",
       "rbac": "rbac",
-      "postgresql": "postgresql",
-      "react": "react"
+      "postgresql": "postgresql"
     },
     "outlineIndex": "1.1.6",
     "outlineKind": "job",
@@ -1044,17 +1043,11 @@
     "start": "12/2003",
     "end": "06/2004",
     "durationMonths": 7,
-    "Description": "• Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
+    "Description": "• Architected a real-time network security monitoring platform in C++ for packet analysis and network intrusion detection.",
     "educationKey": null,
-    "skillIDs": [
-      "c"
-    ],
-    "references": [
-      "<a href=\"https://isocpp.org/\">[c]</a>"
-    ],
-    "job-skills": {
-      "c": "c"
-    },
+    "skillIDs": [],
+    "references": [],
+    "job-skills": {},
     "outlineIndex": "5.4",
     "outlineKind": "job",
     "index": 25,
