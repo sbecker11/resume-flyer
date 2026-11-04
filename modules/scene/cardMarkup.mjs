@@ -225,6 +225,8 @@ function renderBizCardProjectLinkHtml(href, label, title) {
 
 /**
  * Scene biz card body (header + optional skills block). Matches useCardsController.createBizCardDiv.
+ * Project links are included here and then removed by omitSceneProjectLinksUnlessTheyFit
+ * when the fixed scene card cannot show them in full. Resume cards always keep them.
  */
 export function renderBizCardSceneBodyHtml({
     employer = 'Unknown Employer',

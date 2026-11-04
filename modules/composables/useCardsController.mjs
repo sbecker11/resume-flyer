@@ -43,6 +43,7 @@ import {
     renderBizCardSkillTitleSpansHtml,
 } from '@/modules/scene/cardMarkup.mjs'
 import { ignoreProjectLinkClick, projectLinksForJob } from '@/modules/data/projectLinks.mjs'
+import { omitSceneProjectLinksUnlessTheyFit } from '@/modules/scene/sceneProjectLinks.mjs'
 import {
     markFocusedSkillLinkForJob,
     markSourceBizBackLinkForSkill,
@@ -310,6 +311,7 @@ export function useCardsController() {
                         console.error(`[CardsController] ❌ Could not apply palette to job ${index}:`, error)
                         throw error
                     }
+                    omitSceneProjectLinksUnlessTheyFit(card)
                     updateBizCardSkillsVisibility(card)
                 } else {
                     console.warn('[CardsController] Card creation failed for job', index)
@@ -425,14 +427,20 @@ export function useCardsController() {
                         const skillsData = getGlobalJobsDependency().getSkillsData()
                         const displayNames = entries.map(e => skillLabelText(e.skillKey, skillsData[e.skillKey]))
                         expandBizCardToFitSkills(card, displayNames)
+                        omitSceneProjectLinksUnlessTheyFit(card)
                         updateBizCardSkillsVisibility(card)
                     } else {
+                        omitSceneProjectLinksUnlessTheyFit(card)
                         updateBizCardSkillsVisibility(card)
                     }
                 }
                 // Re-check after layout (getBoundingClientRect needs painted geometry)
                 requestAnimationFrame(() => {
-                    for (const card of cards) updateBizCardSkillsVisibility(card)
+                    for (const card of cards) {
+                        if (!card) continue
+                        omitSceneProjectLinksUnlessTheyFit(card)
+                        updateBizCardSkillsVisibility(card)
+                    }
                 })
                 console.log('[SkillCard] Created', Object.keys(skillCardIdsBySkillName).length, 'skill cards')
                 if (window.resumeFlyer?.allDivs) window.resumeFlyer.allDivs.skillCardDivs = [...skillCardsCreated]

@@ -782,13 +782,15 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     line-height: 1.2;
 }
 
-/* GitHub project / GitHub Pages. Shown on scene and resume cards when the projects page lists them. */
+/* GitHub project / GitHub Pages. Resume cards always show them (the row grows).
+   Scene cards keep this row only when it fits above the 20px crop; otherwise the row is removed. */
 .biz-card-div .biz-card-project-links,
 .biz-resume-div .biz-card-project-links,
 body .biz-resume-div .biz-card-project-links,
 #resume-container .biz-resume-div .biz-card-project-links,
 #resume-content-listing .biz-resume-div .biz-card-project-links {
     display: flex;
+    flex: 0 0 auto;
     flex-wrap: wrap;
     gap: 10px;
     margin: 0 0 6px 0;
