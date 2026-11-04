@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     appendedSkillDiv,
     createJobsDependencyStub,
@@ -26,6 +26,14 @@ vi.mock('../utils/selectionPersistence.mjs', () => ({
     persistSelectedCard: vi.fn(async () => {}),
     readPersistedSelectedCard: vi.fn(() => null),
 }));
+
+// SelectionManager schedules real 100ms and 1500ms page-load timers at import, and
+// ResumeListController schedules a 100ms console.log after every list build. If either
+// fires after this file's worker starts closing, Vitest still has an onUserConsoleLog
+// RPC in flight and fails the run with EnvironmentTeardownError even though every
+// assertion passed (CI run 41885424866). Hold those timers and drop them before
+// console spies are restored.
+vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
 
 const { resumeListController: rlc } = await import('./ResumeListController.mjs');
 const ResumeListController = rlc.constructor;
@@ -63,8 +71,13 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-    vi.restoreAllMocks();
     vi.clearAllTimers();
+    vi.restoreAllMocks();
+});
+
+afterAll(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
 });
 
 describe('ResumeListController', () => {
