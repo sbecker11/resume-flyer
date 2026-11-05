@@ -119,6 +119,34 @@ describe('ResumeItemsController', () => {
             expect(projectLinks.textContent).not.toMatch(/Project GitHub Pages URL/);
         });
 
+        it('renders the LinkedIn Project URL anchor alongside the GitHub ones', async () => {
+            const jobs = fixtureJobs();
+            jobs[0].projectGithubRepoUrl = 'https://github.com/acme/widget';
+            jobs[0].projectGithubPagesUrl = 'https://acme.github.io/widget';
+            jobs[0].linkedinProjectUrl = 'https://www.linkedin.com/in/acme-widget';
+            const divs = await buildDivs(jobs);
+            const projectLinks = divs[0].querySelector('.resume-project-links');
+            expect(projectLinks).not.toBeNull();
+            const anchors = Array.from(projectLinks.querySelectorAll('.resume-project-link-url'));
+            expect(anchors.map((a) => a.getAttribute('href'))).toEqual([
+                'https://github.com/acme/widget',
+                'https://acme.github.io/widget',
+                'https://www.linkedin.com/in/acme-widget',
+            ]);
+            expect(projectLinks.textContent).toMatch(/LinkedIn Project URL/);
+        });
+
+        it('renders a Project Links section for a job with only a LinkedIn Project URL', async () => {
+            const jobs = fixtureJobs();
+            jobs[1].linkedinProjectUrl = 'https://www.linkedin.com/in/beta-project';
+            const divs = await buildDivs(jobs);
+            const projectLinks = divs[1].querySelector('.resume-project-links');
+            expect(projectLinks).not.toBeNull();
+            expect(projectLinks.querySelectorAll('.resume-project-link-url')).toHaveLength(1);
+            expect(projectLinks.textContent).toMatch(/LinkedIn Project URL/);
+            expect(divs[0].querySelector('.resume-project-links')).toBeNull();
+        });
+
         it('uses the card color index when present and falls back to a synthetic card when missing', async () => {
             jobsDep.setJobs(fixtureJobs());
             const cards = mockBizCardDivs(3);

@@ -254,19 +254,21 @@ export function renderProjectLinkRowHtml({ label, url }) {
 }
 
 /**
- * "Project Links" rDiv section: Project GitHub Repo URL / Project GitHub Pages URL, each shown
- * only when the job has that field set. Returns '' (section omitted) when the job has neither.
- * Resume-only by design — `.biz-card-details-div > div:not(...)` in scene.css hides unlisted
- * card sections in the compact scene card, the same mechanism that already hides
- * `.resume-description` / `.resume-skills` there.
+ * "Project Links" rDiv section: Project GitHub Repo URL / Project GitHub Pages URL / LinkedIn
+ * Project URL, each shown only when the job has that field set. Returns '' (section omitted)
+ * when the job has none of the three. Resume-only by design —
+ * `.biz-card-details-div > div:not(...)` in scene.css hides unlisted card sections in the
+ * compact scene card, the same mechanism that already hides `.resume-description` /
+ * `.resume-skills` there.
  *
- * @param {{ projectGithubRepoUrl?: string, projectGithubPagesUrl?: string }} job
+ * @param {{ projectGithubRepoUrl?: string, projectGithubPagesUrl?: string, linkedinProjectUrl?: string }} job
  * @returns {string}
  */
-export function renderProjectLinksSectionHtml({ projectGithubRepoUrl, projectGithubPagesUrl } = {}) {
+export function renderProjectLinksSectionHtml({ projectGithubRepoUrl, projectGithubPagesUrl, linkedinProjectUrl } = {}) {
     const rows = [
         renderProjectLinkRowHtml({ label: 'Project GitHub Repo URL', url: projectGithubRepoUrl }),
         renderProjectLinkRowHtml({ label: 'Project GitHub Pages URL', url: projectGithubPagesUrl }),
+        renderProjectLinkRowHtml({ label: 'LinkedIn Project URL', url: linkedinProjectUrl }),
     ].filter(Boolean)
     if (rows.length === 0) return ''
     return `<div class="resume-project-links">

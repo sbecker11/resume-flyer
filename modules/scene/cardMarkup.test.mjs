@@ -136,19 +136,23 @@ describe('cardMarkup', () => {
         }
     })
 
-    it('renderProjectLinksSectionHtml renders both anchors with full URLs as link text when both fields are set', () => {
+    it('renderProjectLinksSectionHtml renders all three anchors with full URLs as link text when all fields are set', () => {
         const html = renderProjectLinksSectionHtml({
             projectGithubRepoUrl: 'https://github.com/acme/widget',
             projectGithubPagesUrl: 'https://acme.github.io/widget',
+            linkedinProjectUrl: 'https://www.linkedin.com/in/acme-widget',
         })
         expect(html).toContain('class="resume-project-links"')
         expect(html).toContain('Project Links')
         expect(html).toContain('Project GitHub Repo URL')
         expect(html).toContain('Project GitHub Pages URL')
+        expect(html).toContain('LinkedIn Project URL')
         expect(html).toContain('<a class="resume-project-link-url" href="https://github.com/acme/widget"')
         expect(html).toContain('>https://github.com/acme/widget</a>')
         expect(html).toContain('<a class="resume-project-link-url" href="https://acme.github.io/widget"')
         expect(html).toContain('>https://acme.github.io/widget</a>')
+        expect(html).toContain('<a class="resume-project-link-url" href="https://www.linkedin.com/in/acme-widget"')
+        expect(html).toContain('>https://www.linkedin.com/in/acme-widget</a>')
         expect(html).toContain('target="_blank"')
         expect(html).toContain('rel="noopener noreferrer"')
     })
@@ -157,16 +161,23 @@ describe('cardMarkup', () => {
         const repoOnly = renderProjectLinksSectionHtml({ projectGithubRepoUrl: 'https://github.com/acme/widget' })
         expect(repoOnly).toContain('Project GitHub Repo URL')
         expect(repoOnly).not.toContain('Project GitHub Pages URL')
+        expect(repoOnly).not.toContain('LinkedIn Project URL')
 
         const pagesOnly = renderProjectLinksSectionHtml({ projectGithubPagesUrl: 'https://acme.github.io/widget' })
         expect(pagesOnly).toContain('Project GitHub Pages URL')
         expect(pagesOnly).not.toContain('Project GitHub Repo URL')
+        expect(pagesOnly).not.toContain('LinkedIn Project URL')
+
+        const linkedinOnly = renderProjectLinksSectionHtml({ linkedinProjectUrl: 'https://www.linkedin.com/in/acme-widget' })
+        expect(linkedinOnly).toContain('LinkedIn Project URL')
+        expect(linkedinOnly).not.toContain('Project GitHub Repo URL')
+        expect(linkedinOnly).not.toContain('Project GitHub Pages URL')
     })
 
-    it('renderProjectLinksSectionHtml omits the whole section when neither field is set', () => {
+    it('renderProjectLinksSectionHtml omits the whole section when none of the three fields is set', () => {
         expect(renderProjectLinksSectionHtml({})).toBe('')
         expect(renderProjectLinksSectionHtml(undefined)).toBe('')
-        expect(renderProjectLinksSectionHtml({ projectGithubRepoUrl: '  ' })).toBe('')
+        expect(renderProjectLinksSectionHtml({ projectGithubRepoUrl: '  ', linkedinProjectUrl: '  ' })).toBe('')
     })
 
     it('renderProjectLinksSectionHtml escapes URLs used as both href and link text', () => {

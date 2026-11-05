@@ -181,6 +181,19 @@
               @blur="onJobFieldBlur"
             />
           </div>
+          <div class="rde-field">
+            <label class="rde-label" for="rde-jobs-linkedin-project-url">LinkedIn Project URL</label>
+            <input
+              id="rde-jobs-linkedin-project-url"
+              name="linkedinProjectUrl"
+              v-model="local.linkedinProjectUrl"
+              type="url"
+              class="rde-input"
+              placeholder="https://www.linkedin.com/..."
+              :disabled="!canEdit"
+              @blur="onJobFieldBlur"
+            />
+          </div>
         </section>
       </template>
       <section v-if="jobsLoaded" class="rde-section rde-job-actions">
@@ -312,6 +325,7 @@ const local = ref({
   Description: '',
   projectGithubRepoUrl: '',
   projectGithubPagesUrl: '',
+  linkedinProjectUrl: '',
 });
 const deleteConfirmOpen = ref(false);
 const deleteConfirmLabel = ref('');
@@ -572,6 +586,7 @@ watch(jobIndexLocal, () => {
     Description: job.Description ?? job.description ?? '',
     projectGithubRepoUrl: job.projectGithubRepoUrl ?? '',
     projectGithubPagesUrl: job.projectGithubPagesUrl ?? '',
+    linkedinProjectUrl: job.linkedinProjectUrl ?? '',
   };
 }, { immediate: true });
 
@@ -609,6 +624,7 @@ async function saveCurrentJob() {
     Description: local.value.Description,
     projectGithubRepoUrl: local.value.projectGithubRepoUrl,
     projectGithubPagesUrl: local.value.projectGithubPagesUrl,
+    linkedinProjectUrl: local.value.linkedinProjectUrl,
   };
   jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
   if (!canPersistToServer) {
@@ -626,6 +642,7 @@ async function saveCurrentJob() {
     if (local.value.Description) patch.Description = local.value.Description;
     if (local.value.projectGithubRepoUrl) patch.projectGithubRepoUrl = local.value.projectGithubRepoUrl;
     if (local.value.projectGithubPagesUrl) patch.projectGithubPagesUrl = local.value.projectGithubPagesUrl;
+    if (local.value.linkedinProjectUrl) patch.linkedinProjectUrl = local.value.linkedinProjectUrl;
     if (Object.keys(patch).length === 0) return true;
     await api.updateJob(props.resumeId, idx, patch);
     emit('saved', jobFieldsSaved());

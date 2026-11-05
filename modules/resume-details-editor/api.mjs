@@ -308,7 +308,7 @@ export async function getResumeData(resumeId) {
 /**
  * @param {string} resumeId
  * @param {number} jobIndex - 0-based
- * @param {{ label?: string, role?: string, employer?: string, start?: string, end?: string, Description?: string, projectGithubRepoUrl?: string, projectGithubPagesUrl?: string }} updates
+ * @param {{ label?: string, role?: string, employer?: string, start?: string, end?: string, Description?: string, projectGithubRepoUrl?: string, projectGithubPagesUrl?: string, linkedinProjectUrl?: string }} updates
  * @returns {Promise<{ ok: boolean, job: object }>}
  */
 export async function updateJob(resumeId, jobIndex, updates) {

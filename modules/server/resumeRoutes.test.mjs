@@ -645,6 +645,20 @@ describe('PATCH /api/resumes/:id/jobs/:jobIndex (fields)', () => {
         await waitForBake();
         await expectConsistent();
     });
+
+    it('updates linkedinProjectUrl and persists it to jobs.json', async () => {
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/jobs/0`)
+            .send({ linkedinProjectUrl: 'https://www.linkedin.com/in/acme-widget' });
+        expect(res.status).toBe(200);
+        expect(res.body.job).toMatchObject({
+            linkedinProjectUrl: 'https://www.linkedin.com/in/acme-widget',
+        });
+        const jobs = await readJson('jobs.json');
+        expect(jobs[0].linkedinProjectUrl).toBe('https://www.linkedin.com/in/acme-widget');
+        await waitForBake();
+        await expectConsistent();
+    });
 });
 
 describe('PATCH /api/resumes/:id/education/:educationKey/skills', () => {

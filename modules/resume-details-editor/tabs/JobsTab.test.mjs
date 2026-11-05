@@ -18,6 +18,7 @@ const sampleJobs = () => [
     {
         employer: 'Acme', role: 'Engineer', start: '2020-01', end: '2021-06-15', Description: '• Built things',
         projectGithubRepoUrl: 'https://github.com/acme/widget', projectGithubPagesUrl: 'https://acme.github.io/widget',
+        linkedinProjectUrl: 'https://www.linkedin.com/in/acme-widget',
     },
     { employer: 'Beta', role: 'Lead', start: '2022-03', end: 'Present', Description: '' },
     { employer: 'MIT', title: 'PhD', educationKey: 'mit-phd', start: '1990', end: '1995' },
@@ -83,6 +84,7 @@ describe('JobsTab.vue', () => {
         expect(w.get('#rde-jobs-description').element.value).toBe('• Built things');
         expect(w.get('#rde-jobs-project-github-repo-url').element.value).toBe('https://github.com/acme/widget');
         expect(w.get('#rde-jobs-project-github-pages-url').element.value).toBe('https://acme.github.io/widget');
+        expect(w.get('#rde-jobs-linkedin-project-url').element.value).toBe('https://www.linkedin.com/in/acme-widget');
         expect(w.get('.rde-btn-nav[aria-label="Previous job"]').attributes('disabled')).toBeDefined();
         expect(w.get('.rde-btn-nav[aria-label="Next job"]').attributes('disabled')).toBeUndefined();
     });
@@ -113,6 +115,7 @@ describe('JobsTab.vue', () => {
         expect(api.updateJob).toHaveBeenCalledWith('r1', 0, expect.objectContaining({
             employer: 'Acme Corp', role: 'Engineer', start: '2020-03', end: '2021-06-15', Description: '• Built things',
             projectGithubRepoUrl: 'https://github.com/acme/widget', projectGithubPagesUrl: 'https://acme.github.io/widget',
+            linkedinProjectUrl: 'https://www.linkedin.com/in/acme-widget',
         }));
         expect(w.emitted('saved')).toEqual([[{ jobFieldsSaved: true }]]);
         // The dropdown label reflects the in-memory update.
@@ -128,6 +131,17 @@ describe('JobsTab.vue', () => {
         expect(api.updateJob).toHaveBeenCalledWith('r1', 0, expect.objectContaining({
             projectGithubRepoUrl: 'https://github.com/acme/widget2',
             projectGithubPagesUrl: 'https://acme.github.io/widget2',
+        }));
+        expect(w.emitted('saved')).toEqual([[{ jobFieldsSaved: true }]]);
+    });
+
+    it('edits and autosaves the LinkedIn project URL field', async () => {
+        const w = await mountLoaded();
+        await w.get('#rde-jobs-linkedin-project-url').setValue('https://www.linkedin.com/in/acme-widget2');
+        await w.get('#rde-jobs-linkedin-project-url').trigger('blur');
+        await flushPromises();
+        expect(api.updateJob).toHaveBeenCalledWith('r1', 0, expect.objectContaining({
+            linkedinProjectUrl: 'https://www.linkedin.com/in/acme-widget2',
         }));
         expect(w.emitted('saved')).toEqual([[{ jobFieldsSaved: true }]]);
     });
