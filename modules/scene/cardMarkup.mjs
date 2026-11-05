@@ -9,6 +9,7 @@
  */
 
 import { skillLabelHtml, skillLabelText, skillYearsExperienceHtml, canonicalSkillKey } from '@/modules/utils/skillLabel.mjs'
+import { projectUrlsFromText, resolveProjectUrls } from '@/modules/data/projectUrls.mjs'
 
 export function escapeHtml(text) {
     return String(text)
@@ -17,6 +18,49 @@ export function escapeHtml(text) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;')
+}
+
+const GITHUB_REPO_PAREN_RE = /\s*\((?:https?:\/\/)?(?:www\.)?github\.com\/[\w.-]+\/[\w.-]+\/?\)/gi
+const GITHUB_PAGES_PAREN_RE = /\s*\((?:https?:\/\/)?[\w.-]+\.github\.io\/[\w.-]+\/?\)/gi
+
+/**
+ * GitHub repo and GitHub Pages links written into a job description or HTML.
+ * Parenthetical forms such as `(github.com/owner/repo)` are the résumé source shape.
+ * @param {string} description
+ * @returns {{ kind: 'github'|'github-pages', label: string, href: string }[]}
+ */
+export function extractProjectUrlAnchors(description) {
+    const urls = projectUrlsFromText(description)
+    const anchors = []
+    if (urls.githubRepoUrl) anchors.push({ kind: 'github', label: 'GitHub', href: urls.githubRepoUrl })
+    if (urls.githubPagesUrl) anchors.push({ kind: 'github-pages', label: 'GitHub Pages', href: urls.githubPagesUrl })
+    return anchors
+}
+
+/** Drop parenthetical project URLs so the achievement text does not repeat the header anchors. */
+export function stripProjectUrlParentheticals(description) {
+    return String(description || '')
+        .replace(GITHUB_REPO_PAREN_RE, '')
+        .replace(GITHUB_PAGES_PAREN_RE, '')
+}
+
+/**
+ * One paragraph per defined project URL. The anchor text is the URL the user entered.
+ * A string description does not define either property, so it renders nothing.
+ * @param {string|object} descriptionOrJob
+ */
+export function renderProjectUrlAnchorsHtml(descriptionOrJob) {
+    const urls = descriptionOrJob != null && typeof descriptionOrJob === 'object'
+        ? resolveProjectUrls(descriptionOrJob)
+        : { githubRepoUrl: '', githubPagesUrl: '' }
+    const rows = []
+    if (urls.githubRepoUrl) rows.push({ kind: 'github', label: urls.githubRepoUrl, href: urls.githubRepoUrl })
+    if (urls.githubPagesUrl) rows.push({ kind: 'github-pages', label: urls.githubPagesUrl, href: urls.githubPagesUrl })
+    if (!rows.length) return ''
+    const paragraphs = rows.map((row) =>
+        `<p class="project-url-row"><a class="project-url-anchor" data-anchor-kind="${escapeHtml(row.kind)}" href="${escapeHtml(row.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.label)}</a></p>`
+    ).join('')
+    return `<div class="project-url-anchors">${paragraphs}</div>`
 }
 
 /**
@@ -211,12 +255,16 @@ export function renderBizCardSceneBodyHtml({
     jobNumber = 0,
     sceneZ = 0,
     hasSkills = false,
+    description = '',
+    githubRepoUrl = '',
+    githubPagesUrl = '',
 }) {
     return `
             <div class="biz-details-employer-wrap">
                 <div class="biz-details-employer">${escapeHtml(employer)}</div>
                 <button type="button" class="biz-details-edit-btn" aria-label="Edit employer">&#9998;</button>
             </div>
+            ${renderProjectUrlAnchorsHtml({ Description: description, githubRepoUrl, githubPagesUrl })}
             <div class="biz-details-role">${escapeHtml(role)}</div>
             ${datesDisplay ? `<div class="biz-details-dates">${escapeHtml(datesDisplay)}</div>` : ''}
             <div class="biz-details-debug-row"><span class="biz-details-id-and-hex">#${escapeHtml(String(jobNumber))} z:${escapeHtml(String(sceneZ))} <span class="hex-normal"></span> <span class="hex-highlighted"></span></span></div>

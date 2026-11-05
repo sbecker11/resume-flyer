@@ -107,10 +107,43 @@ describe('JobsTab.vue', () => {
         expect(w.get('#rde-jobs-start-mm').element.value).toBe('03');
         expect(api.updateJob).toHaveBeenCalledWith('r1', 0, expect.objectContaining({
             employer: 'Acme Corp', role: 'Engineer', start: '2020-03', end: '2021-06-15', Description: '• Built things',
+            githubRepoUrl: '', githubPagesUrl: '',
         }));
         expect(w.emitted('saved')).toEqual([[{ jobFieldsSaved: true }]]);
         // The dropdown label reflects the in-memory update.
         expect(optionLabels(w)[0]).toBe('Acme Corp -- Engineer');
+    });
+
+    it('loads, edits, and saves github repo URL and github page URL', async () => {
+        api.getResumeData.mockImplementation(async () => ({
+            jobs: [{
+                ...sampleJobs()[0],
+                githubRepoUrl: 'https://github.com/sbecker11/color-palette-maker',
+                githubPagesUrl: '',
+            }],
+        }));
+        const w = await mountLoaded();
+        const repo = w.get('#rde-jobs-github-repo-url');
+        const page = w.get('#rde-jobs-github-page-url');
+        expect(repo.element.value).toBe('https://github.com/sbecker11/color-palette-maker');
+        expect(page.element.value).toBe('');
+        expect(w.get('label[for="rde-jobs-github-repo-url"]').text()).toBe('github repo URL');
+        expect(w.get('label[for="rde-jobs-github-page-url"]').text()).toBe('github page URL');
+        await page.setValue('sbecker11.github.io/color-palette-maker/');
+        await page.trigger('blur');
+        await flushPromises();
+        expect(page.element.value).toBe('https://sbecker11.github.io/color-palette-maker/');
+        expect(api.updateJob).toHaveBeenCalledWith('r1', 0, expect.objectContaining({
+            githubRepoUrl: 'https://github.com/sbecker11/color-palette-maker',
+            githubPagesUrl: 'https://sbecker11.github.io/color-palette-maker/',
+        }));
+        await repo.setValue('');
+        await repo.trigger('blur');
+        await flushPromises();
+        expect(api.updateJob).toHaveBeenLastCalledWith('r1', 0, expect.objectContaining({
+            githubRepoUrl: '',
+            githubPagesUrl: 'https://sbecker11.github.io/color-palette-maker/',
+        }));
     });
 
     it('rejects an invalid start month with an alert, clears it, and does not save', async () => {

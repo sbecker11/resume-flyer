@@ -624,6 +624,31 @@ describe('PATCH /api/resumes/:id/jobs/:jobIndex (fields)', () => {
         expect(await readText('jobs.json')).toBe(before);
     });
 
+    it('stores github repo URL and github page URL, and clears them when blank', async () => {
+        const repo = 'https://github.com/sbecker11/color-palette-maker';
+        const page = 'https://sbecker11.github.io/color-palette-maker/';
+        const set = await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/2`).send({
+            githubRepoUrl: ` ${repo} `,
+            githubPagesUrl: page,
+        });
+        expect(set.status).toBe(200);
+        expect(set.body.job.githubRepoUrl).toBe(repo);
+        expect(set.body.job.githubPagesUrl).toBe(page);
+        const jobs = await readJson('jobs.json');
+        expect(jobs[2].githubRepoUrl).toBe(repo);
+        expect(jobs[2].githubPagesUrl).toBe(page);
+        const clear = await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/2`).send({
+            githubRepoUrl: '',
+            githubPagesUrl: '  ',
+        });
+        expect(clear.status).toBe(200);
+        expect(clear.body.job.githubRepoUrl).toBeUndefined();
+        expect(clear.body.job.githubPagesUrl).toBeUndefined();
+        const after = await readJson('jobs.json');
+        expect(after[2].githubRepoUrl).toBeUndefined();
+        expect(after[2].githubPagesUrl).toBeUndefined();
+    });
+
     it('validates input and the job index', async () => {
         expect((await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/2`).send({ nothing: 1 })).status).toBe(400);
         expect((await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/9`).send({ role: 'x' })).status).toBe(404);

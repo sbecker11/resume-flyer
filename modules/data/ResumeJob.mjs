@@ -40,6 +40,18 @@ export class ResumeJob {
   'job-skills' = {};
 
   /**
+   * github repo URL. Set on the resume-jobs tab. Absent when the user has not defined one.
+   * @type {string|undefined}
+   */
+  githubRepoUrl = undefined;
+
+  /**
+   * github page URL. Set on the resume-jobs tab. Absent when the user has not defined one.
+   * @type {string|undefined}
+   */
+  githubPagesUrl = undefined;
+
+  /**
    * Dotted numeric path for sort/nesting only (never shown on cards/listing).
    * @type {string}
    */
@@ -81,6 +93,13 @@ export class ResumeJob {
     if (init && typeof init.description === 'string' && !this.Description) this.Description = init.description;
     this.outlineIndex = this.outlineIndex != null ? String(this.outlineIndex).trim() : '';
     this.outlineKind = this.outlineKind === 'section' ? 'section' : 'job';
+
+    const githubRepoUrl = String(this.githubRepoUrl || '').trim();
+    const githubPagesUrl = String(this.githubPagesUrl || '').trim();
+    if (githubRepoUrl) this.githubRepoUrl = githubRepoUrl;
+    else delete this.githubRepoUrl;
+    if (githubPagesUrl) this.githubPagesUrl = githubPagesUrl;
+    else delete this.githubPagesUrl;
   }
 
   get isEducationDerived() {
@@ -128,6 +147,8 @@ export class ResumeJob {
     };
     if (this.outlineIndex) o.outlineIndex = this.outlineIndex;
     if (this.outlineKind === 'section') o.outlineKind = 'section';
+    if (this.githubRepoUrl) o.githubRepoUrl = this.githubRepoUrl;
+    if (this.githubPagesUrl) o.githubPagesUrl = this.githubPagesUrl;
     return o;
   }
 }

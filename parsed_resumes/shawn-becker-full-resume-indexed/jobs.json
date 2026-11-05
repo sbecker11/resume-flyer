@@ -41,7 +41,7 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "Description": "\u2022 [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance.",
+    "Description": "\u2022 [React] app generating color palettes via [K-means] clustering with [CIEDE2000] perceptual color distance. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)",
     "outlineIndex": "1.1.2",
     "skillIDs": [
       "react",
@@ -59,7 +59,9 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "3"
+    "jobID": "3",
+    "githubRepoUrl": "https://github.com/sbecker11/color-palette-maker",
+    "githubPagesUrl": "https://sbecker11.github.io/color-palette-maker/"
   },
   {
     "index": 4,

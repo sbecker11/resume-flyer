@@ -10,7 +10,7 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf, isOutlineSectionJob } from '../data/ResumeJob.mjs';
 import { displayJobHeading, outlineNestDepth } from '../utils/outlineIndex.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
-import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml } from '../scene/cardMarkup.mjs';
+import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml, renderProjectUrlAnchorsHtml, stripProjectUrlParentheticals } from '../scene/cardMarkup.mjs';
 import { tryParseFlexibleDateString, formatCardDatesDisplay, stripUnknownDatesFromTitle } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '../utils/skillInfoModal.mjs';
@@ -363,6 +363,14 @@ class ResumeItemsController {
             headerDiv.appendChild(datesDiv);
         }
 
+        const projectAnchorsHtml = renderProjectUrlAnchorsHtml(jobData);
+        if (projectAnchorsHtml) {
+            const anchorsHost = document.createElement('div');
+            anchorsHost.innerHTML = projectAnchorsHtml;
+            const anchorsEl = anchorsHost.firstElementChild;
+            if (anchorsEl) headerDiv.appendChild(anchorsEl);
+        }
+
         const debugRow = document.createElement('div');
         debugRow.className = 'biz-details-debug-row';
         const idAndHexSpan = document.createElement('span');
@@ -481,6 +489,7 @@ class ResumeItemsController {
      */
     parseDescriptionToBullets(description, container, options = {}) {
         if (!description) return new Set();
+        description = stripProjectUrlParentheticals(description);
         const requireResolvedSkills = options.requireResolvedSkills !== false;
 
         const escapeHtml = (str) => String(str)
@@ -550,6 +559,50 @@ class ResumeItemsController {
         // links in descriptions to render with missing display names or wrong
         // exclusion sets. This one-time refresh corrects them.
         window.addEventListener('skills-data-ready', () => this.refreshAllDescriptions(), { once: true });
+        window.addEventListener('job-project-urls-updated', (e) => {
+            const { jobIndex } = e.detail || {};
+            if (jobIndex != null) this.refreshProjectUrlAnchors(jobIndex);
+        });
+    }
+
+    /**
+     * Replace the resume-card (and scene-card) project URL rows for one job
+     * from the live job's githubRepoUrl and githubPagesUrl.
+     * @param {number|string} jobIndex
+     */
+    refreshProjectUrlAnchors(jobIndex) {
+        const jobs = getGlobalJobsDependency().getJobsData();
+        const job = Array.isArray(jobs) ? jobs[jobIndex] : null;
+        const html = job ? renderProjectUrlAnchorsHtml(job) : '';
+        const key = String(jobIndex);
+        document.querySelectorAll(`.biz-resume-div[data-job-number="${key}"]`).forEach((card) => {
+            const header = card.querySelector('.resume-header');
+            if (!header) return;
+            this._setProjectUrlAnchors(header, html, header.querySelector('.biz-details-dates'));
+        });
+        document.querySelectorAll(`.biz-card-div[data-job-number="${key}"]`).forEach((card) => {
+            this._setProjectUrlAnchors(card, html, card.querySelector('.biz-details-employer-wrap'));
+        });
+    }
+
+    /**
+     * @param {Element} root
+     * @param {string} html
+     * @param {Element|null} afterEl
+     */
+    _setProjectUrlAnchors(root, html, afterEl) {
+        const existing = root.querySelector(':scope > .project-url-anchors');
+        if (!html) {
+            existing?.remove();
+            return;
+        }
+        const host = document.createElement('div');
+        host.innerHTML = html.trim();
+        const next = host.firstElementChild;
+        if (!next) return;
+        if (existing) existing.replaceWith(next);
+        else if (afterEl) afterEl.after(next);
+        else root.appendChild(next);
     }
 
     /** Rebuild the description-content of every existing rDiv using the now-loaded skills data. */
@@ -767,6 +820,10 @@ class ResumeItemsController {
 
     handleBizResumeDivClickEvent(bizResumeDiv, event) {
         if (!bizResumeDiv) return;
+        if (event?.target?.closest?.('a.project-url-anchor')) {
+            event.stopPropagation?.();
+            return;
+        }
 
         // Check if click was on a skill title link
         const skillTitleEl = event?.target?.closest('.biz-card-skill-title');
