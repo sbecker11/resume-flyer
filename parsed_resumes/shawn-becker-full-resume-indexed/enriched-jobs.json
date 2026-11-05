@@ -109,7 +109,9 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "3"
+    "jobID": "3",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/color-palette-maker",
+    "projectGithubPagesUrl": "https://sbecker11.github.io/color-palette-maker/"
   },
   {
     "employer": "resume-flyer",
