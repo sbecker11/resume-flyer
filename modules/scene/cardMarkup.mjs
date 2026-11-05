@@ -234,6 +234,50 @@ export function renderBizCardSceneBodyHtml({
 }
 
 /**
+ * Anchor showing the full URL as its own link text (opens in a new tab).
+ * @param {string} url
+ */
+export function renderProjectLinkUrlAnchorHtml(url) {
+    const href = String(url || '').trim()
+    if (!href) return ''
+    return `<a class="resume-project-link-url" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(href)}</a>`
+}
+
+/**
+ * One labeled project-link row ("<label>: <full URL as link text>"). Empty string when url is blank.
+ * @param {{ label: string, url: string }} opts
+ */
+export function renderProjectLinkRowHtml({ label, url }) {
+    const linkHtml = renderProjectLinkUrlAnchorHtml(url)
+    if (!linkHtml) return ''
+    return `<div class="resume-project-link-row"><span class="resume-project-link-label">${escapeHtml(label)}:</span> ${linkHtml}</div>`
+}
+
+/**
+ * "Project Links" rDiv section: Project GitHub Repo URL / Project GitHub Pages URL, each shown
+ * only when the job has that field set. Returns '' (section omitted) when the job has neither.
+ * Resume-only by design — `.biz-card-details-div > div:not(...)` in scene.css hides unlisted
+ * card sections in the compact scene card, the same mechanism that already hides
+ * `.resume-description` / `.resume-skills` there.
+ *
+ * @param {{ projectGithubRepoUrl?: string, projectGithubPagesUrl?: string }} job
+ * @returns {string}
+ */
+export function renderProjectLinksSectionHtml({ projectGithubRepoUrl, projectGithubPagesUrl } = {}) {
+    const rows = [
+        renderProjectLinkRowHtml({ label: 'Project GitHub Repo URL', url: projectGithubRepoUrl }),
+        renderProjectLinkRowHtml({ label: 'Project GitHub Pages URL', url: projectGithubPagesUrl }),
+    ].filter(Boolean)
+    if (rows.length === 0) return ''
+    return `<div class="resume-project-links">
+                <div class="resume-section-title-wrap">
+                    <h4>Project Links</h4>
+                </div>
+                <div class="project-links-content">${rows.join('')}</div>
+            </div>`
+}
+
+/**
  * Minimal resume biz header fixture (shared field classes for parity tests / future consolidation).
  */
 export function renderBizResumeHeaderHtml({
