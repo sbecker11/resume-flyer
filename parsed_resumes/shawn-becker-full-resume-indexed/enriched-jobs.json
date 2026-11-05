@@ -171,7 +171,8 @@
     "text color": "#FFFFFF",
     "jobID": "4",
     "projectGithubRepoUrl": "https://github.com/sbecker11/resume-flyer",
-    "projectGithubPagesUrl": "https://sbecker11.github.io/resume-flyer/"
+    "projectGithubPagesUrl": "https://sbecker11.github.io/resume-flyer/",
+    "linkedinProjectUrl": "https://www.linkedin.com/posts/shawnbecker_resume-flyer-a-dynamic-25d-data-visualization-activity-7218416775791542272-3v5M"
   },
   {
     "employer": "sushi-rag-mcp-server",
@@ -486,7 +487,8 @@
     "text color": "#000000",
     "jobID": "9",
     "projectGithubRepoUrl": "https://github.com/sbecker11/linkage-engine",
-    "projectGithubPagesUrl": "https://sbecker11.github.io/linkage-engine/"
+    "projectGithubPagesUrl": "https://sbecker11.github.io/linkage-engine/",
+    "linkedinProjectUrl": "https://www.linkedin.com/feed/update/urn:li:activity:7522122514689626112/"
   },
   {
     "employer": "healthcare-agentic-snowflake-rag",
@@ -551,7 +553,8 @@
     "css color": null,
     "text color": "#FFFFFF",
     "jobID": "10",
-    "projectGithubRepoUrl": "https://github.com/sbecker11/healthcare-agentic-snowflake-rag"
+    "projectGithubRepoUrl": "https://github.com/sbecker11/healthcare-agentic-snowflake-rag",
+    "linkedinProjectUrl": "https://www.linkedin.com/feed/update/urn:li:activity:7473964786880270336/"
   },
   {
     "employer": "recruiting-automation",
