@@ -34,10 +34,12 @@ describe('ResumeJob', () => {
     expect(j.start).toBe('2020-01');
   });
 
-  it('stores optional GitHub repo and GitHub Pages URLs from the description', () => {
+  it('stores github repo URL and github page URL only when those properties are set', () => {
     const j = new ResumeJob({
       employer: 'color-palette-maker',
       Description: '• React app. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)',
+      githubRepoUrl: ' https://github.com/sbecker11/color-palette-maker ',
+      githubPagesUrl: 'https://sbecker11.github.io/color-palette-maker/',
     });
     expect(j.githubRepoUrl).toBe('https://github.com/sbecker11/color-palette-maker');
     expect(j.githubPagesUrl).toBe('https://sbecker11.github.io/color-palette-maker/');
@@ -45,8 +47,11 @@ describe('ResumeJob', () => {
     expect(j.toPlainObject().githubPagesUrl).toBe(j.githubPagesUrl);
   });
 
-  it('leaves both project URLs unset when the job has neither', () => {
-    const j = new ResumeJob({ employer: 'Acme', Description: 'Shipped a service.' });
+  it('leaves both project URLs unset when the user has not defined them', () => {
+    const j = new ResumeJob({
+      employer: 'Acme',
+      Description: 'Shipped a service. (github.com/sbecker11/color-palette-maker)',
+    });
     expect(j.githubRepoUrl).toBeUndefined();
     expect(j.githubPagesUrl).toBeUndefined();
     expect(j.toPlainObject().githubRepoUrl).toBeUndefined();

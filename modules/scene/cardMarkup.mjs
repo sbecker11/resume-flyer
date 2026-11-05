@@ -45,17 +45,17 @@ export function stripProjectUrlParentheticals(description) {
 }
 
 /**
- * One paragraph per defined project URL. The anchor text is the label (GitHub, GitHub Pages).
- * Accepts a description string or a job object with optional githubRepoUrl / githubPagesUrl.
+ * One paragraph per defined project URL. The anchor text is the URL the user entered.
+ * A string description does not define either property, so it renders nothing.
  * @param {string|object} descriptionOrJob
  */
 export function renderProjectUrlAnchorsHtml(descriptionOrJob) {
     const urls = descriptionOrJob != null && typeof descriptionOrJob === 'object'
         ? resolveProjectUrls(descriptionOrJob)
-        : projectUrlsFromText(descriptionOrJob)
+        : { githubRepoUrl: '', githubPagesUrl: '' }
     const rows = []
-    if (urls.githubRepoUrl) rows.push({ kind: 'github', label: 'GitHub', href: urls.githubRepoUrl })
-    if (urls.githubPagesUrl) rows.push({ kind: 'github-pages', label: 'GitHub Pages', href: urls.githubPagesUrl })
+    if (urls.githubRepoUrl) rows.push({ kind: 'github', label: urls.githubRepoUrl, href: urls.githubRepoUrl })
+    if (urls.githubPagesUrl) rows.push({ kind: 'github-pages', label: urls.githubPagesUrl, href: urls.githubPagesUrl })
     if (!rows.length) return ''
     const paragraphs = rows.map((row) =>
         `<p class="project-url-row"><a class="project-url-anchor" data-anchor-kind="${escapeHtml(row.kind)}" href="${escapeHtml(row.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(row.label)}</a></p>`

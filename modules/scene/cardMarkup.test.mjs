@@ -9,6 +9,7 @@ import {
     renderBizCardSceneBodyHtml,
     renderBizResumeHeaderHtml,
     extractProjectUrlAnchors,
+    renderProjectUrlAnchorsHtml,
     orderedBizCardSkillEntries,
     renderBizCardSkillTitleSpansHtml,
 } from './cardMarkup.mjs'
@@ -119,24 +120,32 @@ describe('cardMarkup', () => {
         expect(html).not.toMatch(/skill-card-name-row[\s\S]*skill-url-edit-btn[\s\S]*skill-card-info-url/)
     })
 
-    it('renders GitHub and GitHub Pages anchors from a project description', () => {
+    it('renders a row for each defined project URL and ignores description text', () => {
         const description = '• [React] app. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)'
         expect(extractProjectUrlAnchors(description)).toEqual([
             { kind: 'github', label: 'GitHub', href: 'https://github.com/sbecker11/color-palette-maker' },
             { kind: 'github-pages', label: 'GitHub Pages', href: 'https://sbecker11.github.io/color-palette-maker/' },
         ])
+        const repo = 'https://github.com/sbecker11/color-palette-maker'
+        const page = 'https://sbecker11.github.io/color-palette-maker/'
         const html = renderBizCardSceneBodyHtml({
             employer: 'color-palette-maker',
             role: 'Portfolio Project: color-palette-maker',
             datesDisplay: 'Apr 2025 - May 2026',
             description,
+            githubRepoUrl: repo,
+            githubPagesUrl: page,
         })
-        expect(html).toContain('href="https://github.com/sbecker11/color-palette-maker"')
-        expect(html).toContain('href="https://sbecker11.github.io/color-palette-maker/"')
-        expect(html).toContain('<p class="project-url-row"><a class="project-url-anchor" data-anchor-kind="github"')
-        expect(html).toContain('>GitHub</a></p>')
-        expect(html).toContain('<p class="project-url-row"><a class="project-url-anchor" data-anchor-kind="github-pages"')
-        expect(html).toContain('>GitHub Pages</a></p>')
+        expect(html).toContain(`href="${repo}"`)
+        expect(html).toContain(`href="${page}"`)
+        expect(html).toContain(`>${repo}</a></p>`)
+        expect(html).toContain(`>${page}</a></p>`)
+        expect(renderBizCardSceneBodyHtml({
+            employer: 'color-palette-maker',
+            description,
+        })).not.toContain('project-url-anchor')
+        expect(renderProjectUrlAnchorsHtml({ githubRepoUrl: repo })).toContain(`>${repo}</a>`)
+        expect(renderProjectUrlAnchorsHtml({ githubRepoUrl: repo })).not.toContain('github-pages')
         expect(renderBizCardSceneBodyHtml({ employer: 'Acme' })).not.toContain('project-url-anchor')
     })
 

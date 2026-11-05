@@ -148,28 +148,69 @@ describe('ResumeItemsController', () => {
             expect(ric.parseDescriptionToBullets('', container).size).toBe(0);
         });
 
-        it('shows a labeled GitHub row and a labeled GitHub Pages row, and keeps the URLs out of the achievement text', () => {
+        it('shows each defined project URL on its own row and keeps those URLs out of the achievement text', () => {
+            const repo = 'https://github.com/sbecker11/color-palette-maker';
+            const page = 'https://sbecker11.github.io/color-palette-maker/';
             jobsDep.setJobs([{
                 employer: 'color-palette-maker',
                 role: 'Portfolio Project: color-palette-maker',
                 start: '04/2025',
                 end: '05/2026',
                 Description: '• React app generating color palettes. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)',
+                githubRepoUrl: repo,
+                githubPagesUrl: page,
                 skillIDs: [],
             }]);
             const el = ric.createEnhancedResumeDetailsDiv(0);
             const links = [...el.querySelectorAll('a.project-url-anchor')];
-            expect(links.map((a) => a.textContent)).toEqual(['GitHub', 'GitHub Pages']);
+            expect(links.map((a) => a.textContent)).toEqual([repo, page]);
             expect(links[0].parentElement.tagName).toBe('P');
             expect(links[1].parentElement.tagName).toBe('P');
             expect(links[0].parentElement).not.toBe(links[1].parentElement);
-            expect(links[0].getAttribute('href')).toBe('https://github.com/sbecker11/color-palette-maker');
-            expect(links[1].getAttribute('href')).toBe('https://sbecker11.github.io/color-palette-maker/');
+            expect(links[0].getAttribute('href')).toBe(repo);
+            expect(links[1].getAttribute('href')).toBe(page);
             expect(el.querySelector('.description-content').textContent).not.toMatch(/github/);
             const event = { target: links[0], stopPropagation: () => {} };
             selectionManager.selectedJobNumber = 0;
             ric.handleBizResumeDivClickEvent(el, event);
             expect(selectionManager.selectedJobNumber).toBe(0);
+        });
+
+        it('omits a project URL row when that property is not defined', () => {
+            jobsDep.setJobs([{
+                employer: 'color-palette-maker',
+                role: 'Portfolio Project: color-palette-maker',
+                start: '04/2025',
+                end: '05/2026',
+                Description: '• React app. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)',
+                skillIDs: [],
+            }]);
+            const el = ric.createEnhancedResumeDetailsDiv(0);
+            expect(el.querySelector('a.project-url-anchor')).toBeNull();
+        });
+
+        it('refreshes the resume card when the job project URLs change', () => {
+            const job = {
+                employer: 'color-palette-maker',
+                role: 'Portfolio Project: color-palette-maker',
+                start: '04/2025',
+                end: '05/2026',
+                Description: '• React app.',
+                skillIDs: [],
+            };
+            jobsDep.setJobs([job]);
+            const card = document.createElement('div');
+            card.className = 'biz-resume-div';
+            card.setAttribute('data-job-number', '0');
+            card.appendChild(ric.createEnhancedResumeDetailsDiv(0));
+            document.body.appendChild(card);
+            expect(card.querySelector('a.project-url-anchor')).toBeNull();
+            const page = 'https://sbecker11.github.io/color-palette-maker/';
+            job.githubPagesUrl = page;
+            window.dispatchEvent(new CustomEvent('job-project-urls-updated', { detail: { jobIndex: 0 } }));
+            const links = [...card.querySelectorAll('a.project-url-anchor')];
+            expect(links.map((a) => a.textContent)).toEqual([page]);
+            expect(links[0].closest('.resume-header')).toBeTruthy();
         });
 
         it('leaves unresolved brackets as text when resolution is optional', () => {

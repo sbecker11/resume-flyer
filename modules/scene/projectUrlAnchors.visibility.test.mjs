@@ -45,6 +45,8 @@ if (unscopedStart < 0) throw new Error('ResumeContainer.vue unscoped <style> blo
 const unscopedCss = resumeVue.slice(unscopedStart + '\n<style>\n'.length, resumeVue.indexOf('</style>', unscopedStart))
 
 const DESCRIPTION = '• React app generating color palettes. (github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)'
+const REPO_URL = 'https://github.com/sbecker11/color-palette-maker'
+const PAGE_URL = 'https://sbecker11.github.io/color-palette-maker/'
 
 const DARK = {
     bg: '#14141f',
@@ -151,6 +153,8 @@ function buildResumeCard(theme, { selected = false } = {}) {
         start: '04/2025',
         end: '05/2026',
         Description: DESCRIPTION,
+        githubRepoUrl: REPO_URL,
+        githubPagesUrl: PAGE_URL,
         skillIDs: [],
     }])
     const card = document.createElement('div')
@@ -180,6 +184,8 @@ function buildSceneCard(theme, { selected = false } = {}) {
         role: 'Portfolio Project: color-palette-maker',
         datesDisplay: 'Apr 2025 - May 2026',
         description: DESCRIPTION,
+        githubRepoUrl: REPO_URL,
+        githubPagesUrl: PAGE_URL,
     })
     return card
 }
@@ -228,7 +234,7 @@ describe('project url anchors are visible and selectable', () => {
         for (const [label, card] of cases) {
             listing.appendChild(card)
             const links = [...card.querySelectorAll('a.project-url-anchor')]
-            expect(links.map((a) => a.textContent), label).toEqual(['GitHub', 'GitHub Pages'])
+            expect(links.map((a) => a.textContent), label).toEqual([REPO_URL, PAGE_URL])
             expect(links.every((a) => a.parentElement.tagName === 'P'), label).toBe(true)
             for (const link of links) assertLinkVisibleAndSelectable(link, `${label} ${link.textContent}`)
         }

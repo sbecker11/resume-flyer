@@ -795,14 +795,16 @@ app.put('/api/skill-urls', async (req, res) => {
     }
 });
 
-// PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description).
+// PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description, github repo URL, github page URL).
 // A Description whose [Brackets] do not resolve to skills linked on the job is refused (422) by commitResume.
+// An empty github URL clears that property.
 app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     const { id, jobIndex } = req.params;
     if (!id || id === 'default' || jobIndex == null) {
         return res.status(400).json({ error: 'Invalid resume id or job index.' });
     }
-    const allowed = ['label', 'role', 'employer', 'start', 'end', 'Description', 'outlineIndex', 'outlineKind'];
+    const projectUrlFields = ['githubRepoUrl', 'githubPagesUrl'];
+    const allowed = ['label', 'role', 'employer', 'start', 'end', 'Description', 'outlineIndex', 'outlineKind', ...projectUrlFields];
     const updates = {};
     for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -815,6 +817,12 @@ app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
         const idx = Array.isArray(data.jobs) ? parseInt(jobIndex, 10) : String(jobIndex);
         if (data.jobs[idx] == null) return res.status(404).json({ error: `Job index ${jobIndex} not found.` });
         Object.assign(data.jobs[idx], updates);
+        for (const key of projectUrlFields) {
+            if (!Object.prototype.hasOwnProperty.call(updates, key)) continue;
+            const value = updates[key] == null ? '' : String(updates[key]).trim();
+            if (!value) delete data.jobs[idx][key];
+            else data.jobs[idx][key] = value;
+        }
         const { data: saved } = await commitResume(PARSED_RESUMES_DIR, id, data);
         res.json({ ok: true, job: saved.jobs[idx] });
     } catch (err) {

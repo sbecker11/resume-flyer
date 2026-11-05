@@ -782,7 +782,7 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     line-height: 1.2;
 }
 
-/* GitHub and GitHub Pages: one labeled anchor per row when that URL is set. */
+/* github repo URL and github page URL: one anchor per row when that property is set. The link text is the URL. */
 .project-url-anchors {
     display: flex;
     flex-direction: column;

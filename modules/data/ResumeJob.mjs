@@ -1,5 +1,3 @@
-import { projectUrlsFromText } from './projectUrls.mjs';
-
 /**
  * Unified job row: work history or education-derived (educationKey set).
  * Extensible via class fields; use toJobPatchPlainObject() for job API payloads.
@@ -42,13 +40,13 @@ export class ResumeJob {
   'job-skills' = {};
 
   /**
-   * Optional GitHub repository URL for this biz card. Absent when the project has none.
+   * github repo URL. Set on the resume-jobs tab. Absent when the user has not defined one.
    * @type {string|undefined}
    */
   githubRepoUrl = undefined;
 
   /**
-   * Optional GitHub Pages URL for this biz card. Absent when the project has none.
+   * github page URL. Set on the resume-jobs tab. Absent when the user has not defined one.
    * @type {string|undefined}
    */
   githubPagesUrl = undefined;
@@ -96,9 +94,8 @@ export class ResumeJob {
     this.outlineIndex = this.outlineIndex != null ? String(this.outlineIndex).trim() : '';
     this.outlineKind = this.outlineKind === 'section' ? 'section' : 'job';
 
-    const derived = projectUrlsFromText(this.Description);
-    const githubRepoUrl = String(this.githubRepoUrl || '').trim() || derived.githubRepoUrl;
-    const githubPagesUrl = String(this.githubPagesUrl || '').trim() || derived.githubPagesUrl;
+    const githubRepoUrl = String(this.githubRepoUrl || '').trim();
+    const githubPagesUrl = String(this.githubPagesUrl || '').trim();
     if (githubRepoUrl) this.githubRepoUrl = githubRepoUrl;
     else delete this.githubRepoUrl;
     if (githubPagesUrl) this.githubPagesUrl = githubPagesUrl;

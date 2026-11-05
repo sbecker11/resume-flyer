@@ -15,14 +15,17 @@ describe('projectUrlsFromHtml', () => {
     })
   })
 
-  it('prefers explicit job fields over description text', () => {
+  it('reads only the github repo URL and github page URL properties', () => {
     expect(resolveProjectUrls({
-      githubRepoUrl: 'https://github.com/sbecker11/color-palette-maker',
+      githubRepoUrl: ' https://github.com/sbecker11/color-palette-maker ',
       githubPagesUrl: 'https://sbecker11.github.io/color-palette-maker/',
       Description: 'no links here',
     })).toEqual({
       githubRepoUrl: 'https://github.com/sbecker11/color-palette-maker',
       githubPagesUrl: 'https://sbecker11.github.io/color-palette-maker/',
     })
+    expect(resolveProjectUrls({
+      Description: '(github.com/sbecker11/color-palette-maker) (sbecker11.github.io/color-palette-maker/)',
+    })).toEqual({ githubRepoUrl: '', githubPagesUrl: '' })
   })
 })

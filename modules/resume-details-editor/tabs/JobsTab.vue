@@ -142,6 +142,34 @@
             </div>
           </div>
           <div class="rde-field">
+            <label class="rde-label" for="rde-jobs-github-repo-url">github repo URL</label>
+            <input
+              id="rde-jobs-github-repo-url"
+              name="githubRepoUrl"
+              type="url"
+              v-model="local.githubRepoUrl"
+              class="rde-input"
+              placeholder="https://github.com/owner/repo"
+              autocomplete="off"
+              :disabled="!canEdit"
+              @blur="onJobFieldBlur"
+            />
+          </div>
+          <div class="rde-field">
+            <label class="rde-label" for="rde-jobs-github-page-url">github page URL</label>
+            <input
+              id="rde-jobs-github-page-url"
+              name="githubPagesUrl"
+              type="url"
+              v-model="local.githubPagesUrl"
+              class="rde-input"
+              placeholder="https://owner.github.io/repo/"
+              autocomplete="off"
+              :disabled="!canEdit"
+              @blur="onJobFieldBlur"
+            />
+          </div>
+          <div class="rde-field">
             <label class="rde-label" for="rde-jobs-description">Key Achievements</label>
             <textarea
               id="rde-jobs-description"
@@ -243,6 +271,7 @@
 import { ref, shallowRef, computed, watch, nextTick } from 'vue';
 import * as api from '../api.mjs';
 import { hasServer } from '@/modules/core/hasServer.mjs';
+import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
 import { reportError } from '@/modules/utils/errorReporting.mjs';
 import { jobsMutated, jobFieldsSaved, sessionOnly } from '../savedPayload.mjs';
 import {
@@ -284,6 +313,8 @@ const local = ref({
   endMM: '',
   endDD: '',
   Description: '',
+  githubRepoUrl: '',
+  githubPagesUrl: '',
 });
 const deleteConfirmOpen = ref(false);
 const deleteConfirmLabel = ref('');
@@ -541,7 +572,9 @@ watch(jobIndexLocal, () => {
     endYYYY: toFourDigits(end.year),
     endMM: toTwoDigits(end.month),
     endDD: toTwoDigits(end.day),
-    Description: job.Description ?? job.description ?? ''
+    Description: job.Description ?? job.description ?? '',
+    githubRepoUrl: job.githubRepoUrl ?? '',
+    githubPagesUrl: job.githubPagesUrl ?? '',
   };
 }, { immediate: true });
 
@@ -563,15 +596,55 @@ function jobOptionLabel(job, pos) {
   return parts.length ? parts.join(' -- ') : `Job ${pos + 1}`;
 }
 
+/** Trim a project URL. A value without a scheme is stored as https. */
+function normalizeProjectUrl(value) {
+  const s = String(value ?? '').trim();
+  if (!s) return '';
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+  return `https://${s}`;
+}
+
+/** Write the two URL properties onto the live job and refresh its resume card. */
+function publishProjectUrls(idx, githubRepoUrl, githubPagesUrl) {
+  const live = getGlobalJobsDependency().getJobsData();
+  const job = Array.isArray(live) ? live[idx] : null;
+  if (job && typeof job === 'object') {
+    if (githubRepoUrl) job.githubRepoUrl = githubRepoUrl;
+    else delete job.githubRepoUrl;
+    if (githubPagesUrl) job.githubPagesUrl = githubPagesUrl;
+    else delete job.githubPagesUrl;
+  }
+  window.dispatchEvent(new CustomEvent('job-project-urls-updated', {
+    detail: { jobIndex: idx, githubRepoUrl, githubPagesUrl },
+  }));
+}
+
 /** @returns {Promise<boolean>} true if saved or nothing to save; false if save failed */
 async function saveCurrentJob() {
   const idx = jobIndexLocal.value;
   if (idx == null || !props.resumeId || props.resumeId === 'default') return true;
   if (isEducationDerivedJob(jobs.value[idx])) return true;
   const { start, end } = toStartEnd(local.value);
-  const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
+  const githubRepoUrl = normalizeProjectUrl(local.value.githubRepoUrl);
+  const githubPagesUrl = normalizeProjectUrl(local.value.githubPagesUrl);
+  local.value.githubRepoUrl = githubRepoUrl;
+  local.value.githubPagesUrl = githubPagesUrl;
+  const updated = {
+    ...jobs.value[idx],
+    employer: local.value.employer,
+    role: local.value.title,
+    title: local.value.title,
+    start,
+    end,
+    Description: local.value.Description,
+  };
+  if (githubRepoUrl) updated.githubRepoUrl = githubRepoUrl;
+  else delete updated.githubRepoUrl;
+  if (githubPagesUrl) updated.githubPagesUrl = githubPagesUrl;
+  else delete updated.githubPagesUrl;
   jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
   if (!canPersistToServer) {
+    publishProjectUrls(idx, githubRepoUrl, githubPagesUrl);
     emit('saved', sessionOnly());
     return true;
   }
@@ -584,8 +657,10 @@ async function saveCurrentJob() {
     if (start) patch.start = start;
     if (end) patch.end = end;
     if (local.value.Description) patch.Description = local.value.Description;
-    if (Object.keys(patch).length === 0) return true;
+    patch.githubRepoUrl = githubRepoUrl;
+    patch.githubPagesUrl = githubPagesUrl;
     await api.updateJob(props.resumeId, idx, patch);
+    publishProjectUrls(idx, githubRepoUrl, githubPagesUrl);
     emit('saved', jobFieldsSaved());
     return true;
   } catch (err) {

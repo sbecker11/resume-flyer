@@ -34,13 +34,13 @@ export function projectUrlsFromText(text) {
 }
 
 /**
- * Explicit job fields win. Otherwise the URLs are read from Description / description.
+ * The two job properties the user defined. Description text is not a source.
  * @param {object} [job]
  * @returns {{ githubRepoUrl: string, githubPagesUrl: string }}
  */
 export function resolveProjectUrls(job) {
-    const fromText = projectUrlsFromText(job?.Description || job?.description || '')
-    const githubRepoUrl = String(job?.githubRepoUrl || '').trim() || fromText.githubRepoUrl
-    const githubPagesUrl = String(job?.githubPagesUrl || '').trim() || fromText.githubPagesUrl
-    return { githubRepoUrl, githubPagesUrl }
+    return {
+        githubRepoUrl: String(job?.githubRepoUrl || '').trim(),
+        githubPagesUrl: String(job?.githubPagesUrl || '').trim(),
+    }
 }
