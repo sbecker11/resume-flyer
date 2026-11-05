@@ -2877,4 +2877,69 @@ async function openSkillUrlEditPrompt(skillSlug) {
     outline: 2px solid var(--data-link-color, #2563eb);
     outline-offset: 2px;
 }
+
+/* Project links section - flexbox container (Project GitHub Repo URL / Project GitHub Pages URL) */
+.resume-project-links {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+
+    width: 100%;
+    height: auto;
+    min-height: fit-content;
+    flex-shrink: 0;
+
+    padding-bottom: var(--details-gap, 12px);
+}
+
+.resume-project-links .resume-section-title-wrap h4 {
+    font-size: 13px;
+    font-weight: bold;
+    margin: 0;
+    color: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.project-links-content {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+
+    font-size: 12px;
+    line-height: 1.4;
+    width: 100%;
+    flex-shrink: 0;
+    margin-top: calc(var(--details-gap, 12px) * 0.5);
+}
+
+.resume-project-link-row {
+    color: inherit;
+    opacity: 0.85;
+    margin: 0 0 4px 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+.resume-project-link-row:last-child {
+    margin-bottom: 0;
+}
+
+.resume-project-link-label {
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+.resume-project-link-url {
+    color: inherit;
+    text-decoration: underline;
+    word-break: break-all;
+}
+.resume-project-link-url:hover,
+.resume-project-link-url:focus-visible {
+    opacity: 1;
+    font-weight: bold;
+}
 </style> 

@@ -10,6 +10,7 @@ import {
     renderBizResumeHeaderHtml,
     orderedBizCardSkillEntries,
     renderBizCardSkillTitleSpansHtml,
+    renderProjectLinksSectionHtml,
 } from './cardMarkup.mjs'
 import { enrichJobsWithSkills } from '@/modules/data/enrichedJobs.mjs'
 import { normalizeParserJobs, normalizeParserSkills } from '@/modules/data/parsedResumeAdapter.mjs'
@@ -133,6 +134,50 @@ describe('cardMarkup', () => {
             expect(scene).toContain(cls)
             expect(resume).toContain(cls)
         }
+    })
+
+    it('renderProjectLinksSectionHtml renders both anchors with full URLs as link text when both fields are set', () => {
+        const html = renderProjectLinksSectionHtml({
+            projectGithubRepoUrl: 'https://github.com/acme/widget',
+            projectGithubPagesUrl: 'https://acme.github.io/widget',
+        })
+        expect(html).toContain('class="resume-project-links"')
+        expect(html).toContain('Project Links')
+        expect(html).toContain('Project GitHub Repo URL')
+        expect(html).toContain('Project GitHub Pages URL')
+        expect(html).toContain('<a class="resume-project-link-url" href="https://github.com/acme/widget"')
+        expect(html).toContain('>https://github.com/acme/widget</a>')
+        expect(html).toContain('<a class="resume-project-link-url" href="https://acme.github.io/widget"')
+        expect(html).toContain('>https://acme.github.io/widget</a>')
+        expect(html).toContain('target="_blank"')
+        expect(html).toContain('rel="noopener noreferrer"')
+    })
+
+    it('renderProjectLinksSectionHtml renders only the row for whichever field is set', () => {
+        const repoOnly = renderProjectLinksSectionHtml({ projectGithubRepoUrl: 'https://github.com/acme/widget' })
+        expect(repoOnly).toContain('Project GitHub Repo URL')
+        expect(repoOnly).not.toContain('Project GitHub Pages URL')
+
+        const pagesOnly = renderProjectLinksSectionHtml({ projectGithubPagesUrl: 'https://acme.github.io/widget' })
+        expect(pagesOnly).toContain('Project GitHub Pages URL')
+        expect(pagesOnly).not.toContain('Project GitHub Repo URL')
+    })
+
+    it('renderProjectLinksSectionHtml omits the whole section when neither field is set', () => {
+        expect(renderProjectLinksSectionHtml({})).toBe('')
+        expect(renderProjectLinksSectionHtml(undefined)).toBe('')
+        expect(renderProjectLinksSectionHtml({ projectGithubRepoUrl: '  ' })).toBe('')
+    })
+
+    it('renderProjectLinksSectionHtml escapes URLs used as both href and link text', () => {
+        const html = renderProjectLinksSectionHtml({ projectGithubRepoUrl: 'https://example.com/?a=1&b="x"' })
+        expect(html).toContain('href="https://example.com/?a=1&amp;b=&quot;x&quot;"')
+        expect(html).toContain('>https://example.com/?a=1&amp;b=&quot;x&quot;</a>')
+        const host = document.createElement('div')
+        host.innerHTML = html
+        const anchor = host.querySelector('.resume-project-link-url')
+        expect(anchor.getAttribute('href')).toBe('https://example.com/?a=1&b="x"')
+        expect(anchor.textContent).toBe('https://example.com/?a=1&b="x"')
     })
 })
 

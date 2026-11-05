@@ -10,7 +10,7 @@ import { getGlobalJobsDependency } from '../composables/useJobsDependency.mjs';
 import { isEducationDerivedJob, educationKeyOf, isOutlineSectionJob } from '../data/ResumeJob.mjs';
 import { displayJobHeading, outlineNestDepth } from '../utils/outlineIndex.mjs';
 import { skillLabelText, skillLabelHtml, skillDisplayName, labelToSlug } from '../utils/skillLabel.mjs';
-import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml } from '../scene/cardMarkup.mjs';
+import { orderedBizCardSkillEntries, renderBizCardSkillTitleSpansHtml, renderProjectLinksSectionHtml } from '../scene/cardMarkup.mjs';
 import { tryParseFlexibleDateString, formatCardDatesDisplay, stripUnknownDatesFromTitle } from '../utils/dateUtils.mjs';
 import { createBizCardDivId } from '../utils/bizCardUtils.mjs';
 import { markSourceBizBackLinkForSkill, clearSourceBizBackLinkClass, rememberSkillCardSourceBiz, getRememberedSkillCardSourceBiz } from '../utils/skillInfoModal.mjs';
@@ -388,6 +388,15 @@ class ResumeItemsController {
         headerDiv.appendChild(debugRow);
 
         detailsDiv.appendChild(headerDiv);
+
+        // Project links (Project GitHub Repo URL / Project GitHub Pages URL): resume-view only —
+        // scene.css hides unlisted .biz-card-details-div sections in the compact scene card.
+        const projectLinksHtml = renderProjectLinksSectionHtml(jobData);
+        if (projectLinksHtml) {
+            const projectLinksWrapper = document.createElement('div');
+            projectLinksWrapper.innerHTML = projectLinksHtml;
+            detailsDiv.appendChild(projectLinksWrapper.firstElementChild);
+        }
 
         // descriptionSlugs collects slugs found in [brackets] in the description.
         // Populated below; used when building the skills section so all sources are unioned.

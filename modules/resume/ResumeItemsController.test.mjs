@@ -81,6 +81,42 @@ describe('ResumeItemsController', () => {
                 .map((el) => el.getAttribute('data-skill-name'));
             expect(skillKeys).toEqual(['vue']);
             expect(applyPaletteToElement).toHaveBeenCalledTimes(3);
+            // No project links section when the job has neither URL field.
+            expect(first.querySelector('.resume-project-links')).toBeNull();
+        });
+
+        it('renders a Project Links section with full-URL anchors when the job has GitHub URLs', async () => {
+            const jobs = fixtureJobs();
+            jobs[0].projectGithubRepoUrl = 'https://github.com/acme/widget';
+            jobs[0].projectGithubPagesUrl = 'https://acme.github.io/widget';
+            const divs = await buildDivs(jobs);
+            const projectLinks = divs[0].querySelector('.resume-project-links');
+            expect(projectLinks).not.toBeNull();
+            const anchors = Array.from(projectLinks.querySelectorAll('.resume-project-link-url'));
+            expect(anchors.map((a) => a.getAttribute('href'))).toEqual([
+                'https://github.com/acme/widget',
+                'https://acme.github.io/widget',
+            ]);
+            expect(anchors.map((a) => a.textContent)).toEqual([
+                'https://github.com/acme/widget',
+                'https://acme.github.io/widget',
+            ]);
+            expect(anchors.every((a) => a.getAttribute('target') === '_blank')).toBe(true);
+            expect(projectLinks.textContent).toMatch(/Project GitHub Repo URL/);
+            expect(projectLinks.textContent).toMatch(/Project GitHub Pages URL/);
+            // Other jobs without the fields get no section.
+            expect(divs[1].querySelector('.resume-project-links')).toBeNull();
+        });
+
+        it('renders only the Project Links row for whichever GitHub URL field is set', async () => {
+            const jobs = fixtureJobs();
+            jobs[0].projectGithubRepoUrl = 'https://github.com/acme/widget';
+            const divs = await buildDivs(jobs);
+            const projectLinks = divs[0].querySelector('.resume-project-links');
+            expect(projectLinks).not.toBeNull();
+            expect(projectLinks.querySelectorAll('.resume-project-link-url')).toHaveLength(1);
+            expect(projectLinks.textContent).toMatch(/Project GitHub Repo URL/);
+            expect(projectLinks.textContent).not.toMatch(/Project GitHub Pages URL/);
         });
 
         it('uses the card color index when present and falls back to a synthetic card when missing', async () => {
