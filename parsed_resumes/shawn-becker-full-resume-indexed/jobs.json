@@ -59,7 +59,9 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "3"
+    "jobID": "3",
+    "githubRepoUrl": "https://github.com/sbecker11/color-palette-maker",
+    "githubPagesUrl": "https://sbecker11.github.io/color-palette-maker/"
   },
   {
     "index": 4,

@@ -906,7 +906,11 @@ export function useCardsController() {
             sceneZ,
             hasSkills,
             description: job?.Description || '',
+            githubRepoUrl: job?.githubRepoUrl || '',
+            githubPagesUrl: job?.githubPagesUrl || '',
         })
+        if (job?.githubRepoUrl) card.setAttribute('data-github-repo-url', job.githubRepoUrl)
+        if (job?.githubPagesUrl) card.setAttribute('data-github-pages-url', job.githubPagesUrl)
 
         attachBizCardEditButtonListeners(card, jobNumber)
 

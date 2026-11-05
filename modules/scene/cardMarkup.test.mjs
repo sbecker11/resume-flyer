@@ -133,8 +133,10 @@ describe('cardMarkup', () => {
         })
         expect(html).toContain('href="https://github.com/sbecker11/color-palette-maker"')
         expect(html).toContain('href="https://sbecker11.github.io/color-palette-maker/"')
-        expect(html).toContain('>GitHub</a>')
-        expect(html).toContain('>GitHub Pages</a>')
+        expect(html).toContain('<p class="project-url-row"><a class="project-url-anchor" data-anchor-kind="github"')
+        expect(html).toContain('>GitHub</a></p>')
+        expect(html).toContain('<p class="project-url-row"><a class="project-url-anchor" data-anchor-kind="github-pages"')
+        expect(html).toContain('>GitHub Pages</a></p>')
         expect(renderBizCardSceneBodyHtml({ employer: 'Acme' })).not.toContain('project-url-anchor')
     })
 

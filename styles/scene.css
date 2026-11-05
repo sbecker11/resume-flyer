@@ -782,26 +782,45 @@ body .biz-resume-div.selected[data-icon-set-selected-variant="white"] .img-icon,
     line-height: 1.2;
 }
 
-/* GitHub and GitHub Pages links on a project card. Text uses the card link color so it stays visible on dark and light backgrounds. */
+/* GitHub and GitHub Pages: one labeled anchor per row when that URL is set. */
 .project-url-anchors {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     margin: 2px 0 8px;
     pointer-events: auto;
 }
-/* Scene cards are ~200px wide and crop overflow. Keep the links in the header band, above the role, so the crop cannot hide them. */
+.project-url-row {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+/* Scene cards are ~200px wide and crop overflow. Keep the rows in the header band. */
 .biz-card-div > .project-url-anchors {
     flex: 0 0 auto;
     margin: 0 0 4px;
-    gap: 2px 10px;
 }
-a.project-url-anchor {
+a.project-url-anchor,
+.biz-card-div a.project-url-anchor,
+.biz-card-div.clone a.project-url-anchor,
+.biz-resume-div a.project-url-anchor,
+.biz-resume-div.selected a.project-url-anchor,
+#resume-content-listing .biz-resume-div a.project-url-anchor,
+#resume-content-listing .biz-resume-div.selected a.project-url-anchor,
+#resume-container .biz-resume-div a.project-url-anchor,
+#resume-container .biz-resume-div.selected a.project-url-anchor {
+    display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: inherit !important;
     font-size: 14px;
     font-weight: 700;
-    line-height: 1.2;
-    text-decoration: underline;
+    line-height: 1.25;
+    text-decoration: underline !important;
     text-underline-offset: 2px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
     pointer-events: auto;
     cursor: pointer;
     user-select: text;

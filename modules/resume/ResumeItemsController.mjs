@@ -363,7 +363,7 @@ class ResumeItemsController {
             headerDiv.appendChild(datesDiv);
         }
 
-        const projectAnchorsHtml = renderProjectUrlAnchorsHtml(jobData.Description);
+        const projectAnchorsHtml = renderProjectUrlAnchorsHtml(jobData);
         if (projectAnchorsHtml) {
             const anchorsHost = document.createElement('div');
             anchorsHost.innerHTML = projectAnchorsHtml;

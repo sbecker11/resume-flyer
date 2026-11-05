@@ -1,3 +1,5 @@
+import { projectUrlsFromText } from './projectUrls.mjs';
+
 /**
  * Unified job row: work history or education-derived (educationKey set).
  * Extensible via class fields; use toJobPatchPlainObject() for job API payloads.
@@ -38,6 +40,18 @@ export class ResumeJob {
 
   /** @type {Record<string, string>} */
   'job-skills' = {};
+
+  /**
+   * Optional GitHub repository URL for this biz card. Absent when the project has none.
+   * @type {string|undefined}
+   */
+  githubRepoUrl = undefined;
+
+  /**
+   * Optional GitHub Pages URL for this biz card. Absent when the project has none.
+   * @type {string|undefined}
+   */
+  githubPagesUrl = undefined;
 
   /**
    * Dotted numeric path for sort/nesting only (never shown on cards/listing).
@@ -81,6 +95,14 @@ export class ResumeJob {
     if (init && typeof init.description === 'string' && !this.Description) this.Description = init.description;
     this.outlineIndex = this.outlineIndex != null ? String(this.outlineIndex).trim() : '';
     this.outlineKind = this.outlineKind === 'section' ? 'section' : 'job';
+
+    const derived = projectUrlsFromText(this.Description);
+    const githubRepoUrl = String(this.githubRepoUrl || '').trim() || derived.githubRepoUrl;
+    const githubPagesUrl = String(this.githubPagesUrl || '').trim() || derived.githubPagesUrl;
+    if (githubRepoUrl) this.githubRepoUrl = githubRepoUrl;
+    else delete this.githubRepoUrl;
+    if (githubPagesUrl) this.githubPagesUrl = githubPagesUrl;
+    else delete this.githubPagesUrl;
   }
 
   get isEducationDerived() {
@@ -128,6 +150,8 @@ export class ResumeJob {
     };
     if (this.outlineIndex) o.outlineIndex = this.outlineIndex;
     if (this.outlineKind === 'section') o.outlineKind = 'section';
+    if (this.githubRepoUrl) o.githubRepoUrl = this.githubRepoUrl;
+    if (this.githubPagesUrl) o.githubPagesUrl = this.githubPagesUrl;
     return o;
   }
 }

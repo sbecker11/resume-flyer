@@ -148,7 +148,7 @@ describe('ResumeItemsController', () => {
             expect(ric.parseDescriptionToBullets('', container).size).toBe(0);
         });
 
-        it('shows GitHub and GitHub Pages anchors and keeps them out of the achievement text', () => {
+        it('shows a labeled GitHub row and a labeled GitHub Pages row, and keeps the URLs out of the achievement text', () => {
             jobsDep.setJobs([{
                 employer: 'color-palette-maker',
                 role: 'Portfolio Project: color-palette-maker',
@@ -160,6 +160,9 @@ describe('ResumeItemsController', () => {
             const el = ric.createEnhancedResumeDetailsDiv(0);
             const links = [...el.querySelectorAll('a.project-url-anchor')];
             expect(links.map((a) => a.textContent)).toEqual(['GitHub', 'GitHub Pages']);
+            expect(links[0].parentElement.tagName).toBe('P');
+            expect(links[1].parentElement.tagName).toBe('P');
+            expect(links[0].parentElement).not.toBe(links[1].parentElement);
             expect(links[0].getAttribute('href')).toBe('https://github.com/sbecker11/color-palette-maker');
             expect(links[1].getAttribute('href')).toBe('https://sbecker11.github.io/color-palette-maker/');
             expect(el.querySelector('.description-content').textContent).not.toMatch(/github/);

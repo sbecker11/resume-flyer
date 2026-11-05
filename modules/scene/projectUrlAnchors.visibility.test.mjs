@@ -229,6 +229,7 @@ describe('project url anchors are visible and selectable', () => {
             listing.appendChild(card)
             const links = [...card.querySelectorAll('a.project-url-anchor')]
             expect(links.map((a) => a.textContent), label).toEqual(['GitHub', 'GitHub Pages'])
+            expect(links.every((a) => a.parentElement.tagName === 'P'), label).toBe(true)
             for (const link of links) assertLinkVisibleAndSelectable(link, `${label} ${link.textContent}`)
         }
     })
