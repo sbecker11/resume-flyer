@@ -155,6 +155,32 @@
               @blur="onJobFieldBlur"
             />
           </div>
+          <div class="rde-field">
+            <label class="rde-label" for="rde-jobs-project-github-repo-url">Project GitHub Repo URL</label>
+            <input
+              id="rde-jobs-project-github-repo-url"
+              name="projectGithubRepoUrl"
+              v-model="local.projectGithubRepoUrl"
+              type="url"
+              class="rde-input"
+              placeholder="https://github.com/org/repo"
+              :disabled="!canEdit"
+              @blur="onJobFieldBlur"
+            />
+          </div>
+          <div class="rde-field">
+            <label class="rde-label" for="rde-jobs-project-github-pages-url">Project GitHub Pages URL</label>
+            <input
+              id="rde-jobs-project-github-pages-url"
+              name="projectGithubPagesUrl"
+              v-model="local.projectGithubPagesUrl"
+              type="url"
+              class="rde-input"
+              placeholder="https://org.github.io/repo"
+              :disabled="!canEdit"
+              @blur="onJobFieldBlur"
+            />
+          </div>
         </section>
       </template>
       <section v-if="jobsLoaded" class="rde-section rde-job-actions">
@@ -284,6 +310,8 @@ const local = ref({
   endMM: '',
   endDD: '',
   Description: '',
+  projectGithubRepoUrl: '',
+  projectGithubPagesUrl: '',
 });
 const deleteConfirmOpen = ref(false);
 const deleteConfirmLabel = ref('');
@@ -541,7 +569,9 @@ watch(jobIndexLocal, () => {
     endYYYY: toFourDigits(end.year),
     endMM: toTwoDigits(end.month),
     endDD: toTwoDigits(end.day),
-    Description: job.Description ?? job.description ?? ''
+    Description: job.Description ?? job.description ?? '',
+    projectGithubRepoUrl: job.projectGithubRepoUrl ?? '',
+    projectGithubPagesUrl: job.projectGithubPagesUrl ?? '',
   };
 }, { immediate: true });
 
@@ -569,7 +599,17 @@ async function saveCurrentJob() {
   if (idx == null || !props.resumeId || props.resumeId === 'default') return true;
   if (isEducationDerivedJob(jobs.value[idx])) return true;
   const { start, end } = toStartEnd(local.value);
-  const updated = { ...jobs.value[idx], employer: local.value.employer, role: local.value.title, title: local.value.title, start, end, Description: local.value.Description };
+  const updated = {
+    ...jobs.value[idx],
+    employer: local.value.employer,
+    role: local.value.title,
+    title: local.value.title,
+    start,
+    end,
+    Description: local.value.Description,
+    projectGithubRepoUrl: local.value.projectGithubRepoUrl,
+    projectGithubPagesUrl: local.value.projectGithubPagesUrl,
+  };
   jobs.value = jobs.value.map((j, i) => (i === idx ? updated : j));
   if (!canPersistToServer) {
     emit('saved', sessionOnly());
@@ -584,6 +624,8 @@ async function saveCurrentJob() {
     if (start) patch.start = start;
     if (end) patch.end = end;
     if (local.value.Description) patch.Description = local.value.Description;
+    if (local.value.projectGithubRepoUrl) patch.projectGithubRepoUrl = local.value.projectGithubRepoUrl;
+    if (local.value.projectGithubPagesUrl) patch.projectGithubPagesUrl = local.value.projectGithubPagesUrl;
     if (Object.keys(patch).length === 0) return true;
     await api.updateJob(props.resumeId, idx, patch);
     emit('saved', jobFieldsSaved());

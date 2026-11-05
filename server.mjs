@@ -795,14 +795,15 @@ app.put('/api/skill-urls', async (req, res) => {
     }
 });
 
-// PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description).
+// PATCH /api/resumes/:id/jobs/:jobIndex: Update one job's fields (label, role, start, end, Description,
+// projectGithubRepoUrl, projectGithubPagesUrl).
 // A Description whose [Brackets] do not resolve to skills linked on the job is refused (422) by commitResume.
 app.patch('/api/resumes/:id/jobs/:jobIndex', async (req, res) => {
     const { id, jobIndex } = req.params;
     if (!id || id === 'default' || jobIndex == null) {
         return res.status(400).json({ error: 'Invalid resume id or job index.' });
     }
-    const allowed = ['label', 'role', 'employer', 'start', 'end', 'Description', 'outlineIndex', 'outlineKind'];
+    const allowed = ['label', 'role', 'employer', 'start', 'end', 'Description', 'outlineIndex', 'outlineKind', 'projectGithubRepoUrl', 'projectGithubPagesUrl'];
     const updates = {};
     for (const key of allowed) {
         if (req.body[key] !== undefined) updates[key] = req.body[key];

@@ -629,6 +629,22 @@ describe('PATCH /api/resumes/:id/jobs/:jobIndex (fields)', () => {
         expect((await request(app).patch(`/api/resumes/${RESUME_ID}/jobs/9`).send({ role: 'x' })).status).toBe(404);
         expect((await request(app).patch('/api/resumes/missing/jobs/0').send({ role: 'x' })).status).toBe(404);
     });
+
+    it('updates projectGithubRepoUrl and projectGithubPagesUrl and persists them to jobs.json', async () => {
+        const res = await request(app)
+            .patch(`/api/resumes/${RESUME_ID}/jobs/0`)
+            .send({ projectGithubRepoUrl: 'https://github.com/acme/widget', projectGithubPagesUrl: 'https://acme.github.io/widget' });
+        expect(res.status).toBe(200);
+        expect(res.body.job).toMatchObject({
+            projectGithubRepoUrl: 'https://github.com/acme/widget',
+            projectGithubPagesUrl: 'https://acme.github.io/widget',
+        });
+        const jobs = await readJson('jobs.json');
+        expect(jobs[0].projectGithubRepoUrl).toBe('https://github.com/acme/widget');
+        expect(jobs[0].projectGithubPagesUrl).toBe('https://acme.github.io/widget');
+        await waitForBake();
+        await expectConsistent();
+    });
 });
 
 describe('PATCH /api/resumes/:id/education/:educationKey/skills', () => {
