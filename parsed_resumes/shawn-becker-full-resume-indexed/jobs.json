@@ -28,7 +28,8 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "2"
+    "jobID": "2",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/resume-parser"
   },
   {
     "index": 3,
@@ -59,7 +60,9 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "3"
+    "jobID": "3",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/color-palette-maker",
+    "projectGithubPagesUrl": "https://sbecker11.github.io/color-palette-maker/"
   },
   {
     "index": 4,
@@ -90,7 +93,9 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "4"
+    "jobID": "4",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/resume-flyer",
+    "projectGithubPagesUrl": "https://sbecker11.github.io/resume-flyer/"
   },
   {
     "index": 5,
@@ -131,7 +136,8 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "5"
+    "jobID": "5",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/sushi-rag-app"
   },
   {
     "index": 6,
@@ -218,7 +224,8 @@
       "aws-aurora-postgresql",
       "Spexture Portfolio Project"
     ],
-    "jobID": "8"
+    "jobID": "8",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/ecommerce-semantic-search"
   },
   {
     "index": 9,
@@ -253,7 +260,9 @@
       "rag",
       "Spexture Portfolio Project"
     ],
-    "jobID": "9"
+    "jobID": "9",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/linkage-engine",
+    "projectGithubPagesUrl": "https://sbecker11.github.io/linkage-engine/"
   },
   {
     "index": 10,

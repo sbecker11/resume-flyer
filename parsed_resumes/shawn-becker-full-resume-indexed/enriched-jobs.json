@@ -53,7 +53,8 @@
     "css RGB": "#006688",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "2"
+    "jobID": "2",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/resume-parser"
   },
   {
     "employer": "color-palette-maker",
@@ -109,7 +110,9 @@
     "css RGB": "#0000ff",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "3"
+    "jobID": "3",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/color-palette-maker",
+    "projectGithubPagesUrl": "https://sbecker11.github.io/color-palette-maker/"
   },
   {
     "employer": "resume-flyer",
@@ -166,7 +169,9 @@
     "css RGB": "#4400cd",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "4"
+    "jobID": "4",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/resume-flyer",
+    "projectGithubPagesUrl": "https://sbecker11.github.io/resume-flyer/"
   },
   {
     "employer": "sushi-rag-mcp-server",
@@ -246,7 +251,8 @@
     "css RGB": "#8a2be2",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "5"
+    "jobID": "5",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/sushi-rag-app"
   },
   {
     "employer": "campaign asset automation",
@@ -407,7 +413,8 @@
     "css RGB": "#ff4500",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "8"
+    "jobID": "8",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/ecommerce-semantic-search"
   },
   {
     "employer": "linkage-engine",
@@ -475,7 +482,9 @@
     "css RGB": "#ffa500",
     "css color": null,
     "text color": "#000000",
-    "jobID": "9"
+    "jobID": "9",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/linkage-engine",
+    "projectGithubPagesUrl": "https://sbecker11.github.io/linkage-engine/"
   },
   {
     "employer": "healthcare-agentic-snowflake-rag",
