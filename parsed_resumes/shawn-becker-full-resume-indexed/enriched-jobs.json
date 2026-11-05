@@ -340,7 +340,9 @@
     "css RGB": "#800000",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "7"
+    "jobID": "7",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/workspace-spexture",
+    "projectGithubPagesUrl": "https://www.spexture.com"
   },
   {
     "employer": "ecommerce-semantic-search",
@@ -548,7 +550,8 @@
     "css RGB": "#008080",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "10"
+    "jobID": "10",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/healthcare-agentic-snowflake-rag"
   },
   {
     "employer": "recruiting-automation",
@@ -607,7 +610,8 @@
     "css RGB": "#008b8b",
     "css color": null,
     "text color": "#FFFFFF",
-    "jobID": "11"
+    "jobID": "11",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/recruiting-automation"
   },
   {
     "employer": "Adobe",

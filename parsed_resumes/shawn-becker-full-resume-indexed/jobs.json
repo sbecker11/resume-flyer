@@ -186,7 +186,9 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "7"
+    "jobID": "7",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/workspace-spexture",
+    "projectGithubPagesUrl": "https://www.spexture.com"
   },
   {
     "index": 8,
@@ -296,7 +298,8 @@
       "rag",
       "Spexture Portfolio Project"
     ],
-    "jobID": "10"
+    "jobID": "10",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/healthcare-agentic-snowflake-rag"
   },
   {
     "index": 11,
@@ -329,7 +332,8 @@
       "HTML",
       "CSS"
     ],
-    "jobID": "11"
+    "jobID": "11",
+    "projectGithubRepoUrl": "https://github.com/sbecker11/recruiting-automation"
   },
   {
     "index": 13,
