@@ -343,7 +343,7 @@ const roundedScenePercentage = computed(() => {
   const rawPercentage = scenePercentage.value;
   const result = Math.round(Math.max(0, Math.min(100, rawPercentage)));
   
-  console.log(`[Scene %] Raw: ${rawPercentage}% -> Display: ${result}%`);
+  // console.log(`[Scene %] Raw: ${rawPercentage}% -> Display: ${result}%`);
   return result;
 });
 

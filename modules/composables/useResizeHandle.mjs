@@ -495,7 +495,7 @@ export function useResizeHandle() {
     const rawPercentage = availableWidth > 0 ? (sceneWidth / availableWidth) * 100 : 0;
     const finalPercentage = Math.max(0, Math.min(100, rawPercentage));
     
-    console.log('[DEBUG scenePercentage] windowWidth:', windowWidth, 'availableWidth:', availableWidth, 'sceneWidth:', sceneWidth, 'rawPercentage:', rawPercentage, 'finalPercentage:', finalPercentage);
+    // console.log('[DEBUG scenePercentage] windowWidth:', windowWidth, 'availableWidth:', availableWidth, 'sceneWidth:', sceneWidth, 'rawPercentage:', rawPercentage, 'finalPercentage:', finalPercentage);
     
     // Clamp between 0 and 100
     return finalPercentage;

@@ -944,14 +944,14 @@ export function useCardsController() {
         
         // Add hover handlers for synchronization with rDivs
         card.addEventListener('mouseenter', () => {
-            console.debug('[CardsController] card hover', jobNumber)
+            // console.debug('[CardsController] card hover', jobNumber)
             if (selectionManager) {
                 selectionManager.hoverJobNumber(jobNumber, 'CardsController.mouseenter')
             }
         })
         
         card.addEventListener('mouseleave', () => {
-            console.debug('[CardsController] card hover end', jobNumber)
+            // console.debug('[CardsController] card hover end', jobNumber)
             if (selectionManager) {
                 selectionManager.clearHover('CardsController.mouseleave')
             }
@@ -1634,7 +1634,7 @@ export function useCardsController() {
     
     function handleJobHovered(event) {
         const { jobNumber } = event.detail
-        console.log(`🖱️ [useCardsController] Job hovered: ${jobNumber}`)
+        // console.log(`🖱️ [useCardsController] Job hovered: ${jobNumber}`)
         
         // Clear previous hover states
         clearAllCardHovers()
@@ -1653,7 +1653,7 @@ export function useCardsController() {
         }
         if (card && !card.classList.contains('clone')) {
             applyHoverStylesToCard(card)
-            console.log(`🖱️ [useCardsController] Applied hover styles to card: ${card.id}`)
+            // console.log(`🖱️ [useCardsController] Applied hover styles to card: ${card.id}`)
         }
     }
     

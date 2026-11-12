@@ -802,7 +802,7 @@ class ResumeItemsController {
     handleMouseEnterEvent(bizResumeDiv) {
         if (!bizResumeDiv) return;
         const jobNumber = parseInt(bizResumeDiv.getAttribute('data-job-number'), 10);
-        console.log(`🖱️ [ResumeItemsController] MOUSE ENTER: job ${jobNumber}`);
+        // console.log(`🖱️ [ResumeItemsController] MOUSE ENTER: job ${jobNumber}`);
         
         // Use SelectionManager for synchronized hover
         selectionManager.hoverJobNumber(jobNumber, 'ResumeItemsController.handleMouseEnterEvent');
@@ -811,7 +811,7 @@ class ResumeItemsController {
     handleMouseLeaveEvent(bizResumeDiv) {
         if (!bizResumeDiv) return;
         const jobNumber = parseInt(bizResumeDiv.getAttribute('data-job-number'), 10);
-        console.log(`🖱️ [ResumeItemsController] MOUSE LEAVE: job ${jobNumber}`);
+        // console.log(`🖱️ [ResumeItemsController] MOUSE LEAVE: job ${jobNumber}`);
         
         // Use SelectionManager for synchronized hover
         selectionManager.clearHover('ResumeItemsController.handleMouseLeaveEvent');
@@ -913,11 +913,11 @@ class ResumeItemsController {
 
     handleHoverChanged(event) {
         const { hoveredJobNumber, caller } = event.detail;
-        console.log(`🖱️ [ResumeItemsController] handleHoverChanged: job ${hoveredJobNumber}, caller: ${caller}`);
+        // console.log(`🖱️ [ResumeItemsController] handleHoverChanged: job ${hoveredJobNumber}, caller: ${caller}`);
 
         // Skip applying hover styling to selected items, but allow event coordination to proceed
         if (selectionManager.getSelectedJobNumber() === hoveredJobNumber) {
-            console.log(`🖱️ [ResumeItemsController] Skipping hover styling for selected item ${hoveredJobNumber}`);
+            // console.log(`🖱️ [ResumeItemsController] Skipping hover styling for selected item ${hoveredJobNumber}`);
             return;
         }
 
@@ -927,14 +927,14 @@ class ResumeItemsController {
         });
 
         const bizResumeDiv = this.getBizResumeDivByJobNumber(hoveredJobNumber);
-        console.log(`🖱️ [ResumeItemsController] Found rDiv for job ${hoveredJobNumber}:`, !!bizResumeDiv);
+        // console.log(`🖱️ [ResumeItemsController] Found rDiv for job ${hoveredJobNumber}:`, !!bizResumeDiv);
         if (bizResumeDiv) {
             this._applyHoverStyles(bizResumeDiv);
-            console.log(`🖱️ [ResumeItemsController] Applied hover styles to rDiv for job ${hoveredJobNumber}`);
+            // console.log(`🖱️ [ResumeItemsController] Applied hover styles to rDiv for job ${hoveredJobNumber}`);
             
-            // Debug: Check computed styles
-            const computedStyle = window.getComputedStyle(bizResumeDiv);
-            console.log(`🖱️ [ResumeItemsController] rDiv computed background-color:`, computedStyle.backgroundColor);
+            // NOTE: a debug-only window.getComputedStyle() call used to live here just to log
+            // backgroundColor. It forced a synchronous style recalc on every hover change
+            // (real rendering cost, not just console noise) for zero functional benefit — removed.
         } else {
             console.error(`❌ [ResumeItemsController] Could not find rDiv for job ${hoveredJobNumber}`);
         }
@@ -958,12 +958,12 @@ class ResumeItemsController {
 
     handleResumeUnhover(event) {
         const { jobNumber } = event.detail;
-        console.log(`🖱️ [ResumeItemsController] handleResumeUnhover: job ${jobNumber}`);
+        // console.log(`🖱️ [ResumeItemsController] handleResumeUnhover: job ${jobNumber}`);
         
         const bizResumeDiv = this.getBizResumeDivByJobNumber(jobNumber);
         if (bizResumeDiv) {
             this._clearHoverStyles(bizResumeDiv);
-            console.log(`🖱️ [ResumeItemsController] Cleared hover styles from rDiv for job ${jobNumber}`);
+            // console.log(`🖱️ [ResumeItemsController] Cleared hover styles from rDiv for job ${jobNumber}`);
         }
     }
 
