@@ -8,6 +8,10 @@
       "url": "https://en.wikipedia.org/wiki/Tableau_Software",
       "updatedAt": "2026-10-27T22:23:57.269Z"
     },
+    "ML": {
+      "url": "https://en.wikipedia.org/wiki/Machine_learning",
+      "updatedAt": "2026-10-27T22:24:35.475Z"
+    },
     "MS Mobile 5": {
       "url": "https://en.wikipedia.org/wiki/Windows_Mobile_5.0",
       "updatedAt": "2026-10-27T22:26:41.619Z"
@@ -15,6 +19,10 @@
     "Kafka": {
       "url": "https://kafka.apache.org/",
       "updatedAt": "2026-11-01T22:30:34.840Z"
+    },
+    "Aurora PostgreSQL Serverless v2": {
+      "url": "https://www.google.com/search?q=amazon+Aurora+PostgreSQL+Serverless+v2&rlz=1C5MACD_enUS1022US1022&oq=amazon+Aurora+PostgreSQL+Serverless+v2&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIICAEQABgWGB4yBwgCEAAY7wUyCggDEAAYgAQYogQyBwgEEAAY7wXSAQg2NTU3ajBqNKgCALACAQ&sourceid=chrome&source=chrome.ob&ie=UTF-8",
+      "updatedAt": "2026-10-27T22:29:20.802Z"
     },
     "Spring": {
       "url": "https://spring.io/projects/spring-framework",
@@ -87,6 +95,10 @@
     "sentence-transformers": {
       "url": "https://sbert.net/",
       "updatedAt": "2026-11-03T03:55:47.690Z"
+    },
+    "CATIA": {
+      "url": "https://en.wikipedia.org/wiki/CATIA",
+      "updatedAt": "2026-11-12T18:36:03.549Z"
     }
   }
 }

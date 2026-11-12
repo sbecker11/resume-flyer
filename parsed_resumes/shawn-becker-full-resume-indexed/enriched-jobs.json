@@ -79,7 +79,8 @@
       "ai-ml",
       "Spexture Portfolio Project",
       "HTML",
-      "CSS"
+      "CSS",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://react.dev/\">[react]</a>",
@@ -100,7 +101,8 @@
       "ai-ml": "ai-ml",
       "Spexture Portfolio Project": "Spexture Portfolio Project",
       "HTML": "HTML",
-      "CSS": "CSS"
+      "CSS": "CSS",
+      "Bash": "Bash"
     },
     "outlineIndex": "1.1.2",
     "outlineKind": "job",
@@ -134,7 +136,6 @@
       "docx",
       "ai-ml",
       "genai",
-      "Bash",
       "Spexture Portfolio Project",
       "HTML",
       "CSS"
@@ -156,7 +157,6 @@
       "docx": "docx",
       "ai-ml": "ai-ml",
       "genai": "genai",
-      "Bash": "Bash",
       "Spexture Portfolio Project": "Spexture Portfolio Project",
       "HTML": "HTML",
       "CSS": "CSS"
@@ -311,7 +311,8 @@
       "Spexture Portfolio Project",
       "JavaScript",
       "HTML",
-      "CSS"
+      "CSS",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://react.dev/\">[react]</a>",
@@ -331,7 +332,8 @@
       "Spexture Portfolio Project": "Spexture Portfolio Project",
       "JavaScript": "JavaScript",
       "HTML": "HTML",
-      "CSS": "CSS"
+      "CSS": "CSS",
+      "Bash": "Bash"
     },
     "outlineIndex": "1.1.6",
     "outlineKind": "job",
@@ -373,7 +375,6 @@
       "sentence-transformers",
       "ai-ml",
       "devops",
-      "Bash",
       "aws-aurora-postgresql",
       "Spexture Portfolio Project"
     ],
@@ -404,7 +405,6 @@
       "sentence-transformers": "sentence-transformers",
       "ai-ml": "ai-ml",
       "devops": "devops",
-      "Bash": "Bash",
       "aws-aurora-postgresql": "aws-aurora-postgresql",
       "Spexture Portfolio Project": "Spexture Portfolio Project"
     },
@@ -676,7 +676,8 @@
       "jira",
       "agile",
       "devops",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://www.getdbt.com/\">[dbt]</a>",
@@ -702,7 +703,8 @@
       "jira": "jira",
       "agile": "agile",
       "devops": "devops",
-      "Spexture Client Engagement": "Spexture Client Engagement"
+      "Spexture Client Engagement": "Spexture Client Engagement",
+      "Bash": "Bash"
     },
     "outlineIndex": "1.2.2",
     "outlineKind": "job",
@@ -787,7 +789,9 @@
       "bigquery",
       "fastapi",
       "tableau",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "AWS CloudWatch",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://segment.com/\">[segment-cdp]</a>",
@@ -812,7 +816,9 @@
       "fastapi": "fastapi",
       "airflow": "airflow",
       "tableau": "tableau",
-      "Spexture Client Engagement": "Spexture Client Engagement"
+      "Spexture Client Engagement": "Spexture Client Engagement",
+      "AWS CloudWatch": "AWS CloudWatch",
+      "Bash": "Bash"
     },
     "outlineIndex": "1.2.4",
     "outlineKind": "job",
@@ -885,14 +891,16 @@
     "educationKey": null,
     "skillIDs": [
       "aws-aurora-postgresql",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://aws.amazon.com/rds/aurora/\">[aws-aurora-postgresql]</a>"
     ],
     "job-skills": {
       "aws-aurora-postgresql": "aws-aurora-postgresql",
-      "Spexture Client Engagement": "Spexture Client Engagement"
+      "Spexture Client Engagement": "Spexture Client Engagement",
+      "Bash": "Bash"
     },
     "outlineIndex": "1.2.6",
     "outlineKind": "job",
@@ -978,7 +986,9 @@
       "agile",
       "scrum",
       "jira",
-      "data-pipelines"
+      "data-pipelines",
+      "AWS CloudWatch",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://spark.apache.org/docs/latest/api/python/\">[pyspark]</a>",
@@ -1009,7 +1019,9 @@
       "agile": "agile",
       "scrum": "scrum",
       "jira": "jira",
-      "data-pipelines": "data-pipelines"
+      "data-pipelines": "data-pipelines",
+      "AWS CloudWatch": "AWS CloudWatch",
+      "Bash": "Bash"
     },
     "outlineIndex": "2",
     "outlineKind": "job",
@@ -1073,7 +1085,8 @@
       "dynamodb",
       "nlp",
       "ai-ml",
-      "k-means"
+      "k-means",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
@@ -1088,7 +1101,8 @@
       "nlp": "nlp",
       "data-pipelines": "data-pipelines",
       "ai-ml": "ai-ml",
-      "k-means": "k-means"
+      "k-means": "k-means",
+      "Bash": "Bash"
     },
     "outlineIndex": "4",
     "outlineKind": "job",
@@ -1146,13 +1160,15 @@
     "Description": "• Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
     "educationKey": null,
     "skillIDs": [
-      "C++"
+      "C++",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://isocpp.org/\">[C++]</a>"
     ],
     "job-skills": {
-      "C++": "C++"
+      "C++": "C++",
+      "Bash": "Bash"
     },
     "outlineIndex": "5.4",
     "outlineKind": "job",
@@ -1210,7 +1226,8 @@
     "skillIDs": [
       "sql-anywhere",
       "nservicebus",
-      "ms-mobile-5"
+      "ms-mobile-5",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://www.sap.com/products/technology-platform/sql-anywhere.html\">[sql-anywhere]</a>",
@@ -1220,7 +1237,8 @@
     "job-skills": {
       "sql-anywhere": "sql-anywhere",
       "nservicebus": "nservicebus",
-      "ms-mobile-5": "ms-mobile-5"
+      "ms-mobile-5": "ms-mobile-5",
+      "Bash": "Bash"
     },
     "outlineIndex": "5.2",
     "outlineKind": "job",
@@ -1275,7 +1293,9 @@
     "skillIDs": [
       "java",
       "jsp",
-      "oracle"
+      "oracle",
+      "AWS CloudWatch",
+      "Bash"
     ],
     "references": [
       "<a href=\"https://www.java.com/\">[java]</a>",
@@ -1285,7 +1305,9 @@
     "job-skills": {
       "java": "java",
       "jsp": "jsp",
-      "oracle": "oracle"
+      "oracle": "oracle",
+      "AWS CloudWatch": "AWS CloudWatch",
+      "Bash": "Bash"
     },
     "outlineIndex": "6",
     "outlineKind": "job",
@@ -1311,16 +1333,14 @@
       "Computer Vision",
       "Computer Graphics",
       "Lens Distortion Estimation",
-      "Gradient Descent",
-      "Bash"
+      "Gradient Descent"
     ],
     "references": [],
     "job-skills": {
       "Computer Vision": "Computer Vision",
       "Computer Graphics": "Computer Graphics",
       "Lens Distortion Estimation": "Lens Distortion Estimation",
-      "Gradient Descent": "Gradient Descent",
-      "Bash": "Bash"
+      "Gradient Descent": "Gradient Descent"
     },
     "outlineIndex": "",
     "outlineKind": "job"
@@ -1360,11 +1380,15 @@
     "Description": "",
     "educationKey": "2",
     "skillIDs": [
-      "Bash"
+      "Bash",
+      "AutoCAD",
+      "CATIA"
     ],
     "references": [],
     "job-skills": {
-      "Bash": "Bash"
+      "Bash": "Bash",
+      "AutoCAD": "AutoCAD",
+      "CATIA": "CATIA"
     },
     "outlineIndex": "",
     "outlineKind": "job"

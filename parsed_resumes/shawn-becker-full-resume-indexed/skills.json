@@ -1163,12 +1163,19 @@
     "name": "Bash",
     "jobIDs": [
       0,
-      2,
+      1,
       3,
-      6,
+      5,
       7,
       9,
-      26,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
       27,
       28
     ],
@@ -1224,7 +1231,10 @@
     "name": "AWS CloudWatch",
     "jobIDs": [
       7,
-      11
+      11,
+      13,
+      17,
+      25
     ],
     "categoryIDs": [
       "devops",
@@ -1486,5 +1496,18 @@
     "categoryIDs": [
       "frontend"
     ]
+  },
+  "AutoCAD": {
+    "name": "AutoCAD",
+    "jobIDs": [
+      28
+    ]
+  },
+  "CATIA": {
+    "name": "CATIA",
+    "jobIDs": [
+      28
+    ],
+    "url": "https://en.wikipedia.org/wiki/CATIA"
   }
 }

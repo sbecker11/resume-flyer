@@ -10,8 +10,7 @@
       "Computer Vision",
       "Computer Graphics",
       "Lens Distortion Estimation",
-      "Gradient Descent",
-      "Bash"
+      "Gradient Descent"
     ]
   },
   "1": {
@@ -35,7 +34,9 @@
     "end": "1987-12-31",
     "description": "",
     "skillIDs": [
-      "Bash"
+      "Bash",
+      "AutoCAD",
+      "CATIA"
     ]
   }
 }

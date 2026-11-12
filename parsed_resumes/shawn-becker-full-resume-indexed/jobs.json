@@ -58,7 +58,8 @@
       "ai-ml",
       "Spexture Portfolio Project",
       "HTML",
-      "CSS"
+      "CSS",
+      "Bash"
     ],
     "jobID": "3",
     "projectGithubRepoUrl": "https://github.com/sbecker11/color-palette-maker",
@@ -88,7 +89,6 @@
       "docx",
       "ai-ml",
       "genai",
-      "Bash",
       "Spexture Portfolio Project",
       "HTML",
       "CSS"
@@ -185,7 +185,8 @@
       "Spexture Portfolio Project",
       "JavaScript",
       "HTML",
-      "CSS"
+      "CSS",
+      "Bash"
     ],
     "jobID": "7",
     "projectGithubRepoUrl": "https://github.com/sbecker11/workspace-spexture",
@@ -223,7 +224,6 @@
       "sentence-transformers",
       "ai-ml",
       "devops",
-      "Bash",
       "aws-aurora-postgresql",
       "Spexture Portfolio Project"
     ],
@@ -385,7 +385,8 @@
       "jira",
       "agile",
       "devops",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "Bash"
     ],
     "jobID": "14"
   },
@@ -440,7 +441,9 @@
       "bigquery",
       "fastapi",
       "tableau",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "AWS CloudWatch",
+      "Bash"
     ],
     "jobID": "16"
   },
@@ -485,7 +488,8 @@
     "outlineIndex": "1.2.6",
     "skillIDs": [
       "aws-aurora-postgresql",
-      "Spexture Client Engagement"
+      "Spexture Client Engagement",
+      "Bash"
     ],
     "jobID": "18"
   },
@@ -543,7 +547,9 @@
       "agile",
       "scrum",
       "jira",
-      "data-pipelines"
+      "data-pipelines",
+      "AWS CloudWatch",
+      "Bash"
     ],
     "jobID": "20"
   },
@@ -587,7 +593,8 @@
       "dynamodb",
       "nlp",
       "ai-ml",
-      "k-means"
+      "k-means",
+      "Bash"
     ],
     "jobID": "22"
   },
@@ -626,7 +633,8 @@
     "Description": "\u2022 Architected a real-time network security monitoring platform in [C++] for packet analysis and network intrusion detection.",
     "outlineIndex": "5.4",
     "skillIDs": [
-      "C++"
+      "C++",
+      "Bash"
     ],
     "jobID": "25"
   },
@@ -666,7 +674,8 @@
     "skillIDs": [
       "sql-anywhere",
       "nservicebus",
-      "ms-mobile-5"
+      "ms-mobile-5",
+      "Bash"
     ],
     "jobID": "27"
   },
@@ -705,7 +714,9 @@
     "skillIDs": [
       "java",
       "jsp",
-      "oracle"
+      "oracle",
+      "AWS CloudWatch",
+      "Bash"
     ],
     "jobID": "29"
   }
