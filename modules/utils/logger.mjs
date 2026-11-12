@@ -12,11 +12,19 @@ const LOG_LEVELS = {
 
 // Get log level from environment variable or localStorage
 function getLogLevel() {
-  // Check localStorage first (allows runtime override)
+  // Check localStorage first (allows runtime override).
+  // Use window.localStorage explicitly (not the bare global) and guard with try/catch:
+  // some Node/test runtimes expose a non-functional native `localStorage` global that
+  // shadows window.localStorage and throws when used, which would otherwise break every
+  // module that imports the logger.
   if (typeof window !== 'undefined' && window.localStorage) {
-    const stored = localStorage.getItem('LOG_LEVEL')
-    if (stored && LOG_LEVELS[stored] !== undefined) {
-      return LOG_LEVELS[stored]
+    try {
+      const stored = window.localStorage.getItem('LOG_LEVEL')
+      if (stored && LOG_LEVELS[stored] !== undefined) {
+        return LOG_LEVELS[stored]
+      }
+    } catch {
+      // Fall through to the other checks / default below.
     }
   }
 
@@ -28,9 +36,11 @@ function getLogLevel() {
     }
   }
 
-  // Default to WARN in production, DEBUG in development
-  const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV
-  return isDev ? LOG_LEVELS.DEBUG : LOG_LEVELS.WARN
+  // Default to WARN in both dev and production — DEBUG/INFO logs were a major source of
+  // console noise (and real work, e.g. forced layout reads) during normal interaction.
+  // Opt into verbose logging per-session via window.setLogLevel('DEBUG') or localStorage.LOG_LEVEL,
+  // or at build time via VITE_LOG_LEVEL, without touching this default.
+  return LOG_LEVELS.WARN
 }
 
 let currentLogLevel = getLogLevel()
@@ -45,7 +55,11 @@ export function setLogLevel(level) {
     if (typeof window !== 'undefined' && window.localStorage) {
       const levelName = Object.keys(LOG_LEVELS).find(k => LOG_LEVELS[k] === level)
       if (levelName) {
-        localStorage.setItem('LOG_LEVEL', levelName)
+        try {
+          window.localStorage.setItem('LOG_LEVEL', levelName)
+        } catch {
+          // Ignore — runtime log level still takes effect for this session either way.
+        }
       }
     }
   }

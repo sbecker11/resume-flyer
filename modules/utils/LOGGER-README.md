@@ -27,9 +27,9 @@ logger.log('[MyComponent] Always shown')
 
 - **SILENT** (0) - No logs
 - **ERROR** (1) - Only errors
-- **WARN** (2) - Errors + warnings (default in production)
+- **WARN** (2) - Errors + warnings (default in both development and production)
 - **INFO** (3) - Errors + warnings + info
-- **DEBUG** (4) - All logs (default in development)
+- **DEBUG** (4) - All logs (opt in via `window.setLogLevel('DEBUG')`, `localStorage.LOG_LEVEL`, or `VITE_LOG_LEVEL`)
 
 ## Configuration
 

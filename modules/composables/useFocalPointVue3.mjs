@@ -6,6 +6,7 @@ import { useAppStore } from '../stores/appStore.mjs'
 import { useAppContext, FOCAL_POINT_KEY, provideDependency } from './useAppContext.mjs'
 import { useBullsEyeService } from '../core/globalServices'
 import { injectGlobalElementRegistry } from './useGlobalElementRegistry.mjs'
+import { logger } from '../utils/logger.mjs'
 
 // Focal point modes:
 // - LOCKED: Focal point is fixed to the bulls-eye (scene center). Parallax stays centered; no mouse tracking.
@@ -164,7 +165,7 @@ export function useFocalPoint() {
         addMouseListener()
       }
     }
-    console.log(`[FocalPoint] Boundary glide complete (${source})`)
+    logger.debug(`[FocalPoint] Boundary glide complete (${source})`)
   }
 
   function getBullsEyePosition() {
@@ -448,7 +449,7 @@ export function useFocalPoint() {
   /** Temporary mode change when leaving scene (does not persist to user-settings). */
   function setModeTransient(newMode) {
     store.focalPoint.mode = newMode
-    console.log(`[FocalPoint] Mode (scene leave/enter transient): ${newMode}`)
+    logger.debug(`[FocalPoint] Mode (scene leave/enter transient): ${newMode}`)
   }
 
   function applyOutsideSceneFocalLock() {
@@ -606,7 +607,7 @@ export function useFocalPoint() {
 
   // Watch for mode changes - restored tri-state functionality (defer DOM work so scene-container can exist)
   watch(mode, (newMode, oldMode) => {
-    console.log(`[FocalPoint] Mode changed: ${oldMode} -> ${newMode}`)
+    logger.debug(`[FocalPoint] Mode changed: ${oldMode} -> ${newMode}`)
     removeMouseListener()
 
     function runModeActions() {
