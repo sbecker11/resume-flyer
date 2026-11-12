@@ -214,6 +214,40 @@ describe('useFocalPoint', () => {
         }
     });
 
+    it('leaving the scene in DRAGGING also locks to the bulls-eye; re-entering eases back to the pointer', async () => {
+        const fp = mountFocalPoint();
+        fp.setFocalPointElement(document.createElement('div'));
+        store.focalPoint.mode = FOCALPOINT_MODES.DRAGGING;
+        await settle();
+
+        // First sample inside the scene: nothing happens.
+        mouseMove(200, 200);
+        flushFrames();
+        expect(fp.mode.value).toBe(FOCALPOINT_MODES.DRAGGING);
+        expect(fp.position.value).toEqual({ x: 200, y: 200 });
+
+        // Pointer moves over the resume panel (outside the 800×600 scene box).
+        mouseMove(900, 200);
+        expect(fp.mode.value).toBe(FOCALPOINT_MODES.LOCKED);
+        expect(actions.setFocalPointMode).not.toHaveBeenCalled(); // transient: not persisted
+        flushFrames();
+        expect(fp.position.value).toEqual({ x: 400, y: 300 }); // bulls-eye centre
+
+        // Back into the scene: DRAGGING restored and the focal point glides (not snaps) to the pointer.
+        mouseMove(600, 250);
+        expect(fp.mode.value).toBe(FOCALPOINT_MODES.DRAGGING);
+        flushFrames(1);
+        // Mid-glide: between the bulls-eye and the pointer, not already there.
+        expect(fp.position.value).not.toEqual({ x: 400, y: 300 });
+        expect(fp.position.value).not.toEqual({ x: 600, y: 250 });
+        flushFrames();
+        expect(fp.position.value).toEqual({ x: 600, y: 250 });
+
+        // Once the glide settles, DRAGGING's immediate mouse handler is live again.
+        mouseMove(650, 260);
+        expect(fp.position.value).toEqual({ x: 650, y: 260 });
+    });
+
     it('a mode change while the pointer is outside the scene re-applies the lock', async () => {
         const fp = mountFocalPoint();
         await settle();

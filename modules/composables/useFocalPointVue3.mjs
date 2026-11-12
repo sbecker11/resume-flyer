@@ -144,8 +144,8 @@ export function useFocalPoint() {
   /** Dedicated leave/enter glide — not cancelled by FOLLOW's startEasing(). */
   let boundaryGlideRaf = null
   let boundaryGlideActive = false
-  /** When true, mode watch must not attach the FOLLOW mouse listener yet. */
-  let suppressFollowListener = false
+  /** When true, mode watch must not attach the FOLLOWING/DRAGGING mouse listener yet. */
+  let suppressModeListenerOnEnter = false
 
   function cancelBoundaryGlide() {
     if (boundaryGlideRaf != null) {
@@ -158,9 +158,9 @@ export function useFocalPoint() {
   function finishBoundaryGlide(source) {
     boundaryGlideRaf = null
     boundaryGlideActive = false
-    if (suppressFollowListener) {
-      suppressFollowListener = false
-      if (isFollowing.value && !isMouseListenerActive.value) {
+    if (suppressModeListenerOnEnter) {
+      suppressModeListenerOnEnter = false
+      if ((isFollowing.value || isDragging.value) && !isMouseListenerActive.value) {
         addMouseListener()
       }
     }
@@ -364,8 +364,10 @@ export function useFocalPoint() {
       if (isDragging.value) {
         if (!isPointerInsideSceneView(event.clientX, event.clientY)) return
         const { x, y } = clampToLeftColumn(event.clientX, event.clientY)
-        setPosition(x, y, 'mouse-dragging')
-        updateElementPosition()
+        // setTarget no-ops while a scene-enter/leave boundary glide owns the rAF loop
+        // (same guard FOLLOWING relies on), so a still-attached listener from just
+        // before a mode/visibility change cannot stomp on the glide mid-transition.
+        setTarget(x, y, 'mouse-dragging')
       }
     }
   }
@@ -473,21 +475,22 @@ export function useFocalPoint() {
     // Stop any in-flight glide-to-bulls-eye so restored FOLLOW/DRAG can take over.
     cancelFocalEasing()
     cancelBoundaryGlide()
-    // FOLLOWING leave↔enter symmetry: leave eases to bulls-eye; re-enter eases
-    // to the pointer. Suppress FOLLOW listener until the glide finishes so
-    // mousemove cannot cancel the boundary rAF and snap to the cursor.
+    // FOLLOWING/DRAGGING leave↔enter symmetry: leave eases to bulls-eye; re-enter
+    // eases to the pointer. Suppress the mouse listener until the glide finishes
+    // so mousemove cannot cancel the boundary rAF and snap to the cursor.
     if (
-      restored === FOCALPOINT_MODES.FOLLOWING &&
+      (restored === FOCALPOINT_MODES.FOLLOWING || restored === FOCALPOINT_MODES.DRAGGING) &&
       Number.isFinite(clientX) &&
       Number.isFinite(clientY)
     ) {
-      suppressFollowListener = true
+      suppressModeListenerOnEnter = true
       setModeTransient(restored)
       const { x, y } = clampToLeftColumn(clientX, clientY)
-      easeFocalToPoint(x, y, 'scene-enter-follow')
+      const source = restored === FOCALPOINT_MODES.DRAGGING ? 'scene-enter-drag' : 'scene-enter-follow'
+      easeFocalToPoint(x, y, source)
       return
     }
-    suppressFollowListener = false
+    suppressModeListenerOnEnter = false
     setModeTransient(restored)
   }
 
@@ -611,12 +614,13 @@ export function useFocalPoint() {
         // Single crosshair: only the img at focal position (no CSS cursor) so one size, visible at saved position on load
         if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
         removeCrosshairCursor() // ensure no cursor-file crosshair; we use the img only
-        addMouseListener()
+        // Scene-enter glide attaches the listener when it finishes.
+        if (!suppressModeListenerOnEnter) addMouseListener()
       } else if (newMode === FOCALPOINT_MODES.FOLLOWING) {
         if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
         removeCrosshairCursor()
         // Scene-enter glide attaches the listener when it finishes.
-        if (!suppressFollowListener) addMouseListener()
+        if (!suppressModeListenerOnEnter) addMouseListener()
       } else {
         if (focalPointElement.value) focalPointElement.value.style.display = 'flex'
         removeCrosshairCursor()
@@ -687,7 +691,7 @@ export function useFocalPoint() {
     
     cancelFocalEasing()
     cancelBoundaryGlide()
-    suppressFollowListener = false
+    suppressModeListenerOnEnter = false
   }
   
   // Auto-initialize on first use
