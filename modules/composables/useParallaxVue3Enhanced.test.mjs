@@ -59,6 +59,11 @@ function translateXOf(el) {
     return m ? parseFloat(m[1]) : null;
 }
 
+function translateYOf(el) {
+    const m = /translateY\(([-\d.]+)px\)/.exec(el.style.transform || '');
+    return m ? parseFloat(m[1]) : null;
+}
+
 let mounted;
 
 beforeEach(() => {
@@ -128,6 +133,21 @@ describe('useParallaxEnhanced', () => {
         // Scene is static: only the transform changes.
         expect(near.style.left).toBe('123px');
         expect(near.style.top).toBe('45px');
+    });
+
+    it('projects Y from the bulls-eye and focal point, scaled by depth, same as X', () => {
+        const { cards, focal } = mountScene();
+        // Move the focal point 40px above the bulls-eye's Y (300) → dv = (300 - 260) * 0.9 = 36.
+        setRect(focal, { left: 395, top: 255, width: 10, height: 10 });
+        mounted = withSetup(() => useParallaxEnhanced());
+        const { near, far, mid } = cards;
+        // near (Z=1): 36 * 0.9 = 32.4; far (Z=14): 36 * 0 = 0; mid (Z=7.5): 36 * 0.45 = 16.2.
+        expect(translateYOf(near)).toBeCloseTo(32.4, 6);
+        expect(translateYOf(far)).toBeCloseTo(0, 6);
+        expect(translateYOf(mid)).toBeCloseTo(16.2, 6);
+        // Scene is static: only the transform changes, not the card's anchored top/left.
+        expect(near.style.top).toBe('45px');
+        expect(near.style.left).toBe('123px');
     });
 
     it('re-renders on focal-point, bulls-eye, scene-width, and resize events, skipping unchanged frames', () => {
