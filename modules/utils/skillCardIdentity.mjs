@@ -123,7 +123,8 @@ function jobRowExperience(job, skillsData) {
  * @param {Iterable<Element>} cardElements
  * @param {Record<string, { name?: string }>} [skillsData]
  * @param {unknown} [catalog] shared skill-URL catalog, used only when the skill has no url
- * @param {Array<object>|null} [jobs] when set, labels use the Skill jobs month total: "Name (number)"
+ * @param {Array<object>|null} [jobs] when set, labels use the same whole-years figure as the
+ *   scene skill card — ceil(sum(durationMonths) / 12) — as "Name (number)"
  * @returns {{ kind: 'skill', id: string, label: string, sublabel: string, slug: string }[]}
  */
 export function buildSkillSearchOptions(cardElements, skillsData = {}, catalog = null, jobs = null) {
@@ -137,7 +138,10 @@ export function buildSkillSearchOptions(cardElements, skillsData = {}, catalog =
         let label = name
         if (jobSets) {
             const { jobCount, monthsTotal } = skillJobsExperience(key, jobSets)
-            label = skillRowDisplayLabel(name, jobCount, monthsTotal)
+            // Same formula as the scene skill card (see totalYearsFromDurationMonths):
+            // whole years, rounded up, not raw months.
+            const years = monthsTotal > 0 ? Math.ceil(monthsTotal / 12) : 0
+            label = skillRowDisplayLabel(name, jobCount, years)
         }
         return {
             kind: 'skill',

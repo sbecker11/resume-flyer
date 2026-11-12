@@ -3,7 +3,8 @@
  *
  * jobs.json links "AI/ML" and "AI Agents" by display name while skills.json keys them
  * as "ai-ml" / "ai-agents". The Skill jobs tab and the Find-skill modal must count those
- * links (and the same months the scene skill card shows) instead of reporting zero.
+ * links instead of reporting zero. The Skill jobs tab shows raw months; the Find-skill
+ * modal shows the same whole-years figure (ceil(months / 12)) as the scene skill card.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'fs';
@@ -75,7 +76,7 @@ describe.skipIf(!haveIndexedResume)('indexed resume: display-name skillIDs count
     expect(ids.has('AI/ML')).toBe(false);
   });
 
-  it('gives ai-ml and ai-agents the same non-zero months as the scene skill card', () => {
+  it('gives ai-ml and ai-agents the same non-zero years as the scene skill card', () => {
     const options = buildSkillSearchOptions([skillCard('ai-ml'), skillCard('ai-agents')], skills, null, jobs);
     for (const key of ['ai-ml', 'ai-agents']) {
       const expectedMonths = sceneCardMonths(key, jobs);
@@ -83,7 +84,10 @@ describe.skipIf(!haveIndexedResume)('indexed resume: display-name skillIDs count
       let jobCount = 0;
       for (const job of jobs) if (getSelectedSkillIdsForJob(job, skills).has(key)) jobCount += 1;
       expect(jobCount, `${key} linked jobs`).toBeGreaterThan(0);
-      const expectedLabel = skillRowDisplayLabel(skills[key].name, jobCount, expectedMonths);
+      // Find-skill modal shows the same whole-years figure as the scene skill card:
+      // ceil(sum(durationMonths) / 12), not raw months.
+      const expectedYears = Math.ceil(expectedMonths / 12);
+      const expectedLabel = skillRowDisplayLabel(skills[key].name, jobCount, expectedYears);
       expect(options.find((o) => o.slug === key).label).toBe(expectedLabel);
       expect(expectedLabel).not.toMatch(/\(0\)$/);
     }

@@ -184,7 +184,7 @@ describe('job finder options', () => {
 })
 
 describe('skill finder experience', () => {
-    it('appends the Skill jobs month total after each skill name', () => {
+    it('appends the same ceil(months / 12) years figure shown on the scene skill card', () => {
         const cards = [
             skillCard('skill-card-div-1', 'python'),
             skillCard('skill-card-div-2', 'vite'),
@@ -198,8 +198,10 @@ describe('skill finder experience', () => {
             { skillIDs: ['python'], durationMonths: 10, Description: 'Uses [Vite].' },
         ]
         const options = buildSkillSearchOptions(cards, skills, null, jobs)
-        expect(options.find((row) => row.slug === 'python').label).toBe('Python (18)')
-        expect(options.find((row) => row.slug === 'vite').label).toBe('Vite (10)')
+        // python: 8 + 10 = 18 months -> ceil(18 / 12) = 2 years.
+        expect(options.find((row) => row.slug === 'python').label).toBe('Python (2)')
+        // vite: 10 months -> ceil(10 / 12) = 1 year.
+        expect(options.find((row) => row.slug === 'vite').label).toBe('Vite (1)')
     })
 
     it('counts a job whose skillIDs entry is the display name, not the key', () => {
@@ -217,8 +219,10 @@ describe('skill finder experience', () => {
             { skillIDs: ['ai-ml'], durationMonths: 6, Description: '' },
         ]
         const options = buildSkillSearchOptions(cards, skills, null, jobs)
-        expect(options.find((row) => row.slug === 'ai-ml').label).toBe('AI/ML (41)')
-        expect(options.find((row) => row.slug === 'ai-agents').label).toBe('AI Agents (21)')
+        // ai-ml: 21 + 14 + 6 = 41 months -> ceil(41 / 12) = 4 years.
+        expect(options.find((row) => row.slug === 'ai-ml').label).toBe('AI/ML (4)')
+        // ai-agents: 21 months -> ceil(21 / 12) = 2 years.
+        expect(options.find((row) => row.slug === 'ai-agents').label).toBe('AI Agents (2)')
 
         const biz = document.createElement('div')
         biz.className = 'biz-card-div'
@@ -237,10 +241,11 @@ describe('skill finder experience', () => {
             { skillIDs: ['c++'], durationMonths: 2, Description: '' },
         ]
         const options = buildSkillSearchOptions([skillCard('skill-card-div-1', 'c')], skills, null, jobs)
+        // 7 + 3 + 2 = 12 months -> ceil(12 / 12) = 1 year.
         expect(options).toEqual([
-            { kind: 'skill', id: 'skill-card-div-1', label: 'C++ (12)', sublabel: 'https://isocpp.org/', slug: 'c' },
+            { kind: 'skill', id: 'skill-card-div-1', label: 'C++ (1)', sublabel: 'https://isocpp.org/', slug: 'c' },
         ])
-        expect(filterSearchOptionsByQuery(options, 'c++').map((row) => row.label)).toEqual(['C++ (12)'])
+        expect(filterSearchOptionsByQuery(options, 'c++').map((row) => row.label)).toEqual(['C++ (1)'])
         expect(buildSkillSearchOptions([skillCard('skill-card-div-1', 'c')], skills)[0].label).toBe('C++')
     })
 
@@ -252,7 +257,8 @@ describe('skill finder experience', () => {
         ]
         for (const token of ['C++', 'c++']) {
             const [row] = buildSkillSearchOptions([skillCard('skill-card-div-3', token)], skills, null, jobs)
-            expect(row).toEqual({ kind: 'skill', id: 'skill-card-div-3', label: 'C++ (9)', sublabel: 'https://isocpp.org/', slug: token })
+            // 7 + 2 = 9 months -> ceil(9 / 12) = 1 year.
+            expect(row).toEqual({ kind: 'skill', id: 'skill-card-div-3', label: 'C++ (1)', sublabel: 'https://isocpp.org/', slug: token })
             expect(buildSkillSearchOptions([skillCard('skill-card-div-3', token)], skills)[0].label).toBe('C++')
         }
         const [unknown] = buildSkillSearchOptions([skillCard('skill-card-div-4', 'Rust++')], skills, null, jobs)
@@ -285,10 +291,11 @@ describe('skill finder experience', () => {
         expect(descriptionReads).toBe(jobs.length)
 
         const byLabel = Object.fromEntries(options.map((o) => [o.slug, o.label]))
-        // skill-0: job 0 (1). skill-4: jobs 0..4 (1+2+3+4+5). skill-33: job 29 only (30).
+        // skill-0: job 0, 1 month -> ceil(1/12)=1. skill-4: jobs 0..4, 1+2+3+4+5=15 months -> ceil(15/12)=2.
+        // skill-33: job 29 only, 30 months -> ceil(30/12)=3.
         expect(byLabel['skill-0']).toBe('Skill 0 (1)')
-        expect(byLabel['skill-4']).toBe('Skill 4 (15)')
-        expect(byLabel['skill-33']).toBe('Skill 33 (30)')
+        expect(byLabel['skill-4']).toBe('Skill 4 (2)')
+        expect(byLabel['skill-33']).toBe('Skill 33 (3)')
         expect(byLabel['skill-40']).toBe('Skill 40 (0)')
     })
 })
