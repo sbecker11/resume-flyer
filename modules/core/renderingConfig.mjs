@@ -9,8 +9,11 @@ const DEFAULTS = {
   parallaxScaleAtMaxZ: 1.0,   // at max scene Z (14 = far)
   saturationAtMaxZ: 100,      // percentage 0–100; 100 = no change
   brightnessAtMaxZ: 100,     // percentage 0–100; 100 = no z-based darkness
-  blurAtMaxZ: 0
+  blurAtMaxZ: 0,
+  zEffectsScope: 'all'       // 'all' | 'biz-only'; which cards get blur/saturation/brightness-at-Z
 }
+
+const Z_EFFECTS_SCOPES = ['all', 'biz-only']
 
 /**
  * Clamp a value using rendering limits from app state (app_state.json or app_state.default.json).
@@ -53,6 +56,9 @@ export function setFromAppState(rendering, limits) {
     current.brightnessAtMaxZ = Number.isNaN(pct) ? DEFAULTS.brightnessAtMaxZ : clamp(pct, 'brightnessAtMaxZ')
   }
   if (rendering.blurAtMaxZ !== undefined) current.blurAtMaxZ = clamp(Number(rendering.blurAtMaxZ), 'blurAtMaxZ') ?? DEFAULTS.blurAtMaxZ
+  if (rendering.zEffectsScope !== undefined) {
+    current.zEffectsScope = Z_EFFECTS_SCOPES.includes(rendering.zEffectsScope) ? rendering.zEffectsScope : DEFAULTS.zEffectsScope
+  }
 }
 
 /**

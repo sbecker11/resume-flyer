@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   CARD_MIN_Z,
   CARD_MAX_Z,
@@ -8,7 +8,9 @@ import {
   get_contrast_str_from_z,
   get_saturation_str_from_z,
   get_filterStr_from_z,
+  shouldApplyZEffects,
 } from './filters.mjs';
+import { setFromAppState } from './renderingConfig.mjs';
 
 describe('core/filters', () => {
   it('exports Z constants', () => {
@@ -45,5 +47,47 @@ describe('core/filters', () => {
     expect(s).toMatch(/blur/);
     expect(s).not.toMatch(/contrast/);
     expect(s).toMatch(/saturate/);
+  });
+
+  describe('zEffectsScope (biz-only restriction)', () => {
+    afterEach(() => {
+      // Reset to default scope so other tests in this file are unaffected.
+      setFromAppState({ zEffectsScope: 'all' });
+    });
+
+    it('shouldApplyZEffects is true for any card type when scope is "all" (default)', () => {
+      expect(shouldApplyZEffects('biz')).toBe(true);
+      expect(shouldApplyZEffects('skill')).toBe(true);
+      expect(shouldApplyZEffects(undefined)).toBe(true);
+    });
+
+    it('shouldApplyZEffects is false only for skill cards when scope is "biz-only"', () => {
+      setFromAppState({ zEffectsScope: 'biz-only' });
+      expect(shouldApplyZEffects('biz')).toBe(true);
+      expect(shouldApplyZEffects('skill')).toBe(false);
+    });
+
+    it('biz-only scope: skill cards get no brightness/blur/saturation effect at Z', () => {
+      setFromAppState({ zEffectsScope: 'biz-only', brightnessAtMaxZ: 50, blurAtMaxZ: 4, saturationAtMaxZ: 20 });
+      expect(get_brightness_value_from_z(CARD_MAX_Z, 'skill')).toBe(1.0);
+      expect(get_brightness_str_from_z(CARD_MAX_Z, 'skill')).toBe('brightness(100%)');
+      expect(get_blur_str_from_z(CARD_MAX_Z, 'skill')).toBe('blur(0px)');
+      expect(get_saturation_str_from_z(CARD_MAX_Z, 'skill')).toBe('saturate(1)');
+      expect(get_filterStr_from_z(CARD_MAX_Z, 'skill')).toBe('brightness(100%) blur(0px) saturate(1)');
+    });
+
+    it('biz-only scope: biz cards still get the full Z effect', () => {
+      setFromAppState({ zEffectsScope: 'biz-only', brightnessAtMaxZ: 50, blurAtMaxZ: 4, saturationAtMaxZ: 20 });
+      expect(get_brightness_value_from_z(CARD_MAX_Z, 'biz')).toBeCloseTo(0.5);
+      expect(get_blur_str_from_z(CARD_MAX_Z, 'biz')).toBe('blur(4px)');
+      expect(get_saturation_str_from_z(CARD_MAX_Z, 'biz')).toMatch(/^saturate\(0\.19+6?\)$/);
+    });
+
+    it('"all" scope (default): skill cards also get the full Z effect', () => {
+      setFromAppState({ zEffectsScope: 'all', brightnessAtMaxZ: 50, blurAtMaxZ: 4, saturationAtMaxZ: 20 });
+      expect(get_brightness_value_from_z(CARD_MAX_Z, 'skill')).toBeCloseTo(0.5);
+      expect(get_blur_str_from_z(CARD_MAX_Z, 'skill')).toBe('blur(4px)');
+      expect(get_saturation_str_from_z(CARD_MAX_Z, 'skill')).toMatch(/^saturate\(0\.19+6?\)$/);
+    });
   });
 });

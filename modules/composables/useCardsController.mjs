@@ -690,7 +690,7 @@ export function useCardsController() {
         card.setAttribute('data-sceneZ', sceneZ)
         card.style.zIndex = String(zIndex) // CSS stacking: 1–3 so biz cards sit behind skill cards
         // Apply Z-based depth filters (brightness, blur, etc.)
-        card.style.filter = filters.get_filterStr_from_z(sceneZ)
+        card.style.filter = filters.get_filterStr_from_z(sceneZ, 'biz')
         // Scene is STATIC: position is set once and never changed; parallax handles projection only.
         card.style.left = `${x}px`
         card.style.top = `${y}px`
@@ -1139,7 +1139,7 @@ export function useCardsController() {
         skillCard.style.justifyContent = 'flex-start'
         skillCard.style.textAlign = 'left'
         skillCard.style.wordBreak = 'break-word'
-        skillCard.style.filter = filters.get_filterStr_from_z(sceneZ)
+        skillCard.style.filter = filters.get_filterStr_from_z(sceneZ, 'skill')
         const backIconUrl = basePathJoin('static_content/icons/anchors/icons8-back-16-black.png')
         const skillObj = skillsDataForCard[skillName]
         skillCard.setAttribute('aria-label', skillLabelText(skillName, skillObj))
@@ -1736,11 +1736,12 @@ export function useCardsController() {
         }
         
         // Restore Z-based filter for normal (non-hovered) state
+        // (only called from clearAllCardHovers(), which only targets .biz-card-div elements)
         const sceneZ = card.getAttribute('data-sceneZ');
         if (sceneZ !== null && sceneZ !== '') {
             const z = parseInt(sceneZ, 10);
             if (!Number.isNaN(z)) {
-                card.style.setProperty('filter', filters.get_filterStr_from_z(z));
+                card.style.setProperty('filter', filters.get_filterStr_from_z(z, 'biz'));
             }
         }
         // Remove hovered class

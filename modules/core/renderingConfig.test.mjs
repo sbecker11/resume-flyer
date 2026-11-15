@@ -6,7 +6,8 @@ const DEFAULTS = {
   parallaxScaleAtMaxZ: 1.0,
   saturationAtMaxZ: 100,
   brightnessAtMaxZ: 100,
-  blurAtMaxZ: 0
+  blurAtMaxZ: 0,
+  zEffectsScope: 'all'
 };
 
 describe('core/renderingConfig', () => {
@@ -136,6 +137,31 @@ describe('core/renderingConfig', () => {
       const r = getRendering();
       expect(r.saturationAtMaxZ).toBe(0);
       expect(r.brightnessAtMaxZ).toBe(0);
+    });
+
+    it('defaults zEffectsScope to "all"', () => {
+      const r = getRendering();
+      expect(r.zEffectsScope).toBe('all');
+    });
+
+    it('accepts zEffectsScope "biz-only"', () => {
+      setFromAppState({ zEffectsScope: 'biz-only' });
+      const r = getRendering();
+      expect(r.zEffectsScope).toBe('biz-only');
+    });
+
+    it('falls back to "all" for an invalid zEffectsScope value', () => {
+      setFromAppState({ zEffectsScope: 'biz-only' });
+      setFromAppState({ zEffectsScope: 'nonsense' });
+      const r = getRendering();
+      expect(r.zEffectsScope).toBe('all');
+    });
+
+    it('leaves zEffectsScope unchanged when omitted (partial merge)', () => {
+      setFromAppState({ zEffectsScope: 'biz-only' });
+      setFromAppState({ blurAtMaxZ: 2 });
+      const r = getRendering();
+      expect(r.zEffectsScope).toBe('biz-only');
     });
   });
 });

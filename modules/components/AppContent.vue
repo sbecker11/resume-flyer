@@ -733,7 +733,8 @@ function handleRenderingChanged() {
   cards.forEach((card) => {
     const z = parseFloat(card.getAttribute('data-sceneZ'))
     if (!Number.isNaN(z)) {
-      card.style.filter = get_filterStr_from_z(z)
+      const cardType = card.classList.contains('skill-card-div') ? 'skill' : 'biz'
+      card.style.filter = get_filterStr_from_z(z, cardType)
       // Recompute icon/text contrast whenever effective background changes via 3D filters.
       updateContrastForBrightness(card)
     }

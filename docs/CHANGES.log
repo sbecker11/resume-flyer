@@ -2,6 +2,16 @@
 
 Most recent updates are listed first.
 
+## 2026-11-15
+
+### 3D Settings: scope Z-based effects to biz-cards only
+- Added `system-constants.rendering.zEffectsScope` (`'all'` | `'biz-only'`, default `'all'`) to app state.
+- New toggle in the `modal-3d` (3D Settings) dialog: "Apply blur/saturation/brightness-at-Z to biz-cards only", saved alongside the other 3D Settings fields.
+- `modules/core/filters.mjs`: `get_brightness_str_from_z`, `get_blur_str_from_z`, `get_saturation_str_from_z`, and `get_filterStr_from_z` now take an optional `cardType` (`'biz'` | `'skill'`) and skip the Z-based effect for skill-cards when scope is `'biz-only'`, via new `shouldApplyZEffects(cardType)`.
+- Updated every call site to pass card type: biz/skill card creation and hover-restore in `useCardsController.mjs`, and the `rendering-changed` re-apply handler in `AppContent.vue` (determined per-card from `.biz-card-div` / `.skill-card-div` class).
+- Added default/migration/validation handling in `useAppState.ts` (invalid values fall back to `'all'`), documented the field in `modules/types/index.ts`, and added it to `public/app_state.default.json`.
+- Tests: new coverage in `renderingConfig.test.mjs` and `filters.test.mjs` (30 tests); full suite still green (112 files / 1637 tests).
+
 ## 2026-04-28
 
 ### Commit prepared

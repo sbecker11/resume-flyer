@@ -11,9 +11,24 @@ export const CARD_MIN_Z = 1;
 export const CARD_MAX_Z = 14;
 
 /**
- * Brightness at Z: linear interpolation (min Z = 100%, max Z = brightnessAtMaxZ from app_state).
+ * Whether Z-based blur/saturation/brightness should apply to a card of the given type,
+ * per system-constants.rendering.zEffectsScope ('all' | 'biz-only').
+ * @param {'biz'|'skill'} [cardType] - card type; omit/unknown treated as unaffected by the restriction.
+ * @returns {boolean}
  */
-export function get_brightness_value_from_z(z) {
+export function shouldApplyZEffects(cardType) {
+    const { zEffectsScope } = getRendering();
+    if (zEffectsScope === 'biz-only' && cardType === 'skill') return false;
+    return true;
+}
+
+/**
+ * Brightness at Z: linear interpolation (min Z = 100%, max Z = brightnessAtMaxZ from app_state).
+ * @param {number} z
+ * @param {'biz'|'skill'} [cardType] - when scope is 'biz-only' and cardType is 'skill', returns 100% (no effect).
+ */
+export function get_brightness_value_from_z(z, cardType) {
+    if (!shouldApplyZEffects(cardType)) return 1.0;
     const { brightnessAtMaxZ } = getRendering();
     const maxPct = (typeof brightnessAtMaxZ === 'number' && brightnessAtMaxZ >= 0) ? brightnessAtMaxZ / 100 : 1.0;
     const interp = linearInterp(z, CARD_MIN_Z, 1.0, CARD_MAX_Z, maxPct);
@@ -23,15 +38,18 @@ export function get_brightness_value_from_z(z) {
 /**
  * Brightness filter string from z. Integer percent.
  */
-export function get_brightness_str_from_z(z) {
-    const pct = Math.round(100 * get_brightness_value_from_z(z));
+export function get_brightness_str_from_z(z, cardType) {
+    const pct = Math.round(100 * get_brightness_value_from_z(z, cardType));
     return `brightness(${pct}%)`;
 }
 
 /**
  * Blur at Z: linear interpolation (min Z = 0 px, max Z = blurAtMaxZ from app_state).
+ * @param {number} z
+ * @param {'biz'|'skill'} [cardType] - when scope is 'biz-only' and cardType is 'skill', returns no blur.
  */
-export function get_blur_str_from_z(z) {
+export function get_blur_str_from_z(z, cardType) {
+    if (!shouldApplyZEffects(cardType)) return 'blur(0px)';
     const { blurAtMaxZ } = getRendering();
     if (z <= 0 || blurAtMaxZ <= 0) return 'blur(0px)';
     const blur = linearInterp(z, CARD_MIN_Z, 0, CARD_MAX_Z, blurAtMaxZ);
@@ -55,8 +73,11 @@ export function get_contrast_str_from_z(z) {
 
 /**
  * Saturation at Z: linear interpolation (min Z = 100%, max Z = saturationAtMaxZ from app_state).
+ * @param {number} z
+ * @param {'biz'|'skill'} [cardType] - when scope is 'biz-only' and cardType is 'skill', returns no change.
  */
-export function get_saturation_str_from_z(z) {
+export function get_saturation_str_from_z(z, cardType) {
+    if (!shouldApplyZEffects(cardType)) return 'saturate(1)';
     const { saturationAtMaxZ } = getRendering();
     const maxPct = (typeof saturationAtMaxZ === 'number' && saturationAtMaxZ >= 0) ? saturationAtMaxZ / 100 : 1.0;
     const interp = linearInterp(z, CARD_MIN_Z, 1.0, CARD_MAX_Z, maxPct);
@@ -66,11 +87,14 @@ export function get_saturation_str_from_z(z) {
 
 /**
  * Combined filter string: brightness, blur, saturation at Z each from linear interpolation (value at min Z, value at max Z).
+ * @param {number} z
+ * @param {'biz'|'skill'} [cardType] - card type, used to gate blur/saturation/brightness when
+ *   system-constants.rendering.zEffectsScope is 'biz-only' (skill cards then render with no Z effect).
  */
-export function get_filterStr_from_z(z) {
+export function get_filterStr_from_z(z, cardType) {
     var filterStr = "";
-    filterStr += get_brightness_str_from_z(z) + " ";
-    filterStr += get_blur_str_from_z(z) + " ";
-    filterStr += get_saturation_str_from_z(z);
+    filterStr += get_brightness_str_from_z(z, cardType) + " ";
+    filterStr += get_blur_str_from_z(z, cardType) + " ";
+    filterStr += get_saturation_str_from_z(z, cardType);
     return filterStr;
 } 

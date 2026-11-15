@@ -178,6 +178,7 @@ export interface AppState {
       saturationAtMaxZ: number;      // 0–100%; 100 = no change (default 100)
       brightnessAtMaxZ: number;      // 0–100%; 100 = no z-based darkness (default 100)
       blurAtMaxZ: number;            // 0–5 px at max Z; 0 = no z-based blur (default 0)
+      zEffectsScope: 'all' | 'biz-only'; // which cards get blur/saturation/brightness-at-Z (default 'all')
     };
     /** Min/max/step for 3D Settings sliders; edit in app_state.json for single source of truth */
     renderingLimits?: {

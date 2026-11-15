@@ -295,6 +295,7 @@ function getDefaultState(): AppState {
                 saturationAtMaxZ: 100,
                 brightnessAtMaxZ: 100,
                 blurAtMaxZ: 0,
+                zEffectsScope: 'all',
                 focalPointUiVisible: true,
                 bullsEyeUiVisible: true
             }
@@ -447,6 +448,7 @@ function migrateState(state: any): AppState {
         saturationAtMaxZ: 100,
         brightnessAtMaxZ: 100,
         blurAtMaxZ: 0,
+        zEffectsScope: 'all' as 'all' | 'biz-only',
         focalPointUiVisible: true,
         bullsEyeUiVisible: true
     }
@@ -468,6 +470,7 @@ function migrateState(state: any): AppState {
             if (r.brightnessAtMaxZ === undefined) r.brightnessAtMaxZ = renderingDefaults.brightnessAtMaxZ
             else if (r.brightnessAtMaxZ <= 1 && r.brightnessAtMaxZ > 0) r.brightnessAtMaxZ = Math.round(r.brightnessAtMaxZ * 100)
             if (r.blurAtMaxZ === undefined) r.blurAtMaxZ = renderingDefaults.blurAtMaxZ
+            if (r.zEffectsScope === undefined || (r.zEffectsScope !== 'all' && r.zEffectsScope !== 'biz-only')) r.zEffectsScope = renderingDefaults.zEffectsScope
             if (r.focalPointUiVisible === undefined) r.focalPointUiVisible = renderingDefaults.focalPointUiVisible
             if (r.bullsEyeUiVisible === undefined) r.bullsEyeUiVisible = renderingDefaults.bullsEyeUiVisible
             if (r.displacementAtMaxZ !== undefined) delete r.displacementAtMaxZ
@@ -570,7 +573,7 @@ async function loadStateFromServer(): Promise<AppState> {
             // If saved state was missing system-constants.rendering or renderingLimits, persist merged state so app_state.json gets the new keys
             const scRaw = rawState['system-constants']
             const r = scRaw?.rendering
-            const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ', 'focalPointUiVisible', 'bullsEyeUiVisible'] as const
+            const renderingKeys = ['parallaxScaleAtMinZ', 'parallaxScaleAtMaxZ', 'saturationAtMaxZ', 'brightnessAtMaxZ', 'blurAtMaxZ', 'zEffectsScope', 'focalPointUiVisible', 'bullsEyeUiVisible'] as const
             const hadMissingRendering = !r || renderingKeys.some(k => r[k] === undefined)
             const hadMissingRenderingLimits = !scRaw?.renderingLimits
             if (hadMissingRendering || hadMissingRenderingLimits) {

@@ -164,6 +164,7 @@
       "saturationAtMaxZ": 100,
       "brightnessAtMaxZ": 100,
       "blurAtMaxZ": 0,
+      "zEffectsScope": "all",
       "focalPointUiVisible": true,
       "bullsEyeUiVisible": true
     },

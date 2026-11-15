@@ -41,6 +41,15 @@
               <input v-model.number="form.brightnessAtMaxZ" type="number" :min="renderingLimits.brightnessAtMaxZ.min" :max="renderingLimits.brightnessAtMaxZ.max" :step="renderingLimits.brightnessAtMaxZ.step" />
             </span>
           </label>
+          <div class="modal-row modal-row-toggle">
+            <span class="modal-row-label">Apply blur/saturation/brightness-at-Z to biz-cards only</span>
+            <span class="modal-row-input-wrap modal-row-input-wrap--toggle">
+              <label class="switch">
+                <input v-model="form.zEffectsScope" type="checkbox" role="switch" true-value="biz-only" false-value="all" />
+                <span class="switch-slider" aria-hidden="true"></span>
+              </label>
+            </span>
+          </div>
           <label class="modal-row">
             <span class="modal-row-label">Parallax scale at min scene Z / near (0–1.5)</span>
             <span class="modal-row-input-wrap">
@@ -222,6 +231,7 @@ const form = ref({
   blurAtMaxZ: 0,
   saturationAtMaxZ: 100,
   brightnessAtMaxZ: 100,
+  zEffectsScope: 'all',
   parallaxScaleAtMinZ: 1.0,
   parallaxScaleAtMaxZ: 1.0,
   focalPointUiVisible: true,
@@ -239,6 +249,7 @@ function openModal() {
     blurAtMaxZ: clampRenderingValue(limits, 'blurAtMaxZ', r.blurAtMaxZ),
     saturationAtMaxZ: clampRenderingValue(limits, 'saturationAtMaxZ', saturationPct),
     brightnessAtMaxZ: clampRenderingValue(limits, 'brightnessAtMaxZ', brightnessPct),
+    zEffectsScope: r.zEffectsScope === 'biz-only' ? 'biz-only' : 'all',
     parallaxScaleAtMinZ: clampRenderingValue(limits, 'parallaxScaleAtMinZ', r.parallaxScaleAtMinZ),
     parallaxScaleAtMaxZ: clampRenderingValue(limits, 'parallaxScaleAtMaxZ', r.parallaxScaleAtMaxZ),
     focalPointUiVisible: r.focalPointUiVisible !== false,
@@ -261,6 +272,7 @@ async function save() {
     blurAtMaxZ: clampRenderingValue(limits, 'blurAtMaxZ', form.value.blurAtMaxZ),
     saturationAtMaxZ: clampRenderingValue(limits, 'saturationAtMaxZ', form.value.saturationAtMaxZ),
     brightnessAtMaxZ: clampRenderingValue(limits, 'brightnessAtMaxZ', form.value.brightnessAtMaxZ),
+    zEffectsScope: form.value.zEffectsScope === 'biz-only' ? 'biz-only' : 'all',
     parallaxScaleAtMinZ: clampRenderingValue(limits, 'parallaxScaleAtMinZ', form.value.parallaxScaleAtMinZ),
     parallaxScaleAtMaxZ: clampRenderingValue(limits, 'parallaxScaleAtMaxZ', form.value.parallaxScaleAtMaxZ),
     focalPointUiVisible: !!form.value.focalPointUiVisible,
