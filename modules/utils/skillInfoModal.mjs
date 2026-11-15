@@ -17,7 +17,7 @@ import { hasServer } from '@/modules/core/hasServer.mjs';
 import { getGlobalJobsDependency } from '@/modules/composables/useJobsDependency.mjs';
 import { jobTenureMonthsInclusive, stripUnknownDatesFromTitle } from '@/modules/utils/dateUtils.mjs';
 import { createBizCardDivId } from '@/modules/utils/bizCardUtils.mjs';
-import { scrollResumeListingElementIntoView } from '@/modules/utils/resumeListScroll.mjs';
+import { scrollResumeListingElementIntoView, scrollResumeListingRangeIntoView } from '@/modules/utils/resumeListScroll.mjs';
 import { syncSkillCardBackLinkPresentation } from '@/modules/composables/useColorPalette.mjs';
 
 const MODAL_ID = 'skill-info-modal';
@@ -354,9 +354,57 @@ function scrollSceneContentSoElementVisible(el) {
 }
 
 /**
- * Scroll #resume-content-listing so the focused T&S skill title on the rDiv is in view.
- * Selection’s default scroll parks the rDiv *header* at the top; for tall cards that leaves
- * Technologies & Skills (and the focused skill) below the fold — this corrects that.
+ * Scroll #scene-content so both the card's header (the "top portion containing its title")
+ * and the focused skill are visible together, when the combined span fits the viewport.
+ * Selecting a biz card already parks its header at the top (scrollSceneCardHeaderElementIntoView,
+ * see useCardsController.mjs); without this, a later skill-only nearest-scroll
+ * (scrollSceneContentSoElementVisible) can push that header back out of view on tall cards.
+ * Falls back to the skill-only nearest-scroll when both truly don't fit.
+ *
+ * @param {HTMLElement|null} headerEl - e.g. card.querySelector('.biz-details-employer-wrap')
+ * @param {HTMLElement} skillEl - the focused skill title element
+ */
+export function scrollSceneContentForHeaderAndSkill(headerEl, skillEl) {
+    const sceneContent = document.getElementById('scene-content');
+    if (!sceneContent || !skillEl?.isConnected) return;
+
+    if (!headerEl?.isConnected || headerEl === skillEl) {
+        scrollSceneContentSoElementVisible(skillEl);
+        return;
+    }
+
+    const margin = SCENE_SKILL_SCROLL_MARGIN_PX;
+    const contentRect = sceneContent.getBoundingClientRect();
+    const viewTop = contentRect.top + margin;
+    const viewBottom = contentRect.bottom - margin;
+    const viewHeight = viewBottom - viewTop;
+
+    const { top: headerTop } = getElementVerticalExtent(headerEl);
+    const { bottom: skillBottom } = getElementVerticalExtent(skillEl);
+    const combinedHeight = skillBottom - headerTop;
+
+    if (combinedHeight > viewHeight) {
+        // Can't fit both — the focused skill is the actual navigation target.
+        scrollSceneContentSoElementVisible(skillEl);
+        return;
+    }
+
+    let delta = 0;
+    if (headerTop < viewTop) {
+        delta = headerTop - viewTop;
+    } else if (skillBottom > viewBottom) {
+        delta = skillBottom - viewBottom;
+    }
+    if (delta === 0) return;
+    sceneContent.scrollBy({ top: delta, behavior: 'smooth' });
+}
+
+/**
+ * Scroll #resume-content-listing so both the rDiv header (employer/role — the "top portion")
+ * and the focused T&S skill title are visible together when they fit the scrollport.
+ * Selection’s default scroll parks the rDiv *header* at the top; for tall cards that alone can
+ * leave Technologies & Skills (and the focused skill) below the fold — this reconciles the two
+ * instead of letting the skill-focus scroll push the header back out of view.
  *
  * @param {number|string} jobNumber
  * @param {string} skillSlug
@@ -370,7 +418,14 @@ function scrollResumeSkillTitleIntoView(jobNumber, skillSlug, { behavior = 'smoo
     const skillEl = rDiv?.querySelector(`.biz-card-skill-title[data-skill-name="${escSkill}"]`);
     if (!skillEl) return false;
     const scrollport = skillEl.closest('#resume-content-listing');
-    scrollResumeListingElementIntoView(skillEl, scrollport, { behavior });
+    // Shared header markup across scene/resume cards (docs/CARD-VISUAL-PARITY.md): the "top
+    // portion containing its title" (employer/role).
+    const headerEl = rDiv.querySelector('.biz-details-employer-wrap') || rDiv.querySelector('.biz-details-employer');
+    if (headerEl) {
+        scrollResumeListingRangeIntoView(headerEl, skillEl, scrollport, { behavior });
+    } else {
+        scrollResumeListingElementIntoView(skillEl, scrollport, { behavior });
+    }
     return true;
 }
 
@@ -458,7 +513,11 @@ export function scrollFocusedBizCardSkillIntoViewIfCropVisible(jobNumber, skillS
                 if (!isSkillTitleVisibleInBizCardCrop(skillEl, card)) {
                     growCardToFitFocusedSkill(skillEl, skillsEl, card);
                 }
-                scrollSceneContentSoElementVisible(skillEl);
+                // Shared header markup across scene/resume cards (docs/CARD-VISUAL-PARITY.md): the
+                // "top portion containing its title" (employer/role). Try to keep it visible
+                // alongside the skill instead of letting this scroll push it off-screen.
+                const headerEl = card.querySelector('.biz-details-employer-wrap') || card.querySelector('.biz-details-employer');
+                scrollSceneContentForHeaderAndSkill(headerEl, skillEl);
                 // Reinforce resume scroll after scene layout settles (header scroll may still be running).
                 scrollResumeSkillTitleIntoView(jobNumber, skillSlug, { behavior: 'auto' });
             });

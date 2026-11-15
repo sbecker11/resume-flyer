@@ -2,6 +2,30 @@
 
 Most recent updates are listed first.
 
+## 2026-11-15 (2)
+
+### Skill-card back-icon: keep biz-card header visible alongside the focused skill
+- Clicking a skill-card's back-icon (`.biz-back-link`) slides its source biz-card into view,
+  but previously only the matched skill was guaranteed visible — on tall cards the biz-card's
+  header (employer/role, the "top portion containing its title") could scroll off-screen.
+- `modules/utils/resumeListScroll.mjs`: new `scrollResumeListingRangeIntoView(topEl, bottomEl, scrollportEl, options)` —
+  generalizes the existing single-element scroll to the union of two elements' visual boxes, so
+  both can be shown together when they fit; falls back to scrolling just `bottomEl` (the actual
+  click target) when the combined span is taller than the scrollport.
+- `modules/utils/skillInfoModal.mjs`:
+  - `scrollResumeSkillTitleIntoView` (resume-view) now locates the rDiv's `.biz-details-employer-wrap`
+    header and scrolls the header+skill range together via the new helper, instead of scrolling
+    only the skill title.
+  - New `scrollSceneContentForHeaderAndSkill(headerEl, skillEl)` (scene-view): replaces the old
+    skill-only `scrollSceneContentSoElementVisible(skillEl)` call in
+    `scrollFocusedBizCardSkillIntoViewIfCropVisible`, which could undo the header-parking scroll
+    that selection already performs. Falls back to the skill-only nearest-scroll when both don't fit.
+  - Both call sites find the header via the shared `.biz-details-employer-wrap` / `.biz-details-employer`
+    markup (`docs/CARD-VISUAL-PARITY.md` — identical child classes across scene and resume shells),
+    so one fix covers scene-view, resume-view, and skill-card clones.
+- Tests: `resumeListScroll.test.mjs` (+4 tests) and new `skillInfoModal.headerSkillScroll.test.mjs`
+  (5 tests). Full suite green (113 files / 1646 tests); console-error ratchet and `vite build` clean.
+
 ## 2026-11-15
 
 ### 3D Settings: scope Z-based effects to biz-cards only
